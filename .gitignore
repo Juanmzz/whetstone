@@ -1,0 +1,9 @@
+# OS / editor
+.DS_Store
+
+# Node
+node_modules/
+
+# Whetstone: memory index is a regenerable cache (M2 SQLite adapter).
+# Files under .sdd/memory/ remain the source of truth and ARE committed.
+.sdd/memory/index.db

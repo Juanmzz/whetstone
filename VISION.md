@@ -1,0 +1,79 @@
+# Whetstone
+
+**Self-sharpening workflows for coding agents.**
+
+## Thesis
+
+Agent workflows should improve with use — and leave an audit trail of why every rule exists.
+
+Today, teams hand-craft workflow rules for coding agents (triage policies, delegation rules, TDD discipline, doc conventions). These rules are born from real incidents, but the loop is manual: something goes wrong, a human notices, a human edits a prompt or skill file. Whetstone closes that loop.
+
+## The problem
+
+Spec-driven development tools (Spec Kit, BMAD, Superpowers) solve the *forward* path well: spec → plan → code, with human gates. None of them solve the *feedback* path:
+
+- No project-level memory of decisions and incidents that survives sessions and tools.
+- No versioning of workflow rules — no diff, no changelog, no record of *why* a rule changed.
+- No mechanism for the workflow to propose its own improvements based on what actually happened.
+
+Every team that runs agents seriously ends up rebuilding this by hand, inside one tool, coupled to one memory backend.
+
+## What Whetstone is
+
+1. **An init wizard** that interviews a project (stack, risk profile, team size, conventions) and generates a `.sdd/` directory: a constitution, triage rules, and a starter set of workflow skills adapted to that project.
+2. **A file-based memory substrate** that lives in the repo and travels with it:
+
+```
+.sdd/
+  constitution.md          # project governance, generated at init
+  triage-rules.md          # risk classification for changes
+  memory/
+    decisions/             # ADRs: one markdown file per decision
+    incidents.jsonl        # append-only structured incident log
+    patterns.md            # distilled recurring patterns
+  skills/                  # versioned workflow rules, each with a changelog
+    delegation.md
+    tdd-discipline.md
+    doc-locations.md
+```
+
+3. **A retro loop** (`/retro`): reads accumulated incidents and decisions since the last retro, detects patterns (e.g. "triage misclassified auth changes twice"), and **proposes diffs to the skill files**. A human approves; the skill is amended with a changelog entry linking back to the incidents that motivated it.
+
+The loop: **use → record → distill → amend**. That is the product.
+
+## What Whetstone is NOT
+
+- **Not another spec-driven framework.** It composes with Spec Kit, BMAD, Superpowers, or a bare CLAUDE.md. It owns the feedback loop, not the forward workflow.
+- **Not a memory server.** Memory is an interface, not a product. The default backend is plain files in git. Engram, sqlite+embeddings, or any MCP memory server plug in as optional adapters behind the same contract: `save(record)`, `search(query)`, `summarize(scope)`.
+- **Not autonomous self-modification.** Every amendment to a rule passes a human gate. The value is *auditable* evolution, not unsupervised drift.
+- **Not tied to Claude Code.** Files-first design means any agent that reads markdown can consume it. Claude Code gets first-class support (plugin, slash commands, hooks).
+
+## Design principles
+
+1. **Git-native.** All state is plain text in the repo. Diffable, reviewable, portable. No required servers.
+2. **Memory-agnostic.** File backend by default; everything else is an adapter.
+3. **Human-in-the-loop.** The retro proposes; the human disposes.
+4. **Rules carry receipts.** Every rule links to the incidents and decisions that created it. Delete the reason, question the rule.
+5. **Small core, composable edges.** The core is the `.sdd/` schema + the retro loop. Integrations (Claude Code plugin, Spec Kit extension, MCP adapters) live at the edges.
+
+## Milestones
+
+**M1 — Bootstrap (v0.1)**
+Init wizard + `.sdd/` schema + generic versions of the initial skill set (delegation, TDD discipline, doc locations, token economy), extracted from a real production setup. Manual incident logging (`/log-incident` command). Publishable and demoable on its own.
+
+**M2 — Forward integration (v0.2)**
+Claude Code plugin packaging: slash commands, SessionStart hook that loads the constitution and active skills. Optional adapters: Spec Kit extension, engram MCP backend.
+
+**M3 — The retro loop (v0.3)**
+`/retro`: pattern detection over `incidents.jsonl` + `decisions/`, diff proposals against `skills/*.md`, human approval flow, changelog with incident back-references. This is the milestone that proves the thesis.
+
+**Later / explicitly deferred**
+Semantic search backend, multi-repo/org-level memory, metrics dashboard, non-Claude agent integrations. Not before M3 ships.
+
+## Contribution model
+
+MIT license. The anti-scope section above is enforcement policy: PRs that turn Whetstone into a spec framework or a memory server will be redirected, kindly. Good first issues will target M1 skill genericization and `.sdd/` schema review.
+
+## Origin
+
+Extracted from a production workflow built for a fintech codebase (SDD orchestration, delegation harness, TDD discipline, token economy — all born from real incidents). Whetstone is the generalization of that loop.
