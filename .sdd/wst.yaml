@@ -3,4 +3,6 @@ backend: files            # files | engram | ...  (see SPEC §2.3)
 retro:
   suggest_after: 5        # incidents
 # Skills are populated during M1 genericization (port of the chyta:* skill set).
-skills: []
+skills:
+  - skills/delegation.md
+
