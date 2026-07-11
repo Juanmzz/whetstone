@@ -82,15 +82,20 @@ Signals are *data for the loop*; decisions are *prose for humans*. Both feed the
 
 ### 2.3 Memory adapter interface
 
-The file backend above is the reference implementation. Any backend (engram MCP, sqlite, etc.) must implement:
+The file backend above is the reference implementation. An adapter (engram MCP, sqlite, etc.) implements:
 
 ```
-save(record)        -> id            # record: signal | decision | pattern
-search(query, opts) -> record[]      # opts: {type?, phase?, since?, rule?}
-summarize(scope)    -> markdown      # scope: {since?, rule?, type?}
+save(record)        -> id            # record: signal | decision | pattern   [adapter-owned]
+search(query, opts) -> record[]      # opts: {type?, phase?, since?, rule?}   [adapter-owned]
+summarize(scope)    -> markdown      # scope: {since?, rule?, type?}          [core-owned; adapter may override]
 ```
 
-Adapters may add capabilities (semantic search) but the core only depends on these three. **The core must be fully functional with the file backend alone.**
+`save` and `search` are adapter-owned. `summarize` is **core-owned**: the core provides a
+default `render(search(scope))` over a markdown template, because no surveyed backend exposes
+prose synthesis as a first-class call (see [[0001-memory-is-an-interface]] amendment). An
+adapter overrides `summarize` only if it owns native synthesis. Adapters may add capabilities
+(semantic search) but the call-site only depends on these three. **The core must be fully
+functional with the file backend alone.**
 
 ---
 

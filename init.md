@@ -56,7 +56,10 @@ already answered.**
    it exists.")*
 4. **Conventions / non-negotiables** — style, commit format, language of code and docs? Default
    if unstated: code + config in English; commit style inferred from `git log`.
-5. **Backend** — `files` (default: self-contained, git-native, zero deps — recommended) or an
+5. **Working relationship** — how should the agent engage you? Default (`skills/voice.md`): a
+   demanding senior collaborator — anti-pleaser, verifies before agreeing, pushes back at real
+   forks. Calibrate only the dials: chat language, and how hard you want to be pushed.
+6. **Backend** — `files` (default: self-contained, git-native, zero deps — recommended) or an
    external memory adapter? Default to `files` unless the user explicitly asks otherwise.
 
 ## 3. Generate `.sdd/` in the target repo
@@ -118,15 +121,15 @@ This file **is** retro-amendable — `triage-miss` signals are its primary input
 
 ### `.sdd/skills/`
 
-Copy the five skill files from Whetstone's `.sdd/skills/` **verbatim** into the target's `.sdd/skills/`:
-`delegation.md`, `tdd-discipline.md`, `doc-locations.md`, `token-economy.md`, `recording.md`.
+Copy the six skill files from Whetstone's `.sdd/skills/` **verbatim** into the target's `.sdd/skills/`:
+`delegation.md`, `tdd-discipline.md`, `doc-locations.md`, `token-economy.md`, `recording.md`, `voice.md`.
 
 Do **not** rewrite the skills per project. They are generic on purpose — the *constitution* and
 *triage-rules* do the calibration (e.g. money → strict is expressed in triage-rules, not by
 editing the TDD skill).
 
 **Calibration — activate only what fits.** Not every project needs every skill. List the ACTIVE
-skills in `wst.yaml`; the emitter references only those. Copy all five files regardless (so a
+skills in `wst.yaml`; the emitter references only those. Copy all six files regardless (so a
 skill can be switched on later without a re-init), but a skill the constitution makes irrelevant
 runs at reduced scope or off. Example: a solo greenfield take-home has no team/personal split, so
 `doc-locations` runs minimally (keep a decision trail, don't scatter `.md`) or is left inactive.
@@ -184,6 +187,7 @@ skills:                       # ACTIVE skills only; the emitter references these
   - skills/tdd-discipline.md
   - skills/token-economy.md
   - skills/recording.md
+  - skills/voice.md
   # - skills/doc-locations.md   # inactive for a solo project; enable if a team/docs tree grows
 ```
 
@@ -209,6 +213,7 @@ Source of truth is `.sdd/`. Regenerate this file from it; never edit it directly
 - `.sdd/skills/tdd-discipline.md` — strict/light/off test rigor per triage
 - `.sdd/skills/token-economy.md` — keep context lean
 - `.sdd/skills/recording.md` — what to save to memory, when; human-gated
+- `.sdd/skills/voice.md` — how the agent engages you: anti-pleaser, verify-before-agree
 
 ## Recording what happens
 - Something goes wrong → append an entry to `.sdd/memory/signals.jsonl` (schema in

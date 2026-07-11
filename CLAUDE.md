@@ -56,9 +56,10 @@ Whetstone is a generic, git-native, files-first bootstrapper for coding agents. 
 - Repo scaffolded and committed locally (branch `main`, no remote yet — GitHub is gated behind
   dogfooding). VISION / README / SPEC / LICENSE / OPEN_QUESTIONS in place.
 - `.sdd/` substrate live; ADR-0001..0004 recorded; `sig-0001` logged.
-- **Brick 2 DONE.** Five skills genericized to v1 (`status: active`) in `.sdd/skills/`:
-  `delegation`, `tdd-discipline`, `doc-locations`, `token-economy`, and `recording` (the
-  what/when/who-confirms of memory writes — added beyond the original three). Pattern held:
+- **Brick 2 DONE.** Six skills genericized to v1 (`status: active`) in `.sdd/skills/`:
+  `delegation`, `tdd-discipline`, `doc-locations`, `token-economy`, `recording` (the
+  what/when/who-confirms of memory writes), and `voice` (how the agent engages the human —
+  anti-pleaser, verify-before-agree; from ChytaPay `01-persona` + Gentleman). Pattern held:
   STRIP ChytaPay-specifics / KEEP generic rule structure / ADD front-matter + rule IDs +
   `## Changelog`. ChytaPay mentions survive ONLY in each changelog as provenance. Receipts are
   earned by real signals, never seeded at init.

@@ -39,3 +39,25 @@ M1 memory = files + grep. That is enough to feed and prove the retro loop.
 - No external dependency is required to run or evaluate Whetstone.
 - "Own memory" and "pluggable memory" both hold: the file substrate *is* the built-in
   memory, and the adapter interface *is* the plug.
+
+## Amendment (2026-07-11) — `summarize` is core-owned; `save`/`search` validated
+
+A survey of four real backends (Basic Memory, mem0, Letta, the reference MCP `memory` server)
+against the three-method contract refined — did not reverse — this decision:
+
+- **`save` and `search` are validated as the right shape.** Every backend surveyed has an
+  unambiguous save primitive and a query primitive with at least partial structured filtering
+  (3 of 4 support real date-range filters mapping onto `opts.{type,phase,since,rule}`).
+- **`summarize` is the outlier: not one backend exposes prose synthesis as a first-class
+  call.** So `summarize` can never be a thin per-adapter passthrough. **Decision:** implement
+  `summarize(scope)` **once in the core** as `render(search(scope))` with a default markdown
+  template; adapters override it only if they own native synthesis (none do today). The
+  interface still holds at the call-site — skills/loop only ever call the three — but the
+  contract is asymmetric: `save`/`search` are adapter-owned, `summarize` is core-owned and
+  optional to override. SPEC §2.3 should say this explicitly.
+- **First adapter after files = Basic Memory** — same substrate (markdown + frontmatter), no
+  LLM rewrite of stored text (mem0 mutates by default), genuine structured filtering, no forced
+  foreign concept. mem0 second (only with `infer=False`). Letta (stateful-agent tax) and the
+  reference graph server (no time axis → `since` impossible) are deprioritized.
+- Minor: `type` (signal/decision/pattern) is first-class in none of the file/vector backends;
+  every adapter needs a small `type → tag/frontmatter-key` shim. Not a contract problem.
