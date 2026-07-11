@@ -33,7 +33,7 @@ an audit trail. Composes with Spec Kit / BMAD / Superpowers; not a memory server
   `bootstrap.mjs`.
 - **ADR-0003 — Human-gated, not autonomous.** Why: prior-art check confirmed novelty (no
   exact match; closest is Cursor Bugbot, but autonomous / Cursor-locked / UI-managed / no
-  receipts). The human gate + incident receipts are the moat vs Bugbot, DSPy, and the
+  receipts). The human gate + signal receipts are the moat vs Bugbot, DSPy, and the
   "do-it-manually" blog advice. Value is unproven → validated by dogfooding, not by the
   market gap. **Kill criterion pre-registered.**
 
@@ -48,36 +48,36 @@ an audit trail. Composes with Spec Kit / BMAD / Superpowers; not a memory server
   tedious, human where the blast-radius is high (a bad auto-applied rule degrades every
   future session silently).
 - **Validate the loop BY HAND before building V1.** Wizard-of-Oz it on a real project first;
-  automate only if the manual retro produces value. See `inc-0001`.
+  automate only if the manual retro produces value. See `sig-0001`.
 - **Private-first.** Public / npm / issues gated behind the dogfooding result. Private remote
   ≠ publishing.
 - **Self-hosting is layered.** Whetstone-on-Whetstone (level 1, always-on) proves the
-  substrate but NOT genericity, and generates design incidents rather than the rich workflow
-  incidents the loop needs. A DIFFERENT real project (level 2) is still required for the real
+  substrate but NOT genericity, and generates design signals rather than the rich workflow
+  signals the loop needs. A DIFFERENT real project (level 2) is still required for the real
   validation. (Self-hosting-compiler analogy: compiling its own source ≠ compiling all
   programs.)
 
 ## Prior-art verdict
 
 GO on novelty. Positioning lines vs "this already exists":
-- vs **Bugbot** → human-gated, cross-tool, git-native, with rule→incident receipts.
+- vs **Bugbot** → human-gated, cross-tool, git-native, with rule→signal receipts.
 - vs **doing it manually** → the distillation layer that detects patterns and proposes diffs,
   and leaves a paper trail.
-- vs **DSPy** → readable rules, human gate, incident-sourced (DSPy is autonomous, metric-driven,
+- vs **DSPy** → readable rules, human gate, signal-sourced (DSPy is autonomous, metric-driven,
   rewrites prompts no human reads).
 
 ## Open threads (decide next)
 
 - **Refinement to fold in:** the loop should learn from **session work**, not only hand-logged
-  incidents — touches `OPEN_QUESTIONS.md` #4 (where the signal comes from).
-- The 4 items in `OPEN_QUESTIONS.md` (incident type vocab; are decisions retro-amendable;
+  signals — touches `OPEN_QUESTIONS.md` #4 (where the signal comes from).
+- The 4 items in `OPEN_QUESTIONS.md` (signal type vocab; are decisions retro-amendable;
   multi-agent JSONL writes; init interview format).
 - **Which real project to dogfood** (the level-2 validation target) — not chosen yet.
 
 ## Guardrails — the instructions, do NOT drop these
 
 1. Init-first (Option B). Don't start with the loop.
-2. Validate by hand before building V1. Build follows validation, never the reverse (`inc-0001`).
+2. Validate by hand before building V1. Build follows validation, never the reverse (`sig-0001`).
 3. **Anti-drift:** everything generic must be a STRIP of something already earning its keep in
    ChytaPay. If it's not in the workspace, don't invent it.
 4. Don't build our own memory engine (ADR-0001). Files + grep for M1.
@@ -88,7 +88,7 @@ GO on novelty. Positioning lines vs "this already exists":
 ## Current status + next step
 
 - Scaffold committed locally (branch `main`, no remote yet). ADR-0001..0003 recorded,
-  `inc-0001` logged, `skills/delegation.md` at v1 (the exemplar).
+  `sig-0001` logged, `skills/delegation.md` at v1 (the exemplar).
 - **NEXT — finish Brick 2:** genericize the remaining three skills (`tdd-discipline`,
   `doc-locations`, `token-economy`) following the `delegation.md` pattern. Source paths and
   the money/cents caveat are in `CLAUDE.md` → "Next step".

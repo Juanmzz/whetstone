@@ -10,11 +10,11 @@ rules_affected: []
 ## Context
 
 A bounded prior-art check (2026-07-06) evaluated whether Whetstone's thesis is already
-occupied. Finding: **no exact match** for the combination of incident-sourced +
+occupied. Finding: **no exact match** for the combination of signal-sourced +
 human-gated + audit-trailed amendment of human-readable workflow rule files. The closest
 shipping product is **Cursor Bugbot**, which learns from PR-review signals — but it is
 autonomous (no human gate on proposals), closed to Cursor, UI-managed (rules not in git),
-and carries no rule→incident provenance. Adjacent-but-different categories: forward-path
+and carries no rule→signal provenance. Adjacent-but-different categories: forward-path
 spec frameworks (Spec Kit, BMAD, Superpowers), RAG memory layers (mem0, Letta, Zep), and
 autonomous optimizers (DSPy, Reflexion).
 
@@ -23,7 +23,7 @@ the manual approach is a blog post telling teams to do this by hand, which cuts 
 
 ## Decision
 
-- Lead positioning with: **human-gated proposals + incident receipts + git-native +
+- Lead positioning with: **human-gated proposals + signal receipts + git-native +
   cross-tool**. These are the differentiators against the three likely dismissals
   ("just Bugbot", "we do it manually", "DSPy already does this").
 - **Reaffirm the non-goal:** no autonomous rule rewriting. The human gate is the moat, not

@@ -18,7 +18,7 @@ Does this inflate the agent's context without need? If yes → delegate. If no �
    touches 2+ non-trivial files.
 3. [D3] Before any commit/push/PR after code changes, run a fresh-context review, unless the
    diff is trivial docs/text.
-4. [D4] On any incident (wrong cwd, accidental mutation, merge recovery, env workaround),
+4. [D4] On any signal (wrong cwd, accidental mutation, merge recovery, env workaround),
    stop, run a fresh audit, then continue.
 5. [D5] After roughly 20 tool calls / 5 exploratory reads / 2 non-mechanical edits without
    delegation, pause and delegate.
@@ -67,4 +67,4 @@ reads. Fresh means fresh.
 - v1 (2026-07-08, init): generated from the ChytaPay `delegation-harness` skill. Stripped
   ChytaPay-specifics (engram tool names, the SDD-orchestrator model-routing table,
   topic-key fetch); kept the generic delegation triggers, decision table, and
-  fresh-context rules. No incident receipts yet — those accrue as the retro loop runs.
+  fresh-context rules. No signal receipts yet — those accrue as the retro loop runs.
