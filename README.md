@@ -2,7 +2,7 @@
 
 **Self-sharpening workflows for coding agents.**
 
-Whetstone gives your agent workflow a memory and a feedback loop: incidents and decisions are recorded as you work, and a retro process proposes amendments to your workflow rules — with a human gate and a full audit trail. Rules carry receipts: every rule links back to the incidents that created it.
+Whetstone gives your agent workflow a memory and a feedback loop: signals and decisions are recorded as you work, and a retro process proposes amendments to your workflow rules — with a human gate and a full audit trail. Rules carry receipts: every rule links back to the signals that created it.
 
 > Status: pre-alpha. Design phase — see [VISION.md](./VISION.md) before anything else.
 
@@ -13,7 +13,7 @@ use → record → distill → amend
 ```
 
 1. `whetstone init` interviews your project and generates a `.sdd/` directory: constitution, triage rules, and a starter skill set.
-2. As you work, incidents and decisions are logged to `.sdd/memory/` (plain files, versioned in git — no server required).
+2. As you work, signals and decisions are logged to `.sdd/memory/` (plain files, versioned in git — no server required).
 3. `/retro` reads what accumulated, detects patterns, and proposes diffs to your skill files. You approve; the skill is amended with a changelog entry linking back to the evidence.
 
 ## Non-goals
@@ -22,7 +22,7 @@ Whetstone is **not** a spec-driven framework (it composes with Spec Kit, BMAD, S
 
 ## Roadmap
 
-- **M1 — Bootstrap**: init wizard, `.sdd/` schema, generic skill set, manual incident logging.
+- **M1 — Bootstrap**: init wizard, `.sdd/` schema, generic skill set, manual signal logging.
 - **M2 — Forward integration**: Claude Code plugin (commands, hooks), optional adapters.
 - **M3 — The retro loop**: pattern detection + rule amendment proposals. The milestone that proves the thesis.
 

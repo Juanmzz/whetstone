@@ -21,7 +21,7 @@ neither the memory engine nor the retro loop that is the actual thesis.
 Memory is an **interface**, not a product. The core depends only on three methods:
 `save(record)`, `search(query, opts)`, `summarize(scope)` (SPEC §2.3).
 
-- The **default backend is plain files** in `.sdd/memory/` (`incidents.jsonl`, `decisions/`),
+- The **default backend is plain files** in `.sdd/memory/` (`signals.jsonl`, `decisions/`),
   versioned in git. This is the reference implementation and the source of truth.
 - The **core must be fully functional with the file backend alone.** Engram, sqlite+FTS5,
   or any MCP memory server are **optional adapters** behind the same contract.

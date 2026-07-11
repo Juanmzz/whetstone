@@ -1,1 +1,0 @@
-{"id":"inc-0001","ts":"2026-07-08T15:40:00-03:00","type":"build-before-validate","phase":"plan","severity":"medium","detail":"While planning V0, nearly committed to building the automated retro loop (v1) before dogfooding it by hand on a real project — build ahead of validation. Corrected: Wizard-of-Oz the loop manually first, then automate only if it produces value."}

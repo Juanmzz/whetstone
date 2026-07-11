@@ -2,7 +2,7 @@
 
 Purpose: use NotebookLM as a source-grounded aggregator to distill best practices for working
 with AI coding agents, structured so the output maps directly onto Whetstone's artifacts
-(incident taxonomy, skill rules, triage conditions, init-interview questions).
+(signal taxonomy, skill rules, triage conditions, init-interview questions).
 
 NotebookLM is only as good as its sources. **Add sources first, then paste the prompt.**
 
@@ -27,7 +27,7 @@ I am building a tool that bootstraps and then continuously improves the workflow
 coding agent follows on a given project. I need your output organized into these four
 sections, because each maps to an artifact I will build:
 
-1. FAILURE MODES & ANTI-PATTERNS (→ my incident taxonomy)
+1. FAILURE MODES & ANTI-PATTERNS (→ my signal taxonomy)
    List the recurring ways working with AI coding agents goes wrong (e.g. wrong working
    directory, skipped tests, scope creep, context/token blowout, hallucinated APIs,
    over-broad edits). For each: a short kebab-case name, a one-line description, the workflow
@@ -43,7 +43,7 @@ sections, because each maps to an artifact I will build:
 3. ENCODING & EVOLVING RULES (→ my constitution + feedback-loop thesis)
    How teams encode agent rules in config files (CLAUDE.md / AGENTS.md / .cursorrules), and
    how (if at all) they keep those rules updated as they learn. Note explicitly whether
-   sources describe a FEEDBACK loop (updating rules from real incidents) or only static,
+   sources describe a FEEDBACK loop (updating rules from real signals) or only static,
    hand-written config.
 
 4. PROJECT-SETUP QUESTIONS (→ my init interview)
@@ -63,7 +63,7 @@ Format as clean markdown with those four numbered sections.
 
 ## After you get the output
 
-- Section 1 → candidate `type` vocabulary for `.sdd/memory/incidents.jsonl` (feeds
+- Section 1 → candidate `type` vocabulary for `.sdd/memory/signals.jsonl` (feeds
   `OPEN_QUESTIONS.md` #1).
 - Section 2 → rules to add/adjust in `.sdd/skills/*.md` (with real receipts once sources back
   them).

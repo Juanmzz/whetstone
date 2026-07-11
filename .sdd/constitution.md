@@ -21,7 +21,7 @@ keeping the core small, not about financial correctness.
 2. **Memory is an interface.** `save` / `search` / `summarize` is the only contract the core
    depends on. Never fork or hard-depend on a specific backend (engram included).
 3. **Human-in-the-loop.** The retro proposes; a human disposes. No autonomous rule writes.
-4. **Rules carry receipts.** Every rule cites the incidents/decisions that created it.
+4. **Rules carry receipts.** Every rule cites the signals/decisions that created it.
 5. **Anti-scope is policy.** Not a spec framework, not a memory server (see VISION.md).
 
 ## Stack facts

@@ -13,7 +13,7 @@ Status: draft for review. Breaking changes expected until v0.1.
   constitution.md          # project governance (generated at init, rarely edited)
   triage-rules.md          # risk classification rules for changes
   memory/
-    incidents.jsonl        # append-only structured log (machine-first)
+    signals.jsonl        # append-only structured log (machine-first)
     decisions/             # ADRs, one file each (human-first)
       0001-use-postgres.md
     patterns.md            # distilled recurring patterns (retro output)
@@ -31,7 +31,7 @@ Everything is plain text, committed to git. No servers, no databases, no lockfil
 
 ## 2. Memory substrate
 
-### 2.1 `incidents.jsonl`
+### 2.1 `signals.jsonl`
 
 One JSON object per line. Append-only — never edit or delete lines; corrections are new entries with `supersedes`.
 
@@ -39,21 +39,21 @@ One JSON object per line. Append-only — never edit or delete lines; correction
 
 | field           | type     | req | description |
 |-----------------|----------|-----|-------------|
-| `id`            | string   | ✔   | `inc-` + zero-padded counter, e.g. `inc-0042` |
+| `id`            | string   | ✔   | `sig-` + zero-padded counter, e.g. `sig-0042` |
 | `ts`            | string   | ✔   | ISO 8601 datetime |
 | `type`          | string   | ✔   | open vocabulary, kebab-case: `wrong-cwd`, `triage-miss`, `test-skip`, `scope-creep`, `context-blowout`, ... |
 | `phase`         | string   | ✔   | workflow phase where it occurred: `init`, `triage`, `plan`, `apply`, `verify`, `review`, `other` |
 | `severity`      | string   | ✔   | `low` \| `medium` \| `high` |
 | `detail`        | string   | ✔   | free-text, one or two sentences, enough for a human to reconstruct what happened |
-| `rule_affected` | string[] |     | skill file(s) this incident implicates, e.g. `["skills/delegation.md"]`. Empty = unclassified (retro will attempt classification) |
+| `rule_affected` | string[] |     | skill file(s) this signal implicates, e.g. `["skills/delegation.md"]`. Empty = unclassified (retro will attempt classification) |
 | `supersedes`    | string   |     | id of an earlier entry this one corrects |
-| `resolved_by`   | string   |     | filled by retro: amendment id that addressed this incident |
+| `resolved_by`   | string   |     | filled by retro: amendment id that addressed this signal |
 
 **Example:**
 
 ```jsonl
-{"id":"inc-0001","ts":"2026-07-02T14:30:00-03:00","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at repo root instead of the package dir.","rule_affected":["skills/delegation.md"]}
-{"id":"inc-0002","ts":"2026-07-03T10:12:00-03:00","type":"triage-miss","phase":"triage","severity":"medium","detail":"Auth middleware change classified as light; should be strict.","rule_affected":["triage-rules.md"]}
+{"id":"sig-0001","ts":"2026-07-02T14:30:00-03:00","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at repo root instead of the package dir.","rule_affected":["skills/delegation.md"]}
+{"id":"sig-0002","ts":"2026-07-03T10:12:00-03:00","type":"triage-miss","phase":"triage","severity":"medium","detail":"Auth middleware change classified as light; should be strict.","rule_affected":["triage-rules.md"]}
 ```
 
 ### 2.2 `decisions/` (ADRs)
@@ -78,14 +78,14 @@ rules_affected: []
 ...
 ```
 
-Incidents are *data for the loop*; decisions are *prose for humans*. Both feed the retro.
+Signals are *data for the loop*; decisions are *prose for humans*. Both feed the retro.
 
 ### 2.3 Memory adapter interface
 
 The file backend above is the reference implementation. Any backend (engram MCP, sqlite, etc.) must implement:
 
 ```
-save(record)        -> id            # record: incident | decision | pattern
+save(record)        -> id            # record: signal | decision | pattern
 search(query, opts) -> record[]      # opts: {type?, phase?, since?, rule?}
 summarize(scope)    -> markdown      # scope: {since?, rule?, type?}
 ```
@@ -108,7 +108,7 @@ Classifies every change into a discipline level before work starts:
 - `light` — standard changes: failing happy-path test first
 - `off` — trivial: no ceremony
 
-Rules are written as matchable conditions (paths, keywords, change size). This file **is** retro-amendable: misclassifications logged as `triage-miss` incidents are the primary signal.
+Rules are written as matchable conditions (paths, keywords, change size). This file **is** retro-amendable: misclassifications logged as `triage-miss` are its primary input.
 
 ### 3.3 Skill file format
 
@@ -123,35 +123,35 @@ status: active
 # Delegation
 
 ## Rules
-1. [D1] Never run destructive commands outside the task's working directory. (inc-0001)
+1. [D1] Never run destructive commands outside the task's working directory. (sig-0001)
 2. [D2] Delegate any change touching 4+ files to a sub-agent with fresh context.
 
 ## Changelog
-- v3 (2026-07-05, retro-0002): added D1 after inc-0001. Diff: +rule D1.
+- v3 (2026-07-05, retro-0002): added D1 after sig-0001. Diff: +rule D1.
 - v2 (2026-06-20, manual): tightened D2 threshold from 6 to 4 files.
 - v1 (2026-06-01, init): generated by wizard.
 ```
 
 Two invariants:
 
-1. **Rules carry receipts** — a rule born from incidents cites their ids inline.
+1. **Rules carry receipts** — a rule born from signals cites their ids inline.
 2. **Changelog is mandatory** — every version bump names its source (retro id, manual, init) and summarizes the diff.
 
 ### 3.4 The retro loop
 
-Trigger: manual (`/retro`) or suggested after N new incidents (default 5, configurable in `wst.yaml`).
+Trigger: manual (`/retro`) or suggested after N new signals (default 5, configurable in `wst.yaml`).
 
 Algorithm (v0, deliberately simple — no ML, no embeddings):
 
-1. **Collect**: all incidents since last retro (from `retro-log.md`) + new/changed decisions.
-2. **Classify**: for unclassified incidents (`rule_affected` empty), propose a skill via keyword/phase matching; ask the human to confirm.
+1. **Collect**: all signals since last retro (from `retro-log.md`) + new/changed decisions.
+2. **Classify**: for unclassified signals (`rule_affected` empty), propose a skill via keyword/phase matching; ask the human to confirm.
 3. **Detect**: group by `(rule_affected, type)`. Any group with ≥2 entries, or a single `high` severity entry, becomes a candidate finding.
-4. **Propose**: for each finding, generate a concrete diff against the skill file (new rule, tightened threshold, or clarified wording), citing incident ids.
+4. **Propose**: for each finding, generate a concrete diff against the skill file (new rule, tightened threshold, or clarified wording), citing signal ids.
 5. **Gate**: present diffs to the human. Approve / edit / reject, per diff. Nothing is written without approval.
-6. **Amend**: apply approved diffs, bump skill `version`, append changelog entries, set `resolved_by` on the incidents, append a run summary to `retro-log.md`.
+6. **Amend**: apply approved diffs, bump skill `version`, append changelog entries, set `resolved_by` on the signals, append a run summary to `retro-log.md`.
 7. **Distill**: optionally update `patterns.md` with cross-skill observations that don't map to a single rule.
 
-The whole run must be reviewable as **one git commit**: rule diffs + changelogs + retro-log entry + incident resolutions, together. That commit *is* the audit trail.
+The whole run must be reviewable as **one git commit**: rule diffs + changelogs + retro-log entry + signal resolutions, together. That commit *is* the audit trail.
 
 ### 3.5 `wst.yaml`
 
@@ -159,7 +159,7 @@ The whole run must be reviewable as **one git commit**: rule diffs + changelogs 
 version: 0
 backend: files            # files | engram | ...
 retro:
-  suggest_after: 5        # incidents
+  suggest_after: 5        # signals
 skills:
   - skills/delegation.md
   - skills/tdd-discipline.md
@@ -170,7 +170,7 @@ skills:
 
 ## 4. Open questions (for issues)
 
-1. Incident `type` vocabulary: open (as spec'd) vs. curated enum with `other`?
+1. Signal `type` vocabulary: open (as spec'd) vs. curated enum with `other`?
 2. Should decisions be retro-amendable (status flips) or strictly human-managed?
-3. Multi-agent writes to `incidents.jsonl`: is append-only + git merge enough, or do we need per-session files merged at retro time?
+3. Multi-agent writes to `signals.jsonl`: is append-only + git merge enough, or do we need per-session files merged at retro time?
 4. Where does the init interview live — static questionnaire vs. agent-driven conversation with the codebase?
