@@ -121,15 +121,15 @@ This file **is** retro-amendable — `triage-miss` signals are its primary input
 
 ### `.sdd/skills/`
 
-Copy the six skill files from Whetstone's `.sdd/skills/` **verbatim** into the target's `.sdd/skills/`:
-`delegation.md`, `tdd-discipline.md`, `doc-locations.md`, `token-economy.md`, `recording.md`, `voice.md`.
+Copy the eight skill files from Whetstone's `.sdd/skills/` **verbatim** into the target's `.sdd/skills/`:
+`delegation.md`, `tdd-discipline.md`, `doc-locations.md`, `token-economy.md`, `recording.md`, `voice.md`, `lazy.md`, `xreview.md`.
 
 Do **not** rewrite the skills per project. They are generic on purpose — the *constitution* and
 *triage-rules* do the calibration (e.g. money → strict is expressed in triage-rules, not by
 editing the TDD skill).
 
 **Calibration — activate only what fits.** Not every project needs every skill. List the ACTIVE
-skills in `wst.yaml`; the emitter references only those. Copy all six files regardless (so a
+skills in `wst.yaml`; the emitter references only those. Copy all eight files regardless (so a
 skill can be switched on later without a re-init), but a skill the constitution makes irrelevant
 runs at reduced scope or off. Example: a solo greenfield take-home has no team/personal split, so
 `doc-locations` runs minimally (keep a decision trail, don't scatter `.md`) or is left inactive.
@@ -189,6 +189,8 @@ skills:                       # ACTIVE skills only; the emitter references these
   - skills/token-economy.md
   - skills/recording.md
   - skills/voice.md
+  - skills/lazy.md
+  - skills/xreview.md
   # - skills/doc-locations.md   # inactive for a solo project; enable if a team/docs tree grows
 ```
 
@@ -219,14 +221,16 @@ Source of truth is `.sdd/`. Regenerate this file from it; never edit it directly
 - `.sdd/skills/token-economy.md` — keep context lean
 - `.sdd/skills/recording.md` — what to save to memory, when; human-gated
 - `.sdd/skills/voice.md` — how the agent engages you: anti-pleaser, verify-before-agree
+- `.sdd/skills/lazy.md` — minimal-first: does this need to exist? reuse before adding
+- `.sdd/skills/xreview.md` — adversarial fresh-context review on high-stakes changes
 
 ## Recording what happens
 - Something goes wrong → append an entry to `.sdd/memory/signals.jsonl` (schema in
   `.sdd/memory/README.md`).
 - A decision is made → add an ADR to `.sdd/memory/decisions/`.
-- Periodically → run the retro **by hand**: read `.sdd/memory/signals.jsonl`, propose rule
-  amendments, human confirms each write. (The alpha does this manually — V1 automates the
-  analysis/proposal; the write stays human-gated either way.)
+- Periodically → run the retro (see `retro.md`): read the new signals, recommend apparatus
+  (amend a rule, curate/generate a skill/hook/command), human confirms each write. (Alpha =
+  the `retro.md` playbook run by hand; the write stays human-gated either way.)
 ```
 
 **`CLAUDE.md`** — NOT a copy. A one-line import so Claude Code reads the same canonical source:
