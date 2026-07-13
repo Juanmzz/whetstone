@@ -55,8 +55,12 @@ Whetstone is a generic, git-native, files-first bootstrapper for coding agents. 
 
 - `.sdd/` substrate live; **ADR-0001..0006** recorded; **2 signals** logged. Tags:
   `v0.1.0` (payload) → `v0.1.1` (voice + memory contract) → `v0.2.0` (code-tier emitter).
-- **6 skills** (`status: active`): `delegation`, `tdd-discipline` (**v2 — has TD6, the first
-  earned receipt**), `doc-locations`, `token-economy`, `recording`, `voice`.
+- **8 skills** (`status: active`): `delegation`, `tdd-discipline` (**v2 — TD6, the first earned
+  receipt**), `doc-locations`, `token-economy`, `recording`, `voice`, `lazy`, `xreview` (the last
+  two curated/genericized from ChytaPay).
+- **`retro.md`** — the retro playbook (WoZ, like `init.md`): read new signals → cluster →
+  recommend apparatus (amend / curate / generate / graduate-to-hook) → human-gated write →
+  receipt + retro-log cursor. The core function, written down and repeatable.
 - **`init.md`** — the Wizard-of-Oz bootstrap: 6 phases + **4b (code tier)**. AGENTS.md is
   canonical, CLAUDE.md is a `@AGENTS.md` import (not duplicated). The procedure IS the installer.
 - **Code tier started (V1):** `.claude/hooks/strict-path-guard.mjs` — the first emitter output,
@@ -79,15 +83,14 @@ Whetstone is a generic, git-native, files-first bootstrapper for coding agents. 
 
 ## Next step (resume here)
 
-The Two Way Invoice Sync take-home is delivering (P10 deliverables) — leave its config as-is;
-do not churn it mid-delivery. After it ships, it is the **test case for the updater**:
+Done this phase: `retro.md` playbook (the loop written down) + `lazy`/`xreview` skills (8 total).
+The Two Way Invoice Sync take-home is delivering (P10) — leave its config as-is, don't churn it
+mid-delivery. After it ships, it is the **test case for the updater**:
 
-1. **`retro.md`** — write the retro as a Wizard-of-Oz playbook (like `init.md`). The loop ran
-   ad-hoc; it needs a repeatable procedure. Highest-value, cheapest next step — it IS the function.
-2. **Implement the updater** (ADR-0006): `vendored_from` + 3-way merge; run it on the challenge
+1. **Implement the updater** (ADR-0006): `vendored_from` + 3-way merge; run it on the challenge
    to pull the v0.2 hook and reconcile its local TD6 vs the canonical one. Validates ADR-0006 for real.
-3. Curate the candidate library (`lazy`, `xreview` from ChytaPay) — existing proven skills, don't
-   reinvent. Generate only the project-specific (hooks/commands).
+2. **Run `retro.md` on a second project** — the moat is N=1 (one real retro). Make it N>1 to prove
+   it's a repeatable engine, not a one-off.
+3. More code-tier emitters (config-protection, session-context hooks; commands) — earned via the retro.
 
-Do NOT: build a CLI/plugin or distribution before the retro is repeatable; the moat is N=1, make
-it N>1 first.
+Do NOT: build a CLI/plugin or distribution before the retro is repeatable (N>1).
