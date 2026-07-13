@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 1
+version: 2
 status: active
 ---
 # TDD discipline
@@ -33,6 +33,13 @@ strict TDD regardless of how small it looks.
    - Good: `"returns zero commission when amount is below the minimum threshold"`
    - Bad: `"test processCommission with 0"`
    - Format: `"{subject} {behavior} when {condition}"` or `"given {state}, {subject} {behavior}"`.
+6. [TD6] **Exercise the real path, not a convenient fixture.** A test must drive the UNSEEDED
+   production path. A fixture seeded for convenience (pre-linked references, a fake pre-set to
+   equal the expected state) must not be the *only* path tested, or it masks the exact failure
+   the test is meant to guard. Assert a property through its real consumer, not a proxy that can
+   pass for the wrong reason (e.g. an equality check that treats `NaN` as equal). Corollary: on
+   delegated or generated code, a fresh-context review of the real path is the load-bearing gate
+   — agents systematically green-light the happy fixture.
 
 ## Defining a strict path (worked example)
 
@@ -58,6 +65,14 @@ CI or pre-release — they are NOT part of the per-change TDD loop.
 
 ## Changelog
 
+- v2 (2026-07-13, retro): added [TD6] — exercise the real/unseeded production path; a
+  convenience-seeded fixture must not be the only path tested; assert through the real consumer,
+  not a proxy that can pass for the wrong reason; on delegated/generated code a fresh-context
+  review of the real path is load-bearing. **First earned receipt** — contributed upstream from
+  the Two Way Invoice Sync dogfood (Retro 0002), where a fresh-context review caught a real
+  (usually money-correctness) bug in EVERY delegated phase, root cause always "tests green for
+  the wrong reason" (sig-0006 NaN-via-toEqual; sig-0009 the meta-pattern). The loop's
+  contribution direction working: a real project's signals amended the canonical skill.
 - v1 (2026-07-09, init): generated from the ChytaPay `tdd-discipline` skill. Stripped
   ChytaPay-specifics (sdd-triage/apply/init machinery, `strict_tdd` forwarding, repo paths,
   ARS/USD). Kept the strict/light/off levels, the RED→GREEN→TRIANGULATE→REFACTOR cycle, and
