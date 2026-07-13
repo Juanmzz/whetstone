@@ -239,11 +239,36 @@ Add Claude-specific lines below the import only if the project needs them (Claud
 only `CLAUDE.md`; the `@path` import is expanded inline at session start). Both files are
 OUTPUTS — `.sdd/` is never derived from them.
 
+## 4b. Emit the code tier — hooks (V1, per-vendor)
+
+The markdown tier above is advisory. The **code tier** is enforcement, and it is
+vendor-specific (ADR-0005): compile `.sdd/` into the target tool's native mechanism. For
+**Claude Code**, that is `.claude/settings.json` + `.claude/hooks/*`. Other vendors get what
+they natively support, or nothing — degrade gracefully.
+
+**First hook — `strict-path-guard` (compiled from `triage-rules.md`).** Read the `strict` row's
+paths/globs and bake them into a PreToolUse hook so an edit to a strict-tier path surfaces a
+non-blocking warning. The globs are THIS project's (e.g. `src/sync/**` for a sync engine), not a
+fixed list — that is the compiler at work.
+
+- `.claude/hooks/strict-path-guard.mjs` — reads `tool_input.file_path` from stdin, matches it
+  against the compiled strict prefixes, and on a hit emits
+  `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"defer","additionalContext":"⚠ strict-tier edit …"}}`
+  then `exit 0`. `defer` = allow + inject the warning; it never blocks. Needs a `#!/usr/bin/env node`
+  shebang and the executable bit. (Reference implementation: Whetstone's own `.claude/hooks/`.)
+- `.claude/settings.json` — wire it: `hooks.PreToolUse` with `matcher: "Edit|Write"` →
+  `command: "$CLAUDE_PROJECT_DIR/.claude/hooks/strict-path-guard.mjs"`.
+
+The hook is GENERATED output — mark it "do not edit by hand; regenerate after changing
+`triage-rules.md`." Ship ONLY this one at init. Further hooks (config-protection, session
+context re-inject, recording nudge, block-no-verify) are **earned per-project via the retro**
+when signals prove a rule is being ignored — never sprayed up front (ADR-0005, [[token-economy]]).
+
 ## 5. Confirm + commit
 
 Show the user a tree of everything created. Offer to stage and commit:
-`git add .sdd CLAUDE.md AGENTS.md` → `chore: bootstrap Whetstone workflow`. Never commit without
-confirmation.
+`git add .sdd .claude AGENTS.md CLAUDE.md` → `chore: bootstrap Whetstone workflow`. Never commit
+without confirmation.
 
 ## 6. Optional — integrate an external memory backend (engram)
 
