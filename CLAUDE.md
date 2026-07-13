@@ -51,31 +51,43 @@ Whetstone is a generic, git-native, files-first bootstrapper for coding agents. 
   project, accumulate signals, run the retro manually, and only automate if it produces
   value. Build follows validation, never the reverse (see `sig-0001`).
 
-## Current status
+## Current status — v0.2.0-alpha
 
-- Repo scaffolded and committed locally (branch `main`, no remote yet — GitHub is gated behind
-  dogfooding). VISION / README / SPEC / LICENSE / OPEN_QUESTIONS in place.
-- `.sdd/` substrate live; ADR-0001..0004 recorded; `sig-0001` logged.
-- **Brick 2 DONE.** Six skills genericized to v1 (`status: active`) in `.sdd/skills/`:
-  `delegation`, `tdd-discipline`, `doc-locations`, `token-economy`, `recording` (the
-  what/when/who-confirms of memory writes), and `voice` (how the agent engages the human —
-  anti-pleaser, verify-before-agree; from ChytaPay `01-persona` + Gentleman). Pattern held:
-  STRIP ChytaPay-specifics / KEEP generic rule structure / ADD front-matter + rule IDs +
-  `## Changelog`. ChytaPay mentions survive ONLY in each changelog as provenance. Receipts are
-  earned by real signals, never seeded at init.
-- **`init.md` (root) — alpha, v0.** The agent-driven Wizard-of-Oz bootstrap: 6 phases
-  (preconditions → read repo → grill → generate `.sdd/` → emit `CLAUDE.md`/`AGENTS.md` →
-  commit), all templates filled. The procedure IS the installer (no code tool yet, per
-  `sig-0001`). This is the V0 hook.
+- `.sdd/` substrate live; **ADR-0001..0006** recorded; **2 signals** logged. Tags:
+  `v0.1.0` (payload) → `v0.1.1` (voice + memory contract) → `v0.2.0` (code-tier emitter).
+- **6 skills** (`status: active`): `delegation`, `tdd-discipline` (**v2 — has TD6, the first
+  earned receipt**), `doc-locations`, `token-economy`, `recording`, `voice`.
+- **`init.md`** — the Wizard-of-Oz bootstrap: 6 phases + **4b (code tier)**. AGENTS.md is
+  canonical, CLAUDE.md is a `@AGENTS.md` import (not duplicated). The procedure IS the installer.
+- **Code tier started (V1):** `.claude/hooks/strict-path-guard.mjs` — the first emitter output,
+  a PreToolUse hook whose strict globs are compiled from `triage-rules.md`. Validated WoZ.
+- **THE LOOP IS VALIDATED IN THE WILD.** Dogfooded on the Two Way Invoice Sync take-home: init
+  produced a strong `.sdd/`, the clean-room check caught a global-config conflict, ~9 real
+  signals accumulated, and its **Retro 0002 produced TD6** — a genuinely good rule, contributed
+  upstream here as `tdd-discipline` v2. That was ADR-0003's kill-criterion test, and it passed.
+
+## Key decisions this phase
+
+- **ADR-0005** — the emitter is a COMPILER (`.sdd/` neutral → per-vendor apparatus). Code tier
+  (hooks/agents/commands) = V1 scope; earned per-project via the retro, not sprayed.
+- **ADR-0006** — update model: copy + 3-way merge against a recorded base (`vendored_from` in
+  `wst.yaml`) via `git merge-file`. Two tiers: skills merge, emitter output recompiles. retro /
+  update / contribution are the same machinery in three directions.
+- **The function, sharpened:** Whetstone RECOMMENDS the apparatus (skills/hooks/commands) a
+  project needs, from real usage — curating an existing one when it fits, generating a
+  project-specific one when it doesn't.
 
 ## Next step (resume here)
 
-**DOGFOOD.** The alpha payload is complete — validate it by USE, not by building more. Take
-`init.md` to a real greenfield project (the pending company home-challenge) and run it there:
-from that repo, tell the agent *"read `<path>/whetstone/init.md` and run the Whetstone init
-here."* Accumulate real signals in that project's `.sdd/memory/signals.jsonl`, run the retro
-BY HAND, and only then decide what V1 automates. Build follows validation, never the reverse
-(`sig-0001`).
+The Two Way Invoice Sync take-home is delivering (P10 deliverables) — leave its config as-is;
+do not churn it mid-delivery. After it ships, it is the **test case for the updater**:
 
-Do NOT: build the retro loop in code, add a TUI, or polish `init.md` further in the abstract
-before a real run surfaces the gaps.
+1. **`retro.md`** — write the retro as a Wizard-of-Oz playbook (like `init.md`). The loop ran
+   ad-hoc; it needs a repeatable procedure. Highest-value, cheapest next step — it IS the function.
+2. **Implement the updater** (ADR-0006): `vendored_from` + 3-way merge; run it on the challenge
+   to pull the v0.2 hook and reconcile its local TD6 vs the canonical one. Validates ADR-0006 for real.
+3. Curate the candidate library (`lazy`, `xreview` from ChytaPay) — existing proven skills, don't
+   reinvent. Generate only the project-specific (hooks/commands).
+
+Do NOT: build a CLI/plugin or distribution before the retro is repeatable; the moat is N=1, make
+it N>1 first.
