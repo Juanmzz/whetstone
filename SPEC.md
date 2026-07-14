@@ -33,7 +33,7 @@ Everything is plain text, committed to git. No servers, no databases, no lockfil
 
 ### 2.1 `signals.jsonl`
 
-One JSON object per line. Append-only — never edit or delete lines; corrections are new entries with `supersedes`.
+One JSON object per line. Append-only for signal content — never edit or delete a line's event data; corrections are new entries with `supersedes`. **Exception:** `resolved_by` is a machinery-owned back-pointer the retro MAY set on an existing line (same invariant class as ADR-0006's `vendored_from`) — it records which amendment addressed the signal, not new event data. This preserves bi-directional receipts (rule→signal via changelog citation, signal→amendment via `resolved_by`).
 
 **Schema (v0):**
 
