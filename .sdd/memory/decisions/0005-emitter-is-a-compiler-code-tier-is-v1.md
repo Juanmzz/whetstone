@@ -47,3 +47,20 @@ Two tiers of artifact exist, with opposite vendor stances:
 - Reversal condition: if the neutral-source → per-vendor-compile model proves unworkable at the
   code tier (the derivation is too tool-specific to generalize), reconsider shipping Whetstone as
   a plain Claude Code plugin and accepting vendor-lock — but only after the WoZ proves it, not before.
+
+## Amendment (2026-07-14) — foundational vs graduated hooks
+
+The crossed review (adversarial judges + cloud) flagged a contradiction: `init.md` §4b emits a
+hook AT INIT, while "earned per-project via the retro, not sprayed" (above) reads as forbidding
+any hook before a signal. Resolution — distinguish two classes of code-tier artifact:
+
+- **Foundational** — derivable purely from the constitution / `triage-rules.md` a project just
+  authored (e.g. `strict-path-guard`, which compiles the strict paths the human already declared).
+  These MAY ship at init: they encode a decision the human made moments ago, not a guess, and the
+  reference guard is non-blocking. This is the compiler applied to the init-time definitions.
+- **Graduated** — earned when the signal log proves an advisory rule is repeatedly ignored (retro
+  step 3, "graduate advisory → enforced"). These are NEVER sprayed at init.
+
+"Not sprayed at init" governs *graduated* hooks. Shipping a foundational guard derived from the
+project's own triage is compilation of an existing decision, not cargo-culting. `init.md` §4b
+ships exactly one foundational hook; everything else is graduated.

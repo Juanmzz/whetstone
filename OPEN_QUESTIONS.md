@@ -9,8 +9,9 @@ Sourced from SPEC.md §4.
    Trade-off: open is friction-free to log but noisy for `Detect`; an enum makes grouping
    reliable but needs maintenance.
 
-2. **Are decisions retro-amendable?** — should the retro flip ADR `status`
-   (proposed → accepted → superseded), or are decisions strictly human-managed prose?
+2. ~~**Are decisions retro-amendable?**~~ — **RESOLVED (ADR-0007):** yes, via `status` flip
+   (proposed → accepted → superseded), human-gated, never editing accepted prose. Constitution
+   stays exempt.
 
 3. **Multi-agent writes to `signals.jsonl`** — is append-only + git merge enough, or do
    we need per-session files merged at retro time to avoid concurrent-append conflicts?
