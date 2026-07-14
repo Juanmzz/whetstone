@@ -17,8 +17,8 @@ OK?" rubber-stamps. A judge asked "what's wrong with this?" finds things.
 ## Rules
 
 1. [XR1] Which changes require adversarial review is set by the project's triage rules (the
-   strict/high-stakes paths defined in the constitution or `wst.yaml`) — not hard-coded here.
-   Trivial changes skip it.
+   strict/high-stakes paths defined in `triage-rules.md`, which operationalizes the
+   constitution's risk profile) — not hard-coded here. Trivial changes skip it.
 2. [XR2] The judge must run in **fresh context** — no shared assumptions, reasoning, or
    conversation history with the author. Shared context defeats the purpose even if the judge
    is nominally a different model.

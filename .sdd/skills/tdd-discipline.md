@@ -71,8 +71,10 @@ CI or pre-release — they are NOT part of the per-change TDD loop.
   review of the real path is load-bearing. **First earned receipt** — contributed upstream from
   the Two Way Invoice Sync dogfood (Retro 0002), where a fresh-context review caught a real
   (usually money-correctness) bug in EVERY delegated phase, root cause always "tests green for
-  the wrong reason" (sig-0006 NaN-via-toEqual; sig-0009 the meta-pattern). The loop's
-  contribution direction working: a real project's signals amended the canonical skill.
+  the wrong reason" (Two Way Invoice Sync signals `sig-0006` NaN-via-toEqual and `sig-0009` the
+  meta-pattern — external to this repo's own log, cited via the contribution direction, not
+  seeded here). The loop's contribution direction working: a real project's signals amended the
+  canonical skill.
 - v1 (2026-07-09, init): generated from the ChytaPay `tdd-discipline` skill. Stripped
   ChytaPay-specifics (sdd-triage/apply/init machinery, `strict_tdd` forwarding, repo paths,
   ARS/USD). Kept the strict/light/off levels, the RED→GREEN→TRIANGULATE→REFACTOR cycle, and

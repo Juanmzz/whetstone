@@ -51,10 +51,11 @@ Whetstone is a generic, git-native, files-first bootstrapper for coding agents. 
   project, accumulate signals, run the retro manually, and only automate if it produces
   value. Build follows validation, never the reverse (see `sig-0001`).
 
-## Current status — v0.2.0-alpha
+## Current status — v0.3.0-alpha
 
-- `.sdd/` substrate live; **ADR-0001..0006** recorded; **2 signals** logged. Tags:
-  `v0.1.0` (payload) → `v0.1.1` (voice + memory contract) → `v0.2.0` (code-tier emitter).
+- `.sdd/` substrate live; **ADR-0001..0007** recorded; **2 signals** logged. Tags:
+  `v0.1.0` (payload) → `v0.1.1` (voice + memory contract) → `v0.2.0` (code-tier emitter) →
+  `v0.3.0` (retro playbook + curated lazy/xreview).
 - **8 skills** (`status: active`): `delegation`, `tdd-discipline` (**v2 — TD6, the first earned
   receipt**), `doc-locations`, `token-economy`, `recording`, `voice`, `lazy`, `xreview` (the last
   two curated/genericized from ChytaPay).
