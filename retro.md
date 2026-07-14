@@ -42,7 +42,8 @@ Group the new signals by what they implicate:
   was exactly this, and it produced TD6.
 
 A cluster of ONE low-severity signal is usually not yet actionable — note it, leave it for the
-next retro. Recurrence is the trigger.
+next retro. Recurrence is the trigger — **except a single `high`-severity signal is a candidate on
+its own** (don't wait for it to recur; SPEC §3.4 step 3).
 
 ## 3. For each cluster — form ONE recommendation
 
@@ -84,7 +85,10 @@ written before approval. This is ADR-0003 — the human gate is the moat, not a 
   earned; a rule without one is a guess.
 - **New skill/hook/command:** write it following the payload's format; register it in `wst.yaml`
   (and, for the code tier, re-run the relevant `init.md` §4b emitter step).
-- **Flip an ADR:** set `status: superseded` and write the new ADR; never edit the old prose.
+- **Flip an ADR:** set `status: superseded` and write the new ADR; never edit the old prose (ADR-0007).
+- **In all cases:** set `resolved_by` on each signal this change resolved (the amendment/skill id —
+  §2.1 permits this machinery-owned back-pointer). **Distill:** if a finding surfaced a cross-skill
+  observation that maps to no single rule, add it to `.sdd/memory/patterns.md`.
 
 ## 7. Flag for upstream contribution (ADR-0006)
 
