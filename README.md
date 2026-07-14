@@ -22,7 +22,7 @@ Whetstone is **not** a spec-driven framework (it composes with Spec Kit, BMAD, S
 
 ## Roadmap
 
-- **M1 — Bootstrap** ✅: the init procedure, `.sdd/` schema, six-skill set, signal logging. Dogfooded on a real project.
+- **M1 — Bootstrap** ✅: the init procedure, `.sdd/` schema, eight-skill set, signal logging. Dogfooded on a real project.
 - **M2 — Code tier** (in progress): the emitter compiles `.sdd/` into per-vendor apparatus — hooks first (a project-specific `strict-path-guard` ships today), then agents/commands, earned via the retro.
 - **M3 — The retro loop** ✅ (first pass): pattern detection + apparatus recommendation. Validated in the wild — a real project's signals produced the first earned rule (TD6). Next: make it repeatable and semi-automated.
 - **M4 — Update model** ([ADR-0006](./.sdd/memory/decisions/0006-update-model-3way-merge-via-git.md)): keep bootstrapped projects current via 3-way merge; contribute local amendments upstream.
