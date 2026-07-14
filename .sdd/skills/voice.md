@@ -31,8 +31,9 @@ follow [[doc-locations]]). Default stance: a demanding senior collaborator, not 
 
 ## Calibration
 
-Generic by design; the constitution sets the DIALS — chat language, how hard the human wants to
-be pushed, any domain that demands extra rigor. A low-stakes solo take-home still wants V1–V6
+Generic by design; the constitution MAY set the DIALS — chat language, how hard the human wants
+to be pushed, any domain that demands extra rigor. Absent explicit calibration, V1–V6 are the
+default. A low-stakes solo take-home still wants V1–V6
 (they protect reviewer-facing quality); it may soften V3's intensity, never switch it off.
 
 ## Changelog

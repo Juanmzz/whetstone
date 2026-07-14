@@ -61,14 +61,17 @@ The loop: **use → record → distill → amend**. That is the product.
 **M1 — Bootstrap (v0.1)**
 Init wizard + `.sdd/` schema + generic versions of the initial skill set (delegation, TDD discipline, doc locations, token economy), extracted from a real production setup. Manual signal logging (`/log-signal` command). Publishable and demoable on its own.
 
-**M2 — Forward integration (v0.2)**
-Claude Code plugin packaging: slash commands, SessionStart hook that loads the constitution and active skills. Optional adapters: Spec Kit extension, engram MCP backend.
+**M2 — Code tier (v0.2)** ✅
+The emitter compiles `.sdd/` into per-vendor apparatus — hooks first (a project-specific `strict-path-guard`, derived from `triage-rules.md`), then agents/commands, earned via the retro. NOT plugin packaging — distribution is deferred (see below), per ADR-0004/0005.
 
-**M3 — The retro loop (v0.3)**
-`/retro`: pattern detection over `signals.jsonl` + `decisions/`, diff proposals against `skills/*.md`, human approval flow, changelog with signal back-references. This is the milestone that proves the thesis.
+**M3 — The retro loop (v0.3)** ✅ (first pass)
+`/retro`: pattern detection over `signals.jsonl` + `decisions/`, apparatus recommendation (amend a rule, or curate/generate a skill/hook/command), human approval flow, changelog with signal receipts. Validated in the wild — a real project's signals produced the first earned rule (TD6). Next: make it repeatable (N>1).
+
+**M4 — Update model**
+Keep bootstrapped projects current via 3-way merge against a recorded base (ADR-0006); contribute local amendments upstream — the same machinery in three directions.
 
 **Later / explicitly deferred**
-Semantic search backend, multi-repo/org-level memory, metrics dashboard, non-Claude agent integrations. Not before M3 ships.
+Distribution (`npx whetstone` CLI / optional Claude Code plugin) comes AFTER the loop is repeatable — Wizard-of-Oz → validate → wrap, never the reverse (ADR-0004/0005). Then: semantic search backend, multi-repo/org-level memory, non-Claude emitters. Not before the retro proves out.
 
 ## Contribution model
 

@@ -4,7 +4,7 @@
 
 Whetstone gives your agent workflow a memory and a feedback loop. As you use an AI on a project, it records the friction (signals) and the decisions, then **recommends the guardrails that project actually needs** — a new skill, a hook, a command, or an amendment to an existing rule — with a human gate and a full audit trail. Rules carry receipts: every rule links back to the signals that earned it.
 
-> Status: alpha (v0.2.0). The retro loop — the thesis — has produced its first earned rule from a real project. Wizard-of-Oz (agent-driven procedures, not a CLI yet). See [VISION.md](./VISION.md) first.
+> Status: alpha (v0.3.0). The retro loop — the thesis — has produced its first earned rule from a real project. Wizard-of-Oz (agent-driven procedures, not a CLI yet). See [VISION.md](./VISION.md) first.
 
 ## How it works
 
