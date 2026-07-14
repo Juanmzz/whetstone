@@ -160,7 +160,7 @@ for the retro. Log the small ones too; that is the point.
 | `id` | yes | `sig-` + zero-padded counter, e.g. `sig-0001` |
 | `ts` | yes | ISO 8601 datetime |
 | `type` | yes | kebab-case, open vocab: `wrong-cwd`, `triage-miss`, `test-skip`, `scope-creep`, `context-blowout`, ... |
-| `phase` | yes | `init` \| `plan` \| `apply` \| `verify` \| `review` \| `other` |
+| `phase` | yes | `init` \| `triage` \| `plan` \| `apply` \| `verify` \| `review` \| `other` |
 | `severity` | yes | `low` \| `medium` \| `high` |
 | `detail` | yes | one or two sentences a human can reconstruct from |
 | `rule_affected` | no | skill file(s) implicated, e.g. `["skills/delegation.md"]` |

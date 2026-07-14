@@ -13,15 +13,22 @@ Status: draft for review. Breaking changes expected until v0.1.
   constitution.md          # project governance (generated at init, rarely edited)
   triage-rules.md          # risk classification rules for changes
   memory/
+    README.md              # the memory schema (travels with the payload, self-contained)
     signals.jsonl        # append-only structured log (machine-first)
     decisions/             # ADRs, one file each (human-first)
+      _TEMPLATE.md         # fill-in template for a new ADR
       0001-use-postgres.md
     patterns.md            # distilled recurring patterns (retro output)
     retro-log.md           # record of every retro run
-  skills/                  # versioned workflow rules
+  skills/                  # versioned workflow rules (calibrated active set per project)
     delegation.md
     tdd-discipline.md
     doc-locations.md
+    token-economy.md
+    recording.md
+    voice.md
+    lazy.md
+    xreview.md
   wst.yaml                 # whetstone config (version, backend, skill registry)
 ```
 
@@ -146,15 +153,17 @@ Two invariants:
 
 Trigger: manual (`/retro`) or suggested after N new signals (default 5, configurable in `wst.yaml`).
 
-Algorithm (v0, deliberately simple — no ML, no embeddings):
+Algorithm (v0, deliberately simple — no ML, no embeddings). `retro.md` at the repo root is the
+operational playbook agents follow; this section is the contract it must satisfy:
 
 1. **Collect**: all signals since last retro (from `retro-log.md`) + new/changed decisions.
 2. **Classify**: for unclassified signals (`rule_affected` empty), propose a skill via keyword/phase matching; ask the human to confirm.
-3. **Detect**: group by `(rule_affected, type)`. Any group with ≥2 entries, or a single `high` severity entry, becomes a candidate finding.
-4. **Propose**: for each finding, generate a concrete diff against the skill file (new rule, tightened threshold, or clarified wording), citing signal ids.
-5. **Gate**: present diffs to the human. Approve / edit / reject, per diff. Nothing is written without approval.
-6. **Amend**: apply approved diffs, bump skill `version`, append changelog entries, set `resolved_by` on the signals, append a run summary to `retro-log.md`.
-7. **Distill**: optionally update `patterns.md` with cross-skill observations that don't map to a single rule.
+3. **Detect**: group by `(rule_affected, type)`. Any group with ≥2 entries, **or a single `high` severity entry**, becomes a candidate finding.
+4. **Propose**: for each finding, recommend the apparatus that prevents recurrence — amend a rule (a diff against the skill file), curate an existing proven skill, generate a project-specific skill/hook/command, graduate an advisory rule to an enforced hook (ADR-0005), or flip an ADR's status (ADR-0007) — citing signal ids.
+5. **Validate** (anti-poisoning): before proposing, confirm the signals are real, the recommendation addresses the root cause, and it does not contradict the constitution. Drop what fails.
+6. **Gate**: present recommendations to the human. Approve / edit / reject, per item. Nothing is written without approval.
+7. **Amend**: apply approved changes, bump skill `version`, append changelog entries, set `resolved_by` on the signals (§2.1 exception), append a run summary to `retro-log.md`.
+8. **Distill**: optionally update `patterns.md` with cross-skill observations that don't map to a single rule.
 
 The whole run must be reviewable as **one git commit**: rule diffs + changelogs + retro-log entry + signal resolutions, together. That commit *is* the audit trail.
 
@@ -165,11 +174,20 @@ version: 0
 backend: files            # files | engram | ...
 retro:
   suggest_after: 5        # signals
-skills:
+skills:                   # the active-skill registry
   - skills/delegation.md
   - skills/tdd-discipline.md
   - skills/doc-locations.md
+  - skills/token-economy.md
+  - skills/recording.md
+  - skills/voice.md
+  - skills/lazy.md
+  - skills/xreview.md
 ```
+
+When the updater (ADR-0006) lands, each entry gains a `vendored_from` pointer (the upstream
+version its local copy was last synced from = the 3-way-merge base). Until then the list is a
+flat registry.
 
 ---
 
