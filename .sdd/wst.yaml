@@ -2,7 +2,12 @@ version: 0
 backend: files            # files | engram | ...  (see SPEC §2.3)
 retro:
   suggest_after: 5        # signals
-# Skills are populated during M1 genericization (port of the chyta:* skill set).
-skills:
+skills:                   # ACTIVE skills — the registry (SPEC §3.5)
   - skills/delegation.md
-
+  - skills/tdd-discipline.md
+  - skills/doc-locations.md
+  - skills/token-economy.md
+  - skills/recording.md
+  - skills/voice.md
+  - skills/lazy.md
+  - skills/xreview.md
