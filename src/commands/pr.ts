@@ -50,7 +50,8 @@ import {
   type LensVerdict,
   type RunOutcome,
 } from "../core/gate/outcomes.js";
-import { runGate as executeGate, type CheckRunner, type ReceiptStore } from "../core/gate/run.js";
+import { runGate as executeGate, type ReceiptStore } from "../core/gate/run.js";
+import { createCheckRunner } from "./gate.js";
 import type { JudgeResult, LlmJudge } from "../core/ports.js";
 import { classify, DEFAULT_RULES, parseTriageRules, route } from "../core/triage/index.js";
 import { createClaudeJudge } from "../shell/claude.js";
@@ -73,6 +74,9 @@ export interface PrOptions {
   readonly create?: boolean;
   readonly maxProseUsd?: number;
   readonly maxLensUsd?: number;
+  readonly maxLensTotalUsd?: number;
+  /** Skip the review lens entirely. Deterministic checks still run. */
+  readonly noLens?: boolean;
   readonly timeoutMs?: number;
   readonly json?: boolean;
 }
@@ -129,51 +133,6 @@ function createReceiptStore(sddRoot: string): ReceiptStore {
     write: async (receipt) => {
       await writeReceipt(sddRoot, receipt);
     },
-  };
-}
-
-function createCheckRunner(deps: {
-  readonly cwd: string;
-  readonly range: string;
-  readonly judge: LlmJudge;
-  readonly routing: Routing;
-  readonly maxLensUsd: number;
-  readonly timeoutMs: number;
-}): CheckRunner {
-  return async (check: LoadedCheck, files: readonly ChangedFile[]): Promise<RunOutcome> => {
-    if (check.kind === "deterministic") {
-      if (check.command === undefined) {
-        return { outcome: { status: "errored", detail: `check "${check.id}" declares no command` } };
-      }
-      return { outcome: interpretCommandResult(await runShellCommand(check.command, deps.cwd, deps.timeoutMs)) };
-    }
-
-    if (check.review_lens === undefined) {
-      return { outcome: { status: "errored", detail: `check "${check.id}" declares no review_lens` } };
-    }
-
-    let diff: string;
-    try {
-      diff = await unifiedDiff(deps.range, files.map((f) => f.path), deps.cwd);
-    } catch (cause) {
-      return {
-        outcome: {
-          status: "errored",
-          detail: `could not read the diff for ${check.id}: ${(cause as Error).message}`,
-        },
-      };
-    }
-
-    const result = (await deps.judge.judge({
-      lens: check.review_lens,
-      prompt: `Review this diff.\n\n${diff}`,
-      schema: LensVerdictSchema,
-      model: deps.routing.modelTier,
-      maxBudgetUsd: deps.maxLensUsd,
-      timeoutMs: deps.timeoutMs,
-    })) as JudgeResult<LensVerdict>;
-
-    return interpretJudgeResult(result);
   };
 }
 
@@ -272,6 +231,9 @@ export async function runPr(opts: PrOptions = {}, cwd: string = process.cwd()): 
         judge: createClaudeJudge(),
         routing,
         maxLensUsd: opts.maxLensUsd ?? DEFAULT_MAX_LENS_USD,
+        // The two fields pr.ts's own copy of the runner silently lacked.
+        maxLensTotalUsd: opts.maxLensTotalUsd ?? 3,
+        noLens: opts.noLens ?? false,
         timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       }),
     },
