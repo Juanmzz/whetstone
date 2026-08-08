@@ -1,0 +1,73 @@
+{
+  "_comment": [
+    "Ground truth for the correctness-lens calibration fixtures.",
+    "It lives HERE and not inside the .diff files on purpose: the diff is fed to the",
+    "lens verbatim, so any answer written into it would leak the label.",
+    "`expect` is the verdict a competent reviewer must give. `truth` is the one-sentence",
+    "justification — if it cannot be written confidently, the fixture is a coin flip and",
+    "does not belong in this directory (ADR-0008).",
+    "scripts/calibrate.ts refuses to run if a .diff here is missing from this list."
+  ],
+  "fixtures": [
+    {
+      "file": "known-bad.diff",
+      "difficulty": "easy",
+      "expect": "fail",
+      "truth": "It deletes the only guard between `db.findUser` returning null and `user.email`, so a missing user becomes a TypeError instead of a NotFoundError."
+    },
+    {
+      "file": "known-good.diff",
+      "difficulty": "easy",
+      "expect": "pass",
+      "truth": "It adds the missing null guard before dereferencing `user`, which is the fix for the bug `known-bad.diff` introduces."
+    },
+    {
+      "file": "race-bad.diff",
+      "difficulty": "hard",
+      "expect": "fail",
+      "truth": "`refreshing` is only cleared on the success path, so a single failed refresh leaves a rejected promise parked in it and every later call rethrows that same failure forever."
+    },
+    {
+      "file": "race-good.diff",
+      "difficulty": "hard",
+      "expect": "pass",
+      "truth": "The in-flight promise is cleared in `finally`, so a failed refresh rejects the callers waiting on it and the next call starts a fresh attempt."
+    },
+    {
+      "file": "boundary-bad.diff",
+      "difficulty": "hard",
+      "expect": "fail",
+      "truth": "`hi = mid - 1` drops `mid` from the search range even when `sorted[mid]` is itself the first element >= target, so `lowerBound([1, 3], 3)` returns 0 instead of 1."
+    },
+    {
+      "file": "boundary-good.diff",
+      "difficulty": "hard",
+      "expect": "pass",
+      "truth": "The half-open upper bound `sorted.length` is correct for a `lo < hi` / `hi = mid` loop — it is never used as an index, and it is what lets a target above every element return `sorted.length` as documented."
+    },
+    {
+      "file": "nullish-bad.diff",
+      "difficulty": "hard",
+      "expect": "fail",
+      "truth": "`!override` is also true for `0`, so an account explicitly capped at zero spend silently gets the $100 default cap instead."
+    },
+    {
+      "file": "nullish-good.diff",
+      "difficulty": "hard",
+      "expect": "pass",
+      "truth": "`== null` matches exactly `null` and `undefined`, so the guard strictly widens and removes a real `null.trim()` crash; the loose equality looks like a defect but is the idiomatic nullish check."
+    },
+    {
+      "file": "swallow-bad.diff",
+      "difficulty": "medium",
+      "expect": "fail",
+      "truth": "The catch absorbs every write failure while the function still returns `true`, so callers are told a draft was durably persisted when it was not."
+    },
+    {
+      "file": "swallow-good.diff",
+      "difficulty": "medium",
+      "expect": "pass",
+      "truth": "Only `NotFoundError` is absorbed, and it already satisfies the documented idempotent post-condition; every other error is rethrown unchanged."
+    }
+  ]
+}

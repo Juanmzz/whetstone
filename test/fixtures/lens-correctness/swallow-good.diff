@@ -1,0 +1,15 @@
+diff --git a/src/drafts/store.ts b/src/drafts/store.ts
+--- a/src/drafts/store.ts
++++ b/src/drafts/store.ts
+@@ -44,5 +44,10 @@ import { NotFoundError } from "../errors.js";
+
+ /** Idempotent: returns once the draft is absent, throws if the delete could not be done. */
+ export async function deleteDraft(id: string): Promise<void> {
+-  await store.delete(id);
++  try {
++    await store.delete(id);
++  } catch (err) {
++    // Already absent is the post-condition we want; anything else is a real failure.
++    if (!(err instanceof NotFoundError)) throw err;
++  }
+ }
