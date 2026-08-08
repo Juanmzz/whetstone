@@ -28,19 +28,29 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { createClaudeJudge } from "../src/shell/claude.js";
+import { loadRegistry } from "../src/shell/sdd.js";
 
 const LensVerdict = z.object({
   verdict: z.enum(["pass", "fail"]),
   reason: z.string(),
 });
 
-/** Must stay in sync with `review_lens` in `.sdd/checks/correctness.md`. */
-const LENS = [
-  "You are a correctness review lens for a code gate.",
-  "Given a diff, decide whether it INTRODUCES a correctness bug.",
-  "verdict='fail' means the diff introduces a bug. verdict='pass' means it does not.",
-  "Judge only the change itself, not the surrounding file. Be decisive.",
-].join(" ");
+/**
+ * The lens is READ FROM THE CHECK REGISTRY, never copied here.
+ *
+ * This used to be a local constant with a "must stay in sync" comment, which is a receipt
+ * integrity hole: if the two drift you calibrate one lens and ship another, and the
+ * recorded `calibration:` block then vouches for text that never ran.
+ */
+async function loadLens(repoRoot: string, checkId: string): Promise<string> {
+  const registry = await loadRegistry(join(repoRoot, ".sdd"));
+  const check = registry.byId.get(checkId);
+  if (!check) throw new Error(`no check "${checkId}" in .sdd/checks/`);
+  if (check.kind !== "agent-lens" || check.review_lens === undefined) {
+    throw new Error(`check "${checkId}" is not an agent-lens check — nothing to calibrate`);
+  }
+  return check.review_lens;
+}
 
 const Manifest = z.object({
   fixtures: z
@@ -118,7 +128,9 @@ interface Outcome {
 async function main() {
   const judge = createClaudeJudge();
   const { version } = await judge.describe();
-  const dir = join(import.meta.dirname, "..", "test", "fixtures", "lens-correctness");
+  const repoRoot = join(import.meta.dirname, "..");
+  const LENS = await loadLens(repoRoot, "correctness");
+  const dir = join(repoRoot, "test", "fixtures", "lens-correctness");
   const fixtures = await loadFixtures(dir);
 
   if (fixtures.length === 0) throw new Error(`no fixtures matched --filter ${FILTER}`);

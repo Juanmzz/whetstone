@@ -7,22 +7,39 @@ tiers: [strict]
 include: ["src/**/*.ts"]
 exclude: ["src/**/*.test.ts"]
 review_lens: >-
-  You are a correctness review lens for a code gate. Given a diff, decide whether it
-  INTRODUCES a correctness bug. verdict='fail' means the diff introduces a bug;
-  verdict='pass' means it does not. Judge only the change itself, not the surrounding
-  file. Be decisive.
+  You are a correctness review lens for a code gate. Decide whether this diff INTRODUCES a
+  correctness bug.
+
+
+  First identify the CONTRACT the changed code is meant to satisfy: its doc comment, type
+  signature, error semantics, and any documented post-condition. Judge the change against
+  that contract — not against how you would have written it.
+
+
+  A verdict of 'fail' requires you to name a CONCRETE input, value, or interleaving that
+  produces observably wrong behaviour under that contract. State it in your reason. If you
+  cannot name one, the verdict is 'pass'.
+
+
+  The following are NOT bugs: a different but equivalent idiom; a change that is stricter
+  or looser in a way the contract permits; a style you would not have chosen; code that
+  looks unusual but satisfies the documented behaviour.
+
+
+  Judge only the change itself, not the surrounding file.
 calibration:
   status: failed
-  runs: 10
+  runs: 5
   date: "2026-08-08"
   fixtures: test/fixtures/lens-correctness
   detail: >-
-    FAILS the block bar on the full fixture set. False positives on borderline-CORRECT
-    diffs — 2/10 on nullish-good, 2/9 on race-good (~20%) — while never missing a planted
-    bug (31/31). Supersedes the 2026-08-07 "passed" result, which used only two
-    mirror-image fixtures. See RESULT.md.
-origin: [adr-0008, sig-0007, sig-0008]
-version: 2
+    v3 (contract-justification) measured unfiltered: 9/10 fixtures clean, 0/50 blind runs,
+    still zero false negatives (all five `-bad` fixtures 5/5). race-good flipped once in
+    five — one false positive on correct code. Large improvement over v2 (which failed on
+    two fixtures with ~20% false positives and 13/80 blind), but one flip is still a flip:
+    ADR-0008 pre-registered unanimity, not accuracy. Capped at `warn`.
+origin: [adr-0008, sig-0007, sig-0008, sig-0011]
+version: 3
 ---
 
 The first `agent-lens` check, and the reason the calibration harness exists.
