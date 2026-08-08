@@ -7,6 +7,7 @@ const base = {
   sddPresent: true,
   judge: { name: "claude", version: "2.1.224" },
   nodeVersion: "v24.19.0",
+  hooksInstalled: true,
 };
 
 describe("buildStatusReport", () => {
@@ -68,5 +69,20 @@ describe("renderStatusReport", () => {
     const report = buildStatusReport({ ...base, sddPresent: false });
     const text = renderStatusReport(report, { quiet: true });
     expect(text).toBe("NOT ready");
+  });
+});
+
+describe("the pre-push gate", () => {
+  // A gate that only runs when someone remembers to type it will be forgotten.
+  // Reporting an unarmed clone as drift is the difference between a gate that is
+  // available and one that is actually in the path.
+  it("warns when the hook is not installed, without calling the repo broken", () => {
+    const r = buildStatusReport({ ...base, hooksInstalled: false });
+    expect(r.ready).toBe(true);
+    expect(r.warnings.join(" ")).toMatch(/core\.hooksPath/);
+  });
+
+  it("says nothing when the hook is active", () => {
+    expect(buildStatusReport(base).warnings.join(" ")).not.toMatch(/hooksPath/);
   });
 });

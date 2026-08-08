@@ -54,6 +54,15 @@ export interface GateOptions {
   readonly maxLensUsd?: number;
   readonly maxLensTotalUsd?: number;
   readonly timeoutMs?: number;
+  /**
+   * Skip agent-lens checks, reporting them as skipped rather than run.
+   *
+   * For the pre-push hook. A hook that costs 50 seconds and real money on every
+   * push gets bypassed with --no-verify, and a routed-around gate has negative
+   * value. Deterministic checks are fast and free, so they run every time; the
+   * lens belongs where a human is not waiting on it.
+   */
+  readonly noLens?: boolean;
 }
 
 const DEFAULT_RANGE = "HEAD";
@@ -159,6 +168,7 @@ function createCheckRunner(deps: {
   readonly routing: Routing;
   readonly maxLensUsd: number;
   readonly maxLensTotalUsd: number;
+  readonly noLens: boolean;
   readonly timeoutMs: number;
 }): CheckRunner {
   return async (check: LoadedCheck, files: readonly ChangedFile[]): Promise<RunOutcome> => {
@@ -175,6 +185,11 @@ function createCheckRunner(deps: {
       return { outcome: interpretCommandResult(result) };
     }
 
+    if (deps.noLens) {
+      // Reported as SKIPPED, never as passed. The change was not reviewed by this
+      // check, and saying otherwise is the exact collapse the gate exists to stop.
+      return { outcome: { status: "skipped", reason: "disabled" } };
+    }
     if (check.review_lens === undefined) {
       return {
         outcome: { status: "errored", detail: `check "${check.id}" declares no review_lens` },
@@ -280,6 +295,7 @@ export async function runGate(
         routing,
         maxLensUsd: opts.maxLensUsd ?? DEFAULT_MAX_LENS_USD,
         maxLensTotalUsd: opts.maxLensTotalUsd ?? DEFAULT_MAX_LENS_TOTAL_USD,
+        noLens: opts.noLens ?? false,
         timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       }),
     },

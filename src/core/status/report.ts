@@ -16,6 +16,8 @@ export interface StatusFacts {
   readonly sddPresent: boolean;
   readonly judge: { readonly name: string; readonly version: string | null };
   readonly nodeVersion: string;
+  /** Whether git is configured to use the versioned .githooks/ directory. */
+  readonly hooksInstalled: boolean;
 }
 
 export interface StatusReport {
@@ -39,7 +41,17 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     problems.push(
       `\`${facts.judge.name}\` not found on PATH — agent-lens checks cannot run without it`,
     );
-  } else if (facts.judge.version !== VALIDATED_JUDGE_VERSION) {
+  }
+
+  if (!facts.hooksInstalled) {
+    // A gate that only runs when invoked is a gate that will be forgotten. This is
+    // a warning, not a problem: a fresh clone is not broken, it is just unarmed.
+    warnings.push(
+      "the pre-push gate is not active — run `git config core.hooksPath .githooks`",
+    );
+  }
+
+  if (facts.judge.version !== null && facts.judge.version !== VALIDATED_JUDGE_VERSION) {
     warnings.push(
       `${facts.judge.name} ${facts.judge.version} differs from the version the adapter was ` +
         `validated against (${VALIDATED_JUDGE_VERSION}); re-run \`npm run calibrate\` if verdicts look wrong`,
@@ -66,6 +78,7 @@ export function renderStatusReport(
     `  .sdd/     ${facts.sddPresent ? "present" : "missing"}`,
     `  judge     ${facts.judge.name} ${facts.judge.version ?? "(not found)"}`,
     `  node      ${facts.nodeVersion}`,
+    `  pre-push  ${facts.hooksInstalled ? "active" : "NOT active"}`,
     "",
     `  ${report.ready ? "ready" : "NOT ready"}`,
   ];

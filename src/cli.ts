@@ -55,7 +55,8 @@ program
   .option("--range <range>", "git diff range", "HEAD")
   .option("--tier <tier>", "provisional triage tier override")
   .option("--json", "print the verdict as JSON")
-  .action(async (opts: { range?: string; tier?: string; json?: boolean }) => {
+  .option("--no-lens", "skip agent-lens checks (fast and free; for the pre-push hook)")
+  .action(async (opts: { range?: string; tier?: string; json?: boolean; lens?: boolean }) => {
     // Validate rather than cast: an unrecognised --tier must be rejected loudly.
     // Silently coercing it would let `--tier=stict` run the gate at the wrong
     // discipline while reporting success.
@@ -73,6 +74,7 @@ program
       ...(opts.range !== undefined ? { range: opts.range } : {}),
       ...(tier !== undefined ? { tier } : {}),
       ...(opts.json !== undefined ? { json: opts.json } : {}),
+      ...(opts.lens === false ? { noLens: true } : {}),
     });
   });
 

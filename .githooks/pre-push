@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Whetstone pre-push gate.
+#
+# Versioned here rather than in .git/hooks, which git does not track. Activate with:
+#   git config core.hooksPath .githooks
+# `wst status` reports whether that is set, so an inactive hook shows up as drift
+# rather than as silence.
+#
+# DETERMINISTIC CHECKS ONLY (--no-lens). A hook that costs 50 seconds and real
+# money on every push gets bypassed with --no-verify, and a gate that is routed
+# around is worth less than no gate. The review lens runs in CI, where nobody is
+# waiting on it. Deterministic checks are ~2.6s and free.
+set -euo pipefail
+
+ZERO="0000000000000000000000000000000000000000"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+CLI="$REPO_ROOT/dist/cli.js"
+
+if [ ! -f "$CLI" ]; then
+  echo "whetstone: dist/cli.js missing, run 'npm run build'. Push allowed." >&2
+  exit 0   # never block a push because the gate itself is not built
+fi
+
+# git feeds pre-push one line per ref: <local ref> <local sha> <remote ref> <remote sha>
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ "$local_sha" = "$ZERO" ] && continue   # branch deletion, nothing to gate
+
+  if [ "$remote_sha" = "$ZERO" ]; then
+    # New branch: the remote has no history for it, so gate everything since the
+    # point it diverged. Gating against an all-zero sha would diff the entire
+    # repository and time out on the first push of any branch.
+    BASE="$(git merge-base "$local_sha" refs/remotes/origin/HEAD 2>/dev/null \
+         || git merge-base "$local_sha" origin/main 2>/dev/null \
+         || echo "")"
+    [ -z "$BASE" ] && { echo "whetstone: no base to compare against, push allowed." >&2; exit 0; }
+    RANGE="$BASE..$local_sha"
+  else
+    RANGE="$remote_sha..$local_sha"
+  fi
+
+  echo "whetstone: gating $RANGE"
+  if ! node "$CLI" gate --no-lens --range "$RANGE"; then
+    code=$?
+    echo "" >&2
+    if [ "$code" -eq 2 ]; then
+      # Exit 2 is "a blocking check could not RUN". That is the gate being broken,
+      # not the change being bad, so it must not read as a rejection of the work.
+      echo "whetstone: a required check could not run, so this change was NOT verified." >&2
+    else
+      echo "whetstone: a required check failed. Fix it, or push with --no-verify if you" >&2
+      echo "           genuinely mean to bypass the gate." >&2
+    fi
+    exit 1
+  fi
+done
+
+exit 0
