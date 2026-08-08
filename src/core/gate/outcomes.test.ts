@@ -186,3 +186,31 @@ describe("LensVerdictSchema", () => {
     expect(LensVerdictSchema.safeParse({ verdict: "block", reason: "x" }).success).toBe(false);
   });
 });
+
+/**
+ * Gap found by `npm run mutate`: flipping `<=` to `<` on the truncation boundary
+ * survived, because no test sat exactly on MAX_DETAIL. An off-by-one there
+ * silently ellipsises output that fit perfectly.
+ */
+describe("tail — the truncation boundary", () => {
+  const run = (stdout: string) =>
+    interpretCommandResult({ exitCode: 1, stdout, stderr: "", signal: null });
+
+  it("does not truncate output that is exactly at the limit", () => {
+    const out = run("x".repeat(2000));
+    if (out.status === "fail") {
+      expect(out.detail.startsWith("…")).toBe(false);
+      expect(out.detail).toHaveLength(2000);
+    }
+  });
+
+  it("truncates output one byte over the limit, keeping the TAIL", () => {
+    // The tail, not the head: the error a human needs is at the end of a log.
+    const out = run(`HEAD${"x".repeat(2000)}TAIL`);
+    if (out.status === "fail") {
+      expect(out.detail.startsWith("…")).toBe(true);
+      expect(out.detail.endsWith("TAIL")).toBe(true);
+      expect(out.detail).not.toContain("HEAD");
+    }
+  });
+});
