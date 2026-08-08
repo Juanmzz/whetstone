@@ -70,6 +70,29 @@ DECIDED by the orchestrator: use node:path matchesGlob. Verified against every
       budget/timeout/spawn/auth/max-turns) is the GATE being broken, not a failed
       check. core/llm/verdict.ts already draws that line — do not blur it.
 
+  annotate:
+    step: 4
+    description: PR annotated by criticality — where a human should actually look.
+    owns:
+      - src/core/annotate/
+      - src/commands/pr.ts
+      - src/shell/github.ts
+    note: >-
+      Criticality is "tier = FLOOR, finding = trigger for red", NOT max(tier, finding) —
+      max saturates everything strict into red and the signal is lost. The LLM writes the
+      "look here because X" prose ONLY for red hunks; the engine assigns criticality.
+
+  init:
+    step: 6
+    description: wst init — interview a repo and generate its .sdd/.
+    owns:
+      - src/core/init/
+      - src/commands/init.ts
+    note: >-
+      The payload must be SELF-CONTAINED (ADR-0004): what init writes into a target repo
+      may never reference Whetstone's own files, or it dangles there. Detection is
+      deterministic; only the interview questions are LLM.
+
   fixtures:
     step: 2.5
     description: Calibration — harder fixtures, and the harness that measures against them.
