@@ -49,3 +49,49 @@ remembering the next time this output looks authoritative.
 **Prior retros:** Retro 0001–0002 ran on the Two Way Invoice Sync take-home, external to this
 repo, and produced TD6. This is the first retro on Whetstone's own signals, and the first run
 by code rather than by hand — N=2 for the loop, N=1 for the engine.
+
+## retro-0025 — 2026-08-08
+
+cursor: sig-0025
+
+**Trigger:** nine signals accumulated since retro-0016, all generated while finishing Steps 4
+through 7 and hardening the gate.
+
+**Signals read:** `sig-0017` … `sig-0025` (9). Eight clusters, five actionable.
+
+**Applied (3 of 4 proposals):**
+
+| Rule | Change | Receipt |
+|---|---|---|
+| `xreview` v2→v3 | Two more [XR5] corollaries (presence of a field is not substance; isolate a negative control from real work) plus a review-checklist section on unbounded directory walks | sig-0018, sig-0020, sig-0025 |
+| `delegation` v2→v3 | [D7] gains the hermetic-delegate case: paths only work for a delegate that has tools | sig-0017 |
+
+The `delegation` amendment is the most useful thing this retro produced, because it did not
+just record a mistake, it found that **an existing rule was the cause of one**. D7 said to pass
+artifact references as paths rather than content, on the reasoning that the sub-agent fetches
+them itself. That silently assumed the delegate has tools. A hermetic judge cannot resolve a
+path, so D7 as written guaranteed the failure in `sig-0017`. The rule was not an innocent
+bystander.
+
+**Declined (1 of 4):** a proposal to add a subprocess-exit-code convention (parse stdout for a
+complete envelope before treating a non-zero exit as a spawn failure) to `delegation.md`. Single
+signal, already fixed in code, and delegation is about handing work to sub-agents rather than
+about adapter plumbing. Same shape as the proposal declined in retro-0016, except this one did
+not flag its own weakness. The convention is real and worth having; `delegation.md` is not its
+home, and no skill currently is.
+
+**Dropped by the anti-poisoning gate (before reaching a human):** one proposal targeting
+`doc-locations.md` whose summary and rationale were both the word "placeholder". That gate was
+added in retro-0016 in response to `sig-0018`. It caught its first live case here, one retro
+after being written.
+
+**Contribution candidates (ADR-0006):** both amendments.
+
+**Consciously deferred:** three single-signal `type:` clusters below the actionable bar
+(`error-detail-lost-at-adapter`, `lens-never-runs-on-real-diffs`, `payload-lookup-escapes-package`)
+whose lessons are partly captured by the amendments above, plus `spec-itself-violates-its-adr`.
+
+**Observation worth carrying forward:** of the nine signals in this window, four
+(`sig-0021`, `0024`, `0025`, and arguably `0018`) are mistakes made while VERIFYING work, not
+defects in the work itself. The engine's own output has been more reliable than the process used
+to check it. That is the cluster to watch next time.
