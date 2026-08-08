@@ -1,9 +1,13 @@
 # Open questions
 
+> **Retained as live, not archived (ADR-0008).** Kept tracked because #3 is not a WoZ-era
+> question: concurrent `signals.jsonl` writes become a real engineering problem the moment the
+> gate emits signals from parallel checks (**Step 3**). #1 lands with the check registry (Step 1).
+
 Design questions to resolve before they become GitHub issues. Kept local while the
 project is pre-alpha — no repo ceremony until the thesis is validated (see VISION.md).
 
-Sourced from SPEC.md §4.
+Sourced from `docs/woz/SPEC.md` §4.
 
 1. **Signal `type` vocabulary** — open (as spec'd) vs. curated enum with `other`?
    Trade-off: open is friction-free to log but noisy for `Detect`; an enum makes grouping

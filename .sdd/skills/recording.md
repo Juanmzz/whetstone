@@ -46,5 +46,7 @@ recall never replaces the trigger rules; it sits on top of them (ADR-0001).
   session-summary gate). Stripped ChytaPay-specifics (engram tool names, the `chytapay-workspace`
   project anchor, topic-key scheme, sensitivity tags). Kept the proactive-save triggers and the
   session-close summary. ADDED the explicit human gate on every write — the `memory-poisoning`
-  guard (per [[0003-positioning-human-gated-not-autonomous]] and OPEN_QUESTIONS #5/#6). Made
-  backend-agnostic per [[0001-memory-is-an-interface]]. No signal receipts yet.
+  guard (per [[0003-positioning-human-gated-not-autonomous]], and the two questions it leaves open:
+  what validates a signal BEFORE it may amend a rule, and what stops a hallucinated signal becoming
+  a rule diff a human rubber-stamps). Made backend-agnostic per [[0001-memory-is-an-interface]].
+  No signal receipts yet.
