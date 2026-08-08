@@ -21,6 +21,7 @@ import path from "node:path";
 // Compiled from .sdd/lanes.yaml. See `matches` below for the entry forms.
 const SHARED = [
   "src/core/checks/schema.ts",
+  "src/core/contracts.ts",
   "src/core/ports.ts",
   "src/cli.ts",
   "package.json",

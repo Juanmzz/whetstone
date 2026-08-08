@@ -11,6 +11,8 @@
 import { z } from "zod";
 
 export const TIERS = ["strict", "light", "off"] as const;
+/** Triage tier. Exported as a type so triage/ and gate/ share one definition. */
+export type Tier = (typeof TIERS)[number];
 export const SEVERITIES = ["block", "warn", "annotate"] as const;
 export const KINDS = ["deterministic", "agent-lens"] as const;
 
