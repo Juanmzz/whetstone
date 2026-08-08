@@ -92,6 +92,12 @@ function classifyFile(file: ChangedFile, rules: readonly TriageRule[]): TriageMa
 export function classify(
   files: readonly ChangedFile[],
   rules: readonly TriageRule[],
+  /**
+   * Where `rules` came from. Recorded in the result because a receipt has to be
+   * re-checkable, and "which rules were in force" is part of that — a gate decision
+   * you cannot re-derive is an assertion, not evidence.
+   */
+  rulesSource: string = "built-in defaults",
 ): TriageResult {
   const matches = files.map((file) => classifyFile(file, rules));
 
@@ -100,6 +106,7 @@ export function classify(
     return {
       tier: EMPTY_DIFF_TIER,
       matches: [],
+      rulesSource,
       reason: `${EMPTY_DIFF_TIER} — no files changed; nothing to gate`,
     };
   }
@@ -121,6 +128,7 @@ export function classify(
   return {
     tier,
     matches,
+    rulesSource,
     reason: `${tier} — ${atTier} of ${matches.length} ${noun}; ${driver.file.path}: ${driver.reason}`,
   };
 }

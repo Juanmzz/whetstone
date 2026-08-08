@@ -16,6 +16,7 @@
 
 import type { ChangedFile } from "./diff/parse.js";
 import type { Check, Tier } from "./checks/schema.js";
+import type { ModelTier } from "./ports.js";
 
 // ── Layer 2: triage + routing ────────────────────────────────────────────────
 
@@ -27,15 +28,23 @@ export interface TriageRule {
   readonly reason: string;
 }
 
+/** Which rule won for one file. Named so triage and the gate cannot invent two names. */
+export interface TriageMatch {
+  readonly file: ChangedFile;
+  readonly tier: Tier;
+  readonly reason: string;
+}
+
 export interface TriageResult {
   /** The MAXIMUM tier across all touched files. Size only escalates, never de-escalates. */
   readonly tier: Tier;
   /** Which rule won, per file — first-match-wins, so this is auditable. */
-  readonly matches: readonly {
-    readonly file: ChangedFile;
-    readonly tier: Tier;
-    readonly reason: string;
-  }[];
+  readonly matches: readonly TriageMatch[];
+  /**
+   * Where the rules came from: `.sdd/triage.yaml`, or the built-in defaults. A receipt
+   * has to be re-checkable, and "which rules were in force" is part of that.
+   */
+  readonly rulesSource: string;
   /** One line explaining the overall tier, for the gate to print. */
   readonly reason: string;
 }
@@ -48,7 +57,7 @@ export interface Routing {
   readonly checks: readonly string[];
   /** Critical work keeps a human in the loop; trivial work does not. */
   readonly autonomy: Autonomy;
-  readonly modelTier: "haiku" | "sonnet" | "opus";
+  readonly modelTier: ModelTier;
   /** Whether a failing check may be auto-fixed, or must escalate. */
   readonly autofix: boolean;
 }
