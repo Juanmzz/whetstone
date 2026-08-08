@@ -1,0 +1,11 @@
+diff --git a/src/config/region.ts b/src/config/region.ts
+--- a/src/config/region.ts
++++ b/src/config/region.ts
+@@ -20,6 +20,6 @@ import { DEFAULTS } from "./defaults.js";
+
+ /** `raw` comes off a JSON body: an absent key is `undefined`, an explicit null is `null`. */
+ export function readRegion(raw: string | null | undefined): string {
+-  if (raw === undefined) return DEFAULTS.region;
++  if (raw == null) return DEFAULTS.region;
+   return raw.trim();
+ }

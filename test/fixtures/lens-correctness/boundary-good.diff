@@ -1,0 +1,16 @@
+diff --git a/src/search/bounds.ts b/src/search/bounds.ts
+--- a/src/search/bounds.ts
++++ b/src/search/bounds.ts
+@@ -1,11 +1,11 @@
+ /** Index of the first element >= target, or sorted.length if there is none. */
+ export function lowerBound(sorted: number[], target: number): number {
+   let lo = 0;
+-  let hi = sorted.length - 1;
++  let hi = sorted.length;
+   while (lo < hi) {
+     const mid = (lo + hi) >>> 1;
+     if (sorted[mid]! < target) lo = mid + 1;
+     else hi = mid;
+   }
+   return lo;
+ }
