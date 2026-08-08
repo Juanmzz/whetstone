@@ -1,6 +1,6 @@
 ---
 id: xreview
-version: 1
+version: 2
 status: active
 ---
 # Adversarial review (xreview)
@@ -31,6 +31,13 @@ OK?" rubber-stamps. A judge asked "what's wrong with this?" finds things.
 5. [XR5] Ground every verdict against the real code before accepting or rejecting it — an
    unverified judge opinion (agent's or human's) is worth zero. The orchestrator, not the
    judge, owns the final call.
+   - **Ground the verification itself, not only the claim.** The same failure recurs one level
+     up, in the reviewer's own process. Before a check's result counts as evidence: confirm the
+     check ran and did what it claims. A negative control must be confirmed to have *landed* and
+     *flipped* the result; otherwise a green run is indistinguishable from a broken test.
+   - **State which state you looked at.** A diagnosis drawn from an artifact that a cleanup step
+     has already reset is worthless, and worse, it looks authoritative. Say whether the evidence
+     is live or post-cleanup *before* drawing a conclusion from it.
 6. [XR6] With multiple judges on the same finding, majority-refute kills it — treat it as a
    false positive unless the grounding step (XR5) finds otherwise.
 7. [XR7] Escalate panel size with stakes: one fresh-context judge for a standard strict-path
@@ -53,6 +60,13 @@ per-phase review during implementation rather than pre-merge judgment.
 
 ## Changelog
 
+- v2 (2026-08-08, retro-0016): extended [XR5] reflexively — ground the VERIFICATION, not
+  only the claim, and state whether the evidence is live or post-cleanup before concluding
+  from it. From sig-0003 and sig-0004 (API assumptions asserted without checking the docs),
+  sig-0008 (a rule generalised from 2 samples), sig-0014 (a negative control that silently
+  no-op'd), and sig-0016 (a confident diagnosis drawn from a worktree that the cleanup step
+  being audited had already reset). XR5 already covered the judge's verdict; these show the
+  same gap one level up, in the reviewer's own process. **Contribution candidate.**
 - v1 (2026-07-13, init): generated from the ChytaPay `chyta-xreview` skill. Stripped the
   hard-coded vendor CLIs (Gemini/Codex), the vendor probe/registry machinery, and the
   ChytaPay data-boundary/plugin specifics. Kept the core discipline: independent judge,
