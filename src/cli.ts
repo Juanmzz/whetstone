@@ -22,8 +22,9 @@ program
 program
   .command("status")
   .description("show repo, .sdd/ and judge-adapter health")
-  .action(async () => {
-    process.exitCode = await runStatus();
+  .option("--quiet", "print only the final ready / NOT ready line")
+  .action(async (opts: { quiet?: boolean }) => {
+    process.exitCode = await runStatus(process.cwd(), { quiet: opts.quiet ?? false });
   });
 
 program
