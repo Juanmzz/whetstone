@@ -12,3 +12,8 @@ _design/
 # Whetstone: memory index is a regenerable cache (M2 SQLite adapter).
 # Files under .sdd/memory/ remain the source of truth and ARE committed.
 .sdd/memory/index.db
+
+# Compiled check index: regenerable from .sdd/checks/*.md via `wst check --compile`.
+# Deliberately NOT committed — a compiled artifact that can silently go stale is the
+# same trap as trusting a version string for identity.
+.sdd/checks/_index.json
