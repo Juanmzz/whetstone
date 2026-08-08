@@ -18,7 +18,10 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-export async function runStatus(cwd: string = process.cwd()): Promise<number> {
+export async function runStatus(
+  cwd: string = process.cwd(),
+  options: { readonly quiet?: boolean } = {},
+): Promise<number> {
   const git = createGitAdapter(cwd);
   const judge = createClaudeJudge();
 
@@ -33,6 +36,6 @@ export async function runStatus(cwd: string = process.cwd()): Promise<number> {
     nodeVersion: process.version,
   });
 
-  console.log(renderStatusReport(report));
+  console.log(renderStatusReport(report, options));
   return report.ready ? 0 : 1;
 }
