@@ -22,7 +22,7 @@
 
 import { execFile } from "node:child_process";
 import { chmod, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { createGitAdapter } from "../shell/git.js";
@@ -274,13 +274,34 @@ async function exists(path: string): Promise<boolean> {
  * target. Located by walking up from this module rather than by a hard-coded
  * relative path, so it works the same from `src/` under tsx and from `dist/`
  * after a build.
+ *
+ * IT MUST STOP AT WHETSTONE'S OWN PACKAGE ROOT. Installed as a dependency the
+ * module sits at `<target>/node_modules/whetstone/dist/commands/`, and an unbounded
+ * walk escapes the package and finds `<target>/.sdd/skills` — the TARGET's skills.
+ * `init` would then copy a project's own skills back onto itself and report success,
+ * which looks exactly like a correct bootstrap. So the walk is bounded by the
+ * package.json that declares this package, and never crosses a node_modules boundary.
  */
+const PACKAGE_NAME = "whetstone";
+
 async function findPayloadRoot(): Promise<string | null> {
   let dir = import.meta.dirname;
   for (;;) {
-    if (await exists(join(dir, ".sdd", "skills"))) return join(dir, ".sdd");
+    // Reached this package's own root? Answer from here, and never look higher.
+    try {
+      const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf-8")) as {
+        name?: string;
+      };
+      if (pkg.name === PACKAGE_NAME) {
+        return (await exists(join(dir, ".sdd", "skills"))) ? join(dir, ".sdd") : null;
+      }
+    } catch {
+      /* no package.json here — keep walking */
+    }
+
     const parent = dirname(dir);
-    if (parent === dir) return null;
+    // Never step out of the installed package into the consuming project.
+    if (parent === dir || basename(dir) === "node_modules") return null;
     dir = parent;
   }
 }
