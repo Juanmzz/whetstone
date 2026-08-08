@@ -2,7 +2,7 @@
 .DS_Store
 
 # Node
-node_modules/
+node_modules
 dist/
 
 # Scaffolding: design drafts, research, sprint notes. Working material, not the product.
