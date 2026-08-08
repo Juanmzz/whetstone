@@ -10,6 +10,7 @@ import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
 import { runRun } from "./commands/run.js";
+import { runRetro } from "./commands/retro.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 
 const program = new Command();
@@ -97,5 +98,14 @@ program
       });
     },
   );
+
+program
+  .command("retro")
+  .description("cluster new signals and propose rule changes (human-gated, never applied)")
+  .option("--dry-run", "cluster only — no LLM calls, nothing written")
+  .option("--model <model>", "model for the proposal step")
+  .action(async (opts: { dryRun?: boolean; model?: "haiku" | "sonnet" | "opus" }) => {
+    process.exitCode = await runRetro(opts);
+  });
 
 await program.parseAsync(process.argv);
