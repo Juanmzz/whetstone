@@ -44,9 +44,30 @@ describe("FCIS boundary", () => {
     expect(violations).toEqual([]);
   });
 
+  /**
+   * The boundary is about EFFECTS, not about Node built-ins.
+   *
+   * `node:crypto`'s `createHash` is deterministic computation — same input, same
+   * output, no I/O, no clock, no ambient state — so it belongs in the core, and
+   * `.sdd/architecture.md` already lists receipt hashing as an engine
+   * responsibility. It was previously allowed only by omission from this list;
+   * recording it here makes it a decision rather than an oversight.
+   *
+   * Anything that reads the world (`fs`), spawns it (`child_process`), or reaches
+   * across it (`node:net`, `node:http`) stays banned.
+   */
   it("no file under core/ spawns a process or touches the filesystem directly", async () => {
     const coreFiles = await walk(join(SRC, "core"));
-    const banned = ["node:child_process", "node:fs", "node:fs/promises", "child_process", "fs"];
+    const banned = [
+      "node:child_process",
+      "node:fs",
+      "node:fs/promises",
+      "child_process",
+      "fs",
+      "node:net",
+      "node:http",
+      "node:https",
+    ];
 
     const violations: string[] = [];
     for (const file of coreFiles) {

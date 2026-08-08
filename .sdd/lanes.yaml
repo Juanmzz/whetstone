@@ -50,7 +50,7 @@ lanes:
     description: Turborepo-style input hashing so unchanged code is never re-checked.
     owns:
       - src/core/receipts/
-      - src/shell/receipts.ts
+      - "src/shell/receipts*"   # glob: an exact match denied the adjacent test file
     note: >-
       The hash MUST include the check's `version` field. Otherwise editing a check's
       behaviour silently reuses a receipt earned by the previous version.

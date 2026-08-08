@@ -8,7 +8,8 @@
 // choosing to respect it is advisory, and advisory rules are what this project
 // exists to replace.
 //
-// Activated by WST_LANE=<id>. Unset => orchestrator, no restriction.
+// Activated by a `.wst-lane` file at the worktree root, or WST_LANE=<id> which
+// takes precedence. Neither present => orchestrator, no restriction.
 //
 // Hook API grounded against code.claude.com/docs/en/hooks (2026-08-07):
 // PreToolUse blocks via hookSpecificOutput.permissionDecision="deny" and MUST
@@ -17,8 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-// Compiled from .sdd/lanes.yaml. Entries ending in "/" are directory prefixes;
-// the rest are exact file matches.
+// Compiled from .sdd/lanes.yaml. See `matches` below for the entry forms.
 const SHARED = [
   "src/core/checks/schema.ts",
   "src/core/ports.ts",
@@ -32,12 +32,19 @@ const SHARED = [
 
 const LANES = {
   triage: ["src/core/triage/", "src/commands/triage.ts"],
-  receipts: ["src/core/receipts/", "src/shell/receipts.ts"],
+  receipts: ["src/core/receipts/", "src/shell/receipts*"],
   gate: ["src/core/gate/", "src/commands/gate.ts"],
   fixtures: ["test/fixtures/", "scripts/calibrate.ts"],
 };
 
-const matches = (rel, entry) => (entry.endsWith("/") ? rel.startsWith(entry) : rel === entry);
+// "foo/" = directory prefix · "foo*" = string prefix · otherwise exact file match.
+// The `*` form exists because an exact match on `src/shell/receipts.ts` also denied
+// the adjacent `receipts.test.ts`, leaving an adapter with no way to be tested.
+const matches = (rel, entry) => {
+  if (entry.endsWith("/")) return rel.startsWith(entry);
+  if (entry.endsWith("*")) return rel.startsWith(entry.slice(0, -1));
+  return rel === entry;
+};
 
 function deny(reason) {
   console.log(

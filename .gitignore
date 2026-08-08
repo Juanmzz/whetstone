@@ -21,3 +21,7 @@ _design/
 # Per-worktree lane marker, read by .claude/hooks/lane-guard.mjs. Belongs to the
 # worktree, not to the branch — committing it would scope every clone to one lane.
 .wst-lane
+
+# Receipts are a derived cache: "check X passed on this exact input". Regenerable,
+# and a stale one would claim a pass that never happened for the current code.
+.sdd/receipts/
