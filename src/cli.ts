@@ -56,7 +56,8 @@ program
   .option("--tier <tier>", "provisional triage tier override")
   .option("--json", "print the verdict as JSON")
   .option("--no-lens", "skip agent-lens checks (fast and free; for the pre-push hook)")
-  .action(async (opts: { range?: string; tier?: string; json?: boolean; lens?: boolean }) => {
+  .option("--no-emit", "do not record signals — for verifying the gate itself")
+  .action(async (opts: { range?: string; tier?: string; json?: boolean; lens?: boolean; emit?: boolean }) => {
     // Validate rather than cast: an unrecognised --tier must be rejected loudly.
     // Silently coercing it would let `--tier=stict` run the gate at the wrong
     // discipline while reporting success.
@@ -75,6 +76,7 @@ program
       ...(tier !== undefined ? { tier } : {}),
       ...(opts.json !== undefined ? { json: opts.json } : {}),
       ...(opts.lens === false ? { noLens: true } : {}),
+      ...(opts.emit === false ? { noEmit: true } : {}),
     });
   });
 

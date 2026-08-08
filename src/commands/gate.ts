@@ -25,6 +25,8 @@ import type { CheckOutcome, Routing } from "../core/contracts.js";
 import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
 import { exitCodeFor, renderGateRun } from "../core/gate/report.js";
+import { dedupe, signalsFromGate } from "../core/signals/emit.js";
+import { appendSignals, readSignalLog } from "../shell/signals.js";
 import {
   runGate as executeGate,
   type CheckRunner,
@@ -63,6 +65,8 @@ export interface GateOptions {
    * lens belongs where a human is not waiting on it.
    */
   readonly noLens?: boolean;
+  /** Suppress signal emission. For dry runs and tests, not for normal use. */
+  readonly noEmit?: boolean;
 }
 
 const DEFAULT_RANGE = "HEAD";
@@ -301,10 +305,31 @@ export async function runGate(
     },
   );
 
+  // Record what the gate OBSERVED, before printing. Deduped against the log so
+  // re-running while fixing a failure does not append the same signal five times:
+  // the retro clusters on recurrence, and that would make "how often someone
+  // re-ran the gate" look like evidence.
+  //
+  // Never let this fail the run. The gate's verdict is the product; the signal is
+  // bookkeeping, and bookkeeping that can break a gate is worse than no bookkeeping.
+  let emitted: string[] = [];
+  if (opts.noEmit !== true) {
+    try {
+      const sddRoot = join(repoRoot ?? cwd, ".sdd");
+      const candidates = signalsFromGate(run.verdict, range);
+      emitted = await appendSignals(sddRoot, dedupe(candidates, await readSignalLog(sddRoot)), new Date());
+    } catch {
+      /* bookkeeping only */
+    }
+  }
+
   if (opts.json === true) {
-    console.log(JSON.stringify({ range, tier: routing.tier, ...run.verdict }, null, 2));
+    console.log(JSON.stringify({ range, tier: routing.tier, emitted, ...run.verdict }, null, 2));
   } else {
     console.log(renderGateRun(run));
+    if (emitted.length > 0) {
+      console.log(`\n  signals emitted: ${emitted.join(", ")}`);
+    }
   }
 
   return exitCodeFor(run.verdict);
