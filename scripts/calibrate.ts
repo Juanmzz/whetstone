@@ -209,6 +209,19 @@ async function main() {
       (broken.length > 0 ? ` (${broken.map((o) => o.fixture.file).join(", ")})` : ""),
   );
   console.log(`  cost     $${totalCost.toFixed(4)}`);
+  // A --filter run measures a SUBSET, so it can never authorise a promotion. Printing
+  // the same "PASS — may be declared block" line after `--filter race` is how someone
+  // promotes a lens on four runs of the two fixtures it happens to be good at. The
+  // promotion verdict requires the whole fixture set.
+  if (FILTER) {
+    console.log(
+      `\n  PARTIAL — filtered to "${FILTER}" (${fixtures.length} of the fixture set). ` +
+        `\n  A filtered run diagnoses; it cannot promote. Run unfiltered to decide severity.`,
+    );
+    process.exitCode = failed.length === 0 ? 0 : 1;
+    return;
+  }
+
   console.log(
     failed.length === 0
       ? "\n  PASS — this lens may be declared `severity: block`."

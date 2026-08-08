@@ -102,10 +102,12 @@ Prompt goes on **stdin** — diffs exceed argv limits.
 | Why | Evidence |
 |---|---|
 | Hermetic flags are mandatory | A naive call inherits the ambient config (250+ MCP tools, plugins, SessionStart hooks): **140,682 tokens / $0.84** for a one-word answer. Hermetic: **11.4k / ~$0.03–0.08**. ~10× cost, 92% context |
-| Use `--append-system-prompt`, never `--system-prompt` | Replacing the system prompt **corrupted structured output** (`</parameter>` leaked into a string field). Append was clean 2/2 |
+| Use `--append-system-prompt`, never `--system-prompt` | Replacing the system prompt **corrupted structured output** (`</parameter>` leaked into a string field). Append is *better*, **not clean** — see the row below |
 | Do NOT use `--bare` | It forces `ANTHROPIC_API_KEY`/`apiKeyHelper` and never reads OAuth — it would bill separately and break the Max-subscription cost advantage |
 | `--json-schema` is native validation | The result envelope carries a validated `structured_output` object |
-| Retry is still required | See the corruption above — native validation is necessary, not sufficient |
+| Contamination recurs even with append, and is SIZE-CORRELATED | **Corrected 2026-08-08 (sig-0008/0009).** The original "clean 2/2" was 2 runs on a one-line prompt. Over 80 runs at realistic lengths: **0/40 blind on diffs <10 lines, 13/40 on 11-15 line diffs**. The model closes its tool call inside the string, so the artifact is a well-formed TRAILING suffix with correct prose in front |
+| Sanitise the tail, reject the middle | `core/llm/verdict.ts` strips trailing markup and reports it via `sanitized`; markup embedded mid-content still fails closed. Rejecting outright discarded correct verdicts and billed 3 retries into the same deterministic failure. Re-measured: **0/8 blind** |
+| Retry is still required | Native validation is necessary, not sufficient — a payload can be schema-valid and unusable |
 | `stream-json` needs `--verbose` | It errors without it. We use `json`, not `stream-json` |
 | Cost metering is free | The envelope carries `total_cost_usd`, token counts, `duration_ms` |
 
