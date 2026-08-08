@@ -1,0 +1,101 @@
+/**
+ * The receipt input hash — Turborepo-style content addressing for the gate.
+ *
+ * Why this exists: without it, every gate run re-reviews the whole repo. Frugality
+ * is the point of the gate (`.sdd/architecture.md`), and re-running a check against
+ * code that has not changed is the most expensive way to learn nothing.
+ *
+ * PURE. `node:crypto`'s `createHash` is a deterministic function of its input — no
+ * I/O, no ambient state, no process — so it does not breach the FCIS rule, which is
+ * about effects reaching the core, not about builtins. `test/architecture.test.ts`
+ * draws the same line: it bans `node:fs` and `node:child_process`. Hashing is listed
+ * as an ENGINE responsibility in `.sdd/architecture.md`, not an adapter one. The
+ * digest is injectable anyway, so the canonical form stays testable on its own.
+ */
+
+import { createHash } from "node:crypto";
+
+/** A changed file and its content hash, as produced by `GitPort.hashFile`. */
+export interface HashedFile {
+  readonly path: string;
+  readonly hash: string;
+}
+
+/** A content digest over the canonical serialization. Injectable for tests. */
+export type Digest = (input: string) => string;
+
+/**
+ * Serialization format tag. Bump it when the canonical form changes: every receipt
+ * on disk then stops matching and is re-earned. Without the tag, a change to the
+ * serialization would silently reuse receipts computed under the old one — the same
+ * failure mode as dropping the check version, one level down.
+ */
+export const RECEIPT_INPUT_FORMAT = 1;
+
+/**
+ * NUL separates a path from its content hash. It is the one byte no filesystem
+ * allows in a path, so no path can forge a field boundary. Using `:` or a space
+ * would let `{path: "a b", hash: "c"}` and `{path: "a", hash: "b c"}` collide.
+ */
+const FIELD = "\0";
+
+export function sha256Hex(input: string): string {
+  return createHash("sha256").update(input, "utf8").digest("hex");
+}
+
+/**
+ * The exact bytes that get hashed. Exported because the guarantees live here, and a
+ * test that asserts on two opaque digests proves much less than one that can read
+ * the input.
+ */
+export function canonicalInput(files: readonly HashedFile[], checkVersion: number): string {
+  if (!Number.isInteger(checkVersion) || checkVersion < 1) {
+    throw new Error(
+      `check version must be a positive integer, got ${String(checkVersion)} — ` +
+        `a receipt bound to a nonsense version is worse than no receipt`,
+    );
+  }
+
+  // Sorted: the gate collects matched files from a glob walk, and iteration order
+  // is not a guarantee it can make. If order moved the hash, every run would miss.
+  const sorted = [...files].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+
+  const seen = new Set<string>();
+  const entries = sorted.map((file) => {
+    if (seen.has(file.path)) {
+      throw new Error(
+        `duplicate path in receipt input: "${file.path}" — two content hashes for one ` +
+          `file means the caller is confused, and hashing it anyway would mint a ` +
+          `receipt that looks authoritative and is not`,
+      );
+    }
+    seen.add(file.path);
+    return `${file.path}${FIELD}${file.hash}`;
+  });
+
+  return [
+    `wst-receipt/${RECEIPT_INPUT_FORMAT}`,
+    // THE LOAD-BEARING LINE. See the doc comment on `inputHash`.
+    `v:${checkVersion}`,
+    `n:${entries.length}`,
+    ...entries,
+  ].join("\n").concat("\n");
+}
+
+/**
+ * A stable content hash of everything a check's outcome depends on.
+ *
+ * **The check's `version` is part of the hash, and must stay that way.** A receipt
+ * is a claim that check X already passed on this input. If the version were not in
+ * the hash, editing a check's behaviour would leave every old receipt still
+ * matching, and the gate would report "already passed" for a check that has never
+ * once run in its current form. A gate that is silently wrong is worse than no gate,
+ * because it is trusted. `hash.test.ts` fails if the binding is removed.
+ */
+export function inputHash(
+  files: readonly HashedFile[],
+  checkVersion: number,
+  digest: Digest = sha256Hex,
+): string {
+  return digest(canonicalInput(files, checkVersion));
+}
