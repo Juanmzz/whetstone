@@ -55,20 +55,27 @@ export interface Attempt {
   readonly durationMs: number;
 }
 
-export interface JudgeResult<T> {
-  readonly ok: boolean;
-  readonly value?: T;
-  readonly error?: JudgeError;
+export interface JudgeMeta {
   /** Every attempt made. The calibration harness reads this. */
   readonly attempts: readonly Attempt[];
   /** Raw text of the final envelope, kept for receipts and debugging. */
   readonly raw: string;
+  /** Summed across ALL attempts — retries are not free. */
   readonly costUsd: number;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly durationMs: number;
   readonly sessionId: string | null;
 }
+
+/**
+ * A discriminated union on `ok`, so a caller that checks it gets `value` narrowed
+ * without a non-null assertion. The gate must never be able to read a verdict that
+ * was not actually produced.
+ */
+export type JudgeResult<T> =
+  | ({ readonly ok: true; readonly value: T; readonly error?: undefined } & JudgeMeta)
+  | ({ readonly ok: false; readonly value?: undefined; readonly error: JudgeError } & JudgeMeta);
 
 /**
  * The ONE boundary that may call an LLM. Model-agnostic by construction: adding a

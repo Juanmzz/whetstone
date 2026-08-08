@@ -42,14 +42,7 @@ export async function judgeWithRetry<S extends ZodType>(
   let raw = "";
   let sessionId: string | null = null;
 
-  const finish = (
-    ok: boolean,
-    value?: ReturnType<S["parse"]>,
-    error?: JudgeError,
-  ): JudgeResult<ReturnType<S["parse"]>> => ({
-    ok,
-    ...(value !== undefined ? { value } : {}),
-    ...(error !== undefined ? { error } : {}),
+  const meta = () => ({
     attempts,
     raw,
     costUsd,
@@ -59,9 +52,21 @@ export async function judgeWithRetry<S extends ZodType>(
     sessionId,
   });
 
+  const succeed = (value: ReturnType<S["parse"]>): JudgeResult<ReturnType<S["parse"]>> => ({
+    ok: true,
+    value,
+    ...meta(),
+  });
+
+  const failWith = (error: JudgeError): JudgeResult<ReturnType<S["parse"]>> => ({
+    ok: false,
+    error,
+    ...meta(),
+  });
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (req.signal?.aborted === true) {
-      return finish(false, undefined, {
+      return failWith({
         kind: "timeout",
         detail: "aborted by caller before invocation",
       });
@@ -73,7 +78,7 @@ export async function judgeWithRetry<S extends ZodType>(
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);
       attempts.push({ n: attempt, outcome: "fail", reason: detail, costUsd: 0, durationMs: 0 });
-      return finish(false, undefined, { kind: "spawn", detail });
+      return failWith({ kind: "spawn", detail });
     }
 
     // Retries are not free — meter every attempt, not just the last.
@@ -93,7 +98,7 @@ export async function judgeWithRetry<S extends ZodType>(
         costUsd: shot.costUsd,
         durationMs: shot.durationMs,
       });
-      return finish(true, outcome.value as ReturnType<S["parse"]>);
+      return succeed(outcome.value as ReturnType<S["parse"]>);
     }
 
     if (outcome.kind === "retry") {
@@ -114,10 +119,10 @@ export async function judgeWithRetry<S extends ZodType>(
       costUsd: shot.costUsd,
       durationMs: shot.durationMs,
     });
-    return finish(false, undefined, outcome.error);
+    return failWith(outcome.error);
   }
 
-  return finish(false, undefined, {
+  return failWith({
     kind: "invalid-output",
     detail: `no valid verdict after ${maxAttempts} attempts`,
   });
