@@ -13,10 +13,18 @@
  * Stability alone is not enough: a lens that stably passes everything is perfectly
  * stable and completely useless. Hence the known-bad fixture.
  *
- *   npm run calibrate  [-- --runs 10 --model sonnet]
+ * The first run used exactly two fixtures, and they were mirror images of each other
+ * (removing versus adding a null check) — unambiguous by construction. That measured
+ * the harness, not the lens. So the fixture set is now DISCOVERED from the directory
+ * and every `.diff` in it must be declared in `manifest.json` with an `expect` and a
+ * one-sentence ground truth. A fixture nobody can label confidently is a coin flip and
+ * does not belong here; a fixture nobody remembered to declare must not be silently
+ * skipped, so an undeclared diff is a hard error rather than a warning.
+ *
+ *   npm run calibrate  [-- --runs 10 --model sonnet --filter race]
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { createClaudeJudge } from "../src/shell/claude.js";
@@ -26,6 +34,7 @@ const LensVerdict = z.object({
   reason: z.string(),
 });
 
+/** Must stay in sync with `review_lens` in `.sdd/checks/correctness.md`. */
 const LENS = [
   "You are a correctness review lens for a code gate.",
   "Given a diff, decide whether it INTRODUCES a correctness bug.",
@@ -33,10 +42,19 @@ const LENS = [
   "Judge only the change itself, not the surrounding file. Be decisive.",
 ].join(" ");
 
-const FIXTURES = [
-  { name: "known-bad", file: "known-bad.diff", expect: "fail" as const },
-  { name: "known-good", file: "known-good.diff", expect: "pass" as const },
-];
+const Manifest = z.object({
+  fixtures: z
+    .array(
+      z.object({
+        file: z.string().endsWith(".diff"),
+        difficulty: z.enum(["easy", "medium", "hard"]),
+        expect: z.enum(["pass", "fail"]),
+        truth: z.string().min(20),
+      }),
+    )
+    .min(1),
+});
+type Fixture = z.infer<typeof Manifest>["fixtures"][number];
 
 function arg(flag: string, fallback: string): string {
   const i = process.argv.indexOf(flag);
@@ -45,6 +63,7 @@ function arg(flag: string, fallback: string): string {
 
 const RUNS = Number(arg("--runs", "10"));
 const MODEL = arg("--model", "sonnet") as "haiku" | "sonnet" | "opus";
+const FILTER = arg("--filter", "");
 const CONCURRENCY = 4;
 
 async function pool<T, R>(items: T[], limit: number, fn: (t: T, i: number) => Promise<R>) {
@@ -60,20 +79,63 @@ async function pool<T, R>(items: T[], limit: number, fn: (t: T, i: number) => Pr
   return results;
 }
 
+/**
+ * The fixture set is the directory, not a list in this file. Declaring it here is how
+ * the two drift apart: someone adds a hard fixture, forgets the array, and the run
+ * reports a clean pass it never earned.
+ */
+async function loadFixtures(dir: string): Promise<Fixture[]> {
+  const manifest = Manifest.parse(JSON.parse(await readFile(join(dir, "manifest.json"), "utf-8")));
+  const onDisk = (await readdir(dir)).filter((f) => f.endsWith(".diff")).sort();
+  const declared = new Set(manifest.fixtures.map((f) => f.file));
+
+  const undeclared = onDisk.filter((f) => !declared.has(f));
+  const missing = manifest.fixtures.filter((f) => !onDisk.includes(f.file)).map((f) => f.file);
+  if (undeclared.length > 0 || missing.length > 0) {
+    const parts = [
+      undeclared.length > 0 ? `undeclared in manifest.json: ${undeclared.join(", ")}` : "",
+      missing.length > 0 ? `declared but absent: ${missing.join(", ")}` : "",
+    ].filter(Boolean);
+    throw new Error(`fixture set is inconsistent — ${parts.join("; ")}`);
+  }
+
+  const ordered = onDisk.map((f) => manifest.fixtures.find((m) => m.file === f)!);
+  return FILTER ? ordered.filter((f) => f.file.includes(FILTER)) : ordered;
+}
+
+interface Outcome {
+  fixture: Fixture;
+  /** Correct verdicts out of RUNS. An error counts as not-correct — see the pass rule. */
+  correct: number;
+  /** Runs that never produced a verdict at all (after `maxAttempts` retries). */
+  errors: number;
+  /** True iff the runs that DID return a verdict disagreed with each other. */
+  flipped: boolean;
+  unanimous: boolean;
+  spread: string;
+}
+
 async function main() {
   const judge = createClaudeJudge();
   const { version } = await judge.describe();
   const dir = join(import.meta.dirname, "..", "test", "fixtures", "lens-correctness");
+  const fixtures = await loadFixtures(dir);
 
-  console.log(`calibrating — claude ${version ?? "?"} · model ${MODEL} · ${RUNS} runs/fixture\n`);
+  if (fixtures.length === 0) throw new Error(`no fixtures matched --filter ${FILTER}`);
 
+  console.log(
+    `calibrating — claude ${version ?? "?"} · model ${MODEL} · ` +
+      `${fixtures.length} fixtures × ${RUNS} runs = ${fixtures.length * RUNS} calls\n`,
+  );
+
+  const nameWidth = Math.max(...fixtures.map((f) => f.file.length));
   let totalCost = 0;
-  let allPassed = true;
+  const outcomes: Outcome[] = [];
 
-  for (const fixture of FIXTURES) {
+  for (const fixture of fixtures) {
     const diff = await readFile(join(dir, fixture.file), "utf-8");
 
-    const outcomes = await pool(Array.from({ length: RUNS }, (_, i) => i), CONCURRENCY, async () => {
+    const verdicts = await pool(Array.from({ length: RUNS }, (_, i) => i), CONCURRENCY, async () => {
       const r = await judge.judge({
         lens: LENS,
         prompt: `Review this diff.\n\n${diff}`,
@@ -87,27 +149,72 @@ async function main() {
     });
 
     const tally = new Map<string, number>();
-    for (const o of outcomes) tally.set(o, (tally.get(o) ?? 0) + 1);
+    for (const v of verdicts) tally.set(v, (tally.get(v) ?? 0) + 1);
 
-    const correct = outcomes.filter((o) => o === fixture.expect).length;
+    // A run that never returned a verdict is the HARNESS being broken, not the lens
+    // being wrong — the same line `core/llm/verdict.ts` draws and the gate must keep.
+    // Reporting them as one number hides which of the two problems you actually have.
+    const decided = verdicts.filter((v) => !v.startsWith("ERROR:"));
+    const errors = verdicts.length - decided.length;
+    const correct = verdicts.filter((v) => v === fixture.expect).length;
+    const flipped = new Set(decided).size > 1;
     const unanimous = tally.size === 1;
-    const passed = correct === RUNS;
-    if (!passed) allPassed = false;
-
     const spread = [...tally.entries()].map(([v, n]) => `${v}×${n}`).join(", ");
+    outcomes.push({ fixture, correct, errors, flipped, unanimous, spread });
+
+    const mark = correct === RUNS ? "ok  " : "MISS";
+    const why = flipped ? "FLIPPED  " : errors > 0 ? `err×${errors}   `.slice(0, 9) : "unanimous";
     console.log(
-      `  ${fixture.name.padEnd(11)} expect=${fixture.expect.padEnd(4)} ` +
-        `correct=${correct}/${RUNS}  ${unanimous ? "unanimous" : "FLIPPED"}  [${spread}]`,
+      `  ${mark} ${fixture.file.padEnd(nameWidth)}  ${fixture.difficulty.padEnd(6)} ` +
+        `expect=${fixture.expect.padEnd(4)} correct=${String(correct).padStart(2)}/${RUNS}  ` +
+        `${why}  [${spread}]`,
     );
   }
 
-  console.log(`\n  cost  $${totalCost.toFixed(4)}`);
+  // THE PASS RULE IS UNCHANGED from the first run: correct AND unanimous on EVERY
+  // fixture, zero flips. An infrastructure error still costs the fixture its pass —
+  // a lens that cannot return a verdict cannot gate either — but it is reported
+  // separately below so the two failure modes are never read as one.
+  const failed = outcomes.filter((o) => o.correct !== RUNS);
+  const flips = outcomes.filter((o) => o.flipped);
+  const broken = outcomes.filter((o) => o.errors > 0);
+
+  if (failed.length > 0) {
+    console.log("\n  where it went wrong — ground truth for each miss:");
+    for (const o of failed) console.log(`    ${o.fixture.file}: ${o.fixture.truth}`);
+  }
+
+  const byDifficulty = new Map<string, { total: number; clean: number }>();
+  for (const o of outcomes) {
+    const d = byDifficulty.get(o.fixture.difficulty) ?? { total: 0, clean: 0 };
+    d.total += 1;
+    if (o.correct === RUNS) d.clean += 1;
+    byDifficulty.set(o.fixture.difficulty, d);
+  }
+  const breakdown = ["easy", "medium", "hard"]
+    .filter((d) => byDifficulty.has(d))
+    .map((d) => `${d} ${byDifficulty.get(d)!.clean}/${byDifficulty.get(d)!.total}`)
+    .join(" · ");
+
+  const totalRuns = outcomes.length * RUNS;
+  const totalErrors = outcomes.reduce((n, o) => n + o.errors, 0);
+
+  console.log(`\n  clean    ${outcomes.length - failed.length}/${outcomes.length} fixtures  (${breakdown})`);
   console.log(
-    allPassed
+    `  judgment ${flips.length} fixture(s) flipped` +
+      (flips.length > 0 ? `: ${flips.map((o) => o.fixture.file).join(", ")}` : ""),
+  );
+  console.log(
+    `  harness  ${totalErrors}/${totalRuns} runs returned no verdict` +
+      (broken.length > 0 ? ` (${broken.map((o) => o.fixture.file).join(", ")})` : ""),
+  );
+  console.log(`  cost     $${totalCost.toFixed(4)}`);
+  console.log(
+    failed.length === 0
       ? "\n  PASS — this lens may be declared `severity: block`."
       : "\n  FAIL — this lens is capped at `warn`/`annotate` (ADR-0008).",
   );
-  process.exitCode = allPassed ? 0 : 1;
+  process.exitCode = failed.length === 0 ? 0 : 1;
 }
 
 await main();

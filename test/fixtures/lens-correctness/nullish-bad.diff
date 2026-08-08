@@ -1,0 +1,11 @@
+diff --git a/src/billing/limits.ts b/src/billing/limits.ts
+--- a/src/billing/limits.ts
++++ b/src/billing/limits.ts
+@@ -12,6 +12,6 @@ const DEFAULT_LIMIT_USD = 100;
+
+ /** `override` is the per-account spend cap. 0 is a valid cap and blocks all spend. */
+ export function effectiveLimitUsd(override: number | undefined): number {
+-  if (override === undefined) return DEFAULT_LIMIT_USD;
++  if (!override) return DEFAULT_LIMIT_USD;
+   return override;
+ }
