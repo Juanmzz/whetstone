@@ -118,3 +118,60 @@ third of invocations on realistic-length diffs cannot answer at all.
 
 No fixture was altered after seeing a verdict. ADR-0008 pre-registers against exactly that, and the
 two fixtures the lens got wrong are the two most likely to tempt it.
+
+---
+
+## 2026-08-08 (later) — lens v3, contract-justification. Better, still FAIL.
+
+Two changes since the run above, so this measures both at once:
+
+1. **The lens now demands a concrete failing input.** v2 asked "does this introduce a bug?"
+   and got ~20% false positives on correct code. v3 requires identifying the change's
+   stated contract (doc comment, signature, error semantics) and naming a concrete input,
+   value, or interleaving that produces observably wrong behaviour — otherwise the verdict
+   is `pass`. It also names what is explicitly NOT a bug: an equivalent idiom, a permitted
+   loosening, a style you would not have chosen.
+2. **The adapter stops discarding correct verdicts** (sig-0008) — trailing tool-call markup
+   is stripped rather than rejected.
+
+The harness now READS the lens from `.sdd/checks/correctness.md` instead of keeping its own
+copy. The old "must stay in sync" comment was a receipt-integrity hole: on drift you
+calibrate one lens and ship another, and the `calibration:` block vouches for text that
+never ran.
+
+`npm run calibrate -- --runs 5`, unfiltered, claude 2.1.225, sonnet. **$4.08 / 50 calls.**
+
+| fixture | expect | correct | vs v2 |
+|---|---|---|---|
+| `known-bad` / `known-good` (easy) | — | 5/5 · 5/5 | held |
+| `swallow-bad` / `swallow-good` (medium) | — | 5/5 · 5/5 | held |
+| `nullish-bad` (hard) | fail | 5/5 | held |
+| `nullish-good` (hard) | pass | **5/5** | **fixed** — was 8/10 |
+| `race-bad` (hard) | fail | **5/5** | **fixed** — was 5/10 with 5 blind |
+| `race-good` (hard) | pass | **4/5** | improved (was 7/9) — **still flips** |
+| `boundary-bad` (hard) | fail | **5/5** | **fixed** — was 6/10 with 4 blind |
+| `boundary-good` (hard) | pass | **5/5** | **fixed** — was 7/10 with 3 blind |
+
+### Result — **FAIL. `correctness` stays at `warn`.**
+
+- **Harness: solved.** 0/50 blind, down from 13/80.
+- **False negatives: still zero.** All five `-bad` fixtures 5/5. Tightening the burden of
+  proof for `fail` did NOT make it start missing bugs — the obvious risk of this change,
+  and it did not materialise at this N.
+- **False positives: nearly gone, not gone.** One flip on `race-good` in five runs. The bar
+  is unanimity, and one flip is a flip.
+
+### What this run does NOT prove
+
+- **N=5 is thin.** A single flip in five could be a 20% rate or a 5% rate; this run cannot
+  tell them apart. It is enough to fail on, nowhere near enough to pass on.
+- **Both changes landed together**, so the split between "better lens" and "adapter no
+  longer discarding verdicts" is inferred from which fixtures moved, not isolated.
+- **`race-good` remains the hard case** — a `finally`-cleared single-flight refresh. It was
+  written as false-positive bait and it is still biting, which is the bait working.
+
+### Next
+
+Do not re-run this lens unchanged; it will fail the same way. The remaining failure is
+concentrated in one fixture family (concurrency), which suggests a lens addition about
+async/interleaving reasoning specifically, rather than another general rewrite.
