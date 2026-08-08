@@ -49,7 +49,14 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   return { facts, ready: problems.length === 0, problems, warnings };
 }
 
-export function renderStatusReport(report: StatusReport): string {
+export function renderStatusReport(
+  report: StatusReport,
+  options: { readonly quiet?: boolean } = {},
+): string {
+  if (options.quiet) {
+    return report.ready ? "ready" : "NOT ready";
+  }
+
   const { facts } = report;
   const lines = [
     "whetstone — status",

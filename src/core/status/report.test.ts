@@ -58,4 +58,15 @@ describe("renderStatusReport", () => {
     expect(text).toContain("engine-skeleton");
     expect(text).toContain("claude");
   });
+
+  it("in quiet mode prints only the ready line", () => {
+    const text = renderStatusReport(buildStatusReport(base), { quiet: true });
+    expect(text).toBe("ready");
+  });
+
+  it("in quiet mode prints only the NOT ready line, omitting problems", () => {
+    const report = buildStatusReport({ ...base, sddPresent: false });
+    const text = renderStatusReport(report, { quiet: true });
+    expect(text).toBe("NOT ready");
+  });
 });
