@@ -9,6 +9,7 @@ import { runStatus } from "./commands/status.js";
 import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
+import { runRun } from "./commands/run.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 
 const program = new Command();
@@ -70,5 +71,30 @@ program
       ...(opts.json !== undefined ? { json: opts.json } : {}),
     });
   });
+
+program
+  .command("run")
+  .argument("<task...>", "what the crewmate should do")
+  .description("dispatch a crewmate in an isolated worktree, then gate its work")
+  .option("--dry-run", "print the charter and exit, spending nothing")
+  .option("--lane <lane>", "scope the crewmate to a lane (boundary enforced by hook)")
+  .option("--model <model>", "model for the crewmate")
+  .option("--budget <usd>", "hard spend ceiling for the crewmate", "5")
+  .option("--keep", "keep the worktree even when the gate passes")
+  .action(
+    async (
+      task: string[],
+      opts: { dryRun?: boolean; lane?: string; model?: string; budget?: string; keep?: boolean },
+    ) => {
+      process.exitCode = await runRun({
+        task: task.join(" "),
+        ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+        ...(opts.lane !== undefined ? { lane: opts.lane } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        ...(opts.budget !== undefined ? { budgetUsd: Number(opts.budget) } : {}),
+        ...(opts.keep !== undefined ? { keep: opts.keep } : {}),
+      });
+    },
+  );
 
 await program.parseAsync(process.argv);
