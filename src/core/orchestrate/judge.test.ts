@@ -29,16 +29,33 @@ describe("judgeWithRetry", () => {
     expect(invoke).toHaveBeenCalledOnce();
   });
 
-  it("retries a contaminated payload and accepts the clean one", async () => {
+  it("retries an unrecoverably contaminated payload and accepts the clean one", async () => {
+    // Markup EMBEDDED mid-content is unrecoverable, so it must still cost a retry.
+    // (Trailing markup is now sanitised in place and accepted on the first attempt —
+    // see verdict.test.ts. Rejecting it made the gate blind on a third of
+    // realistic-length diffs while billing three retries per failure.)
     const invoke = vi
       .fn()
-      .mockResolvedValueOnce(shot({ verdict: "pass", reason: "ok</parameter>\n</invoke>\n" }))
+      .mockResolvedValueOnce(
+        shot({ verdict: "pass", reason: 'ok</invoke>\n<invoke name="x">more prose' }),
+      )
       .mockResolvedValueOnce(shot({ verdict: "pass", reason: "ok" })) as unknown as SingleShot;
 
     const result = await judgeWithRetry(req, invoke);
     expect(result.ok).toBe(true);
     expect(result.attempts).toHaveLength(2);
     expect(result.attempts[0]?.outcome).toBe("retry");
+  });
+
+  it("accepts a trailing-markup payload on the FIRST attempt, without a retry", async () => {
+    const invoke = vi.fn(async () =>
+      shot({ verdict: "pass", reason: "No bug introduced.</parameter>\n</invoke>\n" }),
+    ) as SingleShot;
+
+    const result = await judgeWithRetry(req, invoke);
+    expect(result.ok).toBe(true);
+    expect(result.value).toEqual({ verdict: "pass", reason: "No bug introduced." });
+    expect(invoke).toHaveBeenCalledOnce(); // the whole point: no billed retries
   });
 
   it("accumulates cost across attempts — retries are not free", async () => {

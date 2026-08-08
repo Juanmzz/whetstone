@@ -30,7 +30,12 @@ export interface JudgeError {
 }
 
 export type VerdictOutcome<T> =
-  | { readonly kind: "accept"; readonly value: T }
+  | {
+      readonly kind: "accept";
+      readonly value: T;
+      /** Set when trailing tool-call markup was stripped — never silent. */
+      readonly sanitized?: string;
+    }
   | { readonly kind: "retry"; readonly reason: string }
   | { readonly kind: "fail"; readonly error: JudgeError };
 
@@ -67,6 +72,48 @@ function classifyHardError(subtype: unknown, detail: string): JudgeError {
   if (s.includes("timeout")) return { kind: "timeout", detail };
   if (s.includes("auth") || s.includes("credential")) return { kind: "auth", detail };
   return { kind: "unknown", detail };
+}
+
+/**
+ * The model closes its tool call INSIDE a string field, so the artifact appears as
+ * a well-formed SUFFIX with complete prose in front of it. Measured: 0/40 runs on
+ * diffs under 10 lines, 13/40 on 11-15 line diffs (sig-0008).
+ *
+ * Rejecting the whole verdict — the original rule — threw away correct answers and
+ * burned three billed retries into the same deterministic failure. A gate blind on
+ * a third of realistic diffs is worse than one that strips a known suffix. Markup
+ * anywhere OTHER than the tail still fails closed: that means content and
+ * scaffolding are interleaved, which is not recoverable.
+ */
+const TRAILING_MARKUP =
+  /(?:\s*(?:<\/parameter>|<\/invoke>|<\/function_calls>|<parameter\s+name="[^"]*">|<invoke\s+name="[^"]*">))+\s*$/;
+
+function stripTrailingMarkup(value: unknown): { value: unknown; stripped: string | null } {
+  if (typeof value === "string") {
+    const match = TRAILING_MARKUP.exec(value);
+    if (match === null) return { value, stripped: null };
+    return { value: value.slice(0, match.index).trimEnd(), stripped: match[0].trim() };
+  }
+  if (Array.isArray(value)) {
+    let stripped: string | null = null;
+    const out = value.map((item) => {
+      const r = stripTrailingMarkup(item);
+      stripped ??= r.stripped;
+      return r.value;
+    });
+    return { value: out, stripped };
+  }
+  if (value !== null && typeof value === "object") {
+    let stripped: string | null = null;
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      const r = stripTrailingMarkup(item);
+      stripped ??= r.stripped;
+      out[key] = r.value;
+    }
+    return { value: out, stripped };
+  }
+  return { value, stripped: null };
 }
 
 function findContamination(value: unknown): string | null {
@@ -127,17 +174,25 @@ export function interpretEnvelope<S extends ZodType>(
     return retryOrGiveUp("envelope carried no structured_output");
   }
 
-  const contaminant = findContamination(structured);
+  // Strip the recoverable trailing artifact FIRST, then reject whatever markup is
+  // left — which by definition is embedded in the content, not suffixed to it.
+  const { value: cleaned, stripped } = stripTrailingMarkup(structured);
+
+  const contaminant = findContamination(cleaned);
   if (contaminant !== null) {
     return retryOrGiveUp(
-      `structured_output is contaminated with tool-call markup (${contaminant})`,
+      `structured_output is contaminated with tool-call markup embedded mid-content (${contaminant})`,
     );
   }
 
-  const parsed = schema.safeParse(structured);
+  const parsed = schema.safeParse(cleaned);
   if (!parsed.success) {
     return retryOrGiveUp(`structured_output failed schema validation: ${parsed.error.message}`);
   }
 
-  return { kind: "accept", value: parsed.data as Value };
+  return {
+    kind: "accept",
+    value: parsed.data as Value,
+    ...(stripped !== null ? { sanitized: stripped } : {}),
+  };
 }

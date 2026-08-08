@@ -44,20 +44,74 @@ describe("interpretEnvelope", () => {
     expect(out.kind).toBe("retry");
   });
 
-  // THE REGRESSION THAT MATTERS. Observed live: replacing the system prompt made the
-  // model leak raw tool-call markup INTO a schema-valid string field. Schema validation
-  // passes; the value is garbage. Native validation is necessary, not sufficient.
-  it("rejects tool-call markup leaking into a schema-VALID string", () => {
-    const contaminated = envelope({
-      structured_output: {
-        verdict: "pass",
-        reason:
-          "The change guards the call before invoking foo.bar().</parameter>\n</invoke>\n",
-      },
-    });
-    const out = interpretEnvelope(contaminated, LensVerdict, opts);
+  // ── Tool-call markup ─────────────────────────────────────────────────────
+  // Observed live and then MEASURED. The model closes its tool call INSIDE the
+  // string field: the reason ends with "</parameter>\n</invoke>\n" while the prose
+  // before it is complete and the verdict is correct. Rate is size-correlated —
+  // 0/40 runs on diffs under 10 lines, 13/40 on 11-15 line diffs (sig-0008).
+  //
+  // The first version of this rule REJECTED the whole verdict, which threw away
+  // correct answers and burned three billed retries into the same failure. A gate
+  // blind on a third of realistic diffs is worse than one that strips a known,
+  // well-formed suffix. So: recover from the TRAILING artifact, keep rejecting
+  // markup anywhere else, and report what was stripped rather than doing it
+  // silently.
+
+  it("recovers a correct verdict whose reason ends in tool-call markup", () => {
+    // Captured verbatim from a live run against race-good.diff.
+    const out = interpretEnvelope(
+      envelope({
+        structured_output: {
+          verdict: "pass",
+          reason:
+            "The refresh propagates to all waiters, avoiding a stampede — an improvement, " +
+            "not a regression. No correctness bug is introduced.</parameter>\n</invoke>\n",
+        },
+      }),
+      LensVerdict,
+      opts,
+    );
+    expect(out.kind).toBe("accept");
+    if (out.kind === "accept") {
+      expect(out.value.verdict).toBe("pass");
+      expect(out.value.reason).toMatch(/No correctness bug is introduced\.$/);
+      expect(out.value.reason).not.toContain("</parameter>");
+      expect(out.sanitized).toBeDefined(); // stripping is reported, never silent
+    }
+  });
+
+  it("strips a bare closing tag with trailing whitespace", () => {
+    const out = interpretEnvelope(
+      envelope({ structured_output: { verdict: "fail", reason: "Off by one.</parameter>  \n" } }),
+      LensVerdict,
+      opts,
+    );
+    expect(out.kind).toBe("accept");
+    if (out.kind === "accept") expect(out.value.reason).toBe("Off by one.");
+  });
+
+  // The safety half of the rule: markup in the MIDDLE means the content itself is
+  // interleaved with scaffolding, not merely suffixed by it. That is unrecoverable
+  // and must still fail closed.
+  it("still REJECTS markup embedded mid-string", () => {
+    const out = interpretEnvelope(
+      envelope({
+        structured_output: {
+          verdict: "pass",
+          reason: "Looks fine</invoke>\n<invoke name=\"other\">and then some more prose.",
+        },
+      }),
+      LensVerdict,
+      opts,
+    );
     expect(out.kind).toBe("retry");
     if (out.kind === "retry") expect(out.reason).toMatch(/contaminat/i);
+  });
+
+  it("does not strip anything from a clean verdict", () => {
+    const out = interpretEnvelope(envelope(), LensVerdict, opts);
+    expect(out.kind).toBe("accept");
+    if (out.kind === "accept") expect(out.sanitized).toBeUndefined();
   });
 
   // The contamination check must not be so eager that it breaks real reviews:
