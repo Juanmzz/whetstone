@@ -79,8 +79,21 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
   };
 
   try {
-    await exec("git", ["reset", "--hard", "HEAD"], { cwd: worktree.path });
+    // Branch from the ORCHESTRATOR's current commit, not from whatever the pooled
+    // worktree happens to sit at — a fresh pool hands you the default branch.
+    const { stdout: baseOut } = await exec("git", ["rev-parse", "HEAD"], { cwd: repoRoot });
+    const base = baseOut.trim();
+    await exec("git", ["fetch", "--no-tags", repoRoot, base], { cwd: worktree.path }).catch(
+      () => undefined,
+    );
+    await exec("git", ["reset", "--hard", base], { cwd: worktree.path });
     await exec("git", ["switch", "-C", branch], { cwd: worktree.path });
+
+    // node_modules is not in the tree, so a fresh worktree cannot run its own
+    // checks. Found by the first crewmate, which reported having to install.
+    await exec("ln", ["-sfn", join(repoRoot, "node_modules"), "node_modules"], {
+      cwd: worktree.path,
+    }).catch(() => undefined);
     console.log(`  branch    ${branch}`);
     if (opts.lane !== undefined) {
       await exec("sh", ["-c", `printf '%s\\n' '${opts.lane}' > .wst-lane`], { cwd: worktree.path });
@@ -120,8 +133,22 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
     // Gate the crewmate's work IN ITS OWN WORKTREE, against the base it branched
     // from. This is the whole point: the worker does not decide whether its work
     // is acceptable.
-    console.log(`--- gate ---`);
-    const gateExit = await runGate({ range: "HEAD" }, worktree.path);
+    // THE RANGE MATTERS. `HEAD` means working-tree-vs-HEAD, which is EMPTY once the
+    // crewmate has committed — the gate then verifies nothing and honestly says so,
+    // while the run reports PASSED. Gate the commits the crewmate actually made.
+    const { stdout: changed } = await exec(
+      "git",
+      ["diff", "--name-only", `${base}..HEAD`],
+      { cwd: worktree.path },
+    );
+    if (changed.trim() === "") {
+      keepForInspection = true;
+      console.error(`\n  the crewmate committed nothing — there is no work to gate.`);
+      return 1;
+    }
+
+    console.log(`--- gate (${base.slice(0, 7)}..HEAD) ---`);
+    const gateExit = await runGate({ range: `${base}..HEAD` }, worktree.path);
 
     if (gateExit !== 0) {
       // Never discard a worktree whose work did not pass. The diff is the evidence.
