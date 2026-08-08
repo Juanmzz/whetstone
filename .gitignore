@@ -17,3 +17,7 @@ _design/
 # Deliberately NOT committed — a compiled artifact that can silently go stale is the
 # same trap as trusting a version string for identity.
 .sdd/checks/_index.json
+
+# Per-worktree lane marker, read by .claude/hooks/lane-guard.mjs. Belongs to the
+# worktree, not to the branch — committing it would scope every clone to one lane.
+.wst-lane

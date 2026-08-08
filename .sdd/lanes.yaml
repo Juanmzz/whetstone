@@ -1,0 +1,78 @@
+# Lane ownership — the source of truth for parallel work.
+#
+# `.claude/hooks/lane-guard.mjs` is COMPILED from this file (ADR-0005). Change this
+# table, then regenerate the hook — never the reverse.
+#
+# Why this exists: treehouse gives ISOLATION (two agents cannot edit one working
+# copy) but not ENFORCEMENT (nothing stops a crewmate editing a shared contract
+# inside its own worktree and merging a change nobody agreed to). Asking agents to
+# respect a boundary written in a README is the advisory-rules failure mode this
+# whole project exists to replace. So the boundary is compiled into a hook that
+# denies the write.
+#
+# Activated per worktree by a `.wst-lane` file at the worktree root (gitignored),
+# or by `WST_LANE=<id>` which takes precedence. Neither present means orchestrator:
+# no restriction.
+#
+# The guard resolves the repo root FROM THE FILE BEING EDITED, not from the caller's
+# project dir — a crewmate works in a worktree whose root differs from the
+# orchestrator's. Keying off the caller made every worktree edit look "outside the
+# repo" and allowed everything. A guard that fails OPEN is worse than no guard,
+# because you believe you are protected. Found by testing it, not by reasoning.
+
+version: 1
+
+# Denied to EVERY lane, always. Changing one of these invalidates the assumptions
+# the other lanes are working under, so it is a conversation, not a commit.
+shared:
+  - src/core/checks/schema.ts   # the check contract — Steps 2 and 3 both consume it
+  - src/core/ports.ts           # every port signature
+  - src/cli.ts                  # command wiring — the orchestrator integrates
+  - package.json                # dependencies are a shared decision
+  - tsconfig.json
+  - tsconfig.build.json
+  - .sdd/                       # governance, checks, triage, this file
+  - .claude/                    # hooks and settings, incl. this guard
+
+lanes:
+  triage:
+    step: 2
+    description: Classify a change into a tier, and route tier -> {checks, autonomy, model}.
+    owns:
+      - src/core/triage/
+      - src/commands/triage.ts
+    note: >-
+      Needs a glob-matcher dependency. package.json is shared, so ASK before adding
+      one — that choice binds the receipts and gate lanes too.
+
+  receipts:
+    step: 3
+    description: Turborepo-style input hashing so unchanged code is never re-checked.
+    owns:
+      - src/core/receipts/
+      - src/shell/receipts.ts
+    note: >-
+      The hash MUST include the check's `version` field. Otherwise editing a check's
+      behaviour silently reuses a receipt earned by the previous version.
+
+  gate:
+    step: 3
+    description: Aggregate check results into pass|block.
+    owns:
+      - src/core/gate/
+      - src/commands/gate.ts
+    depends_on: [triage, receipts]
+    note: >-
+      Only a real check failure may block. An infrastructure failure (error.kind of
+      budget/timeout/spawn/auth/max-turns) is the GATE being broken, not a failed
+      check. core/llm/verdict.ts already draws that line — do not blur it.
+
+  fixtures:
+    step: 2.5
+    description: Harder calibration fixtures — diffs where a competent reviewer would hesitate.
+    owns:
+      - test/fixtures/
+    note: >-
+      Report whether the correctness lens should be demoted; do NOT edit
+      .sdd/checks/correctness.md yourself — changing a check's severity is a gate
+      policy decision and .sdd/ is shared.
