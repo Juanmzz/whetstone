@@ -30,7 +30,7 @@ The first `agent-lens` check, and the reason the calibration harness exists.
 **Why this is `warn`, and now cannot be anything else.** The 2026-08-07 run passed 10/10,
 but on two mirror-image fixtures — unambiguous by construction. The debt that result
 recorded has been paid: eight harder fixtures landed on 2026-08-08 and the lens **failed**.
-The schema now refuses `severity: warn` outright while `calibration.status` is `failed`.
+The schema now refuses `severity: block` outright while `calibration.status` is `failed`.
 
 **The shape of the failure matters more than the rate.** The lens never missed a planted
 bug (31/31 on decided runs, including the two hard ones). It fails the other way: ~20%
