@@ -71,7 +71,26 @@ const invokeClaude: SingleShot = async (req, _attempt): Promise<RawInvocation> =
   });
 
   child.child.stdin?.end(req.prompt);
-  const { stdout } = await child;
+
+  // The CLI exits NON-ZERO on its own terminal errors — notably
+  // `error_max_budget_usd` — while still writing a complete, parseable envelope to
+  // stdout. execFile rejects on that exit code, so discarding stdout here made every
+  // such case surface as `spawn` ("could not run the check") when the truth was
+  // "ran out of budget". That is precisely the distinction the gate works to
+  // preserve, destroyed one layer below it. Measured: exit 1, stdout carries
+  // {is_error:true, subtype:"error_max_budget_usd", total_cost_usd:0.607}.
+  let stdout: string;
+  try {
+    ({ stdout } = await child);
+  } catch (cause) {
+    const partial = (cause as { stdout?: string }).stdout ?? "";
+    try {
+      JSON.parse(partial); // only trust it if it is actually a complete envelope
+      stdout = partial;
+    } catch {
+      throw cause; // a genuine spawn failure — no envelope to classify from
+    }
+  }
 
   const envelope: unknown = JSON.parse(stdout);
   const e = envelope as Record<string, unknown>;
