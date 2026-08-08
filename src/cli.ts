@@ -11,6 +11,7 @@ import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
 import { runRun } from "./commands/run.js";
 import { runRetro } from "./commands/retro.js";
+import { runInit } from "./commands/init.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 
 const program = new Command();
@@ -106,6 +107,22 @@ program
   .option("--model <model>", "model for the proposal step")
   .action(async (opts: { dryRun?: boolean; model?: "haiku" | "sonnet" | "opus" }) => {
     process.exitCode = await runRetro(opts);
+  });
+
+program
+  .command("init")
+  .description("interview this repo and generate its .sdd/")
+  .option("--answers <file>", "JSON file of interview answers")
+  .option("--purpose <text>", "one-line project purpose")
+  .option("--risk <flags>", "comma-separated: money,personalData,productionData,authn,safetyCritical")
+  .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
+  .option("--agent-lens", "also seed an uncalibrated review lens (capped at warn)")
+  .option("--no-code-tier", "skip the .claude/ hook")
+  .option("--force", "overwrite an existing .sdd/")
+  .option("--dry-run", "show the plan, write nothing")
+  .option("--json", "print the plan as JSON")
+  .action(async (opts: Parameters<typeof runInit>[0]) => {
+    process.exitCode = await runInit(opts);
   });
 
 await program.parseAsync(process.argv);
