@@ -3,6 +3,7 @@ import type { Tier } from "../checks/schema.js";
 import type { CheckOutcome, CheckResult, GateVerdict, TriageResult } from "../contracts.js";
 import { aggregate } from "../gate/aggregate.js";
 import { annotate, type Annotation } from "./annotate.js";
+import { MARK } from "./criticality.js";
 import {
   BODY_END,
   BODY_START,
@@ -88,6 +89,37 @@ describe("renderBody", () => {
 
   it("says the tier and the counts up front", () => {
     expect(body).toMatch(/strict/);
+  });
+
+  /**
+   * Found by running `wst pr --dry-run` on this repo: 54 skim rows each carrying
+   * the identical sentence "strict tier, no finding — glance to confirm the
+   * intent". That is the same signal collapse the criticality rule exists to
+   * prevent, one level down — a reason printed on every row is not a reason, it is
+   * wallpaper. The shared explanation belongs once, under the heading.
+   */
+  it("does not repeat boilerplate on every plain 🟡 row", () => {
+    const plain = body
+      .split("\n")
+      .filter((l) => l.startsWith(`- ${MARK.skim}`))
+      .filter((l) => l.includes("glance to confirm"));
+    expect(plain).toEqual([]);
+    // ...and the explanation is still there, exactly once, as a section note.
+    expect(body.split("no finding was reported against").length - 1).toBe(1);
+  });
+
+  it("still gives a 🟡 row its reason when the reason says something", () => {
+    const withNote = renderBody(
+      annotate({
+        triage: triageOf([["src/core/a.ts", "strict"]]),
+        verdict: verdictOf(
+          result("correctness", "block", { status: "errored", detail: "timed out" }),
+        ),
+        coverage: [covering("correctness", "src/core/a.ts")],
+      }),
+    );
+    expect(withNote).toContain("NOT VERIFIED");
+    expect(withNote).toContain("src/core/a.ts");
   });
 
   it("is deterministic", () => {

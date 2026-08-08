@@ -85,8 +85,30 @@ function detailBlock(findings: readonly Finding[]): string[] {
   return lines;
 }
 
+/**
+ * Does this row's reason say anything the heading has not already said?
+ *
+ * Found by running `wst pr --dry-run` on Whetstone itself: 54 skim rows, each
+ * carrying the identical sentence "strict tier, no finding — glance to confirm the
+ * intent". That is the criticality rule's own failure mode one level down — text
+ * repeated on every row is wallpaper, and it pushes the rows that DO say something
+ * (a not-verified check, a receipt reuse) off the top of a reviewer's attention.
+ *
+ * `FileAnnotation.reason` is unchanged and still goes out in `--json`: this is a
+ * rendering decision, not a change to what the engine concluded.
+ */
+function saysSomething(file: FileAnnotation): boolean {
+  return (
+    file.findings.length > 0 || file.notVerified.length > 0 || file.viaReceipt.length > 0
+  );
+}
+
 function row(file: FileAnnotation, prose: ReadonlyMap<string, string> | undefined): string[] {
-  const lines = [`- ${MARK[file.criticality]} \`${file.path}\` — ${file.reason}`];
+  const lines = [
+    saysSomething(file)
+      ? `- ${MARK[file.criticality]} \`${file.path}\` — ${file.reason}`
+      : `- ${MARK[file.criticality]} \`${file.path}\``,
+  ];
 
   if (file.criticality === "review") {
     lines.push(...detailBlock(file.findings));
@@ -136,7 +158,15 @@ export function renderBody(annotation: Annotation, options: RenderOptions = {}):
   }
 
   if (skim.length > 0) {
-    lines.push(`### ${MARK.skim} Worth a skim (${String(skim.length)})`, "");
+    lines.push(
+      `### ${MARK.skim} Worth a skim (${String(skim.length)})`,
+      "",
+      // The shared explanation, ONCE. Every row that adds nothing to it is just a
+      // path; rows that do add something carry their reason inline.
+      "Critical-path files where no finding was reported against this change, plus " +
+        "advisory findings. Glance to confirm the intent — not to hunt for bugs.",
+      "",
+    );
     for (const file of skim) lines.push(...row(file, options.prose));
     lines.push("");
   }

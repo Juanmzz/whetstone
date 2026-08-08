@@ -101,14 +101,6 @@ function reasonFor(file: {
   if (advisory.length > 0) {
     parts.push(`${list(advisory.map((f) => f.checkId))} raised an advisory here`);
   }
-  if (parts.length === 0) {
-    parts.push(
-      file.tier === "strict"
-        ? "strict tier, no finding — glance to confirm the intent, not to hunt for bugs"
-        : "no finding",
-    );
-  }
-
   // Loud, and deliberately in capitals: this is the sentence that stops a reader
   // concluding "green" from the absence of a finding.
   if (file.notVerified.length > 0) {
@@ -116,6 +108,18 @@ function reasonFor(file: {
   }
   if (file.viaReceipt.length > 0) {
     parts.push(`${list(file.viaReceipt)} not re-run — receipt from an identical input`);
+  }
+
+  // THE FALLBACK, and only ever a fallback — it goes LAST for that reason. Prefixing
+  // the generic sentence to a row that already says something buries the part the
+  // reader needs; eleven rows all opening with "strict tier, no finding" is
+  // wallpaper. Found by running `wst pr --dry-run` on this lane's own commit.
+  if (parts.length === 0) {
+    parts.push(
+      file.tier === "strict"
+        ? "strict tier, no finding — glance to confirm the intent, not to hunt for bugs"
+        : "no finding",
+    );
   }
 
   return parts.join(" · ");

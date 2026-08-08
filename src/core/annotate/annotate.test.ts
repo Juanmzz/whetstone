@@ -112,6 +112,16 @@ describe("an errored check — the gate could not run it", () => {
     expect(annotation.files[0]?.reason).toContain("NOT VERIFIED");
   });
 
+  /**
+   * The generic "strict tier, no finding" sentence is the FALLBACK for a row with
+   * nothing else to say. Prefixing it to a row that does have something to say
+   * buries the only part a reader needs. Found by running `wst pr --dry-run` on
+   * this lane's own commit — eleven rows, each opening with the same clause.
+   */
+  it("does not prefix the not-verified note with boilerplate", () => {
+    expect(annotation.files[0]?.reason).toBe("NOT VERIFIED: correctness could not run");
+  });
+
   it("does not request changes on the strength of a broken check", () => {
     expect(annotation.blocking).toBe(false);
     expect(annotation.event).toBe("COMMENT");
