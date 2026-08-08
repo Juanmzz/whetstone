@@ -34,7 +34,7 @@ const LANES = {
   triage: ["src/core/triage/", "src/commands/triage.ts"],
   receipts: ["src/core/receipts/", "src/shell/receipts.ts"],
   gate: ["src/core/gate/", "src/commands/gate.ts"],
-  fixtures: ["test/fixtures/"],
+  fixtures: ["test/fixtures/", "scripts/calibrate.ts"],
 };
 
 const matches = (rel, entry) => (entry.endsWith("/") ? rel.startsWith(entry) : rel === entry);
