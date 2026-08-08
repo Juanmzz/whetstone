@@ -69,9 +69,11 @@ lanes:
 
   fixtures:
     step: 2.5
-    description: Harder calibration fixtures — diffs where a competent reviewer would hesitate.
+    description: Calibration — harder fixtures, and the harness that measures against them.
     owns:
       - test/fixtures/
+      - scripts/calibrate.ts   # added on first use: the lane cannot point the
+                               # harness at new fixtures without owning it
     note: >-
       Report whether the correctness lens should be demoted; do NOT edit
       .sdd/checks/correctness.md yourself — changing a check's severity is a gate
