@@ -35,6 +35,8 @@ const LANES = {
   triage: ["src/core/triage/", "src/commands/triage.ts"],
   receipts: ["src/core/receipts/", "src/shell/receipts*"],
   gate: ["src/core/gate/", "src/commands/gate.ts"],
+  annotate: ["src/core/annotate/", "src/commands/pr.ts", "src/shell/github.ts"],
+  init: ["src/core/init/", "src/commands/init.ts"],
   fixtures: ["test/fixtures/", "scripts/calibrate.ts"],
 };
 
