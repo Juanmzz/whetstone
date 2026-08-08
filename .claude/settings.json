@@ -1,4 +1,7 @@
 {
+  "env": {
+    "ENGRAM_PROJECT": "whetstone"
+  },
   "hooks": {
     "PreToolUse": [
       {

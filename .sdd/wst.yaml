@@ -1,5 +1,10 @@
 version: 0
-backend: files            # files | engram | ...  (see SPEC §2.3)
+backend: files            # files | engram | ...  (see docs/woz/SPEC.md §2.3)
+memory:
+  # Pins the namespace for any memory adapter (ADR-0001's save/search/summarize port).
+  # Without this it is inferred from the git remote — this repo has none, and the ambient
+  # tooling has been observed defaulting Whetstone work into a ChytaPay namespace.
+  namespace: whetstone
 retro:
   suggest_after: 5        # signals
 skills:                   # ACTIVE skills — the registry (SPEC §3.5)
