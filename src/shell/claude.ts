@@ -27,13 +27,25 @@ const run = promisify(execFile);
 const DEFAULT_TIMEOUT_MS = 120_000;
 const MAX_BUFFER = 64 * 1024 * 1024;
 
+/**
+ * zod emits a `$schema` key pointing at the draft 2020-12 meta-schema URI, which
+ * the CLI's validator rejects outright:
+ *   "--json-schema is not a valid JSON Schema: no schema with key or ref
+ *    https://json-schema.org/draft/2020-12/schema"
+ * Strip it. Everything else zod produces is accepted as-is.
+ */
+function toClaudeJsonSchema(schema: ZodType): string {
+  const { $schema: _discard, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
+  return JSON.stringify(rest);
+}
+
 function buildArgs<S extends ZodType>(req: JudgeRequest<S>): string[] {
   const args = [
     "-p",
     "--output-format",
     "json",
     "--json-schema",
-    JSON.stringify(z.toJSONSchema(req.schema)),
+    toClaudeJsonSchema(req.schema),
     "--append-system-prompt",
     req.lens,
     "--strict-mcp-config",
