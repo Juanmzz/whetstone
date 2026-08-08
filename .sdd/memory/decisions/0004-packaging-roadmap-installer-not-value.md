@@ -3,9 +3,16 @@ id: adr-0004
 ts: 2026-07-11
 status: accepted
 supersedes: null
+amended_by: adr-0008      # partial waiver of the ordering rule — reasoning below still stands
 rules_affected: []
 ---
 # Packaging is an installer wrapper, not the value — Wizard-of-Oz first, CLI/plugin after
+
+> **Amended by [[0008-engine-supersedes-woz]] (2026-08-07).** The ordering rule below is
+> **discharged** for `init.md`/`retro.md` (Wizard-of-Oz'd and validated in the wild) and
+> **explicitly waived** for the gate, check registry, triage, receipts and PR annotation, which
+> are being built against a design rather than a validated procedure. The reasoning in this ADR
+> is unchanged and still correct; only its applicability narrows.
 
 ## Context
 
