@@ -165,7 +165,16 @@ function createReceiptStore(sddRoot: string): ReceiptStore {
  * One runner over both kinds of check. It only dispatches and reports; every
  * fail-versus-errored decision is made by `core/gate/outcomes.ts`.
  */
-function createCheckRunner(deps: {
+/**
+ * Exported so `wst pr` uses THIS runner instead of keeping a copy.
+ *
+ * It kept one, and the copy silently missed the chunking and the total budget cap
+ * added here for sig-0023. Pointed at a large diff it would send the whole thing in
+ * one lens call and die, so the annotation would report every check unverified while
+ * `wst gate` on the same range passed. Two implementations of "run a check" is two
+ * places for the gate's honesty rules to drift apart.
+ */
+export function createCheckRunner(deps: {
   readonly cwd: string;
   readonly range: string;
   readonly judge: LlmJudge;
