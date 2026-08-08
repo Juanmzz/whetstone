@@ -26,20 +26,30 @@ review_lens: >-
   looks unusual but satisfies the documented behaviour.
 
 
+  CONCURRENCY. Shared mutable state, an `await` between a check and a write, or two callers
+  reaching the same function are NOT evidence of a race — they are the shape of every
+  correct concurrency primitive too. Before returning 'fail' for a race, you must state in
+  your reason: (a) the shared state, (b) two concrete interleavings of specific calls, and
+  (c) the observable wrong result they produce. Then check whether the change already
+  prevents that interleaving. Pay attention to which paths run cleanup: `finally` runs on
+  both fulfilment and rejection, whereas `.then` or a trailing assignment runs only on
+  success — a guard cleared in `finally` is usually correct, one cleared only on success is
+  usually not. If the change already prevents the interleaving you were about to describe,
+  the verdict is 'pass'.
+
+
   Judge only the change itself, not the surrounding file.
 calibration:
-  status: failed
-  runs: 5
+  status: uncalibrated
+  runs: 0
   date: "2026-08-08"
   fixtures: test/fixtures/lens-correctness
   detail: >-
-    v3 (contract-justification) measured unfiltered: 9/10 fixtures clean, 0/50 blind runs,
-    still zero false negatives (all five `-bad` fixtures 5/5). race-good flipped once in
-    five — one false positive on correct code. Large improvement over v2 (which failed on
-    two fixtures with ~20% false positives and 13/80 blind), but one flip is still a flip:
-    ADR-0008 pre-registered unanimity, not accuracy. Capped at `warn`.
+    Lens v4 adds a concurrency clause after v3 failed only on race-good (1 flip in 5).
+    Changing the lens INVALIDATES the previous measurement — v3's result does not describe
+    this text. Must be re-measured unfiltered before any severity above `warn`.
 origin: [adr-0008, sig-0007, sig-0008, sig-0011]
-version: 3
+version: 4
 ---
 
 The first `agent-lens` check, and the reason the calibration harness exists.
