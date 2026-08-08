@@ -285,3 +285,34 @@ describe("a finding on a path that is not in the diff", () => {
     expect(annotation.counts.review).toBe(0);
   });
 });
+
+/**
+ * Gap found by `npm run mutate`, not by reading the code. Flipping the
+ * block/advisory split in the per-file reason SURVIVED the entire suite: every
+ * existing test happened to use findings of a single severity, so nothing noticed
+ * the two branches swapping. A reader would have been told an advisory "reported a
+ * problem" and a real failure merely "raised an advisory", inverting the one
+ * distinction the row exists to make.
+ */
+describe("the per-file reason keeps block and advisory apart", () => {
+  const both = annotate({
+    triage: triageOf([["src/a.ts", "strict"]]),
+    verdict: verdictOf(
+      result("blocker", "block", { status: "fail", detail: "src/a.ts:1 boom" }),
+      result("advisor", "warn", { status: "fail", detail: "src/a.ts:2 hmm" }),
+    ),
+    coverage: [covering("blocker", "src/a.ts"), covering("advisor", "src/a.ts")],
+  }).files[0];
+
+  it("names the BLOCK check as having reported a problem", () => {
+    expect(both?.reason).toMatch(/blocker reported a problem/);
+    expect(both?.reason).not.toMatch(/blocker raised an advisory/);
+  });
+
+  it("names the WARN check as having raised an advisory", () => {
+    // The case that makes the mutation detectable at all: with one of each on the
+    // same file, swapping the filters swaps which check appears in which sentence.
+    expect(both?.reason).toMatch(/advisor raised an advisory/);
+    expect(both?.reason).not.toMatch(/advisor reported a problem/);
+  });
+});
