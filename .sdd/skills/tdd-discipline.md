@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 2
+version: 3
 status: active
 ---
 # TDD discipline
@@ -40,6 +40,17 @@ strict TDD regardless of how small it looks.
    pass for the wrong reason (e.g. an equality check that treats `NaN` as equal). Corollary: on
    delegated or generated code, a fresh-context review of the real path is the load-bearing gate
    — agents systematically green-light the happy fixture.
+7. [TD7] **A guard is not trusted until it is proven in BOTH directions.** Testing what a
+   guard *rejects* proves nothing about what it *accepts*. Every blocking guard, validator or
+   filter needs a paired false-positive test: one case it must reject, and one legitimate case
+   it must let through. A guard that fails closed on real work is worse than no guard, because
+   it gets routed around.
+   - **Thresholds are measured, not chosen.** If a guard's rule was inferred from a handful of
+     observations, it is a hypothesis. Measure it against a real sample before shipping it as a
+     block, and state the sample size next to the claim.
+   - **A negative test must prove it landed.** Before trusting "the check blocked it", confirm
+     the mutation you introduced actually applied AND that the test went red for the reason you
+     intended. A no-op patch produces a green run that looks exactly like a broken guard.
 
 ## Defining a strict path (worked example)
 
@@ -65,6 +76,15 @@ CI or pre-release — they are NOT part of the per-change TDD loop.
 
 ## Changelog
 
+- v3 (2026-08-08, retro-0016): added [TD7] — a guard must be proven in BOTH directions
+  (a paired false-positive test), thresholds must be measured rather than inferred from a
+  handful of observations, and a negative test must confirm its mutation actually landed
+  before "it blocked" counts. From sig-0006 (a contamination guard that would have rejected
+  any review quoting `</div>`), sig-0008 (a rule calibrated from 2 samples that, measured over
+  80 runs, was right in kind and wrong in degree — it discarded correct answers on a third of
+  realistic inputs), and sig-0014 (a mutation test whose patch never applied, which nearly
+  recorded "the gate fails to block" from a no-op). Distinct from TD6: those tests existed,
+  they just did not prove enough. **Contribution candidate** — generic to any project.
 - v2 (2026-07-13, retro): added [TD6] — exercise the real/unseeded production path; a
   convenience-seeded fixture must not be the only path tested; assert through the real consumer,
   not a proxy that can pass for the wrong reason; on delegated/generated code a fresh-context

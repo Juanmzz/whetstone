@@ -1,6 +1,6 @@
 ---
 id: delegation
-version: 1
+version: 2
 status: active
 ---
 # Delegation
@@ -28,6 +28,15 @@ Does this inflate the agent's context without need? If yes → delegate. If no �
    references as ids/paths (not full content — the sub-agent fetches them itself), the
    rule-file paths to load first, and an instruction to record discoveries/decisions to the
    memory substrate before returning.
+8. [D8] **Verify a delegate's work against the base you dispatched from.** Capture the base
+   commit BEFORE dispatch and check the range `base..HEAD`. Checking the working tree against
+   HEAD is the trap: a delegate that commits leaves a clean tree, so the diff is empty and the
+   verification silently covers nothing.
+   - **Refuse an empty result.** A delegate that committed nothing has produced nothing to
+     verify. Say so; do not run checks over an empty range and read the outcome as success.
+   - **"No checks ran" must never share a message with "all checks passed."** They are
+     different outcomes and only one of them is evidence. Collapsing them is how unverified
+     work gets reported as verified.
 
 ## Inline vs delegate — quick table
 
@@ -64,6 +73,12 @@ reads. Fresh means fresh.
 
 ## Changelog
 
+- v2 (2026-08-08, retro-0016): added [D8] — verify a delegate's work against the base
+  captured BEFORE dispatch (`base..HEAD`), refuse an empty result, and never let "no checks
+  ran" share a message with "all checks passed". From sig-0015: a dispatch-then-gate flow
+  checked the working tree against HEAD, but the delegate had committed, so the diff was empty
+  — the gate honestly reported that nothing was verified while the run printed PASSED above it.
+  **Contribution candidate.**
 - v1 (2026-07-08, init): generated from the ChytaPay `delegation-harness` skill. Stripped
   ChytaPay-specifics (engram tool names, the SDD-orchestrator model-routing table,
   topic-key fetch); kept the generic delegation triggers, decision table, and
