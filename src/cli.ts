@@ -137,12 +137,13 @@ program
   .option("--base <branch>", "base branch", "main")
   .option("--title <title>", "title, when creating the PR")
   .option("--dry-run", "print what would be posted, spend nothing, touch no PR")
-  .option("--no-llm", "skip the LLM prose; engine reasons only")
+  .option("--no-llm", "skip the LLM prose on red hunks; the gate's lens still runs")
+  .option("--no-lens", "skip the gate's review lens too — fast and free")
   .option("--create", "open the PR if the branch has none")
   .option("--json", "print the annotation as JSON")
   .action(async (opts: {
     range?: string; base?: string; title?: string;
-    dryRun?: boolean; llm?: boolean; create?: boolean; json?: boolean;
+    dryRun?: boolean; llm?: boolean; lens?: boolean; create?: boolean; json?: boolean;
   }) => {
     process.exitCode = await runPr({
       ...(opts.range !== undefined ? { range: opts.range } : {}),
@@ -150,6 +151,7 @@ program
       ...(opts.title !== undefined ? { title: opts.title } : {}),
       ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
       ...(opts.llm === false ? { noLlm: true } : {}),
+      ...(opts.lens === false ? { noLens: true } : {}),
       ...(opts.create !== undefined ? { create: opts.create } : {}),
       ...(opts.json !== undefined ? { json: opts.json } : {}),
     });
