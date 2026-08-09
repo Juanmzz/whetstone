@@ -48,4 +48,11 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node dist/cli.js pr --base "${{ github.event.pull_request.base.ref }}" --no-llm
+        run: |
+          # actions/checkout leaves HEAD detached at the merge commit on a PR, and
+          # `wst pr` needs a branch to find the PR. Point a local branch at the head
+          # ref WITHOUT moving the working tree: the gate above already ran against
+          # the merge commit, and re-checking-out the head would silently change
+          # which tree got annotated.
+          git checkout -B "$GITHUB_HEAD_REF" --no-track HEAD
+          node dist/cli.js pr --base "${{ github.event.pull_request.base.ref }}" --no-llm
