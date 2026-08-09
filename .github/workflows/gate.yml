@@ -16,6 +16,13 @@ on:
   push:
     branches: [main]
 
+# The default GITHUB_TOKEN for this repo is read-only, so the annotation step could
+# neither look the PR up reliably nor post a review. Declared explicitly rather than
+# relying on the repo default, which is invisible from the workflow file.
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   gate:
     runs-on: ubuntu-latest
@@ -55,4 +62,10 @@ jobs:
           # the merge commit, and re-checking-out the head would silently change
           # which tree got annotated.
           git checkout -B "$GITHUB_HEAD_REF" --no-track HEAD
+
+          # Ask gh directly first. `findPr` maps ANY non-zero exit to "no PR", so a
+          # permission or auth failure arrives as "open one" for a PR that exists.
+          # Until that conflation is fixed, this line is what makes CI diagnosable.
+          gh pr view "$GITHUB_HEAD_REF" --json number,url || echo "gh pr view failed above — that is the real error"
+
           node dist/cli.js pr --base "${{ github.event.pull_request.base.ref }}" --no-llm
