@@ -83,6 +83,42 @@ describe("buildCharter", () => {
   });
 });
 
+/**
+ * OBSERVED IN THE WILD. `wst run` produced
+ *   run/fix-init-see-monorepos-and-their-tests-i
+ * where the trailing `-i` is the amputated start of a word: `slice(0, 40)` cut
+ * mid-word and the `-+$` strip only removed a hyphen, never the stump.
+ *
+ * It reads as carelessness on a branch a human has to look at in `git branch`,
+ * `gh pr list` and every merge commit forever. Cut at a word boundary instead.
+ */
+describe("branchNameFor truncation", () => {
+  it("never ends in a fragment of a word", () => {
+    expect(branchNameFor("fix init see monorepos and their tests inside packages")).toBe(
+      "run/fix-init-see-monorepos-and-their-tests",
+    );
+  });
+
+  it("cuts at the last word that fits, not at the character limit", () => {
+    const name = branchNameFor("alpha bravo charlie delta echo foxtrot golf hotel india");
+    expect(name.length).toBeLessThanOrEqual("run/".length + 40);
+    // Every segment present must be a whole word from the input.
+    const words = new Set("alpha bravo charlie delta echo foxtrot golf hotel india".split(" "));
+    for (const part of name.slice("run/".length).split("-")) expect(words.has(part)).toBe(true);
+  });
+
+  it("falls back to a hard cut when the first word alone is too long", () => {
+    // No word boundary to cut at. A stump beats an empty branch name.
+    const name = branchNameFor("supercalifragilisticexpialidociousandthensomemoreletters");
+    expect(name.startsWith("run/supercalifragilistic")).toBe(true);
+    expect(name.length).toBeLessThanOrEqual("run/".length + 40);
+  });
+
+  it("still fits a short task unchanged", () => {
+    expect(branchNameFor("add a quiet flag")).toBe("run/add-a-quiet-flag");
+  });
+});
+
 describe("branchNameFor", () => {
   it("slugifies a task", () => {
     expect(branchNameFor("Add a --quiet flag to wst status")).toBe(
