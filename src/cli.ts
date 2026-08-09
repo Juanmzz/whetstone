@@ -5,6 +5,7 @@
  */
 
 import { Command } from "commander";
+import { banner } from "./banner.js";
 import { runStatus } from "./commands/status.js";
 import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
@@ -15,12 +16,17 @@ import { runInit } from "./commands/init.js";
 import { runPr } from "./commands/pr.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 
+const VERSION = "0.4.0-alpha";
+
 const program = new Command();
 
 program
   .name("wst")
   .description("Whetstone — a self-sharpening standards layer for AI coding agents")
-  .version("0.4.0-alpha");
+  .version(VERSION)
+  // Only on the bare `wst`, where a human is looking at the tool rather than at a
+  // result. Commander prints this above the usage text.
+  .addHelpText("beforeAll", `\n${banner(VERSION)}\n`);
 
 program
   .command("status")
