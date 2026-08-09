@@ -9,6 +9,7 @@
  */
 
 import { execFile } from "node:child_process";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { buildCharter, branchNameFor, type GatingCheck } from "../core/dispatch/charter.js";
@@ -25,6 +26,14 @@ export interface RunOptions {
   /** Print the charter and exit without spending anything. */
   readonly dryRun?: boolean;
   readonly lane?: string;
+  /**
+   * Lease the worktree, branch it, write the charter — and stop before dispatching.
+   *
+   * For working the way a multiplexer shows: the agent runs in a session you can see,
+   * because you opened it. `wst run` spawns `claude -p` headless, which is correct for
+   * automation and invisible to herdr, tmux or anything else that displays panes.
+   */
+  readonly prepare?: boolean;
   readonly model?: string;
   readonly budgetUsd?: number;
   readonly mode?: CrewmateMode;
@@ -108,6 +117,32 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
       gatingChecks,
       strictPaths: ["src/core/", ".sdd/skills/", ".claude/hooks/"],
     });
+
+    // --prepare: everything up to the dispatch, then stop.
+    //
+    // The workdir is treehouse's job, the charter is Whetstone's, and the WINDOW is
+    // nobody's here — that is the point. Spawning `claude -p` headless is why herdr,
+    // tmux and any other multiplexer have nothing to show: there is no terminal to
+    // attach to. Handing the worktree back lets a human, a multiplexer or a harness
+    // supply the session, without Whetstone taking a dependency on any of them.
+    //
+    // A notary can prepare the file. It does not sit down and do the work.
+    if (opts.prepare === true) {
+      const charterPath = join(worktree.path, ".wst-charter.md");
+      await writeFile(charterPath, `${charter}\n`, "utf-8");
+      keepForInspection = true; // the worktree IS the deliverable here
+
+      console.log(`\n  prepared — nothing was dispatched, nothing was spent.\n`);
+      console.log(`  worktree  ${worktree.path}`);
+      console.log(`  branch    ${branch}`);
+      console.log(`  charter   .wst-charter.md (in the worktree)\n`);
+      console.log(`  Open a session there and start an agent:`);
+      console.log(`    cd ${worktree.path} && claude\n`);
+      console.log(`  When it is done, gate the work it committed:`);
+      console.log(`    wst gate --range ${base.slice(0, 7)}..HEAD --no-lens\n`);
+      console.log(`  Then return the worktree:  treehouse return ${worktree.path}`);
+      return 0;
+    }
 
     console.log(`\n  dispatching crewmate...`);
     const crewmate = createCrewmateAdapter();

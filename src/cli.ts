@@ -90,6 +90,7 @@ program
   .argument("<task...>", "what the crewmate should do")
   .description("dispatch a crewmate in an isolated worktree, then gate its work")
   .option("--dry-run", "print the charter and exit, spending nothing")
+  .option("--prepare", "lease the worktree and write the charter, but do not dispatch")
   .option("--lane <lane>", "scope the crewmate to a lane (boundary enforced by hook)")
   .option("--model <model>", "model for the crewmate")
   .option("--budget <usd>", "hard spend ceiling for the crewmate", "5")
@@ -97,11 +98,19 @@ program
   .action(
     async (
       task: string[],
-      opts: { dryRun?: boolean; lane?: string; model?: string; budget?: string; keep?: boolean },
+      opts: {
+        dryRun?: boolean;
+        prepare?: boolean;
+        lane?: string;
+        model?: string;
+        budget?: string;
+        keep?: boolean;
+      },
     ) => {
       process.exitCode = await runRun({
         task: task.join(" "),
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+        ...(opts.prepare !== undefined ? { prepare: opts.prepare } : {}),
         ...(opts.lane !== undefined ? { lane: opts.lane } : {}),
         ...(opts.model !== undefined ? { model: opts.model } : {}),
         ...(opts.budget !== undefined ? { budgetUsd: Number(opts.budget) } : {}),
