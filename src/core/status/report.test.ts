@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildStatusReport, renderStatusReport } from "./report.js";
+import { buildStatusReport, renderStatusReport, type StatusFacts } from "./report.js";
 
 const base = {
   repoRoot: "/repo",
@@ -7,7 +7,7 @@ const base = {
   sddPresent: true,
   judge: { name: "claude", version: "2.1.224" },
   nodeVersion: "v24.19.0",
-  hooksInstalled: true,
+  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },
 };
 
 describe("buildStatusReport", () => {
@@ -73,16 +73,53 @@ describe("renderStatusReport", () => {
 });
 
 describe("the pre-push gate", () => {
+  const withHooks = (over: Partial<StatusFacts["hooks"]>) =>
+    buildStatusReport({ ...base, hooks: { ...base.hooks, ...over } });
+
   // A gate that only runs when someone remembers to type it will be forgotten.
   // Reporting an unarmed clone as drift is the difference between a gate that is
   // available and one that is actually in the path.
-  it("warns when the hook is not installed, without calling the repo broken", () => {
-    const r = buildStatusReport({ ...base, hooksInstalled: false });
+  it("warns when nothing is configured and .githooks/ is there to point at", () => {
+    const r = withHooks({ configuredPath: null });
     expect(r.ready).toBe(true);
     expect(r.warnings.join(" ")).toMatch(/core\.hooksPath/);
   });
 
   it("says nothing when the hook is active", () => {
     expect(buildStatusReport(base).warnings.join(" ")).not.toMatch(/hooksPath/);
+  });
+
+  /**
+   * THE ADVICE MUST NOT BE DESTRUCTIVE.
+   *
+   * git has ONE `core.hooksPath`, so husky, lefthook and Whetstone are mutually
+   * exclusive. Telling someone on `.husky` to run `git config core.hooksPath
+   * .githooks` disarms their existing hooks — and `wst init` never writes a
+   * `.githooks/` directory, so it disarms them and installs nothing in its place.
+   * A boolean `hooksInstalled` could not tell those states apart: a repo on
+   * `.husky` reported identically to a repo with no hooks at all.
+   */
+  it("does NOT tell you to overwrite another tool's hooksPath", () => {
+    const r = withHooks({ configuredPath: ".husky" });
+    expect(r.warnings.join(" ")).not.toMatch(/run `git config/);
+  });
+
+  it("names the tool that currently owns hooks so the conflict is legible", () => {
+    expect(withHooks({ configuredPath: ".husky" }).warnings.join(" ")).toMatch(/\.husky/);
+  });
+
+  it("refuses to suggest pointing git at a .githooks/ that does not exist", () => {
+    // Following that advice disarms whatever was there and installs nothing.
+    const r = withHooks({ configuredPath: null, whetstoneHooksPresent: false });
+    expect(r.warnings.join(" ")).not.toMatch(/run `git config/);
+  });
+
+  it("stays a warning, never a problem, in every hook state", () => {
+    for (const configuredPath of [null, ".husky", ".githooks"]) {
+      for (const whetstoneHooksPresent of [true, false]) {
+        const r = withHooks({ configuredPath, whetstoneHooksPresent });
+        expect(r.problems.join(" ")).not.toMatch(/hook/i);
+      }
+    }
   });
 });
