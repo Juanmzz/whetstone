@@ -33,6 +33,11 @@ describe("parseSignalLog against .sdd/memory/signals.jsonl", () => {
 
   it("rejects the real log with a single line corrupted, naming that line", async () => {
     const text = await readFile(LOG, "utf-8");
+    // The parser stops at the FIRST corrupt line, so this test only means what it
+    // says if the log starts clean. Assert that separately rather than letting a
+    // pre-existing corruption elsewhere in the file pass as "the guard fired".
+    expect(() => parseSignalLog(text)).not.toThrow();
+
     const lines = text.split("\n");
     // Prove the mutation landed before trusting the rejection (TD7): the line must
     // really have become unparseable, or a green "it blocked" means nothing.
