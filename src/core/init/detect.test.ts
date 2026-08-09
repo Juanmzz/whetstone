@@ -215,3 +215,131 @@ describe("detectStack — layout, CI and commit style", () => {
     }
   });
 });
+
+/**
+ * A monorepo keeps its code where its root manifest says it does. Reading that
+ * declaration is the difference between naming the application code and naming
+ * nothing at all — and `sourceGlobs` being empty is not a cosmetic loss: it is
+ * what makes `triage.yaml` emit no rule over the source, the strict-paths
+ * question lose its default, and a check's `include` fall back to the unscoped
+ * `**​/*.ts` that `checks.ts` exists to avoid.
+ */
+describe("detectStack — workspaces", () => {
+  const sift = (over: Partial<RepoFacts> = {}): RepoFacts =>
+    facts({
+      files: [
+        "package.json",
+        "package-lock.json",
+        "tsconfig.base.json",
+        "apps/api/package.json",
+        "apps/api/src/index.ts",
+        "apps/api/src/llm/__tests__/retry.test.ts",
+        "apps/web/package.json",
+        "apps/web/src/App.tsx",
+        "packages/shared/package.json",
+        "packages/shared/src/index.ts",
+        "plan/package.json",
+        "plan/README.md",
+      ],
+      packageJson: { workspaces: ["apps/*", "packages/*"] },
+      ...over,
+    });
+
+  it("scopes the source globs to the workspaces the root manifest declares", () => {
+    expect(detectStack(sift()).sourceGlobs).toEqual(["apps/*/src/**", "packages/*/src/**"]);
+  });
+
+  it("keeps a check's include scoped, instead of falling back to the whole repo", () => {
+    const globs = detectStack(sift()).sourceFileGlobs;
+    expect(globs).toEqual([
+      "apps/*/src/**/*.ts",
+      "apps/*/src/**/*.tsx",
+      "packages/*/src/**/*.ts",
+      "packages/*/src/**/*.tsx",
+    ]);
+    expect(globs).not.toContain("**/*.ts");
+  });
+
+  it("names only the workspaces — a sibling directory with a package.json is not one", () => {
+    // `plan/` carries a package.json and holds no application code. It is
+    // excluded because the root manifest does not declare it, which is the whole
+    // reason for reading the declaration instead of guessing at directory names.
+    for (const glob of detectStack(sift()).sourceGlobs) expect(glob).not.toContain("plan");
+  });
+
+  it("ignores a declared workspace pattern that matches nothing on disk", () => {
+    const stack = detectStack(
+      sift({ packageJson: { workspaces: ["apps/*", "packages/*", "services/*"] } }),
+    );
+    expect(stack.sourceGlobs).toEqual(["apps/*/src/**", "packages/*/src/**"]);
+  });
+
+  it("honours a negated workspace pattern", () => {
+    const stack = detectStack(
+      sift({
+        files: [
+          "package.json",
+          "apps/api/package.json",
+          "apps/api/src/index.ts",
+          "apps/legacy/package.json",
+          "apps/legacy/lib/old.ts",
+        ],
+        packageJson: { workspaces: ["apps/*", "!apps/legacy"] },
+      }),
+    );
+    expect(stack.sourceGlobs).toEqual(["apps/*/src/**"]);
+  });
+
+  it("reads yarn's `workspaces.packages` spelling too", () => {
+    const stack = detectStack(sift({ packageJson: { workspaces: { packages: ["apps/*"] } } }));
+    expect(stack.sourceGlobs).toEqual(["apps/*/src/**"]);
+  });
+
+  it("falls back to the package root when a workspace has no recognisable source dir", () => {
+    const stack = detectStack(
+      sift({
+        files: ["package.json", "packages/tiny/package.json", "packages/tiny/index.ts"],
+        packageJson: { workspaces: ["packages/*"] },
+      }),
+    );
+    expect(stack.sourceGlobs).toEqual(["packages/*/**"]);
+  });
+
+  it("keeps a root source dir alongside the workspaces, most specific last", () => {
+    const stack = detectStack(
+      sift({
+        files: [
+          "package.json",
+          "src/cli.ts",
+          "apps/api/package.json",
+          "apps/api/src/index.ts",
+        ],
+        packageJson: { workspaces: ["apps/*"] },
+      }),
+    );
+    expect(stack.sourceGlobs).toEqual(["src/**", "apps/*/src/**"]);
+  });
+
+  it("says in the evidence that the layout came from the declared workspaces", () => {
+    expect(detectStack(sift()).evidence.join("\n")).toContain("workspaces");
+  });
+
+  it("leaves a flat repo exactly as it was — src/ at the root, no workspaces", () => {
+    // Whetstone's own shape. The regression fixture for all of the above.
+    const stack = detectStack(
+      facts({
+        files: ["package.json", "tsconfig.json", "src/cli.ts", "src/core/init/detect.ts"],
+        packageJson: { scripts: { test: "vitest run" } },
+      }),
+    );
+    expect(stack.sourceGlobs).toEqual(["src/**"]);
+    expect(stack.sourceFileGlobs).toEqual(["src/**/*.ts", "src/**/*.tsx"]);
+  });
+
+  it("ignores a `workspaces` field that is not a list of strings", () => {
+    const stack = detectStack(
+      facts({ files: ["package.json", "src/a.ts"], packageJson: { workspaces: "apps/*" } }),
+    );
+    expect(stack.sourceGlobs).toEqual(["src/**"]);
+  });
+});

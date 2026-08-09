@@ -18,12 +18,16 @@
  * scripts or is a command the detected toolchain guarantees.
  */
 
+import { matchesPathGlob } from "../triage/glob.js";
+
 export interface PackageJson {
   readonly name?: unknown;
   readonly packageManager?: unknown;
   readonly scripts?: Readonly<Record<string, unknown>>;
   readonly dependencies?: Readonly<Record<string, unknown>>;
   readonly devDependencies?: Readonly<Record<string, unknown>>;
+  /** npm/bun `["apps/*"]` or yarn-classic `{ packages: ["apps/*"] }`. */
+  readonly workspaces?: unknown;
 }
 
 /**
@@ -93,6 +97,79 @@ const SOURCE_EXT = [
 ];
 
 const SOURCE_DIRS = ["src", "lib", "app", "pkg", "internal", "cmd"];
+
+/**
+ * Where a monorepo keeps its packages, read from the root manifest's `workspaces`
+ * rather than guessed from a list of fashionable directory names.
+ *
+ * The guess is the tempting fix — add `apps` and `packages` to `SOURCE_DIRS` and
+ * sift lights up. It is also wrong in both directions: it names `apps/` in a repo
+ * that keeps documentation there, and it stays blind to the repo that calls the
+ * same directory `services/` or `modules/`. The declaration is not a heuristic;
+ * it is the project stating where its code lives, in the file the package manager
+ * itself reads.
+ *
+ * Two spellings exist. npm, pnpm and bun take an array; yarn classic wraps it in
+ * `{ packages: [...] }`. A leading `!` negates, which npm supports and which a
+ * repo uses precisely to keep a stale package out of the workspace — so honouring
+ * it is honouring the project's own exclusion.
+ */
+function workspacePatterns(pkg: PackageJson | null): {
+  readonly include: readonly string[];
+  readonly exclude: readonly string[];
+} {
+  const declared = pkg?.workspaces;
+  const raw = Array.isArray(declared)
+    ? declared
+    : typeof declared === "object" && declared !== null && "packages" in declared
+      ? (declared as { readonly packages?: unknown }).packages
+      : undefined;
+  if (!Array.isArray(raw)) return { include: [], exclude: [] };
+
+  const include: string[] = [];
+  const exclude: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    const negated = entry.startsWith("!");
+    const pattern = normalise(negated ? entry.slice(1) : entry).replace(/\/+$/, "");
+    if (pattern.length === 0) continue;
+    (negated ? exclude : include).push(pattern);
+  }
+  return { include, exclude };
+}
+
+/**
+ * The declared patterns that actually matched a package on disk, each paired with
+ * the packages it matched.
+ *
+ * Grounded on both sides on purpose: a pattern with no package behind it names
+ * nothing (a `services/*` line left over from a directory that was deleted), and a
+ * directory with a `package.json` that no pattern claims is not a workspace (sift's
+ * `plan/`, which holds planning documents and a lockfile). Either one alone would
+ * put a glob over code that is not there, or over prose that is not code.
+ */
+function workspaceRoots(
+  files: readonly string[],
+  pkg: PackageJson | null,
+): readonly { readonly pattern: string; readonly roots: readonly string[] }[] {
+  const { include, exclude } = workspacePatterns(pkg);
+  if (include.length === 0) return [];
+
+  const packages = files
+    .filter((f) => f.endsWith("/package.json"))
+    .map((f) => f.slice(0, -"/package.json".length))
+    .filter((dir) => dir.length > 0);
+
+  return include
+    .map((pattern) => ({
+      pattern,
+      roots: packages.filter(
+        (dir) =>
+          matchesPathGlob(dir, pattern) && !exclude.some((no) => matchesPathGlob(dir, no)),
+      ),
+    }))
+    .filter((entry) => entry.roots.length > 0);
+}
 
 /**
  * `npm init` writes this. It exits 1 by design, so a `test` check built on it
@@ -208,8 +285,14 @@ export function detectStack(facts: RepoFacts): StackFacts {
   const commands = detectCommands(facts.packageJson, language, packageManager, has, note);
 
   // ── layout ────────────────────────────────────────────────────────────────
-  const sourceGlobs = SOURCE_DIRS.filter((d) => under(`${d}/`)).map((d) => `${d}/**`);
-  if (sourceGlobs.length > 0) note(`source dirs: ${sourceGlobs.join(", ")}`, "directory listing");
+  const workspaces = workspaceRoots(files, facts.packageJson);
+  const sourceGlobs = layoutGlobs(under, workspaces);
+  if (sourceGlobs.length > 0) {
+    note(
+      `source dirs: ${sourceGlobs.join(", ")}`,
+      workspaces.length > 0 ? "package.json workspaces + directory listing" : "directory listing",
+    );
+  }
 
   const hasTests = files.some(
     (f) =>
@@ -311,6 +394,35 @@ function detectCommands(
     typecheck,
     lint: lintScript === null ? null : run(lintScript),
   };
+}
+
+/**
+ * The source globs: the repo's own top-level source dirs, then one glob per
+ * declared workspace pattern.
+ *
+ * The workspace globs keep the pattern (`apps/*​/src/**`) rather than expanding to
+ * one glob per package. Both are correct against the glob engine; the pattern is
+ * what a human wrote in `package.json`, it stays two lines in `triage.yaml`
+ * instead of fifty in a large monorepo, and it already covers the package added
+ * next week. The source dir INSIDE the pattern is still measured, not assumed —
+ * `src` appears only because a package actually has one.
+ */
+function layoutGlobs(
+  under: (prefix: string) => boolean,
+  workspaces: readonly { readonly pattern: string; readonly roots: readonly string[] }[],
+): string[] {
+  const globs = SOURCE_DIRS.filter((d) => under(`${d}/`)).map((d) => `${d}/**`);
+
+  for (const { pattern, roots } of workspaces) {
+    const dirs = SOURCE_DIRS.filter((d) => roots.some((root) => under(`${root}/${d}/`)));
+    // A package that keeps its code at its own root (`packages/tiny/index.ts`) is
+    // still application code. Naming the package is less precise than naming a
+    // source dir and strictly better than naming nothing.
+    const found = dirs.length > 0 ? dirs.map((d) => `${pattern}/${d}/**`) : [`${pattern}/**`];
+    for (const glob of found) if (!globs.includes(glob)) globs.push(glob);
+  }
+
+  return globs;
 }
 
 /**
