@@ -9,7 +9,7 @@
 
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { EmittableSignal } from "../core/signals/emit.js";
+import { signalId, type EmittableSignal } from "../core/signals/emit.js";
 import { parseSignalLog, type SignalRecord } from "../core/signals/parse.js";
 
 export const SIGNALS_PATH = "memory/signals.jsonl";
@@ -32,15 +32,6 @@ export async function readSignalLog(sddRoot: string): Promise<SignalRecord[]> {
   return parseSignalLog(text);
 }
 
-function nextId(existing: readonly SignalRecord[]): number {
-  let max = 0;
-  for (const s of existing) {
-    const n = Number(/^sig-(\d+)$/.exec(s.id)?.[1] ?? 0);
-    if (n > max) max = n;
-  }
-  return max + 1;
-}
-
 /** Returns the ids written. Empty when there was nothing new to say. */
 export async function appendSignals(
   sddRoot: string,
@@ -52,13 +43,10 @@ export async function appendSignals(
   const path = join(sddRoot, SIGNALS_PATH);
   await mkdir(dirname(path), { recursive: true });
 
-  const existing = await readSignalLog(sddRoot);
-  let n = nextId(existing);
-
   const ids: string[] = [];
   const lines: string[] = [];
   for (const s of signals) {
-    const id = `sig-${String(n++).padStart(4, "0")}`;
+    const id = signalId(s.fingerprint);
     ids.push(id);
     lines.push(
       JSON.stringify({

@@ -14,6 +14,7 @@
  * rather than blending the two.
  */
 
+import { createHash } from "node:crypto";
 import type { GateVerdict } from "../contracts.js";
 
 export type SignalSeverity = "low" | "medium" | "high";
@@ -93,6 +94,29 @@ export function signalsFromGate(verdict: GateVerdict, range: string): EmittableS
  * A signal whose earlier twin was RESOLVED is re-emitted: the receipt proves it was
  * closed, so its return is a regression, and regressions are real news.
  */
+/**
+ * A signal's id, derived from the fingerprint it already carries.
+ *
+ * `shell/signals.ts` allocated `sig-NNNN` as `max(existing) + 1`, read from the log.
+ * The FILE is append-only and its header explains why; the ID was not, and that is a
+ * read-modify-write with the same failure it warns about. Two gates in parallel
+ * worktrees read the same log, compute the same next number, and both write it —
+ * duplicate ids in the evidence the retro clusters over, and the failure only shows
+ * up once you use the tool the way it is meant to be used.
+ *
+ * Content-derived needs no read, so there is nothing to race, and two machines with
+ * different logs agree. The cost is that ids stop being readable in order:
+ * `sig-0034` told you it was the 34th, `sig-a3f21c9d` tells you nothing. That was
+ * never information worth a correctness bug, and the timestamp is right there.
+ *
+ * Signals `sig-0001` to `sig-0036` keep their hand-written sequential ids. Ids must
+ * be unique, not ordered, and rewriting the record to match a new scheme is exactly
+ * what the memory rules forbid.
+ */
+export function signalId(fingerprint: string): string {
+  return `sig-${createHash("sha256").update(fingerprint, "utf8").digest("hex").slice(0, 8)}`;
+}
+
 export function dedupe(
   candidates: readonly EmittableSignal[],
   existing: readonly ExistingSignal[],

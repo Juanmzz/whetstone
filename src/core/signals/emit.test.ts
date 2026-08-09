@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedupe, signalsFromGate, type EmittableSignal } from "./emit.js";
+import { dedupe, signalId, signalsFromGate, type EmittableSignal } from "./emit.js";
 import type { CheckOutcome, CheckResult, GateVerdict } from "../contracts.js";
 import { aggregate } from "../gate/aggregate.js";
 
@@ -99,5 +99,42 @@ describe("dedupe", () => {
 
   it("ignores hand-written signals that carry no fingerprint", () => {
     expect(dedupe([sig("x")], [{ detail: "a human wrote this" } as never])).toHaveLength(1);
+  });
+});
+
+/**
+ * IDS MUST NOT COME FROM A COUNTER.
+ *
+ * `shell/signals.ts` allocated `sig-NNNN` as `max(existing) + 1`, read from the log.
+ * The file is append-only and says so — but the ID is not, and two gates running in
+ * parallel worktrees both read the same log, both compute the same next number, and
+ * both write it. The retro clusters over these IDs.
+ *
+ * The signal already carries a content identity: `fingerprint`, which `dedupe`
+ * relies on. Deriving the ID from it needs no read, so there is nothing to race.
+ */
+describe("signalId", () => {
+  it("is a pure function of the fingerprint", () => {
+    expect(signalId("gate-blocked:test:1")).toBe(signalId("gate-blocked:test:1"));
+  });
+
+  it("differs for different fingerprints", () => {
+    expect(signalId("gate-blocked:test:1")).not.toBe(signalId("gate-blocked:test:2"));
+  });
+
+  it("needs nothing but the fingerprint — no log, no counter, no clock", () => {
+    // The whole point: two machines with different logs agree, so concurrent
+    // writers cannot collide and a replay cannot renumber history.
+    expect(signalId.length).toBe(1);
+  });
+
+  it("looks like a signal id, so existing tooling and prose still parse it", () => {
+    expect(signalId("x")).toMatch(/^sig-[0-9a-f]{8}$/);
+  });
+
+  it("does not collide across a realistic spread of fingerprints", () => {
+    const ids = new Set<string>();
+    for (let i = 0; i < 2000; i++) ids.add(signalId(`gate-blocked:check-${String(i)}:1`));
+    expect(ids.size).toBe(2000);
   });
 });
