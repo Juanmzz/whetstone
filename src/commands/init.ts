@@ -14,10 +14,16 @@
  *
  * ## Never clobber
  *
- * An existing `.sdd/` stops the command dead. `init` is not `re-init`: a repo
- * that already has a constitution has decisions in it, and overwriting them
- * silently destroys the only record of why the project works the way it does.
- * `--force` exists, prints what it is about to overwrite, and is not the default.
+ * ANY existing file the plan would write stops the command dead, not just `.sdd/`.
+ * The guard used to cover `.sdd/` alone, which meant a repo that had never seen
+ * Whetstone but did have a hand-written `AGENTS.md`, a `CLAUDE.md` and a populated
+ * `.claude/settings.json` lost all three on the first command a new user ran. The
+ * writer is `mkdir -p` + `writeFile` with no existence check of its own, so this is
+ * the only thing standing between the plan and somebody's work.
+ *
+ * `core/init/collisions.ts` decides what a collision costs; this file only asks the
+ * filesystem what is there. `--force` overwrites, still prints the list first, and
+ * is not the default.
  */
 
 import { execFile } from "node:child_process";
@@ -26,6 +32,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { createGitAdapter } from "../shell/git.js";
+import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import {
   NO_RISK,
   buildInterview,
@@ -306,6 +313,21 @@ async function findPayloadRoot(): Promise<string | null> {
   }
 }
 
+/**
+ * Which of the plan's target paths are already on disk.
+ *
+ * The one place `init` touches the filesystem to answer a question rather than to
+ * write. Stat-per-path rather than a directory walk: the plan is ~30 paths, and a
+ * walk would have to reason about ignore rules to be equivalent.
+ */
+async function existingOf(plan: InitPlan, root: string): Promise<string[]> {
+  const paths = [...plan.files.map((f) => f.path), ...plan.copies.map((c) => c.to)];
+  const found = await Promise.all(
+    paths.map(async (path) => ((await exists(join(root, path))) ? path : null)),
+  );
+  return found.filter((path): path is string => path !== null);
+}
+
 async function writePlan(plan: InitPlan, root: string, payloadRoot: string | null): Promise<void> {
   for (const file of plan.files) {
     const target = join(root, file.path);
@@ -351,19 +373,6 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
-  // Checked AFTER the questions phase on purpose: printing what init WOULD ask is
-  // read-only and useful in a repo that already has a `.sdd/`.
-  const sddPath = join(root, ".sdd");
-  if ((await exists(sddPath)) && opts.force !== true) {
-    console.error(
-      `refusing to overwrite: ${sddPath} already exists.\n` +
-        `  init is not re-init — that directory holds decisions, and a silent overwrite\n` +
-        `  destroys the record of why this project works the way it does.\n` +
-        `  Pass --force if replacing it is genuinely what you want.`,
-    );
-    return 1;
-  }
-
   let plan: InitPlan;
   try {
     plan = planInit({
@@ -388,6 +397,24 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   console.log(`wst init — ${root}`);
   printDetection(plan.stack);
   printPlan(plan, root);
+
+  // Checked AFTER the questions phase and the plan on purpose: both are read-only,
+  // and printing what init WOULD ask or write stays useful in a repo it refuses to
+  // touch. Checked BEFORE the writer because the writer has no existence check of
+  // its own — it is `mkdir -p` + `writeFile`, and by the time it runs the previous
+  // contents are already gone.
+  const collisions = collisionsIn(plan, await existingOf(plan, root));
+
+  if (collisions.length > 0) {
+    if (opts.force !== true) {
+      console.error(`\n${renderCollisions(collisions)}`);
+      return 1;
+    }
+    // --force still SAYS what it is about to destroy. A destructive flag that
+    // works silently teaches people to pass it by reflex.
+    console.log(`\n--force: overwriting ${String(collisions.length)} existing file(s):`);
+    for (const collision of collisions) console.log(`  ${collision.path}`);
+  }
 
   if (opts.dryRun === true) {
     console.log("\n--dry-run: nothing written.");
