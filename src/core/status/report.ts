@@ -16,9 +16,32 @@ export interface StatusFacts {
   readonly sddPresent: boolean;
   readonly judge: { readonly name: string; readonly version: string | null };
   readonly nodeVersion: string;
-  /** Whether git is configured to use the versioned .githooks/ directory. */
-  readonly hooksInstalled: boolean;
+  readonly hooks: HookFacts;
 }
+
+/** Where Whetstone's hooks live, when it owns them. */
+export const WHETSTONE_HOOKS_PATH = ".githooks";
+
+/**
+ * git has exactly ONE `core.hooksPath`, so husky, lefthook and Whetstone are
+ * mutually exclusive: setting one unsets the others.
+ *
+ * This used to be a single boolean, `hooksInstalled`, computed as
+ * `hooksPath === ".githooks"`. That collapsed three different situations into one
+ * answer — nothing configured, another tool configured, and Whetstone configured —
+ * so a repo on `.husky` reported identically to a repo with no hooks at all and got
+ * told to run `git config core.hooksPath .githooks`. Following that disarms husky.
+ */
+export interface HookFacts {
+  /** The configured `core.hooksPath`, verbatim, or `null` when unset. */
+  readonly configuredPath: string | null;
+  /** Whether a `.githooks/` directory actually exists to be pointed at. */
+  readonly whetstoneHooksPresent: boolean;
+}
+
+/** Whether the pre-push gate is actually in the path. */
+export const hooksArmed = (hooks: HookFacts): boolean =>
+  hooks.configuredPath === WHETSTONE_HOOKS_PATH;
 
 export interface StatusReport {
   readonly facts: StatusFacts;
@@ -43,12 +66,35 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     );
   }
 
-  if (!facts.hooksInstalled) {
-    // A gate that only runs when invoked is a gate that will be forgotten. This is
-    // a warning, not a problem: a fresh clone is not broken, it is just unarmed.
-    warnings.push(
-      "the pre-push gate is not active — run `git config core.hooksPath .githooks`",
-    );
+  // A gate that only runs when invoked is a gate that will be forgotten. Always a
+  // warning, never a problem: a fresh clone is not broken, it is just unarmed — and
+  // a repo that deliberately uses husky is not broken either.
+  if (!hooksArmed(facts.hooks)) {
+    const { configuredPath, whetstoneHooksPresent } = facts.hooks;
+
+    if (configuredPath !== null) {
+      // Another tool owns hooks. Say so and STOP — no command to copy-paste. There
+      // is one `core.hooksPath`, so any instruction we could give here silently
+      // disarms whatever is already protecting this repo, and choosing that for
+      // someone is not `status`'s call. It reports; the human decides.
+      warnings.push(
+        `the pre-push gate is not active, and \`${configuredPath}\` already owns ` +
+          `core.hooksPath — git allows only one, so arming Whetstone would disable it. ` +
+          `Chain the gate from the existing hook, or move deliberately; status will not ` +
+          `hand you a command that disarms something you set up on purpose`,
+      );
+    } else if (!whetstoneHooksPresent) {
+      // Pointing git at a directory that does not exist installs nothing, and if
+      // anything had been configured it would now be gone. Never suggest it.
+      warnings.push(
+        `the pre-push gate is not active, and there is no \`${WHETSTONE_HOOKS_PATH}/\` ` +
+          `directory to point git at — create the hook first, then arm it`,
+      );
+    } else {
+      warnings.push(
+        `the pre-push gate is not active — run \`git config core.hooksPath ${WHETSTONE_HOOKS_PATH}\``,
+      );
+    }
   }
 
   if (facts.judge.version !== null && facts.judge.version !== VALIDATED_JUDGE_VERSION) {
@@ -78,7 +124,15 @@ export function renderStatusReport(
     `  .sdd/     ${facts.sddPresent ? "present" : "missing"}`,
     `  judge     ${facts.judge.name} ${facts.judge.version ?? "(not found)"}`,
     `  node      ${facts.nodeVersion}`,
-    `  pre-push  ${facts.hooksInstalled ? "active" : "NOT active"}`,
+    // Names the owner when it is not us. "NOT active" alone reads as "nothing is
+    // guarding this repo", which is the opposite of the truth on a husky repo.
+    `  pre-push  ${
+      hooksArmed(facts.hooks)
+        ? "active"
+        : facts.hooks.configuredPath !== null
+          ? `NOT active (\`${facts.hooks.configuredPath}\` owns core.hooksPath)`
+          : "NOT active"
+    }`,
     "",
     `  ${report.ready ? "ready" : "NOT ready"}`,
   ];

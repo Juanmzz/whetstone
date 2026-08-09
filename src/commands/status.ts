@@ -9,7 +9,11 @@ import { promisify } from "node:util";
 import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
 import { createClaudeJudge } from "../shell/claude.js";
-import { buildStatusReport, renderStatusReport } from "../core/status/report.js";
+import {
+  buildStatusReport,
+  renderStatusReport,
+  WHETSTONE_HOOKS_PATH,
+} from "../core/status/report.js";
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -20,11 +24,18 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** `core.hooksPath`, or null when unset. */
+/**
+ * `core.hooksPath`, or null when unset.
+ *
+ * Reported VERBATIM rather than compared to `.githooks` here. The comparison is a
+ * decision and belongs in `core/status/`; collapsing it to a boolean at this layer
+ * is what let status tell a husky repo to disarm itself.
+ */
 async function hooksPath(cwd: string): Promise<string | null> {
   try {
     const { stdout } = await promisify(execFile)("git", ["config", "--get", "core.hooksPath"], { cwd });
-    return stdout.trim();
+    const value = stdout.trim();
+    return value === "" ? null : value;
   } catch {
     return null;
   }
@@ -45,7 +56,10 @@ export async function runStatus(
     branch,
     sddPresent: await exists(join(repoRoot ?? cwd, ".sdd")),
     judge: judgeInfo,
-    hooksInstalled: (await hooksPath(repoRoot ?? cwd)) === ".githooks",
+    hooks: {
+      configuredPath: await hooksPath(repoRoot ?? cwd),
+      whetstoneHooksPresent: await exists(join(repoRoot ?? cwd, WHETSTONE_HOOKS_PATH)),
+    },
     nodeVersion: process.version,
   });
 
