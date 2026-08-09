@@ -4,17 +4,12 @@
  * blocks, what earns a receipt and what the exit code is are all decided in
  * `src/core/gate/`, where the tests can reach them.
  *
- * Two things in this file are deliberately temporary, and both are marked in place:
- *
- *  1. **The triage seam.** `Routing` normally comes from `src/core/triage/`, which is
- *     being built in a parallel lane and does not exist yet. `provisionalRouting`
- *     stands in for it and fails SAFE — it assumes `strict`, the maximum tier, so the
- *     stub over-verifies rather than under-verifies. Replacing it is one import.
- *  2. **Two adapters living in a command.** `runShellCommand` and `unifiedDiff` spawn
- *     processes, which belongs in `src/shell/`. The gate lane does not own
- *     `src/shell/`, and the lane guard denies the write — correctly, since a second
- *     lane may be editing there. They are kept as thin as the rest of `src/shell/`
- *     is: no branching logic, all interpretation is in `core/gate/outcomes.ts`.
+ * One thing in this file is deliberately temporary, and it is marked in place:
+ * `runShellCommand` and `unifiedDiff` spawn processes, which belongs in
+ * `src/shell/`. The gate lane does not own `src/shell/`, and the lane guard denies
+ * the write — correctly, since a second lane may be editing there. They are kept as
+ * thin as the rest of `src/shell/` is: no branching logic, all interpretation is in
+ * `core/gate/outcomes.ts`.
  */
 
 import { exec, execFile } from "node:child_process";
@@ -41,15 +36,22 @@ import {
   type RunOutcome,
 } from "../core/gate/outcomes.js";
 import type { JudgeResult, LlmJudge } from "../core/ports.js";
+import { classify, route } from "../core/triage/index.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { createGitAdapter } from "../shell/git.js";
 import { readReceipt, writeReceipt } from "../shell/receipts.js";
-import { loadRegistry } from "../shell/sdd.js";
+import { loadRegistry, loadTriageRules, type LoadedTriageRules } from "../shell/sdd.js";
 
 export interface GateOptions {
   /** A `git diff` range. Default `HEAD` — the working tree against the last commit. */
   readonly range?: string;
-  /** Provisional: overrides the stubbed triage tier until `core/triage/` lands. */
+  /**
+   * Force a tier instead of the one triage classified. An ESCAPE HATCH, not the
+   * normal path: `.sdd/triage.yaml` is where a project says what a change earns.
+   * Kept because escalating by hand ("verify this as if it were strict") is a
+   * legitimate thing to want, and because it is how the tier-specific behaviour
+   * gets exercised without fabricating a diff.
+   */
   readonly tier?: Tier;
   readonly json?: boolean;
   /** Per-lens spend ceiling handed to the judge. */
@@ -84,26 +86,6 @@ const MAX_BUFFER = 64 * 1024 * 1024;
 
 /** Exit code for a gate that could not even start. Distinct from a block. */
 const EXIT_MISCONFIGURED = 2;
-
-// ── the triage seam ──────────────────────────────────────────────────────────
-
-/**
- * PROVISIONAL — replace with `route(classify(files, rules))` from `src/core/triage/`.
- *
- * It hard-codes the MAXIMUM tier rather than guessing. Triage's own rule is that the
- * tier is the maximum over the files touched and size only escalates, so a stub that
- * assumes `strict` can only ever run more checks than the real thing, never fewer.
- * A stub that guessed low would silently under-verify, and nobody would notice.
- */
-function provisionalRouting(registry: Registry, tier: Tier): Routing {
-  return {
-    tier,
-    checks: registry.active.filter((c) => c.tiers.includes(tier)).map((c) => c.id),
-    autonomy: tier === "strict" ? "human-gate" : "autonomous",
-    modelTier: "sonnet",
-    autofix: false,
-  };
-}
 
 // ── adapters (see the file header: these belong in src/shell/) ───────────────
 
@@ -275,11 +257,14 @@ export async function runGate(
   const range = opts.range ?? DEFAULT_RANGE;
 
   let registry: Registry;
+  let rules: LoadedTriageRules;
   try {
-    registry = await loadRegistry(sddRoot);
+    [registry, rules] = await Promise.all([loadRegistry(sddRoot), loadTriageRules(sddRoot)]);
   } catch (cause) {
-    // A registry that will not load means an UNGATED change. It must be loud.
-    console.error(`check registry failed to load\n  ${(cause as Error).message}`);
+    // Configuration that will not load means an UNGATED change. It must be loud.
+    // Triage rules belong in the same breath as the registry: rules the gate
+    // could not read would silently route every change at the fallback tier.
+    console.error(`configuration failed to load\n  ${(cause as Error).message}`);
     return EXIT_MISCONFIGURED;
   }
 
@@ -293,7 +278,12 @@ export async function runGate(
     return EXIT_MISCONFIGURED;
   }
 
-  const routing = provisionalRouting(registry, opts.tier ?? "strict");
+  // The same two calls `wst pr` makes, deliberately. The gate is the enforcement
+  // channel; if it routed from anything other than `.sdd/triage.yaml`, the project's
+  // triage rules would be decorative exactly where they matter, and the annotation
+  // would describe a tier the gate never used.
+  const triage = classify(files, rules.rules, rules.origin);
+  const routing = route(opts.tier ?? triage.tier, registry.active);
 
   const run = await executeGate(
     { routing, registry, files },
@@ -324,7 +314,6 @@ export async function runGate(
   let emitted: string[] = [];
   if (opts.noEmit !== true) {
     try {
-      const sddRoot = join(repoRoot ?? cwd, ".sdd");
       const candidates = signalsFromGate(run.verdict, range);
       emitted = await appendSignals(sddRoot, dedupe(candidates, await readSignalLog(sddRoot)), new Date());
     } catch {

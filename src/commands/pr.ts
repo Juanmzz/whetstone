@@ -25,7 +25,6 @@
  */
 
 import { exec, execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   annotate,
@@ -40,7 +39,7 @@ import {
   type CheckCoverage,
 } from "../core/annotate/index.js";
 import type { LoadedCheck, Registry } from "../core/checks/registry.js";
-import type { Routing, TriageResult, TriageRule } from "../core/contracts.js";
+import type { Routing, TriageResult } from "../core/contracts.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
 import {
   LensVerdictSchema,
@@ -53,12 +52,12 @@ import {
 import { runGate as executeGate, type ReceiptStore } from "../core/gate/run.js";
 import { createCheckRunner } from "./gate.js";
 import type { JudgeResult, LlmJudge } from "../core/ports.js";
-import { classify, DEFAULT_RULES, parseTriageRules, route } from "../core/triage/index.js";
+import { classify, route } from "../core/triage/index.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { createGitAdapter } from "../shell/git.js";
 import { createGithubAdapter, type GithubPort } from "../shell/github.js";
 import { readReceipt, writeReceipt } from "../shell/receipts.js";
-import { loadRegistry } from "../shell/sdd.js";
+import { loadRegistry, loadTriageRules, type LoadedTriageRules } from "../shell/sdd.js";
 
 export interface PrOptions {
   /** `git diff --name-status <range>`. Defaults to the PR's own commits vs the base. */
@@ -136,21 +135,6 @@ function createReceiptStore(sddRoot: string): ReceiptStore {
   };
 }
 
-async function loadRules(sddRoot: string): Promise<{ rules: readonly TriageRule[]; origin: string }> {
-  const path = join(sddRoot, "triage.yaml");
-  try {
-    return { rules: parseTriageRules(await readFile(path, "utf-8"), path), origin: path };
-  } catch (cause) {
-    // Only a MISSING file falls back. A malformed one is re-thrown by
-    // `parseTriageRules` and must not be swallowed — silently ignoring rules
-    // somebody wrote is how a change gets triaged at the wrong discipline.
-    if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
-      return { rules: DEFAULT_RULES, origin: "built-in defaults" };
-    }
-    throw cause;
-  }
-}
-
 // ── the dry run ──────────────────────────────────────────────────────────────
 
 function printDryRun(
@@ -200,9 +184,9 @@ export async function runPr(opts: PrOptions = {}, cwd: string = process.cwd()): 
   const range = opts.range ?? `${base}...HEAD`;
 
   let registry: Registry;
-  let rules: { rules: readonly TriageRule[]; origin: string };
+  let rules: LoadedTriageRules;
   try {
-    [registry, rules] = await Promise.all([loadRegistry(sddRoot), loadRules(sddRoot)]);
+    [registry, rules] = await Promise.all([loadRegistry(sddRoot), loadTriageRules(sddRoot)]);
   } catch (cause) {
     console.error(`configuration failed to load\n  ${(cause as Error).message}`);
     return EXIT_FAILED;
