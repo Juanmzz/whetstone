@@ -1,0 +1,71 @@
+name: gate
+
+# The other half of the pre-push hook. The hook runs deterministic checks only, so
+# it stays fast enough not to be bypassed; CI is where the slower, costlier work
+# belongs because nobody is waiting on it.
+#
+# NOTE ON THE REVIEW LENS: `claude` is not authenticated here, so the agent-lens
+# check cannot run. That is deliberately NOT papered over. The gate reports it as
+# `errored` (the gate being broken) rather than `fail` (the change being bad), and
+# exits 2 only if a BLOCKING check could not run. `correctness` is at severity
+# warn, so CI still passes and the PR says plainly that the lens did not run.
+# Wiring an ANTHROPIC_API_KEY secret would change that, at a cost per PR.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# The default GITHUB_TOKEN for this repo is read-only, so the annotation step could
+# neither look the PR up reliably nor post a review. Declared explicitly rather than
+# relying on the repo default, which is invisible from the workflow file.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The gate diffs against the base, so a shallow clone has nothing to
+          # compare with. Full history is the cheapest way to get that right.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: whetstone gate
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.sha }}"
+          else
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          fi
+          echo "gating $RANGE"
+          node dist/cli.js gate --range "$RANGE"
+
+      - name: annotate the PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # actions/checkout leaves HEAD detached at the merge commit on a PR, and
+          # `wst pr` needs a branch to find the PR. Point a local branch at the head
+          # ref WITHOUT moving the working tree: the gate above already ran against
+          # the merge commit, and re-checking-out the head would silently change
+          # which tree got annotated.
+          git checkout -B "$GITHUB_HEAD_REF" --no-track HEAD
+
+          # Ask gh directly first. `findPr` maps ANY non-zero exit to "no PR", so a
+          # permission or auth failure arrives as "open one" for a PR that exists.
+          # Until that conflation is fixed, this line is what makes CI diagnosable.
+          gh pr view "$GITHUB_HEAD_REF" --json number,url || echo "gh pr view failed above — that is the real error"
+
+          node dist/cli.js pr --base "${{ github.event.pull_request.base.ref }}" --no-llm

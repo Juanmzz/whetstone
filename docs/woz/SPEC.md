@@ -1,5 +1,9 @@
 # Whetstone Spec — v0 (draft)
 
+> **WoZ-era reference (ADR-0008).** Superseded as a live contract; retained as the specification
+> being ported to code. §1–3 define the `.sdd/` layout and schemas that the **Step 1** loader must
+> parse — this file is that step's input, not dead weight.
+
 This document defines the two things Whetstone actually owns: the **memory substrate** (`.sdd/memory/`) and the **SDD core** (constitution, triage, skills, and the retro loop that amends them). Everything else is an adapter.
 
 Status: draft for review. Breaking changes expected until v0.1.

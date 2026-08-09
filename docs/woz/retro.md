@@ -5,6 +5,10 @@ status: alpha
 ---
 # Whetstone retro
 
+> **WoZ-era reference (ADR-0008).** Superseded as a procedure; retained as the working
+> specification for **Step 7** (`wst retro`). This is the loop that produced TD6 — the validation
+> ADR-0008 rests on. The code must reproduce it, including the anti-poisoning gate in §4.
+
 The feedback loop's engine. Where `init.md` INSTALLS a project's guardrails, `retro.md`
 IMPROVES them: it reads the friction a project actually hit and **recommends the apparatus that
 project needs** — amend a rule, curate a proven skill, generate a project-specific hook/command,

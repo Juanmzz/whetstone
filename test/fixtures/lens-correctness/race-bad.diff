@@ -1,0 +1,20 @@
+diff --git a/src/auth/token.ts b/src/auth/token.ts
+--- a/src/auth/token.ts
++++ b/src/auth/token.ts
+@@ -4,8 +4,14 @@ import { api } from "../api.js";
+
+ let cached: Token | null = null;
++let refreshing: Promise<Token> | null = null;
+
++/** Single-flight: concurrent callers share one refresh instead of stampeding. */
+ export async function getToken(): Promise<Token> {
+   if (cached && !isExpired(cached)) return cached;
+-  cached = await api.refreshToken();
+-  return cached;
++  if (refreshing) return await refreshing;
++
++  refreshing = api.refreshToken();
++  cached = await refreshing;
++  refreshing = null;
++  return cached;
+ }

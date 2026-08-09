@@ -5,6 +5,10 @@ status: alpha
 ---
 # Whetstone init
 
+> **WoZ-era reference (ADR-0008).** Superseded as the installer; retained as the working
+> specification for **Step 6** (`wst init`). This procedure was validated in the wild — it is the
+> behaviour the code must reproduce.
+
 Agent-driven bootstrap. Run this **from the target project's repo** with a coding agent
 (Claude Code, Cursor, …). It reads the repo, asks only what it can't infer, generates a
 self-contained `.sdd/`, and emits `CLAUDE.md` + `AGENTS.md`. Files backend by default — no

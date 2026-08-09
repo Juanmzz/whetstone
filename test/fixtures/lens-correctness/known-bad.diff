@@ -1,0 +1,10 @@
+diff --git a/src/users/profile.ts b/src/users/profile.ts
+--- a/src/users/profile.ts
++++ b/src/users/profile.ts
+@@ -8,7 +8,6 @@ import { NotFoundError } from "../errors.js";
+
+ export async function getContactEmail(id: string): Promise<string> {
+   const user = await db.findUser(id);
+-  if (!user) throw new NotFoundError(`no user ${id}`);
+   return user.email;
+ }

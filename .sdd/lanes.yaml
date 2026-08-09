@@ -1,0 +1,106 @@
+# Lane ownership — the source of truth for parallel work.
+#
+# `.claude/hooks/lane-guard.mjs` is COMPILED from this file (ADR-0005). Change this
+# table, then regenerate the hook — never the reverse.
+#
+# Why this exists: treehouse gives ISOLATION (two agents cannot edit one working
+# copy) but not ENFORCEMENT (nothing stops a crewmate editing a shared contract
+# inside its own worktree and merging a change nobody agreed to). Asking agents to
+# respect a boundary written in a README is the advisory-rules failure mode this
+# whole project exists to replace. So the boundary is compiled into a hook that
+# denies the write.
+#
+# Activated per worktree by a `.wst-lane` file at the worktree root (gitignored),
+# or by `WST_LANE=<id>` which takes precedence. Neither present means orchestrator:
+# no restriction.
+#
+# The guard resolves the repo root FROM THE FILE BEING EDITED, not from the caller's
+# project dir — a crewmate works in a worktree whose root differs from the
+# orchestrator's. Keying off the caller made every worktree edit look "outside the
+# repo" and allowed everything. A guard that fails OPEN is worse than no guard,
+# because you believe you are protected. Found by testing it, not by reasoning.
+
+version: 1
+
+# Denied to EVERY lane, always. Changing one of these invalidates the assumptions
+# the other lanes are working under, so it is a conversation, not a commit.
+shared:
+  - src/core/checks/schema.ts   # the check contract — Steps 2 and 3 both consume it
+  - src/core/contracts.ts       # triage/gate seam — written before the lanes fan out
+  - src/core/ports.ts           # every port signature
+  - src/cli.ts                  # command wiring — the orchestrator integrates
+  - package.json                # dependencies are a shared decision
+  - tsconfig.json
+  - tsconfig.build.json
+  - .sdd/                       # governance, checks, triage, this file
+  - .claude/                    # hooks and settings, incl. this guard
+
+lanes:
+  triage:
+    step: 2
+    description: Classify a change into a tier, and route tier -> {checks, autonomy, model}.
+    owns:
+      - src/core/triage/
+      - src/commands/triage.ts
+    note: >-
+DECIDED by the orchestrator: use node:path matchesGlob. Verified against every
+      pattern the registry uses — NO new dependency. It is pure string matching, so it
+      is allowed in core/ under the same rule as node:crypto (effects are banned, not
+      built-ins). Do not add a glob library.
+
+  receipts:
+    step: 3
+    description: Turborepo-style input hashing so unchanged code is never re-checked.
+    owns:
+      - src/core/receipts/
+      - "src/shell/receipts*"   # glob: an exact match denied the adjacent test file
+    note: >-
+      The hash MUST include the check's `version` field. Otherwise editing a check's
+      behaviour silently reuses a receipt earned by the previous version.
+
+  gate:
+    step: 3
+    description: Aggregate check results into pass|block.
+    owns:
+      - src/core/gate/
+      - src/commands/gate.ts
+    depends_on: [triage, receipts]
+    note: >-
+      Only a real check failure may block. An infrastructure failure (error.kind of
+      budget/timeout/spawn/auth/max-turns) is the GATE being broken, not a failed
+      check. core/llm/verdict.ts already draws that line — do not blur it.
+
+  annotate:
+    step: 4
+    description: PR annotated by criticality — where a human should actually look.
+    owns:
+      - src/core/annotate/
+      - src/commands/pr.ts
+      - src/shell/github.ts
+    note: >-
+      Criticality is "tier = FLOOR, finding = trigger for red", NOT max(tier, finding) —
+      max saturates everything strict into red and the signal is lost. The LLM writes the
+      "look here because X" prose ONLY for red hunks; the engine assigns criticality.
+
+  init:
+    step: 6
+    description: wst init — interview a repo and generate its .sdd/.
+    owns:
+      - src/core/init/
+      - src/commands/init.ts
+    note: >-
+      The payload must be SELF-CONTAINED (ADR-0004): what init writes into a target repo
+      may never reference Whetstone's own files, or it dangles there. Detection is
+      deterministic; only the interview questions are LLM.
+
+  fixtures:
+    step: 2.5
+    description: Calibration — harder fixtures, and the harness that measures against them.
+    owns:
+      - test/fixtures/
+      - scripts/calibrate.ts   # added on first use: the lane cannot point the
+                               # harness at new fixtures without owning it
+    note: >-
+      Report whether the correctness lens should be demoted; do NOT edit
+      .sdd/checks/correctness.md yourself — changing a check's severity is a gate
+      policy decision and .sdd/ is shared.
