@@ -107,8 +107,6 @@ describe("seedChecks — the agent-lens rule", () => {
     const lens = checks.find((c) => c.kind === "agent-lens");
     expect(lens).toBeDefined();
     expect(lens?.severity).toBe("warn");
-    expect(lens?.calibration?.status).toBe("uncalibrated");
-    expect(lens?.calibration?.runs).toBe(0);
   });
 
   it("NEVER emits an agent-lens check at severity block, whatever it is asked for", () => {

@@ -63,11 +63,13 @@ function render(draft: Draft): GeneratedFile {
     lines.push(`review_lens: ${yamlBlock(draft.reviewLens)}`);
   }
   if (draft.calibrationDate !== undefined) {
+    // No `status` field: it used to be what granted blocking authority, and it was
+    // typed by hand. Authority now comes from a `<id>.calibration.json` receipt whose
+    // hashes the loader recomputes. What is left here is a pointer to the fixtures
+    // and a note, neither of which decides anything.
     lines.push(
       "calibration:",
-      "  status: uncalibrated",
-      "  runs: 0",
-      `  date: ${yamlString(draft.calibrationDate)}`,
+      `  detail: ${yamlString(`seeded ${draft.calibrationDate}; never measured. Run \`wst calibrate\` before raising severity.`)}`,
     );
   }
   // Empty `origin` is the schema's word for "unearned". Seeded checks are exactly

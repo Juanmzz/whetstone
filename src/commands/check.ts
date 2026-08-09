@@ -45,10 +45,11 @@ export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()):
   console.log(`checks (${registry.active.length} active of ${registry.all.length})\n`);
   for (const check of registry.all) {
     const kind = check.kind === "agent-lens" ? "lens" : "det ";
-    const cal =
-      check.kind === "agent-lens"
-        ? ` [calibration: ${check.calibration?.status ?? "uncalibrated"}]`
-        : "";
+    // Severity IS the calibration status now: an agent-lens that reaches `block` has
+    // a verified receipt, because the registry refuses to load it otherwise. Printing
+    // a separate "calibration: passed" would restate the same fact from a field that
+    // no longer decides anything.
+    const cal = check.kind === "agent-lens" && check.severity !== "block" ? " [advisory]" : "";
     console.log(`  ${severityMark(check)} ${kind}  ${check.id.padEnd(14)} ${check.description}${cal}`);
   }
 

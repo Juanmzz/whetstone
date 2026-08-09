@@ -16,14 +16,21 @@ export type Tier = (typeof TIERS)[number];
 export const SEVERITIES = ["block", "warn", "annotate"] as const;
 export const KINDS = ["deterministic", "agent-lens"] as const;
 
+/**
+ * Where the measurement lives, and a note for whoever reads the file.
+ *
+ * What is NOT here any more: `status`. It used to be the whole mechanism — a lens
+ * declaring `status: passed` with `runs: 1` was granted blocking authority, and both
+ * fields were typed by hand. Editing three lines promoted an unmeasured lens to
+ * `block`; that was demonstrated, not feared. Authority now comes from
+ * `<id>.calibration.json`, whose hashes the loader recomputes (`core/calibration/`).
+ *
+ * These fields are prose for humans. They grant nothing.
+ */
 export const CalibrationSchema = z.strictObject({
-  status: z.enum(["uncalibrated", "passed", "failed"]),
-  /** How many runs per fixture the verdict held across. */
-  runs: z.number().int().min(0),
-  date: z.string(),
-  detail: z.string().optional(),
-  /** Fixture directory this was measured against, for re-running. */
+  /** Fixture directory the receipt was measured against, for re-running. */
   fixtures: z.string().optional(),
+  detail: z.string().optional(),
 });
 
 export type Calibration = z.infer<typeof CalibrationSchema>;
@@ -82,26 +89,10 @@ export const CheckSchema = BaseCheck.superRefine((check, ctx) => {
     });
   }
 
-  // Non-negotiable 7. A flaky check that blocks legitimate work is worse than no
-  // check: it gets routed around, and then the gate's value is negative.
-  if (check.severity === "block") {
-    const cal = check.calibration;
-    if (cal === undefined || cal.status !== "passed") {
-      ctx.addIssue({
-        code: "custom",
-        path: ["severity"],
-        message:
-          `agent-lens check "${check.id}" declares severity: block without a passing ` +
-          `calibration receipt. Run \`npm run calibrate\`, record the result, or drop it to \`warn\`.`,
-      });
-    } else if (cal.runs < 1) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["calibration", "runs"],
-        message: "calibration cannot claim `passed` with zero runs",
-      });
-    }
-  }
+  // Non-negotiable 7 is NOT decided here any more. A zod schema sees one file's text
+  // and cannot recompute a fixture-set hash, so "has this lens earned block?" moved to
+  // `parseCheckFile`, which is handed the receipt. Leaving a weaker version of the rule
+  // here as well would be two authorities that can disagree.
 });
 
 export type Check = z.infer<typeof CheckSchema>;

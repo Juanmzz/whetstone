@@ -78,28 +78,31 @@ describe("CheckSchema", () => {
     expect(CheckSchema.safeParse(agentLens).success).toBe(true);
   });
 
-  it("REFUSES an agent-lens check that blocks without calibration", () => {
-    const r = CheckSchema.safeParse({ ...agentLens, severity: "block" });
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.error.message).toMatch(/calibrat/i);
+  /**
+   * The block rule is NOT here any more, and that is the point.
+   *
+   * It used to live in this schema and ask one question: does the YAML say
+   * `status: passed`? Two hand-typed fields, and editing three lines of a check file
+   * promoted an unmeasured lens to blocking authority — demonstrated, not feared.
+   *
+   * A zod schema sees one file's text. It cannot hash a fixture directory, so it can
+   * never tell a measurement from a claim about one. The rule moved to
+   * `parseCheckFile`, which is handed the receipt; see `registry.test.ts`. Leaving a
+   * weaker copy here would be two authorities that can disagree.
+   */
+  it("no longer decides whether an agent-lens may block", () => {
+    // Parses fine. Whether it LOADS is the registry's call, with evidence in hand.
+    expect(CheckSchema.safeParse({ ...agentLens, severity: "block" }).success).toBe(true);
   });
 
-  it("REFUSES an agent-lens check that blocks on FAILED calibration", () => {
+  it("rejects the `status` field outright, so an old check file fails loudly", () => {
+    // Silently ignoring it would leave repos carrying a field that reads like it
+    // still grants something.
     const r = CheckSchema.safeParse({
       ...agentLens,
-      severity: "block",
-      calibration: { status: "failed", runs: 10, date: "2026-08-07" },
-    });
-    expect(r.success).toBe(false);
-  });
-
-  it("allows an agent-lens check to block once calibration passed", () => {
-    const r = CheckSchema.safeParse({
-      ...agentLens,
-      severity: "block",
       calibration: { status: "passed", runs: 10, date: "2026-08-07" },
     });
-    expect(r.success).toBe(true);
+    expect(r.success).toBe(false);
   });
 
   it("lets a DETERMINISTIC check block freely — no calibration needed", () => {

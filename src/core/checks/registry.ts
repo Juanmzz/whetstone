@@ -7,7 +7,23 @@
  */
 
 import { parse as parseYaml } from "yaml";
+import { blockAuthority, type CalibrationReceipt } from "../calibration/receipt.js";
 import { CheckSchema, type Check } from "./schema.js";
+
+/**
+ * What the loader knows about a lens's measurement. Supplied by the shell, which is
+ * the only layer that can read `<id>.calibration.json` off disk and hash the fixture
+ * directory as it exists right now.
+ *
+ * ABSENT MEANS DENIED. A caller that forgets to pass this must not thereby hand a
+ * lens blocking authority — the failure mode of the field this replaced was exactly
+ * "authority granted because nobody checked".
+ */
+export interface CalibrationEvidence {
+  readonly receipt: CalibrationReceipt | null;
+  /** sha256 of the fixture set as it exists now, or null when it cannot be read. */
+  readonly currentFixturesHash: string | null;
+}
 
 export interface LoadedCheck extends Check {
   /** Prose after the frontmatter: rationale, and what to do when it fails. */
@@ -41,7 +57,11 @@ export interface Registry {
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 
-export function parseCheckFile(filename: string, contents: string): LoadedCheck {
+export function parseCheckFile(
+  filename: string,
+  contents: string,
+  evidence?: CalibrationEvidence,
+): LoadedCheck {
   const match = FRONTMATTER.exec(contents);
   if (match === null) {
     throw new Error(`${filename}: missing YAML frontmatter (expected a leading --- block)`);
@@ -74,6 +94,24 @@ export function parseCheckFile(filename: string, contents: string): LoadedCheck 
     throw new Error(
       `${filename}: id "${parsed.data.id}" does not match the filename stem "${stem}"`,
     );
+  }
+
+  // NON-NEGOTIABLE 2, and the only place it is decided. An `agent-lens` may hold
+  // `block` only when a receipt describes THIS prompt against THESE fixtures and
+  // passed. `blockAuthority` denies on every ambiguity, including the absent
+  // evidence a forgetful caller produces.
+  if (parsed.data.kind === "agent-lens" && parsed.data.severity === "block") {
+    const decision = blockAuthority(
+      parsed.data.review_lens ?? "",
+      evidence?.receipt ?? null,
+      evidence?.currentFixturesHash ?? "",
+    );
+    if (!decision.ok) {
+      throw new Error(
+        `${filename}: agent-lens "${parsed.data.id}" declares severity: block but has not ` +
+          `earned it — ${decision.reason}`,
+      );
+    }
   }
 
   return { ...parsed.data, body: body.trim() };

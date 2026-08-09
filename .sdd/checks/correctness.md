@@ -40,14 +40,12 @@ review_lens: >-
 
   Judge only the change itself, not the surrounding file.
 calibration:
-  status: uncalibrated
-  runs: 0
-  date: "2026-08-08"
   fixtures: test/fixtures/lens-correctness
   detail: >-
     Lens v4 adds a concurrency clause after v3 failed only on race-good (1 flip in 5).
-    Changing the lens INVALIDATES the previous measurement — v3's result does not describe
-    this text. Must be re-measured unfiltered before any severity above `warn`.
+    Never measured at v4. There is no `<id>.calibration.json`, so the loader would refuse
+    `severity: block` outright — the sentence that used to live here, asking a human to
+    remember that editing the lens invalidates its measurement, is now a hash.
 origin: [adr-0008, sig-0007, sig-0008, sig-0011]
 version: 4
 ---
