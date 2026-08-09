@@ -68,7 +68,7 @@ architectural fact, not a promise.
 | 2 | **Triage / Routing** | Classify a change → criticality → {autonomy, model tier, which checks run} | Step 2 |
 | 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate lives here | Step 5 |
 | 4 | **Verification gate** (lean) | Triage-gated: deterministic checks always, calibrated agent review only when critical. Receipts skip what already passed | Step 3 — the central build |
-| 5 | **Reviewable output** | PR annotated by criticality + verification artifacts | Step 4 — the differentiator |
+| 5 | ~~**Reviewable output**~~ | ~~PR annotated by criticality~~ — **removed, ADR-0009**. Verification artifacts remain. | — |
 | 6 | **Self-sharpening** (retro) | Signals → distill → propose/tune/prune checks → human gate → amend | WoZ validated (`docs/woz/retro.md`) · code = Step 7 |
 
 Cross-cutting: **memory** (tiered, behind ADR-0001's `save`/`search`/`summarize` port) and

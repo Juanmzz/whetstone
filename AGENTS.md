@@ -32,7 +32,6 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst run <task>` | dispatch a crewmate in an isolated worktree, then gate its work |
-| `wst pr` | annotate a PR by criticality: 🔴 review · 🟡 skim · ⚪ skip |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
 | `wst init` | interview a repo and generate its `.sdd/` |
 
@@ -87,7 +86,8 @@ Backend is `files`; `.sdd/memory/` is the source of truth, human-gated. **Engram
 ## Status — Steps 0–7 complete · branch `engine-skeleton` · 581 tests
 
 ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
-`init`/`retro` and **explicitly waiving** it for the gate, registry, triage and PR annotation.
+`init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
+built under that waiver and removed by ADR-0009.
 
 - **The loop is closed and self-hosting.** `wst gate` verifies this repo's own changes and now
   writes its own signals; `wst run` dispatched a crewmate whose work was gated before a human saw

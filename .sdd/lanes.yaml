@@ -70,17 +70,6 @@ DECIDED by the orchestrator: use node:path matchesGlob. Verified against every
       budget/timeout/spawn/auth/max-turns) is the GATE being broken, not a failed
       check. core/llm/verdict.ts already draws that line — do not blur it.
 
-  annotate:
-    step: 4
-    description: PR annotated by criticality — where a human should actually look.
-    owns:
-      - src/core/annotate/
-      - src/commands/pr.ts
-      - src/shell/github.ts
-    note: >-
-      Criticality is "tier = FLOOR, finding = trigger for red", NOT max(tier, finding) —
-      max saturates everything strict into red and the signal is lost. The LLM writes the
-      "look here because X" prose ONLY for red hunks; the engine assigns criticality.
 
   init:
     step: 6

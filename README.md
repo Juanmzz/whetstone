@@ -5,8 +5,9 @@
 Whetstone captures a project's definition of *correct* — its constitution, its risk triage, and the
 checks that matter — as plain files in git, then enforces it with a deterministic engine that calls
 an LLM only where judgment is irreducible. Routine changes run autonomously; the ones your project
-calls critical keep a human in the loop. Every task ends in a PR annotated with **where a human
-should actually look**. And because it records the friction it hits, the checks a project needs grow
+calls critical keep a human in the loop. The gate's exit code is the whole enforcement surface: it
+runs in a pre-push hook and in CI, so it does not depend on an agent choosing to cooperate. And
+because it records the friction it hits, the checks a project needs grow
 and tighten over time — each carrying a receipt for why it exists.
 
 > Status: alpha (v0.4.0). The engine is under construction — the CLI skeleton and the calibrated LLM
@@ -28,7 +29,7 @@ layer that makes a non-negotiable actually non-negotiable.
 
 ```
 wst init   → interview the project, generate .sdd/
-wst run    → triage → plan gate (critical changes only) → dispatch → gate → annotated PR
+wst run    → triage → plan gate (critical changes only) → dispatch → gate → branch
 wst gate   → select checks → skip what receipts prove unchanged → run → pass or block
 wst retro  → cluster signals → propose checks → human approves → amend with a receipt
 ```
@@ -69,7 +70,7 @@ worktrees, GitHub and execution to tools that already do those well. See
 - **M3 — The retro loop** ✅ *(first pass)* — pattern detection + apparatus recommendation, validated
   in the wild. Still N=1; repeatability unproven.
 - **M4 — The engine** ← *current* — `wst` CLI, deterministic core, calibrated LLM boundary, check
-  registry, lean gate with receipts, annotated PR.
+  registry, lean gate with receipts.
 - **M5 — Update model** — keep bootstrapped projects current via 3-way merge; contribute upstream.
 - **Distribution** — `npx wst` / optional plugin. Deliberately last: the payload is the value, the
   installer is a wrapper.
