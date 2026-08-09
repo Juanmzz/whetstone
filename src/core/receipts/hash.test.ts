@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { canonicalInput, inputHash, sha256Hex, type Digest, type HashedFile } from "./hash.js";
+import {
+  canonicalInput,
+  inputHash,
+  RECEIPT_INPUT_FORMAT,
+  sha256Hex,
+  type Digest,
+  type HashedFile,
+} from "./hash.js";
 
 const files = (...pairs: readonly (readonly [string, string])[]): HashedFile[] =>
   pairs.map(([path, hash]) => ({ path, hash }));
@@ -9,21 +16,21 @@ const B = ["src/b.ts", "2222222222222222222222222222222222222222"] as const;
 
 describe("inputHash", () => {
   it("is stable across calls with the same inputs", () => {
-    expect(inputHash(files(A, B), 1)).toBe(inputHash(files(A, B), 1));
+    expect(inputHash(files(A, B), { version: 1 })).toBe(inputHash(files(A, B), { version: 1 }));
   });
 
   it("does not depend on the order the files arrive in", () => {
     // The gate collects matched files from a glob walk; iteration order is not a
     // guarantee it can make. If order moved the hash, every run would miss.
-    expect(inputHash(files(A, B), 1)).toBe(inputHash(files(B, A), 1));
+    expect(inputHash(files(A, B), { version: 1 })).toBe(inputHash(files(B, A), { version: 1 }));
   });
 
   it("changes when a file's content hash changes", () => {
-    expect(inputHash(files(A), 1)).not.toBe(inputHash(files(["src/a.ts", "ffff"]), 1));
+    expect(inputHash(files(A), { version: 1 })).not.toBe(inputHash(files(["src/a.ts", "ffff"]), { version: 1 }));
   });
 
   it("changes when a file is added to the set", () => {
-    expect(inputHash(files(A), 1)).not.toBe(inputHash(files(A, B), 1));
+    expect(inputHash(files(A), { version: 1 })).not.toBe(inputHash(files(A, B), { version: 1 }));
   });
 
   it("keeps each content hash bound to its own path", () => {
@@ -32,33 +39,84 @@ describe("inputHash", () => {
     // sets collide, so renaming a file across a swap would reuse a stale receipt.
     const straight = files([A[0], A[1]], [B[0], B[1]]);
     const swapped = files([A[0], B[1]], [B[0], A[1]]);
-    expect(inputHash(straight, 1)).not.toBe(inputHash(swapped, 1));
+    expect(inputHash(straight, { version: 1 })).not.toBe(inputHash(swapped, { version: 1 }));
   });
 
   it("distinguishes a path split across the delimiter", () => {
     // A naive `path + hash` concatenation makes these two indistinguishable.
-    expect(inputHash(files(["ab", "cd"]), 1)).not.toBe(inputHash(files(["a", "bcd"]), 1));
+    expect(inputHash(files(["ab", "cd"]), { version: 1 })).not.toBe(inputHash(files(["a", "bcd"]), { version: 1 }));
   });
 
   it("hashes the empty file set to something stable and non-empty", () => {
-    const empty = inputHash([], 1);
-    expect(empty).toBe(inputHash([], 1));
-    expect(empty).not.toBe(inputHash(files(A), 1));
+    const empty = inputHash([], { version: 1 });
+    expect(empty).toBe(inputHash([], { version: 1 }));
+    expect(empty).not.toBe(inputHash(files(A), { version: 1 }));
   });
 
   it("rejects duplicate paths rather than hashing ambiguous input", () => {
     // Two hashes for one path means the caller is confused. Hashing it anyway
     // would mint a receipt that looks authoritative and is not.
-    expect(() => inputHash(files(A, ["src/a.ts", "ffff"]), 1)).toThrow(/duplicate/i);
+    expect(() => inputHash(files(A, ["src/a.ts", "ffff"]), { version: 1 })).toThrow(/duplicate/i);
   });
 
   it("returns a lowercase hex sha256 by default", () => {
-    expect(inputHash(files(A), 1)).toMatch(/^[0-9a-f]{64}$/);
+    expect(inputHash(files(A), { version: 1 })).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("delegates to an injected digest, so the canonical form is testable", () => {
     const digest: Digest = () => "stubbed";
-    expect(inputHash(files(A), 1, digest)).toBe("stubbed");
+    expect(inputHash(files(A), { version: 1 }, digest)).toBe("stubbed");
+  });
+});
+
+/**
+ * THE GAP THE VERSION BINDING ALONE LEAVES OPEN (sig-0028).
+ *
+ * `version` is a HAND-MAINTAINED proxy for "this check's behaviour changed", and a
+ * hand-maintained proxy drifts. Edit a check's `command` from `npm test` to
+ * `npm test -- --shard=1/4`, forget the version bump, and every existing receipt
+ * still matches: the gate reports "already passed" for a check that has never run
+ * in its current form. Nothing in the schema forces the bump.
+ *
+ * So the behaviour-determining fields are hashed DIRECTLY, and the version stays as
+ * the manual override for changes the fields cannot see (a check whose command is
+ * `npm test` still means something different after upgrading vitest).
+ */
+describe("the check-behaviour binding", () => {
+  it("changes the hash when the command changes at the same version", () => {
+    expect(inputHash(files(A, B), { version: 1, command: "npm test" })).not.toBe(
+      inputHash(files(A, B), { version: 1, command: "npm test -- --shard=1/4" }),
+    );
+  });
+
+  it("changes the hash when the review lens changes at the same version", () => {
+    expect(inputHash(files(A, B), { version: 1, reviewLens: "look for bugs" })).not.toBe(
+      inputHash(files(A, B), { version: 1, reviewLens: "look for security bugs" }),
+    );
+  });
+
+  it("distinguishes a declared field from an absent one", () => {
+    // A check that declares no command is not the same check as one whose command
+    // is the empty string, and neither is the same as one with no lens.
+    const none = inputHash(files(A), { version: 1 });
+    expect(none).not.toBe(inputHash(files(A), { version: 1, command: "" }));
+    expect(none).not.toBe(inputHash(files(A), { version: 1, reviewLens: "" }));
+  });
+
+  it("keeps each behaviour field bound to its own slot", () => {
+    // The same string must not mean the same thing in both roles: a deterministic
+    // check running `x` and a lens whose prompt is `x` are different checks.
+    expect(inputHash(files(A), { version: 1, command: "x" })).not.toBe(
+      inputHash(files(A), { version: 1, reviewLens: "x" }),
+    );
+  });
+
+  it("still changes when only the version changes, fields held equal", () => {
+    // The manual override survives. It is the escape hatch for a behaviour change
+    // the hashed fields cannot observe, which is exactly why it must not be dropped.
+    expect(inputHash(files(A), { version: 1, command: "npm test" })).not.toBe(
+      inputHash(files(A), { version: 2, command: "npm test" }),
+    );
   });
 });
 
@@ -87,12 +145,12 @@ describe("sha256Hex", () => {
  */
 describe("the check-version binding", () => {
   it("changes the hash when only the check version changes", () => {
-    expect(inputHash(files(A, B), 2)).not.toBe(inputHash(files(A, B), 1));
+    expect(inputHash(files(A, B), { version: 2 })).not.toBe(inputHash(files(A, B), { version: 1 }));
   });
 
   it("gives every version a distinct hash", () => {
     const seen = new Set<string>();
-    for (let v = 1; v <= 25; v++) seen.add(inputHash(files(A, B), v));
+    for (let v = 1; v <= 25; v++) seen.add(inputHash(files(A, B), { version: v }));
     expect(seen.size).toBe(25);
   });
 
@@ -105,15 +163,15 @@ describe("the check-version binding", () => {
       seen = input;
       return "x";
     };
-    inputHash(files(A), 7, recording);
+    inputHash(files(A), { version: 7 }, recording);
     expect(seen).toContain("7");
-    expect(canonicalInput(files(A), 7)).toBe(seen);
+    expect(canonicalInput(files(A), { version: 7 })).toBe(seen);
   });
 
   it("cannot be satisfied by a file change that happens to look like a version bump", () => {
     // The version lives in its own field of the canonical form, so no arrangement
     // of file paths or content hashes can forge it.
-    expect(canonicalInput(files(["v", "2"]), 1)).not.toBe(canonicalInput(files(["v", "1"]), 2));
+    expect(canonicalInput(files(["v", "2"]), { version: 1 })).not.toBe(canonicalInput(files(["v", "1"]), { version: 2 }));
   });
 });
 
@@ -121,10 +179,12 @@ describe("canonicalInput", () => {
   it("is versioned, so a future format change invalidates old receipts", () => {
     // Without a format tag, changing the serialization silently reuses receipts
     // computed under the old one — the same failure mode as dropping the version.
-    expect(canonicalInput([], 1).startsWith("wst-receipt/1\n")).toBe(true);
+    expect(canonicalInput([], { version: 1 }).startsWith(`wst-receipt/${RECEIPT_INPUT_FORMAT}\n`)).toBe(
+      true,
+    );
   });
 
   it("sorts by path so the serialization is order-independent", () => {
-    expect(canonicalInput(files(B, A), 1)).toBe(canonicalInput(files(A, B), 1));
+    expect(canonicalInput(files(B, A), { version: 1 })).toBe(canonicalInput(files(A, B), { version: 1 }));
   });
 });

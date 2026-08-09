@@ -5,7 +5,7 @@ import type { ChangedFile } from "../diff/parse.js";
 import { inputHash, type HashedFile } from "../receipts/hash.js";
 import { recordPass, type Receipt } from "../receipts/receipt.js";
 import type { RunOutcome } from "./outcomes.js";
-import { DELETED_FILE_HASH, runGate, type CheckRunner, type GatePorts } from "./run.js";
+import { DELETED_FILE_HASH, identityOf, runGate, type CheckRunner, type GatePorts } from "./run.js";
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
@@ -292,7 +292,7 @@ describe("rule 3 — receipts are written on pass only", () => {
     expect(h.written).toEqual([
       recordPass({
         checkId: "typecheck",
-        checkVersion: 7,
+        check: identityOf(det({ version: 7 })),
         files: hashedFiles(["src/a.ts", "src/b.ts"]),
         at: AT,
       }),
@@ -316,7 +316,7 @@ describe("rule 3 — receipts are written on pass only", () => {
     const stored = {
       typecheck: recordPass({
         checkId: "typecheck",
-        checkVersion: 1,
+        check: identityOf(det()),
         files: hashedFiles(["src/a.ts", "src/b.ts"]),
         at: AT,
       }),
@@ -354,7 +354,7 @@ describe("rule 4 — a receipt skip is a skip, and it is honest", () => {
   const receiptFor = (version = 1): Receipt =>
     recordPass({
       checkId: "typecheck",
-      checkVersion: version,
+      check: identityOf(det({ version })),
       files: hashedFiles(["src/a.ts", "src/b.ts"]),
       at: AT,
     });
@@ -373,7 +373,7 @@ describe("rule 4 — a receipt skip is a skip, and it is honest", () => {
       typecheck: receiptFor(),
       test: recordPass({
         checkId: "test",
-        checkVersion: 1,
+        check: identityOf(det({ id: "test", command: "npm test" })),
         files: hashedFiles(["src/a.ts", "src/b.ts"]),
         at: AT,
       }),
@@ -407,7 +407,7 @@ describe("rule 4 — a receipt skip is a skip, and it is honest", () => {
   it("re-runs when a matched file's content changed", async () => {
     const stale = recordPass({
       checkId: "typecheck",
-      checkVersion: 1,
+      check: identityOf(det()),
       files: [
         { path: "src/a.ts", hash: "9999999999999999999999999999999999999999" },
         { path: "src/b.ts", hash: HASHES["src/b.ts"] ?? "" },
@@ -471,7 +471,7 @@ describe("hashing the receipt input", () => {
           { path: "src/a.ts", hash: HASHES["src/a.ts"] ?? "" },
           { path: "src/gone.ts", hash: DELETED_FILE_HASH },
         ],
-        1,
+        identityOf(det()),
       ),
     );
     expect(run.verdict.verdict).toBe("pass");
