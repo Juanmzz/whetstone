@@ -146,12 +146,66 @@ describe("renderGateRun", () => {
  * `verdict` stays `pass` and `blocking` stays empty, and the incompleteness is
  * reported through a DIFFERENT channel with a different number.
  */
+/**
+ * FOUND BY A CREWMATE, not by a test. Dispatched with "run the checks yourself", it
+ * ran `wst gate --no-lens --no-emit`, got the default `--range HEAD` against a clean
+ * tree, and was told:
+ *
+ *   no checks applied to this change
+ *   passed — but no check applied, so nothing about this change was verified
+ *   $? = 0
+ *
+ * The prose was honest and the exit code was not, and an agent, a git hook and a CI
+ * step all read the number. This file's own header promises that "no checks applied"
+ * is "reported as itself rather than dressed up as a pass" — it was, in the render
+ * only, one layer above the thing anyone actually consumes.
+ *
+ * A receipt skip DOES count as verified: it means this exact input passed already.
+ * "Nothing matched" and "nothing needed re-running" are different facts.
+ */
+describe("a run that verified nothing does not exit 0", () => {
+  it("is INCOMPLETE when no check applied at all", () => {
+    expect(exitCodeFor(aggregate([]))).toBe(EXIT_INCOMPLETE);
+  });
+
+  it("is INCOMPLETE when every check was skipped for not applying", () => {
+    const skipped = [
+      result("test", "block", { status: "skipped", reason: "not-in-tier" }),
+      result("lint", "warn", { status: "skipped", reason: "disabled" }),
+    ];
+    expect(exitCodeFor(aggregate(skipped))).toBe(EXIT_INCOMPLETE);
+  });
+
+  it("PASSES when every check was skipped by a RECEIPT — that input did pass", () => {
+    const cached = [
+      result("test", "block", { status: "skipped", reason: "receipt" }),
+      result("typecheck", "block", { status: "skipped", reason: "receipt" }),
+    ];
+    expect(exitCodeFor(aggregate(cached))).toBe(EXIT_PASS);
+  });
+
+  it("PASSES when at least one check actually ran and passed", () => {
+    const mixed = [
+      result("test", "block", { status: "pass" }),
+      result("lint", "warn", { status: "skipped", reason: "not-in-tier" }),
+    ];
+    expect(exitCodeFor(aggregate(mixed))).toBe(EXIT_PASS);
+  });
+
+  it("still reports BLOCKED ahead of incomplete when something failed", () => {
+    // A real failure is the more urgent fact, and 1 is what a hook keys on.
+    const failed = [result("test", "block", { status: "fail", detail: "nope" })];
+    expect(exitCodeFor(aggregate(failed))).toBe(EXIT_BLOCKED);
+  });
+});
+
 describe("exitCodeFor", () => {
   const ERRORED: CheckOutcome = { status: "errored", detail: "budget exhausted" };
 
-  it("is 0 on a clean pass, and on a run with no checks at all", () => {
+  it("is 0 on a clean pass", () => {
     expect(exitCodeFor(aggregate([result("test", "block", { status: "pass" })]))).toBe(EXIT_PASS);
-    expect(exitCodeFor(aggregate([]))).toBe(EXIT_PASS);
+    // The "no checks at all" case used to assert 0 here. See the describe above:
+    // that was the bug, and a run that verified nothing is now INCOMPLETE.
   });
 
   it("is 1 when — and only when — a real check failure blocked", () => {
@@ -168,11 +222,29 @@ describe("exitCodeFor", () => {
     expect(exitCodeFor(aggregate([result("test", "block", ERRORED)]))).toBe(EXIT_INCOMPLETE);
   });
 
-  it("is 0 when only an ADVISORY check errored — no gating power was lost", () => {
+  it("is 0 when an ADVISORY check errored beside work that DID get verified", () => {
     // A `warn` lens that times out costs you an annotation, not a verification.
     // Failing CI for it is how a gate gets routed around.
-    expect(exitCodeFor(aggregate([result("correctness", "warn", ERRORED)]))).toBe(EXIT_PASS);
-    expect(exitCodeFor(aggregate([result("style", "annotate", ERRORED)]))).toBe(EXIT_PASS);
+    const withPass = (advisory: CheckResult) =>
+      exitCodeFor(aggregate([result("test", "block", { status: "pass" }), advisory]));
+    expect(withPass(result("correctness", "warn", ERRORED))).toBe(EXIT_PASS);
+    expect(withPass(result("style", "annotate", ERRORED))).toBe(EXIT_PASS);
+  });
+
+  /**
+   * TWO REAL RULES MEET HERE, and the resolution is deliberate.
+   *
+   * "An errored advisory must not fail CI" is right, and this test used to encode it
+   * with a fixture holding NOTHING BUT the errored advisory — so it also asserted 0
+   * for a run in which nothing whatsoever was verified.
+   *
+   * Those are separable. The rule protects a verified run from a flaky model; it was
+   * never meant to bless a run with no verification in it. `INCOMPLETE` is not
+   * `BLOCKED`: it says "we do not know", which is exactly the truth here, and every
+   * ambiguity in this engine resolves toward more verification, not less.
+   */
+  it("is INCOMPLETE when the errored advisory was the ONLY thing that ran", () => {
+    expect(exitCodeFor(aggregate([result("correctness", "warn", ERRORED)]))).toBe(EXIT_INCOMPLETE);
   });
 
   it("prefers the block code when a real failure and an error happen together", () => {

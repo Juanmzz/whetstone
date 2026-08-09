@@ -35,7 +35,22 @@ export function exitCodeFor(verdict: GateVerdict): number {
   const lostGating = verdict.results.some(
     (r) => r.outcome.status === "errored" && r.severity === "block",
   );
-  return lostGating ? EXIT_INCOMPLETE : EXIT_PASS;
+  if (lostGating) return EXIT_INCOMPLETE;
+
+  // A run that verified NOTHING is not a pass, and this file's header has always
+  // said so — in the render, one layer above the number anyone consumes. A crewmate
+  // told "run the checks yourself" ran the gate against an empty range, read
+  // "nothing about this change was verified", and got 0 back.
+  //
+  // A receipt skip counts as verified: it means this exact input passed already.
+  // "Nothing matched" and "nothing needed re-running" are different facts, and
+  // collapsing them would make the cache look like a hole.
+  const verifiedSomething = verdict.results.some(
+    (r) =>
+      r.outcome.status === "pass" ||
+      (r.outcome.status === "skipped" && r.outcome.reason === "receipt"),
+  );
+  return verifiedSomething ? EXIT_PASS : EXIT_INCOMPLETE;
 }
 
 function indent(detail: string): string {
