@@ -69,6 +69,17 @@ export interface GateOptions {
   readonly noLens?: boolean;
   /** Suppress signal emission. For dry runs and tests, not for normal use. */
   readonly noEmit?: boolean;
+  /**
+   * Ignore receipts entirely: skip nothing, record nothing.
+   *
+   * For a gate JUDGING SOMEONE ELSE'S WORK in their own working tree. Receipts are a
+   * cache keyed on content, so honouring them is normally safe — but the file is
+   * plain JSON that whoever produced the diff could write, and `parseReceipt`
+   * validates its shape, not its provenance. A worker that mints the receipts its
+   * own gate honours is one step from `charter.ts`'s "a worker that can merge its
+   * own work has no gate".
+   */
+  readonly noReceipts?: boolean;
 }
 
 const DEFAULT_RANGE = "HEAD";
@@ -144,17 +155,31 @@ function createReceiptStore(sddRoot: string): ReceiptStore {
 }
 
 /**
+ * A store that remembers nothing, for a gate that must not take the subject's word.
+ *
+ * Exported so `wst run` uses THIS rather than deciding for itself what "do not trust
+ * the worker's cache" means — the same reason `createCheckRunner` is exported. Three
+ * bugs in this codebase were one rule implemented twice and drifting.
+ */
+export function createDistrustfulReceiptStore(): ReceiptStore {
+  return {
+    read: async () => null,
+    write: async () => undefined,
+  };
+}
+
+/**
  * One runner over both kinds of check. It only dispatches and reports; every
  * fail-versus-errored decision is made by `core/gate/outcomes.ts`.
  */
 /**
- * Exported so `wst pr` uses THIS runner instead of keeping a copy.
+ * Exported so any second caller uses THIS runner instead of keeping a copy.
  *
- * It kept one, and the copy silently missed the chunking and the total budget cap
- * added here for sig-0023. Pointed at a large diff it would send the whole thing in
- * one lens call and die, so the annotation would report every check unverified while
- * `wst gate` on the same range passed. Two implementations of "run a check" is two
- * places for the gate's honesty rules to drift apart.
+ * `wst pr` kept one, and the copy silently missed the chunking and the total budget
+ * cap added here for sig-0023 — the annotation reported every check unverified while
+ * `wst gate` on the same range passed. That command is gone (ADR-0009) and the
+ * export stays, because the lesson is not about `pr`: two implementations of "run a
+ * check" is two places for the gate's honesty rules to drift apart.
  */
 export function createCheckRunner(deps: {
   readonly cwd: string;
@@ -290,7 +315,8 @@ export async function runGate(
     {
       hashFile: (path) => git.hashFile(path),
       clock: { now: () => new Date() },
-      receipts: createReceiptStore(sddRoot),
+      receipts:
+        opts.noReceipts === true ? createDistrustfulReceiptStore() : createReceiptStore(sddRoot),
       run: createCheckRunner({
         cwd: repoRoot,
         range,

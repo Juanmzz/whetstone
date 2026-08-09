@@ -148,7 +148,14 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
     }
 
     console.log(`--- gate (${base.slice(0, 7)}..HEAD) ---`);
-    const gateExit = await runGate({ range: `${base}..HEAD` }, worktree.path);
+    // `noReceipts`: this gate is judging the crewmate, INSIDE the crewmate's own
+    // worktree, where the crewmate had write access to `.sdd/receipts/`. Measured on
+    // the first real dispatch — every check came back `skipped (receipt)`, so the
+    // supervising gate verified nothing and the worker's own run had vouched for it.
+    const gateExit = await runGate(
+      { range: `${base}..HEAD`, noReceipts: true },
+      worktree.path,
+    );
 
     if (gateExit !== 0) {
       // Never discard a worktree whose work did not pass. The diff is the evidence.
