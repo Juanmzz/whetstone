@@ -9,30 +9,33 @@
 
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { EmittableSignal, ExistingSignal } from "../core/signals/emit.js";
+import type { EmittableSignal } from "../core/signals/emit.js";
+import { parseSignalLog, type SignalRecord } from "../core/signals/parse.js";
 
 export const SIGNALS_PATH = "memory/signals.jsonl";
 
-interface LoggedSignal extends ExistingSignal {
-  readonly id?: string;
-}
-
-export async function readSignalLog(sddRoot: string): Promise<LoggedSignal[]> {
+/**
+ * A MISSING log is empty; a CORRUPT one is not. Only the read is caught here —
+ * parsing is `core/signals/parse.ts` and it throws, deliberately.
+ *
+ * This used to swallow the parse too, and that is how one corrupt line became the
+ * gate's problem: an empty log deduplicates against nothing, so every signal was
+ * re-emitted and the retro clustered on recurrence that never happened.
+ */
+export async function readSignalLog(sddRoot: string): Promise<SignalRecord[]> {
+  let text: string;
   try {
-    const text = await readFile(join(sddRoot, SIGNALS_PATH), "utf-8");
-    return text
-      .split("\n")
-      .filter((l) => l.trim() !== "")
-      .map((l) => JSON.parse(l) as LoggedSignal);
+    text = await readFile(join(sddRoot, SIGNALS_PATH), "utf-8");
   } catch {
     return [];
   }
+  return parseSignalLog(text);
 }
 
-function nextId(existing: readonly LoggedSignal[]): number {
+function nextId(existing: readonly SignalRecord[]): number {
   let max = 0;
   for (const s of existing) {
-    const n = Number(/^sig-(\d+)$/.exec(s.id ?? "")?.[1] ?? 0);
+    const n = Number(/^sig-(\d+)$/.exec(s.id)?.[1] ?? 0);
     if (n > max) max = n;
   }
   return max + 1;
