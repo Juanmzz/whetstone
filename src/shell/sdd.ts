@@ -5,12 +5,23 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { buildRegistry, parseCheckFile, type Registry } from "../core/checks/registry.js";
+import { hashFixtureDir, loadCalibration } from "./calibration.js";
 import type { TriageRule } from "../core/contracts.js";
 import { DEFAULT_RULES, parseTriageRules } from "../core/triage/index.js";
 
 export const CHECKS_DIR = "checks";
 export const INDEX_FILE = "_index.json";
 export const TRIAGE_FILE = "triage.yaml";
+
+/**
+ * Where a check says its fixtures live, read out of the raw frontmatter.
+ *
+ * Read by regex rather than by parsing, because this is needed BEFORE the parse that
+ * would give it to us properly — the parse is what consumes the answer.
+ */
+function fixturesDirFor(contents: string): string {
+  return /^\s*fixtures:\s*(\S+)\s*$/m.exec(contents)?.[1] ?? "test/fixtures";
+}
 
 export async function loadRegistry(sddRoot: string): Promise<Registry> {
   const dir = join(sddRoot, CHECKS_DIR);
@@ -25,7 +36,19 @@ export async function loadRegistry(sddRoot: string): Promise<Registry> {
   const files = entries.filter((f) => f.endsWith(".md") && !f.startsWith("_")).sort();
 
   const checks = await Promise.all(
-    files.map(async (file) => parseCheckFile(file, await readFile(join(dir, file), "utf-8"))),
+    files.map(async (file) => {
+      const contents = await readFile(join(dir, file), "utf-8");
+      const checkId = file.replace(/\.md$/, "");
+
+      // Gathered for EVERY check, not only the ones that ask to block. Deciding here
+      // whether the evidence is needed would mean parsing the file twice, and the
+      // cheap read is not worth the second parse being a place the two can disagree.
+      const receipt = await loadCalibration(sddRoot, checkId);
+      const currentFixturesHash =
+        receipt === null ? null : await hashFixtureDir(join(sddRoot, "..", fixturesDirFor(contents)));
+
+      return parseCheckFile(file, contents, { receipt, currentFixturesHash });
+    }),
   );
 
   return buildRegistry(checks);

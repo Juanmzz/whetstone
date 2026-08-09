@@ -24,11 +24,13 @@
  *   npm run calibrate  [-- --runs 10 --model sonnet --filter race]
  */
 
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { createClaudeJudge } from "../src/shell/claude.js";
 import { loadRegistry } from "../src/shell/sdd.js";
+import { hashFixtureDir, receiptName } from "../src/shell/calibration.js";
+import { recordCalibration, type FixtureFile } from "../src/core/calibration/receipt.js";
 
 const LensVerdict = z.object({
   verdict: z.enum(["pass", "fail"]),
@@ -123,6 +125,30 @@ interface Outcome {
   flipped: boolean;
   unanimous: boolean;
   spread: string;
+  /** Raw per-run outcome, in order. The receipt records these, not a score. */
+  verdicts: readonly ("pass" | "fail" | "errored")[];
+}
+
+/**
+ * The fixture set as `FixtureFile[]`, hashed the same way the loader hashes it.
+ *
+ * It reads through `hashFixtureDir` first and refuses when that returns null: if the
+ * loader cannot hash this directory, a receipt minted here could never be honoured,
+ * and writing one anyway produces a file that silently never grants anything.
+ */
+async function fixtureFiles(dir: string): Promise<FixtureFile[]> {
+  if ((await hashFixtureDir(dir)) === null) {
+    throw new Error(`refusing to mint a receipt: ${dir} does not hash — fix the manifest first`);
+  }
+  const manifest = Manifest.parse(JSON.parse(await readFile(join(dir, "manifest.json"), "utf-8")));
+  const { createHash } = await import("node:crypto");
+  return Promise.all(
+    manifest.fixtures.map(async (f) => ({
+      path: f.file,
+      expected: f.expect,
+      hash: createHash("sha256").update(await readFile(join(dir, f.file), "utf-8"), "utf8").digest("hex"),
+    })),
+  );
 }
 
 async function main() {
@@ -172,7 +198,10 @@ async function main() {
     const flipped = new Set(decided).size > 1;
     const unanimous = tally.size === 1;
     const spread = [...tally.entries()].map(([v, n]) => `${v}×${n}`).join(", ");
-    outcomes.push({ fixture, correct, errors, flipped, unanimous, spread });
+    outcomes.push({
+      fixture, correct, errors, flipped, unanimous, spread,
+      verdicts: verdicts.map((v) => (v === "pass" ? "pass" : v === "fail" ? "fail" : "errored")),
+    });
 
     const mark = correct === RUNS ? "ok  " : "MISS";
     const why = flipped ? "FLIPPED  " : errors > 0 ? `err×${errors}   `.slice(0, 9) : "unanimous";
