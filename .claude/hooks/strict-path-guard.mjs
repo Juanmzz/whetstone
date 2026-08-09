@@ -5,14 +5,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
-// Strict-tier paths for THIS project, compiled from triage-rules.md.
+// Strict-tier paths for THIS project, compiled from triage-rules.md (recompiled 2026-08-07, ADR-0008).
 // Entries ending in "/" are directory prefixes; the rest are EXACT file matches.
 // (For a different project the emitter bakes in that project's strict paths, e.g. src/sync/**.)
 const STRICT_PATHS = [
+  "src/core/", // the deterministic engine: triage, selection, receipts, gate, verdict contract
   ".sdd/skills/", // skills copied verbatim into every bootstrapped project
-  "SPEC.md", // schemas: signal / ADR / adapter / directory contract
-  "init.md", // the emitter / compiler logic
-  "retro.md", // the retro / recommendation engine (init.md's twin, same blast radius)
+  ".claude/hooks/", // emitter output — hand-edits here are drift (ADR-0005/0006)
+  "docs/woz/SPEC.md", // schemas: signal / ADR / adapter / directory contract
 ];
 
 let input;
@@ -38,9 +38,13 @@ if (hit) {
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         additionalContext:
-          `⚠ strict-tier edit (${rel}). Per .sdd/triage-rules.md this propagates to every ` +
-          `bootstrapped project: full TDD once code exists, plus fresh-context review and a ` +
-          `worked example before it ships. Proceed deliberately.`,
+          `⚠ strict-tier edit (${rel}). Per .sdd/triage-rules.md: ` +
+          (rel.startsWith("src/core/")
+            ? `this is the deterministic engine — full TDD, RED first. A bug here silently ` +
+              `mis-gates every change in every project that runs Whetstone.`
+            : `this propagates verbatim to every bootstrapped project — fresh-context review ` +
+              `and a worked example before it ships.`) +
+          ` Proceed deliberately.`,
       },
     })
   );

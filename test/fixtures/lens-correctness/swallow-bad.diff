@@ -1,0 +1,15 @@
+diff --git a/src/drafts/store.ts b/src/drafts/store.ts
+--- a/src/drafts/store.ts
++++ b/src/drafts/store.ts
+@@ -30,6 +30,10 @@ import { logger } from "../logger.js";
+
+ /** Returns true iff the draft is durably persisted. */
+ export async function saveDraft(draft: Draft): Promise<boolean> {
+-  await store.put(draft.id, draft);
++  try {
++    await store.put(draft.id, draft);
++  } catch (err) {
++    logger.warn({ err, id: draft.id }, "saveDraft failed");
++  }
+   return true;
+ }

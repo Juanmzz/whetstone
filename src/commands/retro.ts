@@ -1,0 +1,217 @@
+/**
+ * `wst retro` — the self-sharpening loop. Composition root.
+ *
+ *   cursor -> new signals -> cluster (ENGINE) -> recommend (LLM) -> anti-poisoning
+ *   gate (ENGINE) -> propose to a human (NEVER applied automatically)
+ *
+ * The gate in the middle is the point. The recommendation is agent-generated, so a
+ * human gate alone is not enough: a plausible proposal citing a signal that never
+ * happened is exactly what a tired reviewer approves. The machine checks its own
+ * evidence first, and a proposal that fails never reaches the human.
+ *
+ * This command NEVER writes to a skill, a hook, or an ADR. It writes a proposal file.
+ * Applying it is a human act — constitution non-negotiable 3.
+ */
+
+import { join } from "node:path";
+import { z } from "zod";
+import { clusterSignals, signalsSince, type Cluster } from "../core/retro/cluster.js";
+import {
+  renderProposal,
+  validateRecommendation,
+  type Recommendation,
+} from "../core/retro/propose.js";
+import { createGitAdapter } from "../shell/git.js";
+import { createClaudeJudge } from "../shell/claude.js";
+import { readCursor, readSignals, writeProposals } from "../shell/retro.js";
+import { readdir, readFile } from "node:fs/promises";
+
+export interface RetroOptions {
+  /** Cluster and print, but make no LLM calls and write nothing. */
+  readonly dryRun?: boolean;
+  readonly model?: "haiku" | "sonnet" | "opus";
+}
+
+const RecommendationSchema = z.object({
+  kind: z.enum(["amend", "graduate-to-hook", "command", "curate", "generate", "flip-adr"]),
+  target: z.string(),
+  summary: z.string(),
+  rationale: z.string(),
+  citedSignals: z.array(z.string()),
+});
+
+const LENS = [
+  "You are the retro engine of Whetstone, proposing ONE change that would prevent a",
+  "cluster of recorded friction from recurring.",
+  "",
+  "Prefer the SMALLEST apparatus that fixes it: a rule beats a hook beats a command",
+  "beats a whole new skill. Prefer curating a proven solution over generating a new one.",
+  "",
+  "`target` MUST be a path under .sdd/ — a skill, a hook, or an ADR. You may NEVER",
+  "target .sdd/constitution.md; the constitution is human-owned.",
+  "",
+  "`citedSignals` MUST list only signal ids that appear in the cluster you were given.",
+  "Do not invent an id, and do not cite one twice. The citation is the receipt that",
+  "earns the rule; a rule without one is a guess.",
+  "",
+  "Address the ROOT CAUSE, not the symptom. If the cluster does not justify a change,",
+  "say so in the rationale and propose the smallest possible amendment anyway — the",
+  "human will reject it, and that is a valid outcome.",
+].join("\n");
+
+/**
+ * The proposer runs HERMETIC (no tools, no filesystem — see `shell/claude.ts`), so
+ * everything it needs must be in the prompt. The first real run proved why: three of
+ * four proposals came back as the literal word "placeholder", one of them explaining
+ * "I don't have visibility into .sdd/skills/voice.md". It was asked to amend a rule
+ * it had never been shown.
+ */
+async function describeCluster(
+  cluster: Cluster,
+  sddRoot: string,
+  skillIndex: string,
+): Promise<string> {
+  const parts = [
+    `Cluster: ${cluster.key} (${cluster.signals.length} signal(s))`,
+    "",
+    ...cluster.signals.map(
+      (s) => `- ${s.id} [${s.severity}/${s.type}/${s.phase}] ${s.detail}`,
+    ),
+    "",
+    `Skills that exist in this project (target one of these, or an ADR):`,
+    skillIndex,
+  ];
+
+  if (cluster.key.startsWith("rule:")) {
+    const rel = cluster.key.slice("rule:".length);
+    try {
+      const body = await readFile(join(sddRoot, rel), "utf-8");
+      parts.push(
+        "",
+        `CURRENT CONTENT of .sdd/${rel} — amend THIS text, and do not restate a rule it`,
+        `already contains:`,
+        "",
+        body.slice(0, 6000),
+      );
+    } catch {
+      parts.push("", `(.sdd/${rel} could not be read — propose against the skill list above.)`);
+    }
+  }
+  return parts.join("\n");
+}
+
+async function listSkills(sddRoot: string): Promise<string> {
+  try {
+    const files = await readdir(join(sddRoot, "skills"));
+    return files
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => `  - .sdd/skills/${f}`)
+      .join("\n");
+  } catch {
+    return "  (none)";
+  }
+}
+
+export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Promise<number> {
+  const repoRoot = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
+  const sddRoot = join(repoRoot, ".sdd");
+
+  const all = await readSignals(sddRoot);
+  const cursor = await readCursor(sddRoot);
+
+  let fresh;
+  try {
+    fresh = signalsSince(all, cursor);
+  } catch (cause) {
+    console.error((cause as Error).message);
+    return 1;
+  }
+
+  console.log(`whetstone — retro\n`);
+  console.log(`  signals   ${all.length} total · ${fresh.length} since ${cursor ?? "the beginning"}`);
+
+  if (fresh.length === 0) {
+    console.log(`\n  nothing new since the last retro.`);
+    return 0;
+  }
+
+  const clusters = clusterSignals(fresh);
+  const actionable = clusters.filter((c) => c.actionable);
+  console.log(`  clusters  ${clusters.length} · ${actionable.length} actionable\n`);
+
+  for (const c of clusters) {
+    const mark = c.actionable ? "▶" : " ";
+    console.log(`  ${mark} ${c.key.padEnd(42)} ${c.signals.length} signal(s)`);
+  }
+
+  if (opts.dryRun === true) {
+    console.log(`\n  --dry-run: clustered only, no proposals generated.`);
+    return 0;
+  }
+  if (actionable.length === 0) {
+    console.log(`\n  no cluster is actionable yet. Recurrence is the trigger.`);
+    return 0;
+  }
+
+  const skillIndex = await listSkills(sddRoot);
+  const judge = createClaudeJudge();
+  const accepted: Recommendation[] = [];
+  const rejected: { rec: Recommendation; reasons: readonly string[] }[] = [];
+  let cost = 0;
+
+  console.log(`\n  proposing...`);
+  for (const cluster of actionable) {
+    const result = await judge.judge({
+      lens: LENS,
+      prompt: await describeCluster(cluster, sddRoot, skillIndex),
+      schema: RecommendationSchema,
+      model: opts.model ?? "sonnet",
+      maxAttempts: 3,
+    });
+    cost += result.costUsd;
+
+    if (!result.ok) {
+      console.log(`    ${cluster.key}: no proposal (${result.error.kind})`);
+      continue;
+    }
+
+    const rec: Recommendation = { clusterKey: cluster.key, ...result.value };
+    // THE ANTI-POISONING GATE. Validated against the FULL log, not the cluster,
+    // so a fabricated id is caught even if it looks plausible.
+    const check = validateRecommendation(rec, all);
+    if (check.ok) accepted.push(rec);
+    else rejected.push({ rec, reasons: check.reasons });
+  }
+
+  const lines: string[] = [
+    `# Retro proposals`,
+    ``,
+    `Signals ${fresh[0]?.id} … ${fresh[fresh.length - 1]?.id} (${fresh.length} new).`,
+    `**Nothing here has been applied.** Approving is a human act.`,
+    ``,
+  ];
+  accepted.forEach((rec, i) => lines.push(renderProposal(rec, i + 1), ``));
+
+  if (rejected.length > 0) {
+    lines.push(`## Dropped by the anti-poisoning gate`, ``);
+    for (const { rec, reasons } of rejected) {
+      lines.push(`- **${rec.target}** — ${reasons.join("; ")}`);
+    }
+    lines.push(``);
+  }
+
+  const retroId = `retro-${String(all.length).padStart(4, "0")}`;
+  const path = await writeProposals(sddRoot, retroId, lines.join("\n"));
+
+  console.log(`\n  ${accepted.length} proposal(s) survived the anti-poisoning gate`);
+  if (rejected.length > 0) {
+    console.log(`  ${rejected.length} dropped before reaching you:`);
+    for (const { rec, reasons } of rejected) console.log(`    ${rec.target}: ${reasons[0]}`);
+  }
+  console.log(`  cost: $${cost.toFixed(4)}`);
+  console.log(`\n  wrote ${path}`);
+  console.log(`  Review it. Nothing is applied until you apply it.`);
+  console.log(`  Then append a "## ${retroId}" entry to .sdd/memory/retro-log.md with`);
+  console.log(`  \`cursor: ${fresh[fresh.length - 1]?.id}\` so the next retro starts after it.`);
+  return 0;
+}

@@ -1,41 +1,99 @@
 # Whetstone
 
-**Self-sharpening workflows for coding agents.**
+**Self-sharpening standards for coding agents.**
 
-Whetstone gives your agent workflow a memory and a feedback loop. As you use an AI on a project, it records the friction (signals) and the decisions, then **recommends the guardrails that project actually needs** — a new skill, a hook, a command, or an amendment to an existing rule — with a human gate and a full audit trail. Rules carry receipts: every rule links back to the signals that earned it.
+Whetstone captures a project's definition of *correct* — its constitution, its risk triage, and the
+checks that matter — as plain files in git, then enforces it with a deterministic engine that calls
+an LLM only where judgment is irreducible. Routine changes run autonomously; the ones your project
+calls critical keep a human in the loop. Every task ends in a PR annotated with **where a human
+should actually look**. And because it records the friction it hits, the checks a project needs grow
+and tighten over time — each carrying a receipt for why it exists.
 
-> Status: alpha (v0.3.0). The retro loop — the thesis — has produced its first earned rule from a real project. Wizard-of-Oz (agent-driven procedures, not a CLI yet). See [VISION.md](./VISION.md) first.
+> Status: alpha (v0.4.0). The engine is under construction — the CLI skeleton and the calibrated LLM
+> boundary landed; the gate is next. The retro loop has produced its first earned rule from a real
+> project. Read [VISION.md](./VISION.md) first.
+
+## Why
+
+Most of what a senior engineer does to guarantee quality is already deterministic — tests, linters,
+type checks, review checklists. The LLM's unique contribution is **judgment**. Whetstone splits the
+work along that line: the engine does the mechanical 80%, cheap and reproducible, and an agent is
+applied to the remaining 20%, only where the change is critical.
+
+The consequence is frugality in *verification*. Tools that review everything with an agent are
+expensive and slow; a `CLAUDE.md` full of rules is merely advisory. Whetstone is neither — it is the
+layer that makes a non-negotiable actually non-negotiable.
 
 ## How it works
 
 ```
-use → record → distill → amend
+wst init   → interview the project, generate .sdd/
+wst run    → triage → plan gate (critical changes only) → dispatch → gate → annotated PR
+wst gate   → select checks → skip what receipts prove unchanged → run → pass or block
+wst retro  → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-1. `whetstone init` interviews your project and generates a `.sdd/` directory: constitution, triage rules, and a starter skill set.
-2. As you work, signals and decisions are logged to `.sdd/memory/` (plain files, versioned in git — no server required).
-3. `/retro` reads what accumulated, detects patterns, and recommends apparatus — a new skill/hook/command, or a diff to an existing rule (curating a proven one when it fits, generating a project-specific one when it doesn't). You approve; the change lands with a changelog entry linking back to the evidence.
+*Shipped today: all eight commands — `status`, `check`, `triage`, `gate`, `run`, `pr`, `retro`,
+`init` — as a TypeScript engine (ADR-0008). The Wizard-of-Oz procedures under
+[`docs/woz/`](./docs/woz/) are reference specs, not current procedure.*
+
+The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst run` has dispatched a
+crewmate whose work was gated before a human saw it, and `wst retro` has produced amendments across
+four skills, each carrying the signals that earned it. **`wst run` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
+for worktree isolation, and agent-lens checks need the `claude` CLI; neither is bundled.** What is
+still weak is stated in [AGENTS.md](./AGENTS.md#known-weaknesses-stated-plainly) — chiefly that the
+lens is uncalibrated at v4, so the judgment tier is advisory.
+
+1. **`.sdd/` is data.** Constitution, triage rules, and a registry of checks — one file per check,
+   each declaring what it triggers on, whether it is deterministic or judgment, and whether it may
+   block or only warn.
+2. **The engine is code.** It classifies changes by glob, selects checks, hashes inputs so unchanged
+   code is never re-reviewed, runs what remains, and enforces the result.
+3. **The LLM is judgment only.** One boundary, one port, swappable adapters. A judgment check must
+   prove it is correct and stable over fixtures before it is allowed to block anything — otherwise
+   it is capped at `warn`. A flaky gate gets routed around, and then it is worth less than nothing.
+4. **The loop closes.** Signals accumulate as you work; the retro proposes new or amended checks;
+   you approve; the change lands with a changelog linking back to the evidence.
 
 ## Non-goals
 
-Whetstone is **not** a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers) and **not** a memory server (memory is an interface; plain files are the default backend, engram/MCP backends are optional adapters). See [VISION.md](./VISION.md#what-whetstone-is-not).
+Not a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers). Not a memory server
+(memory is an interface; files are the default backend). Not a fleet manager — it delegates
+worktrees, GitHub and execution to tools that already do those well. See
+[VISION.md](./VISION.md#what-whetstone-is-not).
 
 ## Roadmap
 
-- **M1 — Bootstrap** ✅: the init procedure, `.sdd/` schema, eight-skill set, signal logging. Dogfooded on a real project.
-- **M2 — Code tier** (in progress): the emitter compiles `.sdd/` into per-vendor apparatus — hooks first (a project-specific `strict-path-guard` ships today), then agents/commands, earned via the retro.
-- **M3 — The retro loop** ✅ (first pass): pattern detection + apparatus recommendation. Validated in the wild — a real project's signals produced the first earned rule (TD6). Next: make it repeatable and semi-automated.
-- **M4 — Update model** ([ADR-0006](./.sdd/memory/decisions/0006-update-model-3way-merge-via-git.md)): keep bootstrapped projects current via 3-way merge; contribute local amendments upstream.
-- **M5 — Distribution**: `npx whetstone` CLI / optional plugin, for use beyond the author.
+- **M1 — Bootstrap** ✅ — the init procedure, `.sdd/` schema, eight-skill set, signal logging.
+- **M2 — Code tier** ✅ — the emitter compiles `.sdd/` into per-vendor apparatus, hooks first.
+- **M3 — The retro loop** ✅ *(first pass)* — pattern detection + apparatus recommendation, validated
+  in the wild. Still N=1; repeatability unproven.
+- **M4 — The engine** ← *current* — `wst` CLI, deterministic core, calibrated LLM boundary, check
+  registry, lean gate with receipts, annotated PR.
+- **M5 — Update model** — keep bootstrapped projects current via 3-way merge; contribute upstream.
+- **Distribution** — `npx wst` / optional plugin. Deliberately last: the payload is the value, the
+  installer is a wrapper.
+
+## Development
+
+```bash
+npm install
+npm test          # no network, no token cost
+npm run typecheck
+npm run build && node dist/cli.js status
+npm run calibrate # spends real tokens: measures agent-lens verdict stability
+```
+
+The core (`src/core/`) is pure and strictly TDD'd; adapters (`src/shell/`) are thin. A test enforces
+that the core can never import an adapter, which is what makes "the LLM is judgment only" an
+architectural fact rather than a promise.
 
 ## Contributing
 
-Contributions are welcome, with two rules:
-
-1. **Read [VISION.md](./VISION.md) first** — especially the "What Whetstone is NOT" section. PRs that pull the project toward being a spec framework or a memory server will be (kindly) redirected.
-2. **Small, atomic PRs.** One concern per PR. A PR that touches the `.sdd/` schema should not also refactor the CLI. If your change needs more than ~300 lines of diff, open an issue first so we can split it.
-
-Good first issues are labeled `good-first-issue` and target M1: skill genericization and `.sdd/` schema review.
+1. **Read [VISION.md](./VISION.md) first** — especially "What Whetstone is NOT". PRs that pull the
+   project toward being a spec framework or a memory server will be (kindly) redirected.
+2. **Small, atomic PRs.** One concern per PR. If your change needs more than ~300 lines of diff,
+   open an issue first so we can split it.
 
 ## License
 
