@@ -63,3 +63,12 @@ export {
   renderTriageRulesMd,
   renderTriageYaml,
 } from "./triage.js";
+export { collisionsIn, renderCollisions, type Collidable, type Collision } from "./collisions.js";
+export {
+  ProposalSchema,
+  buildProposalPrompt,
+  proposalToAnswers,
+  renderProposal,
+  unevidencedFlags,
+  type Proposal,
+} from "./propose.js";

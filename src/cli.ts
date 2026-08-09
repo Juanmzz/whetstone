@@ -127,9 +127,11 @@ program
   .option("--purpose <text>", "one-line project purpose")
   .option("--risk <flags>", "comma-separated: money,personalData,productionData,authn,safetyCritical")
   .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
+  .option("--propose", "draft the answers with the judge — you edit and sign (one model call)")
+  .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
   .option("--agent-lens", "also seed an uncalibrated review lens (capped at warn)")
   .option("--no-code-tier", "skip the .claude/ hook")
-  .option("--force", "overwrite an existing .sdd/")
+  .option("--force", "overwrite existing files, listing them first")
   .option("--dry-run", "show the plan, write nothing")
   .option("--json", "print the plan as JSON")
   .action(async (opts: Parameters<typeof runInit>[0]) => {
