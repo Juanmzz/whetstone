@@ -31,6 +31,7 @@ import { chmod, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promis
 import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import {
@@ -367,7 +368,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   }
 
   if (answers === null) {
-    console.log(`wst init — ${root}`);
+    console.log(`${banner()}\n\ninit — ${root}`);
     printDetection(stack);
     printQuestions(stack);
     return 0;
@@ -394,7 +395,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
-  console.log(`wst init — ${root}`);
+  console.log(`${banner()}\n\ninit — ${root}`);
   printDetection(plan.stack);
   printPlan(plan, root);
 
