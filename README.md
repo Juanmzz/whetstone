@@ -33,8 +33,16 @@ wst gate   → select checks → skip what receipts prove unchanged → run → 
 wst retro  → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-*Shipped today: `wst status`.* The rest is the target shape — `init` and `retro` exist as validated
-procedures under [`docs/woz/`](./docs/woz/) and are being ported to code; `gate` and `run` are next.
+*Shipped today: all eight commands — `status`, `check`, `triage`, `gate`, `run`, `pr`, `retro`,
+`init` — as a TypeScript engine (ADR-0008). The Wizard-of-Oz procedures under
+[`docs/woz/`](./docs/woz/) are reference specs, not current procedure.*
+
+The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst run` has dispatched a
+crewmate whose work was gated before a human saw it, and `wst retro` has produced amendments across
+four skills, each carrying the signals that earned it. **`wst run` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
+for worktree isolation, and agent-lens checks need the `claude` CLI; neither is bundled.** What is
+still weak is stated in [AGENTS.md](./AGENTS.md#known-weaknesses-stated-plainly) — chiefly that the
+lens is uncalibrated at v4, so the judgment tier is advisory.
 
 1. **`.sdd/` is data.** Constitution, triage rules, and a registry of checks — one file per check,
    each declaring what it triggers on, whether it is deterministic or judgment, and whether it may
