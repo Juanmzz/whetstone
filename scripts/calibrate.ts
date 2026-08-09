@@ -74,6 +74,7 @@ function arg(flag: string, fallback: string): string {
 }
 
 const RUNS = Number(arg("--runs", "10"));
+const CHECK_ID = "correctness";
 const MODEL = arg("--model", "sonnet") as "haiku" | "sonnet" | "opus";
 const FILTER = arg("--filter", "");
 const CONCURRENCY = 4;
@@ -263,10 +264,31 @@ async function main() {
     return;
   }
 
+  // THE ARTIFACT. Prose used to be the only output, and a human then transcribed a
+  // conclusion from it into a YAML field nothing checked — which is how an unmeasured
+  // lens reached `block` (sig-0034). The receipt is what the loader reads; everything
+  // above is for the person watching.
+  const receipt = recordCalibration({
+    checkId: CHECK_ID,
+    lens: LENS,
+    fixtures: await fixtureFiles(dir),
+    model: MODEL,
+    runtime: { name: "claude", version: version ?? "unknown" },
+    results: outcomes.map((o) => ({
+      fixture: o.fixture.file,
+      expected: o.fixture.expect,
+      got: [...o.verdicts],
+    })),
+    at: new Date(),
+  });
+  const receiptPath = join(repoRoot, ".sdd", "checks", receiptName(CHECK_ID));
+  await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf-8");
+  console.log(`\n  wrote .sdd/checks/${receiptName(CHECK_ID)} — verdict: ${receipt.verdict}`);
+
   console.log(
-    failed.length === 0
-      ? "\n  PASS — this lens may be declared `severity: block`."
-      : "\n  FAIL — this lens is capped at `warn`/`annotate` (ADR-0008).",
+    receipt.verdict === "passed"
+      ? "  PASS — this lens may now be declared `severity: block`."
+      : "  FAIL — this lens is capped at `warn`/`annotate` (ADR-0008).",
   );
   process.exitCode = failed.length === 0 ? 0 : 1;
 }

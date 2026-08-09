@@ -65,6 +65,29 @@ export type CalibrationResult = z.infer<typeof ResultSchema>;
 
 export const CALIBRATION_FORMAT = 1;
 
+/**
+ * Runs per fixture before a clean sweep grants anything.
+ *
+ * NOT a taste number. Measured on this repo's own `correctness` lens, an hour apart,
+ * same prompt and same fixtures:
+ *
+ *   --runs 10  ->  race-good flipped once  ->  failed
+ *   --runs  2  ->  10/10 clean             ->  passed
+ *
+ * Both receipts were genuine, both carried true hashes, and the second was worthless.
+ * It was produced by accident while testing the plumbing, and it overwrote the honest
+ * failing one — which is exactly how this would happen to a user.
+ *
+ * Without a floor, the honour-system hole this whole module replaced simply comes
+ * back wearing a hash: instead of typing `status: passed`, you run `--runs 1`.
+ *
+ * 10 is what the bar in `test/fixtures/lens-correctness/RESULT.md` has used since the
+ * first measurement, and it is the smallest sample that has actually caught the flip
+ * this lens has. It is a floor, not a proof — a lens that fails one time in fifty
+ * passes this and is still flaky.
+ */
+export const MIN_AUTHORISING_RUNS = 10;
+
 const Shape = z.strictObject({
   format: z.literal(CALIBRATION_FORMAT),
   checkId: z.string().min(1),
@@ -225,6 +248,14 @@ export function blockAuthority(
   }
   if (receipt.verdict !== "passed") {
     return { ok: false, reason: "the calibration did not pass" };
+  }
+  if (receipt.runs < MIN_AUTHORISING_RUNS) {
+    return {
+      ok: false,
+      reason:
+        `too few runs: ${String(receipt.runs)} per fixture, and ${String(MIN_AUTHORISING_RUNS)} ` +
+        `are required before a clean sweep means anything`,
+    };
   }
   return { ok: true };
 }

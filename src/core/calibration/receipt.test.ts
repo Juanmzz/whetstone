@@ -24,8 +24,10 @@ const perfect = () =>
     model: "sonnet",
     runtime: { name: "claude", version: "2.1.226" },
     results: [
-      { fixture: "race-bad.diff", expected: "fail", got: ["fail", "fail", "fail"] },
-      { fixture: "race-good.diff", expected: "pass", got: ["pass", "pass", "pass"] },
+      // TEN runs, not three: `MIN_AUTHORISING_RUNS` is part of what grants block, so
+      // a fixture short of it would test the floor instead of what it means to test.
+      { fixture: "race-bad.diff", expected: "fail", got: Array.from({ length: 10 }, () => "fail" as const) },
+      { fixture: "race-good.diff", expected: "pass", got: Array.from({ length: 10 }, () => "pass" as const) },
     ],
     at: new Date("2026-08-09T12:00:00Z"),
   });
@@ -183,3 +185,54 @@ function inputOf(r: CalibrationReceipt) {
     at: new Date(r.measuredAt),
   };
 }
+
+/**
+ * A RECEIPT WITH TOO FEW RUNS IS THE HONOUR-SYSTEM HOLE WEARING A HASH.
+ *
+ * Measured, an hour apart, on the same lens and the same fixtures:
+ *   --runs 10  ->  race-good flipped once  ->  failed
+ *   --runs 2   ->  10/10 clean             ->  passed
+ *
+ * Both receipts are genuine. Both carry real hashes of the real prompt and the real
+ * fixture set. The second one is worthless, and it was produced by accident while
+ * testing the plumbing — it overwrote the honest failing one.
+ *
+ * So the verdict alone cannot grant authority. `runs` is part of the evidence, and a
+ * sample too small to catch a flip has not looked for one.
+ */
+describe("a passing receipt must have looked hard enough", () => {
+  const enough = (runs: number) =>
+    recordCalibration({
+      ...inputOf(perfect()),
+      results: [
+        { fixture: "a.diff", expected: "fail", got: Array.from({ length: runs }, () => "fail" as const) },
+        { fixture: "b.diff", expected: "pass", got: Array.from({ length: runs }, () => "pass" as const) },
+      ],
+      fixtures: [
+        { path: "a.diff", expected: "fail", hash: "1111" },
+        { path: "b.diff", expected: "pass", hash: "2222" },
+      ],
+    });
+
+  const current = fixturesHash([
+    { path: "a.diff", expected: "fail", hash: "1111" },
+    { path: "b.diff", expected: "pass", hash: "2222" },
+  ]);
+
+  it("DENIES block on a two-run sweep, however clean", () => {
+    const decision = blockAuthority(LENS, enough(2), current);
+    expect(decision.ok).toBe(false);
+    expect(decision.ok === false && decision.reason).toMatch(/runs|sample/i);
+  });
+
+  it("grants block once the sample is large enough", () => {
+    expect(blockAuthority(LENS, enough(10), current).ok).toBe(true);
+  });
+
+  it("still records the small run honestly rather than refusing to mint it", () => {
+    // The measurement happened; it just does not authorise. Refusing to write it
+    // would hide a real diagnostic run, which is what `--runs 2` is FOR.
+    expect(enough(2).verdict).toBe("passed");
+    expect(enough(2).runs).toBe(2);
+  });
+});
