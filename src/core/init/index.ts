@@ -59,8 +59,6 @@ export {
 export { MAX_DEPTH, MAX_FILES, skipDir, walkDepth } from "./walk.js";
 export {
   buildTriageRules,
-  renderClaudeSettings,
-  renderStrictPathGuard,
   renderTriageRulesMd,
   renderTriageYaml,
 } from "./triage.js";

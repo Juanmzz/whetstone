@@ -39,19 +39,25 @@ import {
 import { auditSelfContained, formatViolations } from "./selfcontained.js";
 import {
   buildTriageRules,
-  renderClaudeSettings,
-  renderStrictPathGuard,
   renderTriageRulesMd,
   renderTriageYaml,
 } from "./triage.js";
 
 export interface InitOptions {
+  /**
+   * Emit `.sdd/` only: no `AGENTS.md`, no `CLAUDE.md`.
+   *
+   * `.sdd/` is the vendor-neutral source of truth (ADR-0002) and the vendor files are
+   * RENDERINGS of it. A repo that already has its own `AGENTS.md` — because another
+   * harness owns that surface — needs the definitions without the rendering, and
+   * refusing to install at all was the only previous answer.
+   */
+  readonly definitionsOnly?: boolean;
   /** Memory backend. `files` is the default AND the recommendation (ADR-0001). */
   readonly backend?: string;
   /** Seed an uncalibrated review lens. Off by default: apparatus is earned. */
   readonly seedAgentLens?: boolean;
   /** Emit `.claude/` hooks. On by default, but only when something is strict. */
-  readonly emitCodeTier?: boolean;
 }
 
 export interface InitPlanInput {
@@ -97,7 +103,6 @@ export function planInit(input: InitPlanInput): InitPlan {
 
   // Compiled BEFORE the prose, because the prose refers to it: `triage-rules.md`
   // may only name the hook in a repo where the hook actually exists.
-  const hook = options.emitCodeTier === false ? null : renderStrictPathGuard(rules);
 
   const constitution = renderConstitution({
     repoName: input.facts.repoName,
@@ -107,7 +112,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     conventions: input.answers.conventions,
     stack,
   });
-  const triageRulesMd = renderTriageRulesMd(rules, { date, codeTierHook: hook !== null });
+  const triageRulesMd = renderTriageRulesMd(rules, { date });
 
   const files: GeneratedFile[] = [
     { path: ".sdd/constitution.md", contents: constitution },
@@ -140,6 +145,13 @@ export function planInit(input: InitPlanInput): InitPlan {
         "\nit deliberately did not change. The next retro starts where the last one stopped.\n",
     },
     { path: ".sdd/memory/decisions/_TEMPLATE.md", contents: ADR_TEMPLATE },
+  ];
+
+  // The vendor files are RENDERINGS of `.sdd/` (ADR-0002), which is why they can be
+  // withheld without withholding anything: a repo whose harness already owns
+  // `AGENTS.md` gets the definitions and keeps its own front door. Refusing to
+  // install at all used to be the only answer to that.
+  const vendorFiles: GeneratedFile[] = [
     {
       path: "AGENTS.md",
       contents: renderAgentsMd({
@@ -154,21 +166,12 @@ export function planInit(input: InitPlanInput): InitPlan {
     // native `@path` import, so one source of truth costs one line here.
     { path: "CLAUDE.md", contents: CLAUDE_MD },
   ];
+  if (options.definitionsOnly !== true) files.push(...vendorFiles);
 
-  // ── the code tier ─────────────────────────────────────────────────────────
-  if (hook !== null) {
-    files.push(
-      { path: ".claude/hooks/strict-path-guard.mjs", contents: hook, executable: true },
-      { path: ".claude/settings.json", contents: renderClaudeSettings() },
-    );
-    if (hook.includes("widened from")) {
-      notes.push(
-        "a strict glob could not be reduced to a directory prefix, so the generated hook " +
-          "was WIDENED and will warn more broadly than the rule does. It only warns, but " +
-          "narrow the glob if the noise is not worth it.",
-      );
-    }
-  }
+  // No `.claude/` any more (ADR-0010). `init` writes DEFINITIONS; the editor hook is
+  // the plugin's, which reads `.sdd/triage.yaml` at run time rather than baking the
+  // paths in, and composes with a repo's existing hooks instead of replacing their
+  // `settings.json` wholesale. That write is what forced `collisions.ts` to exist.
 
   if (checkFiles.length === 0) {
     notes.push(

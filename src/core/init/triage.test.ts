@@ -5,7 +5,6 @@ import { detectStack, type RepoFacts } from "./detect.js";
 import { NO_RISK, type InterviewAnswers } from "./interview.js";
 import {
   buildTriageRules,
-  renderStrictPathGuard,
   renderTriageRulesMd,
   renderTriageYaml,
 } from "./triage.js";
@@ -156,68 +155,3 @@ describe("renderTriageRulesMd", () => {
   });
 });
 
-describe("renderStrictPathGuard — the code tier compiled from the same source", () => {
-  it("emits no hook when nothing is strict — a guard that matches nothing is dead weight", () => {
-    expect(renderStrictPathGuard(buildTriageRules(tsRepo, answers()))).toBeNull();
-  });
-
-  it("compiles a `dir/**` glob to a directory prefix", () => {
-    const hook = renderStrictPathGuard(
-      buildTriageRules(tsRepo, {
-        ...answers(),
-        strictPaths: [{ glob: "src/billing/**", reason: "moves money" }],
-      }),
-    );
-    expect(hook).toContain('"src/billing/"');
-  });
-
-  it("compiles an exact file glob to an exact match", () => {
-    const hook = renderStrictPathGuard(
-      buildTriageRules(tsRepo, {
-        ...answers(),
-        strictPaths: [{ glob: "src/schema.ts", reason: "the shared contract" }],
-      }),
-    );
-    expect(hook).toContain('"src/schema.ts"');
-    expect(hook).not.toContain('"src/schema.ts/"');
-  });
-
-  it("degrades a glob it cannot reduce to that glob's literal prefix, and says so", () => {
-    const hook = renderStrictPathGuard(
-      buildTriageRules(tsRepo, {
-        ...answers(),
-        strictPaths: [{ glob: "src/**/*.money.ts", reason: "money-shaped modules" }],
-      }),
-    );
-    expect(hook).toContain('"src/"');
-    expect(hook).toMatch(/src\/\*\*\/\*\.money\.ts/);
-  });
-
-  it("is an executable node script that never blocks and never throws", () => {
-    const hook =
-      renderStrictPathGuard(
-        buildTriageRules(tsRepo, {
-          ...answers(),
-          strictPaths: [{ glob: "src/billing/**", reason: "moves money" }],
-        }),
-      ) ?? "";
-    expect(hook.startsWith("#!/usr/bin/env node\n")).toBe(true);
-    expect(hook).toContain("PreToolUse");
-    // `defer`/no decision = warn only. A generated hook that can DENY an edit in
-    // someone else's repo on day one is how a bootstrapper gets uninstalled.
-    expect(hook).not.toContain('permissionDecision":"deny"');
-    expect(hook).not.toContain('permissionDecision: "deny"');
-    expect(hook).toContain("process.exit(0)");
-  });
-
-  it("escapes the strings it bakes in, so a quote in a reason cannot break the script", () => {
-    const hook =
-      renderStrictPathGuard(
-        buildTriageRules(tsRepo, {
-          ...answers(),
-          strictPaths: [{ glob: 'src/a"b/**', reason: 'has a " in it' }],
-        }),
-      ) ?? "";
-    expect(hook).toContain('"src/a\\"b/"');
-  });
-});

@@ -74,7 +74,15 @@ export interface InitOptions {
   /** Where --propose writes its draft. */
   readonly out?: string;
   readonly agentLens?: boolean;
-  readonly codeTier?: boolean;
+  /**
+   * Write `.sdd/` and nothing else.
+   *
+   * For a repo that already has a harness. ChytaPay has its own `CLAUDE.md`, its own
+   * `AGENTS.md` and a plugin that owns `.claude/`; the collision guard stops `init`
+   * destroying them, but stopping is not the same as coexisting. This is the mode
+   * that lets Whetstone be the verifier for a workspace somebody else runs.
+   */
+  readonly definitionsOnly?: boolean;
 }
 
 // ── gathering facts ──────────────────────────────────────────────────────────
@@ -478,7 +486,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       clock: { now: () => new Date() },
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
-        ...(opts.codeTier !== undefined ? { emitCodeTier: opts.codeTier } : {}),
+        ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
       },
     });
   } catch (cause) {

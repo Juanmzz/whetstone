@@ -129,7 +129,7 @@ program
   .option("--propose", "draft the answers with the judge — you edit and sign (one model call)")
   .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
   .option("--agent-lens", "also seed an uncalibrated review lens (capped at warn)")
-  .option("--no-code-tier", "skip the .claude/ hook")
+  .option("--definitions-only", "write .sdd/ and nothing else — no AGENTS.md, no CLAUDE.md")
   .option("--force", "overwrite existing files, listing them first")
   .option("--dry-run", "show the plan, write nothing")
   .option("--json", "print the plan as JSON")

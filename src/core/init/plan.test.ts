@@ -49,11 +49,12 @@ const at = (p: InitPlan, path: string): string | undefined =>
 describe("planInit — what a typical TypeScript repo gets", () => {
   const p = plan({ answers: MONEY });
 
-  it("writes the whole .sdd/ substrate plus the two vendor files", () => {
+  it("writes the whole .sdd/ substrate plus the two vendor files, and nothing else", () => {
+    // No `.claude/` (ADR-0010). This list IS the contract with a target repo: every
+    // path here is one somebody else has to live with, and the two that are not
+    // `.sdd/` are the ones that collide.
     expect(p.files.map((f) => f.path).sort()).toEqual(
       [
-        ".claude/hooks/strict-path-guard.mjs",
-        ".claude/settings.json",
         ".sdd/checks/lint.md",
         ".sdd/checks/test.md",
         ".sdd/checks/typecheck.md",
@@ -86,10 +87,6 @@ describe("planInit — what a typical TypeScript repo gets", () => {
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it("marks the hook executable and nothing else", () => {
-    const executable = p.files.filter((f) => f.executable === true).map((f) => f.path);
-    expect(executable).toEqual([".claude/hooks/strict-path-guard.mjs"]);
-  });
 });
 
 describe("planInit — everything generated must load through the real loaders", () => {
@@ -145,24 +142,6 @@ describe("planInit — everything generated must load through the real loaders",
   });
 });
 
-describe("planInit — the code tier is earned, not sprayed", () => {
-  it("emits no .claude/ files when nothing is strict", () => {
-    const paths = plan().files.map((f) => f.path);
-    expect(paths.some((p) => p.startsWith(".claude/"))).toBe(false);
-  });
-
-  it("emits the hook when a strict path exists, wired by settings.json", () => {
-    const p = plan({ answers: MONEY });
-    expect(at(p, ".claude/hooks/strict-path-guard.mjs")).toContain("src/billing/");
-    const settings = JSON.parse(at(p, ".claude/settings.json") ?? "{}") as Record<string, unknown>;
-    expect(JSON.stringify(settings)).toContain("strict-path-guard.mjs");
-  });
-
-  it("suppresses the code tier on request", () => {
-    const p = plan({ answers: MONEY, options: { emitCodeTier: false } });
-    expect(p.files.some((f) => f.path.startsWith(".claude/"))).toBe(false);
-  });
-});
 
 describe("planInit — refuses to produce a broken payload", () => {
   it("throws when the answers do not validate", () => {
@@ -212,10 +191,4 @@ describe("planInit — notes", () => {
     expect(plan({ answers: MONEY }).notes.join("\n")).toMatch(/typescript/i);
   });
 
-  it("warns when a strict glob had to be widened for the hook", () => {
-    const p = plan({
-      answers: answers({ strictPaths: [{ glob: "src/**/*.money.ts", reason: "money modules" }] }),
-    });
-    expect(p.notes.join("\n")).toMatch(/widen/i);
-  });
 });
