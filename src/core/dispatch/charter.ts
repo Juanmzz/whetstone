@@ -121,12 +121,33 @@ export function buildCharter(input: CharterInput): string {
  * Pure, and here rather than in the command because `commands/` is light tier and
  * nothing there is unit-tested — a slug function has more edge cases than it looks.
  */
+/** Characters of slug after `run/`. Long enough to stay readable in `git branch`. */
+const SLUG_MAX = 40;
+
 export function branchNameFor(task: string): string {
-  const slug = task
+  const full = task
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-    .replace(/-+$/, "");
-  return `run/${slug === "" ? "task" : slug}`;
+    .replace(/^-+|-+$/g, "");
+
+  return `run/${truncateAtWord(full) === "" ? "task" : truncateAtWord(full)}`;
+}
+
+/**
+ * Cut at the last whole word that fits, not at the character.
+ *
+ * A plain `slice(0, 40)` amputates mid-word, and stripping a trailing hyphen does
+ * not remove the stump it leaves. Observed: `run/fix-init-see-monorepos-and-their-tests-i`,
+ * where `-i` is the start of a word that did not survive. A branch name is read by
+ * a human in `git branch`, in `gh pr list` and in every merge commit forever, so a
+ * visible amputation is a lasting piece of carelessness for no gain.
+ *
+ * A first word longer than the whole budget has no boundary to cut at; there a hard
+ * cut is the honest answer, because an empty branch name is worse than a stump.
+ */
+function truncateAtWord(slug: string): string {
+  if (slug.length <= SLUG_MAX) return slug;
+
+  const cut = slug.lastIndexOf("-", SLUG_MAX);
+  return cut <= 0 ? slug.slice(0, SLUG_MAX) : slug.slice(0, cut);
 }

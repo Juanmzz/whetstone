@@ -35,6 +35,13 @@ import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import {
+  ProposalSchema,
+  buildProposalPrompt,
+  proposalToAnswers,
+  renderProposal,
+} from "../core/init/propose.js";
+import { createClaudeJudge } from "../shell/claude.js";
+import {
   MAX_FILES,
   NO_RISK,
   buildInterview,
@@ -62,6 +69,10 @@ export interface InitOptions {
   readonly force?: boolean;
   readonly dryRun?: boolean;
   readonly json?: boolean;
+  /** Draft the answers with the judge instead of asking the human to type them. */
+  readonly propose?: boolean;
+  /** Where --propose writes its draft. */
+  readonly out?: string;
   readonly agentLens?: boolean;
   readonly codeTier?: boolean;
 }
@@ -327,6 +338,76 @@ async function existingOf(plan: InitPlan, root: string): Promise<string[]> {
   return found.filter((path): path is string => path !== null);
 }
 
+/** First of these that exists, or null. A missing README is a fact, not an error. */
+async function readFirst(root: string, candidates: readonly string[]): Promise<string | null> {
+  for (const candidate of candidates) {
+    try {
+      return await readFile(join(root, candidate), "utf-8");
+    } catch {
+      /* try the next */
+    }
+  }
+  return null;
+}
+
+/** Where `--propose` writes its draft when `--out` is not given. */
+const DEFAULT_ANSWERS_FILE = ".wst-answers.json";
+
+/** Whether there is a judge to call at all. Checked before advertising `--propose`. */
+async function judgeAvailable(): Promise<boolean> {
+  return (await createClaudeJudge().describe()).version !== null;
+}
+
+/**
+ * Draft the answers with the judge and write them for the human to edit.
+ *
+ * It writes a FILE rather than proceeding straight to `planInit`. That gap is the
+ * point: a draft that flowed directly into a written `.sdd/` would make the model's
+ * reading of the project the project's constitution, with no moment where anyone
+ * had to look at it. ADR-0003 calls the human gate the moat.
+ */
+async function proposeAnswers(
+  facts: RepoFacts,
+  stack: ReturnType<typeof detectStack>,
+  root: string,
+  outPath: string,
+): Promise<number> {
+  console.log(`${banner()}\n\ninit --propose — ${root}`);
+  printDetection(stack);
+  console.log("\nasking the judge to draft the answers...\n");
+
+  // The judge asked for this on the first live run and could not go and get it.
+  const readme = await readFirst(root, ["README.md", "readme.md", "README", "docs/README.md"]);
+
+  const result = await createClaudeJudge().judge({
+    lens:
+      "You draft project definitions for review by the project's owner. You argue " +
+      "from evidence you were given and never from assumption. You propose; you do " +
+      "not decide.",
+    prompt: buildProposalPrompt(facts, stack, readme),
+    schema: ProposalSchema,
+  });
+
+  if (!result.ok) {
+    // The judge failing is the DRAFTER being broken, not a fact about the repo —
+    // the same distinction the gate draws. Fall back to the questions rather than
+    // writing a half-answer.
+    console.error(
+      `the judge could not produce a draft (${result.error.kind}): ${result.error.detail}\n` +
+        `  Nothing was written. Answer the questions yourself with \`wst init\`.`,
+    );
+    return 1;
+  }
+
+  const target = resolve(root, outPath);
+  await writeFile(target, `${JSON.stringify(proposalToAnswers(result.value), null, 2)}\n`, "utf-8");
+
+  console.log(renderProposal(result.value));
+  console.log(`\nwrote ${outPath} ($${result.costUsd.toFixed(4)})`);
+  console.log(`  Edit it, then: wst init --answers ${outPath}`);
+  return 0;
+}
+
 async function writePlan(plan: InitPlan, root: string, payloadRoot: string | null): Promise<void> {
   for (const file of plan.files) {
     const target = join(root, file.path);
@@ -365,10 +446,27 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 1;
   }
 
+  // --propose: the judge drafts, the human signs. Deliberately OPT-IN, not the
+  // default, and for the same reason the `correctness` lens sits at `warn`: it has
+  // not earned the promotion by measurement yet. Making an unvalidated model call
+  // the default path of the FIRST command a new user runs is the investment the
+  // check schema already refuses to make for the lens. Promote it by ADR once it
+  // has shown it drafts well, not before.
+  if (opts.propose === true) {
+    return await proposeAnswers(facts, stack, root, opts.out ?? DEFAULT_ANSWERS_FILE);
+  }
+
   if (answers === null) {
     console.log(`${banner()}\n\ninit — ${root}`);
     printDetection(stack);
     printQuestions(stack);
+    if (await judgeAvailable()) {
+      console.log(
+        "\nOr let the judge draft them from what it can see:\n" +
+          "  wst init --propose        (one model call, measured at ~$0.15)\n" +
+          "It proposes; you edit and sign. The risk answer is yours either way.",
+      );
+    }
     return 0;
   }
 
