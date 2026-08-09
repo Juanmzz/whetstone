@@ -42,13 +42,6 @@ rules:
       allows the wrong writes in every project it is installed into, and it
       fails open, which looks like working.
 
-  - glob: "docs/woz/SPEC.md"
-    tier: strict
-    reason: >-
-      The schemas that propagate — signal, ADR, memory adapter, directory
-      contract. Everything downstream is written against them, including files
-      already living in other repositories.
-
   # ── off — no ceremony ──────────────────────────────────────────────────────
   # Only the retro log is expressible as a path. The rest of the `off` row in
   # .sdd/triage-rules.md (typos, formatting, changelog lines) is about CONTENT,
@@ -100,5 +93,4 @@ rules:
   - glob: "docs/**"
     tier: light
     reason: >-
-      Design and reference documentation. The propagating schema under docs/woz
-      is claimed by a stricter rule above.
+      Design and reference documentation.

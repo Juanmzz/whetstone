@@ -134,7 +134,31 @@ describe("the default ruleset", () => {
 
   it("rates the payload that propagates verbatim strict", () => {
     expect(tierOf(".sdd/skills/tdd-discipline.md")).toBe("strict");
-    expect(tierOf("docs/woz/SPEC.md")).toBe("strict");
+  });
+
+  /**
+   * THE DEFAULTS TRAVEL. `DEFAULT_RULES_YAML` is what any repo without its own
+   * `.sdd/triage.yaml` is triaged by, so a path that exists only in Whetstone is
+   * this project's biography imposed as another project's policy — the same class
+   * of leak `core/init/selfcontained.ts` exists to stop, in the one file it does
+   * not audit.
+   *
+   * It shipped: `docs/woz/SPEC.md` sat here at `strict`, and the test above
+   * asserted it, calling a Whetstone-only document "payload that propagates".
+   */
+  it("names no path that exists only in Whetstone", () => {
+    const WHETSTONE_ONLY = [
+      /docs\/woz\//,
+      /\bOPEN_QUESTIONS\.md\b/,
+      /\bPARALLEL\.md\b/,
+      /\blanes\.yaml\b/,
+      /\bVISION\.md\b/,
+    ];
+    for (const rule of DEFAULT_RULES) {
+      for (const pattern of WHETSTONE_ONLY) {
+        expect(`${rule.glob} ${rule.reason}`).not.toMatch(pattern);
+      }
+    }
   });
 
   it("rates compiled emitter output strict", () => {
