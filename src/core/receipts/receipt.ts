@@ -10,7 +10,7 @@
  */
 
 import { z } from "zod";
-import { inputHash, type Digest, type HashedFile } from "./hash.js";
+import { inputHash, type CheckIdentity, type Digest, type HashedFile } from "./hash.js";
 
 /**
  * On-disk record format. Bump it when the record's shape or meaning changes:
@@ -38,7 +38,13 @@ export interface Receipt {
 
 export interface PassInput {
   readonly checkId: string;
-  readonly checkVersion: number;
+  /**
+   * The check's version AND its behaviour-determining fields. One object rather
+   * than a loose version number, for the same reason `recordPass` computes the hash
+   * instead of accepting one: two ways to say what the check was is two things that
+   * can drift.
+   */
+  readonly check: CheckIdentity;
   readonly files: readonly HashedFile[];
   readonly at: Date;
   readonly digest?: Digest;
@@ -59,8 +65,8 @@ export function recordPass(input: PassInput): Receipt {
   return {
     format: RECEIPT_FORMAT,
     checkId: input.checkId,
-    checkVersion: input.checkVersion,
-    inputHash: inputHash(input.files, input.checkVersion, input.digest),
+    checkVersion: input.check.version,
+    inputHash: inputHash(input.files, input.check, input.digest),
     matchedFiles: input.files.length,
     outcome: "pass",
     recordedAt: input.at.toISOString(),

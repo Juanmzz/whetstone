@@ -18,7 +18,7 @@ import type { LoadedCheck, Registry } from "../checks/registry.js";
 import type { CheckResult, GateVerdict, Routing } from "../contracts.js";
 import type { ChangedFile } from "../diff/parse.js";
 import type { ClockPort, GitPort } from "../ports.js";
-import { inputHash, type HashedFile } from "../receipts/hash.js";
+import { inputHash, type CheckIdentity, type HashedFile } from "../receipts/hash.js";
 import { recordPass, shouldSkip, type Receipt } from "../receipts/receipt.js";
 import { aggregate } from "./aggregate.js";
 import type { RunOutcome } from "./outcomes.js";
@@ -95,6 +95,21 @@ export interface GateRun {
 const detailOf = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause);
 
+/**
+ * What goes into the receipt hash on the CHECK's side.
+ *
+ * Built in one place so the hash the gate compares against and the hash `recordPass`
+ * mints are the same function of the same check. Two constructions of this object
+ * would be two chances to disagree, and a disagreement here means either a receipt
+ * that never matches (harmless, wasteful) or one that matches when it should not
+ * (a false PASS).
+ */
+export const identityOf = (check: LoadedCheck): CheckIdentity => ({
+  version: check.version,
+  ...(check.command !== undefined ? { command: check.command } : {}),
+  ...(check.review_lens !== undefined ? { reviewLens: check.review_lens } : {}),
+});
+
 /** What one selected check needs before it can be run or skipped. */
 interface Prepared {
   readonly check: LoadedCheck;
@@ -169,7 +184,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
       check: selected.check,
       files: selected.files,
       hashed,
-      hash: hashed === null ? null : inputHash(hashed, selected.check.version),
+      hash: hashed === null ? null : inputHash(hashed, identityOf(selected.check)),
     });
   }
 
@@ -267,7 +282,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
       await ports.receipts.write(
         recordPass({
           checkId: item.check.id,
-          checkVersion: item.check.version,
+          check: identityOf(item.check),
           files: item.hashed,
           at: ports.clock.now(),
         }),

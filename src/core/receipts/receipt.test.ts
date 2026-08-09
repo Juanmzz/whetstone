@@ -17,7 +17,7 @@ const FILES: HashedFile[] = [
 const AT = new Date("2026-08-07T10:00:00.000Z");
 
 const pass = (over: Partial<Parameters<typeof recordPass>[0]> = {}): Receipt =>
-  recordPass({ checkId: "typecheck", checkVersion: 1, files: FILES, at: AT, ...over });
+  recordPass({ checkId: "typecheck", check: { version: 1 }, files: FILES, at: AT, ...over });
 
 describe("recordPass", () => {
   it("records the check, the input hash, the outcome and when", () => {
@@ -26,7 +26,7 @@ describe("recordPass", () => {
       format: RECEIPT_FORMAT,
       checkId: "typecheck",
       checkVersion: 1,
-      inputHash: inputHash(FILES, 1),
+      inputHash: inputHash(FILES, { version: 1 }),
       matchedFiles: 2,
       outcome: "pass",
       recordedAt: "2026-08-07T10:00:00.000Z",
@@ -38,8 +38,8 @@ describe("recordPass", () => {
     // stop them drifting apart — and a receipt whose hash was earned under v1 while
     // claiming v2 is exactly the bug this lane exists to prevent. There is one
     // constructor and it does the binding.
-    expect(pass({ checkVersion: 2 }).inputHash).toBe(inputHash(FILES, 2));
-    expect(pass({ checkVersion: 2 }).inputHash).not.toBe(pass({ checkVersion: 1 }).inputHash);
+    expect(pass({ check: { version: 2 } }).inputHash).toBe(inputHash(FILES, { version: 2 }));
+    expect(pass({ check: { version: 2 } }).inputHash).not.toBe(pass({ check: { version: 1 } }).inputHash);
   });
 
   it("is the only way to make a receipt, and it can only say pass", () => {
@@ -54,24 +54,24 @@ describe("recordPass", () => {
 describe("shouldSkip", () => {
   it("skips when the recorded hash matches the current one", () => {
     const receipt = pass();
-    const decision = shouldSkip(receipt, inputHash(FILES, 1));
+    const decision = shouldSkip(receipt, inputHash(FILES, { version: 1 }));
     expect(decision).toEqual({ skip: true, receipt });
   });
 
   it("re-runs when there is no receipt", () => {
-    expect(shouldSkip(null, inputHash(FILES, 1))).toEqual({ skip: false, reason: "no-receipt" });
+    expect(shouldSkip(null, inputHash(FILES, { version: 1 }))).toEqual({ skip: false, reason: "no-receipt" });
   });
 
   it("re-runs when the inputs changed", () => {
-    const changed = inputHash([{ path: "src/a.ts", hash: "ffff" }], 1);
+    const changed = inputHash([{ path: "src/a.ts", hash: "ffff" }], { version: 1 });
     expect(shouldSkip(pass(), changed)).toEqual({ skip: false, reason: "input-changed" });
   });
 
   it("re-runs when the check version was bumped", () => {
     // End-to-end proof of the binding: a receipt earned by v1 must not satisfy v2,
     // and it does not, because the version is inside the hash both sides compute.
-    const earnedOnV1 = pass({ checkVersion: 1 });
-    expect(shouldSkip(earnedOnV1, inputHash(FILES, 2))).toEqual({
+    const earnedOnV1 = pass({ check: { version: 1 } });
+    expect(shouldSkip(earnedOnV1, inputHash(FILES, { version: 2 }))).toEqual({
       skip: false,
       reason: "input-changed",
     });
