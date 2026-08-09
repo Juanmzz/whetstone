@@ -35,10 +35,13 @@ import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import {
+  MAX_FILES,
   NO_RISK,
   buildInterview,
   detectStack,
   planInit,
+  skipDir,
+  walkDepth,
   type InitPlan,
   type InterviewAnswers,
   type PackageJson,
@@ -65,44 +68,39 @@ export interface InitOptions {
 
 // ── gathering facts ──────────────────────────────────────────────────────────
 
-/** Directories never worth walking: huge, generated, or somebody else's code. */
-const SKIP_DIRS = new Set([
-  ".git",
-  "node_modules",
-  "dist",
-  "build",
-  "out",
-  "target",
-  "vendor",
-  "coverage",
-  ".next",
-  ".turbo",
-  ".venv",
-  "venv",
-  "__pycache__",
-]);
-
-/** Deep enough to see `src/**​/*.ts` and `.github/workflows/`, shallow enough to be instant. */
-const MAX_DEPTH = 4;
-const MAX_FILES = 4000;
-
+/**
+ * The walk. How deep it goes is `core/init/walk.ts`'s decision, not this file's —
+ * the budget restarts at every package manifest, so a monorepo's packages are each
+ * read as deeply as a flat repo is.
+ *
+ * The directory is READ before its depth is judged, because the manifest that
+ * restarts the budget is one of the entries. That costs one `readdir` at each
+ * boundary and buys the walker its only view of where a package begins.
+ */
 async function listFiles(root: string): Promise<string[]> {
   const found: string[] = [];
 
   async function walk(dir: string, rel: string, depth: number): Promise<void> {
-    if (depth > MAX_DEPTH || found.length >= MAX_FILES) return;
+    if (found.length >= MAX_FILES) return;
     let entries;
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch {
       return;
     }
+
+    const here = walkDepth(
+      depth,
+      entries.filter((entry) => entry.isFile()).map((entry) => entry.name),
+    );
+    if (here === null) return;
+
     for (const entry of entries) {
       if (found.length >= MAX_FILES) return;
       const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) continue;
-        await walk(join(dir, entry.name), childRel, depth + 1);
+        if (skipDir(entry.name)) continue;
+        await walk(join(dir, entry.name), childRel, here + 1);
       } else {
         found.push(childRel);
       }

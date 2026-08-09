@@ -56,6 +56,7 @@ export {
   formatViolations,
   type SelfContainmentViolation,
 } from "./selfcontained.js";
+export { MAX_DEPTH, MAX_FILES, skipDir, walkDepth } from "./walk.js";
 export {
   buildTriageRules,
   renderClaudeSettings,
