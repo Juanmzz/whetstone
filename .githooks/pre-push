@@ -39,8 +39,13 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
   fi
 
   echo "whetstone: gating $RANGE"
-  if ! node "$CLI" gate --no-lens --range "$RANGE"; then
-    code=$?
+  # `if ! cmd` resets $? to the negated status, so the exit code is ALWAYS 0 inside
+  # the branch and the "could not run" arm below is unreachable. `|| code=$?` keeps
+  # the real code, which is the whole point: 2 means the gate broke, not that the
+  # change is bad, and hard rule 3 forbids letting those two share a message.
+  code=0
+  node "$CLI" gate --no-lens --range "$RANGE" || code=$?
+  if [ "$code" -ne 0 ]; then
     echo "" >&2
     if [ "$code" -eq 2 ]; then
       # Exit 2 is "a blocking check could not RUN". That is the gate being broken,
