@@ -6,6 +6,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Signal } from "../core/retro/cluster.js";
+import { parseSignalLog } from "../core/signals/parse.js";
 
 export const RETRO_LOG = "memory/retro-log.md";
 export const SIGNALS = "memory/signals.jsonl";
@@ -18,18 +19,10 @@ export async function readSignals(sddRoot: string): Promise<Signal[]> {
   } catch {
     return [];
   }
-  const signals: Signal[] = [];
-  for (const [i, line] of text.split("\n").entries()) {
-    if (line.trim() === "") continue;
-    try {
-      signals.push(JSON.parse(line) as Signal);
-    } catch {
-      // A corrupt line must not be skipped silently: the retro would then cluster
-      // over a subset while reporting it processed everything.
-      throw new Error(`${SIGNALS}:${i + 1} is not valid JSON — fix it before running the retro`);
-    }
-  }
-  return signals;
+  // Throws on a corrupt line, and that is the point: clustering over a subset while
+  // reporting it processed everything is worse than stopping. The policy used to
+  // live here and disagree with `shell/signals.ts`; it now lives in one place.
+  return parseSignalLog(text);
 }
 
 /**

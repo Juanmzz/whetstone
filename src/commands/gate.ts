@@ -311,23 +311,41 @@ export async function runGate(
   //
   // Never let this fail the run. The gate's verdict is the product; the signal is
   // bookkeeping, and bookkeeping that can break a gate is worse than no bookkeeping.
+  //
+  // But SKIPPING must not be silent. Now that the log parser fails closed, the
+  // likeliest thing thrown here is a corrupt line, and the two silent options are
+  // both bad: emitting anyway means re-emitting every signal the unreadable log
+  // already holds, and skipping quietly means the run that finally broke the build
+  // leaves no trace, which is the one run whose evidence matters. So: skip, keep
+  // the verdict, and tell the human — on stderr, and in the JSON for anything
+  // reading this as an API. Losing one run's signal is recoverable by re-running
+  // after a one-line fix; poisoning the retro's recurrence evidence is not.
   let emitted: string[] = [];
+  let signalError: string | null = null;
   if (opts.noEmit !== true) {
     try {
       const candidates = signalsFromGate(run.verdict, range);
       emitted = await appendSignals(sddRoot, dedupe(candidates, await readSignalLog(sddRoot)), new Date());
-    } catch {
-      /* bookkeeping only */
+    } catch (cause) {
+      signalError = (cause as Error).message;
     }
   }
 
   if (opts.json === true) {
-    console.log(JSON.stringify({ range, tier: routing.tier, emitted, ...run.verdict }, null, 2));
+    console.log(
+      JSON.stringify({ range, tier: routing.tier, emitted, signalError, ...run.verdict }, null, 2),
+    );
   } else {
     console.log(renderGateRun(run));
     if (emitted.length > 0) {
       console.log(`\n  signals emitted: ${emitted.join(", ")}`);
     }
+  }
+  if (signalError !== null) {
+    console.error(
+      `\n  ⚠ no signals were recorded for this run — ${signalError}\n` +
+        `    The verdict above still stands; only the bookkeeping was skipped.`,
+    );
   }
 
   return exitCodeFor(run.verdict);
