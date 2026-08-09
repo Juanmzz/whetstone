@@ -16,6 +16,7 @@
  */
 
 import { execFile } from "node:child_process";
+import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import type { ZodType } from "zod";
 import { z } from "zod";
@@ -51,6 +52,13 @@ function buildArgs<S extends ZodType>(req: JudgeRequest<S>): string[] {
     "--strict-mcp-config",
     "--mcp-config",
     '{"mcpServers":{}}',
+    // Loads NO setting source at all. `--settings {hooks:{}}` only overrides the
+    // PROJECT layer: measured on 2.1.226, the caller's `~/.claude/CLAUDE.md`, its
+    // `rules/*.md` and its user-level SessionStart hooks all still fired, and one of
+    // them injected a memory block carrying prompts from unrelated projects into a
+    // verdict. See sig-0033.
+    "--setting-sources",
+    "",
     "--settings",
     '{"hooks":{},"outputStyle":"default"}',
     "--tools",
@@ -64,6 +72,19 @@ function buildArgs<S extends ZodType>(req: JudgeRequest<S>): string[] {
 const invokeClaude: SingleShot = async (req, _attempt): Promise<RawInvocation> => {
   const started = Date.now();
   const child = run("claude", buildArgs(req), {
+    // A NEUTRAL directory, not the repo under review.
+    //
+    // Auto-memory is indexed BY DIRECTORY, and no flag turns it off (`--bare` does,
+    // but it forces ANTHROPIC_API_KEY and abandons OAuth — see the header). Standing
+    // in the target repo therefore loads that repo's memory index into the judge:
+    // measured, a line reading "uses sift-app as a tutor-mode sandbox" reached a
+    // verdict about sift-app and shaped it.
+    //
+    // The judge has no use for a working directory anyway. Hard rule 9 already
+    // requires everything it must judge to be INLINED, precisely because a hermetic
+    // call cannot resolve a path. A judge standing inside the repo it judges was
+    // always the wrong posture; now it is also a measured leak.
+    cwd: tmpdir(),
     timeout: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     maxBuffer: MAX_BUFFER,
     killSignal: "SIGKILL",
