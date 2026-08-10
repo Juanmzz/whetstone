@@ -51,5 +51,13 @@ Rules 6 and 7 originate in ADR-0008; rules 1–5 predate it and are unchanged.
   subscription, no API key). Adding a model is one adapter, zero core changes.
 - **Distribution:** `npx wst` for dev; Bun `--compile` to a portable binary later. Deferred until the
   engine earns it (ADR-0004/0005).
+- **Remote:** `origin` is `Juanmzz/whetstone`. **Check the active `gh` account before any git
+  operation against it.** Several accounts are logged into `gh` on the build machine, and the git
+  credential helper hands out whichever one is active — so with the wrong one selected, `git fetch`,
+  `git push` and `gh pr` all fail with `remote: Repository not found`. That is a 404 from token
+  scope, not a missing repo, and it reads like the remote is gone. `gh auth status` shows the active
+  account; `gh auth switch --user <name>` changes it. The sibling ChytaPay repos live under a
+  different account, so moving between the two workspaces means switching. Whetstone itself has no
+  GitHub surface to break (ADR-0009 deleted the only one), so this is purely about git plumbing.
 
 See `.sdd/architecture.md` for how these fit together.
