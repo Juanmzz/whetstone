@@ -17,6 +17,19 @@ export interface StatusFacts {
   readonly judge: { readonly name: string; readonly version: string | null };
   readonly nodeVersion: string;
   readonly hooks: HookFacts;
+  readonly plugin: PluginFacts;
+}
+
+/** What the harness says about the Whetstone plugin. */
+export type PluginInstall = "enabled" | "disabled" | "absent" | "unknown";
+
+/** RED: the policy that reads these lands with the implementation. */
+export interface PluginFacts {
+  readonly install: PluginInstall;
+  readonly hookRoot: string;
+  readonly hookRootIsRepo: boolean;
+  readonly hookRootHasSdd: boolean;
+  readonly sddTracked: boolean;
 }
 
 /** Where Whetstone's hooks live, when it owns them. */
