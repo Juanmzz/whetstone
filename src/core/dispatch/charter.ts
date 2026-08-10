@@ -13,6 +13,22 @@
  */
 
 import type { Check } from "../checks/schema.js";
+import type { TriageRule } from "../contracts.js";
+
+/** An orientation file the charter may point at, and what it is. */
+export interface OrientationDoc {
+  /** Repo-relative. The composition root stats exactly these. */
+  readonly path: string;
+  readonly note: string;
+}
+
+/** RED: the real candidate set lands with the implementation. */
+export const ORIENTATION_DOCS: readonly OrientationDoc[] = [];
+
+/** RED: derivation lands with the implementation. */
+export function strictPathsFrom(_rules: readonly TriageRule[]): readonly string[] {
+  return [];
+}
 
 export interface GatingCheck {
   readonly id: string;
@@ -30,6 +46,11 @@ export interface CharterInput {
   readonly gatingChecks: readonly GatingCheck[];
   /** Path prefixes where full TDD is mandatory. */
   readonly strictPaths: readonly string[];
+  /**
+   * Which of `ORIENTATION_DOCS` the target repo ACTUALLY has, as stat'd by the
+   * composition root. The charter names nothing outside this set.
+   */
+  readonly presentDocs: readonly string[];
 }
 
 export function buildCharter(input: CharterInput): string {

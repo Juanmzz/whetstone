@@ -19,12 +19,11 @@ judgment is irreducible.
 - **`.sdd/` = DATA** (the *what*): constitution, triage, check registry. Git-versioned config.
 - **Engine = CODE** (the *how*, deterministic): reads `.sdd/`, classifies (globs, not LLM), selects
   and runs checks, enforces the gate, writes receipts, collects signals, clusters the retro.
-- **LLM = judgment only**: `agent-lens` checks, plan grilling, PR criticality annotation, proposing
-  new checks (human-gated).
+- **LLM = judgment only**: `agent-lens` checks, plan grilling, proposing new checks (human-gated).
 
 | Deterministic → ENGINE | LLM (judgment only) |
 |---|---|
-| triage classification · check selection · running deterministic checks · enforcing the gate · receipts (hashing) · signal collection + clustering · hooks | `agent-lens` checks · grilling/plan · annotating the PR by criticality · proposing a new check |
+| triage classification · check selection · running deterministic checks · enforcing the gate · receipts (hashing) · signal collection + clustering · hooks | `agent-lens` checks · grilling/plan · proposing a new check |
 
 This buys reproducibility, testability, auditability, frugality, and trust — a non-negotiable
 cannot be "forgotten".
@@ -124,8 +123,8 @@ above neutralises all of them at once.
 ## Build sequence
 
 Step 0 skeleton **(current)** → 1 check registry → 2 triage/routing → 2.5 verdict calibration →
-3 lean gate + receipts *(first real value: Whetstone gates its own PRs)* → 4 annotated PR →
-5 `wst run` dispatch → 6 `init` → 7 `retro` *(loop closed)*.
+3 lean gate + receipts *(first real value: Whetstone gates its own PRs)* → ~~4 annotated PR~~
+**(built, then removed — ADR-0009)** → 5 `wst run` dispatch → 6 `init` → 7 `retro` *(loop closed)*.
 
 Self-hosting: Whetstone's own `.sdd/` exists from Step 0; **self-gating starts at Step 3**, and
 signals are emitted from then on so the retro has real volume to process.
