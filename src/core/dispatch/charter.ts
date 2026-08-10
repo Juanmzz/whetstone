@@ -50,7 +50,7 @@ export const ORIENTATION_DOCS: readonly OrientationDoc[] = [
  * `CLAUDE.md` is usually a one-line `@AGENTS.md` import. Naming both spends a
  * crewmate's first two reads on the same content.
  */
-const VENDOR_ALIASES = ["AGENTS.md", "CLAUDE.md"] as const;
+const VENDOR_ALIASES: readonly string[] = ["AGENTS.md", "CLAUDE.md"];
 
 /**
  * The strict-tier globs a project's OWN triage rules declare.
@@ -73,14 +73,13 @@ export function strictPathsFrom(rules: readonly TriageRule[]): readonly string[]
 /** The docs to name: the candidate set, narrowed to what the target actually has. */
 function orientationFor(presentDocs: readonly string[]): readonly OrientationDoc[] {
   const present = new Set(presentDocs);
-  const canonicalVendor = VENDOR_ALIASES.find((p) => present.has(p));
+  const canonicalVendor = VENDOR_ALIASES.find((path) => present.has(path));
 
-  return ORIENTATION_DOCS.filter((doc) => {
-    if (!present.has(doc.path)) return false;
-    return VENDOR_ALIASES.includes(doc.path as (typeof VENDOR_ALIASES)[number])
-      ? doc.path === canonicalVendor
-      : true;
-  });
+  return ORIENTATION_DOCS.filter(
+    (doc) =>
+      present.has(doc.path) &&
+      (!VENDOR_ALIASES.includes(doc.path) || doc.path === canonicalVendor),
+  );
 }
 
 export interface GatingCheck {
