@@ -19,11 +19,14 @@ judgment is irreducible.
 - **`.sdd/` = DATA** (the *what*): constitution, triage, check registry. Git-versioned config.
 - **Engine = CODE** (the *how*, deterministic): reads `.sdd/`, classifies (globs, not LLM), selects
   and runs checks, enforces the gate, writes receipts, collects signals, clusters the retro.
-- **LLM = judgment only**: `agent-lens` checks, plan grilling, proposing new checks (human-gated).
+- **LLM = judgment only**: `agent-lens` checks, proposing new checks (human-gated).
 
 | Deterministic → ENGINE | LLM (judgment only) |
 |---|---|
-| triage classification · check selection · running deterministic checks · enforcing the gate · receipts (hashing) · signal collection + clustering · hooks | `agent-lens` checks · grilling/plan · proposing a new check |
+| triage classification · check selection · running deterministic checks · enforcing the gate · receipts (hashing) · signal collection + clustering · hooks | `agent-lens` checks · proposing a new check |
+
+Both columns list what EXISTS. The plan gate named in layer 3 below is declared and not
+built; it is not in the right-hand column until it is.
 
 This buys reproducibility, testability, auditability, frugality, and trust — a non-negotiable
 cannot be "forgotten".
@@ -65,7 +68,7 @@ architectural fact, not a promise.
 | 0 | **Definition** (`.sdd/`) | Per-project source of truth: constitution, triage, check registry, skills, memory | constitution/triage/skills ✅ · registry = Step 1 |
 | 1 | **Apply** (`wst init`) | Interview the project → generate `.sdd/` + bootstrap the toolchain | WoZ validated (`docs/woz/init.md`) · code = Step 6 |
 | 2 | **Triage / Routing** | Classify a change → criticality → {autonomy, model tier, which checks run} | Step 2 |
-| 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate lives here | Step 5 |
+| 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate was to live here | charter ✅ (`wst run`, Step 5) · **plan gate NOT BUILT** — declared, never implemented, no ADR either way |
 | 4 | **Verification gate** (lean) | Triage-gated: deterministic checks always, calibrated agent review only when critical. Receipts skip what already passed | Step 3 — the central build |
 | 5 | ~~**Reviewable output**~~ | ~~PR annotated by criticality~~ — **removed, ADR-0009**. Verification artifacts remain. | — |
 | 6 | **Self-sharpening** (retro) | Signals → distill → propose/tune/prune checks → human gate → amend | WoZ validated (`docs/woz/retro.md`) · code = Step 7 |
