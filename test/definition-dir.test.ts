@@ -26,7 +26,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFINITION_DIR } from "../src/core/paths.js";
+import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../src/core/paths.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const SRC = join(ROOT, "src");
@@ -216,5 +216,81 @@ describe("the definition directory has one owner (ADR-0012)", () => {
       if (!text.includes(DEFINITION_DIR)) disagreements.push(`${rel} never names ${DEFINITION_DIR}`);
     }
     expect(disagreements).toEqual([]);
+  });
+});
+
+/**
+ * ADR-0012 part 2: the old name is GONE, not deprecated.
+ *
+ * The ADR rejected supporting both paths — "a repo holding `.sdd/` and `.wst/` at
+ * once has no source of truth" — so a leftover mention is not a cosmetic miss. In
+ * live code it is a path that will not resolve; in live prose it is an instruction
+ * pointing at a directory that does not exist, which is the same dangling-reference
+ * failure `selfcontained.ts` exists to stop, aimed inward.
+ *
+ * What is deliberately EXEMPT, and why it is a principle rather than a shortcut:
+ * the append-only records. ADR-0007 and hard rule 6 say accepted prose is never
+ * rewritten — an ADR shows what was believed at the time, and editing it destroys
+ * exactly that. Signals, proposals and the retro log are the same kind of artifact:
+ * records of what was observed or proposed, on a day when the directory really was
+ * called `.sdd/`. Rewriting them would forge the evidence the retro reasons over.
+ */
+describe("the old directory name is gone (ADR-0012)", () => {
+  const SCANNED = [
+    "src",
+    "scripts",
+    "plugin",
+    ".githooks",
+    ".github",
+    ".claude/hooks",
+    DEFINITION_DIR,
+  ];
+
+  const EXEMPT = [
+    // Accepted prose and append-only evidence. See the block comment above.
+    `${DEFINITION_DIR}/memory/decisions/`,
+    `${DEFINITION_DIR}/memory/proposals/`,
+    `${DEFINITION_DIR}/memory/signals.jsonl`,
+    `${DEFINITION_DIR}/memory/retro-log.md`,
+    // Declares the old name so the diagnostic can print it.
+    "src/core/paths.ts",
+    // Asserts on the old name, which is the only way to test the diagnostic.
+    "src/core/paths.test.ts",
+    "test/definition-dir.test.ts",
+  ];
+
+  async function walkAll(dir: string): Promise<string[]> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    const files = await Promise.all(
+      entries.map(async (e) => {
+        const full = join(dir, e.name);
+        return e.isDirectory() ? walkAll(full) : [full];
+      }),
+    );
+    return files.flat();
+  }
+
+  it("appears nowhere that is still live", async () => {
+    const roots = [...SCANNED.map((d) => join(ROOT, d)), ROOT];
+    const files = new Set<string>();
+    for (const root of roots) {
+      if (root === ROOT) continue;
+      for (const f of await walkAll(root)) files.add(f);
+    }
+    // Root-level files that name the path, per the ADR's "Harder" section.
+    for (const f of ["README.md", "VISION.md", "AGENTS.md", "package.json", "docs/PARALLEL.md"]) {
+      files.add(join(ROOT, f));
+    }
+
+    const survivors: string[] = [];
+    for (const file of files) {
+      const rel = relative(ROOT, file);
+      if (EXEMPT.some((e) => rel === e || rel.startsWith(e))) continue;
+      const text = await readFile(file, "utf-8");
+      text.split("\n").forEach((line, index) => {
+        if (line.includes(LEGACY_DEFINITION_DIR)) survivors.push(`${rel}:${index + 1}  ${line.trim()}`);
+      });
+    }
+    expect(survivors).toEqual([]);
   });
 });

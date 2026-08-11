@@ -82,6 +82,49 @@ describe("planInit — what a typical TypeScript repo gets", () => {
     expect(at(p, ".sdd/memory/signals.jsonl")).toBe("");
   });
 
+  /**
+   * ADR-0012 part 3: `memory/out-of-scope/` is the fourth memory artifact.
+   *
+   * `memory/` already records what went wrong (`signals.jsonl`), what was decided
+   * (`decisions/`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
+   * recorded what was deliberately REFUSED, and a refusal without a file gets
+   * re-proposed every six months with the argument re-derived from scratch.
+   */
+  describe("memory/out-of-scope/", () => {
+    const readme = at(p, ".wst/memory/out-of-scope/README.md");
+
+    it("ships with a README, because an empty directory does not survive git", () => {
+      expect(readme).not.toBeUndefined();
+    });
+
+    it("states all four things an entry must record", () => {
+      const text = (readme ?? "").toLowerCase();
+      for (const field of ["what was asked", "why", "escape hatch", "request"]) {
+        expect(text).toContain(field);
+      }
+    });
+
+    /**
+     * Hard rule 7. The form is borrowed from `mattpocock/skills` (MIT), and the
+     * attribution has to be IN the emitted file: a pointer to this project's own
+     * LICENSE dangles the moment the file lands in a repo that has never heard of
+     * it, which is the exact bug class `selfcontained.ts` exists to catch.
+     */
+    it("carries its attribution inline, not as a reference", () => {
+      expect(readme).toContain("mattpocock/skills");
+      expect(readme).toContain("MIT");
+    });
+
+    it("ships no entries — the directory is a home, not a claim", () => {
+      const entries = p.files.filter(
+        (f) =>
+          f.path.startsWith(".wst/memory/out-of-scope/") &&
+          !f.path.endsWith("/README.md"),
+      );
+      expect(entries).toEqual([]);
+    });
+  });
+
   it("emits no duplicate paths", () => {
     const paths = p.files.map((f) => f.path);
     expect(new Set(paths).size).toBe(paths.length);

@@ -36,6 +36,29 @@ describe("buildStatusReport", () => {
     expect(r.problems.join(" ")).toMatch(/wst init/i);
   });
 
+  /**
+   * ADR-0012: a repo installed before the rename must not fail blankly.
+   *
+   * "run `wst init` to create one" is the WRONG advice for a repo that already has
+   * a full definition layer under the old name — following it either refuses on a
+   * collision or, with `--force`, overwrites a directory `init` cannot see. Status
+   * is where a human looks when something is off, so it is where the old name has
+   * to be said out loud.
+   */
+  it("names the old directory rather than telling a migrated repo to init", () => {
+    const r = buildStatusReport({ ...base, definitionPresent: false, legacyPresent: true });
+    expect(r.ready).toBe(false);
+    const said = r.problems.join(" ");
+    expect(said).toContain(".sdd");
+    expect(said).toContain("git mv .sdd .wst");
+    expect(said).not.toMatch(/wst init/i);
+  });
+
+  it("still says `wst init` when there is nothing to migrate", () => {
+    const r = buildStatusReport({ ...base, definitionPresent: false, legacyPresent: false });
+    expect(r.problems.join(" ")).toMatch(/wst init/i);
+  });
+
   it("is not ready when the judge CLI is missing", () => {
     const r = buildStatusReport({ ...base, judge: { name: "claude", version: null } });
     expect(r.ready).toBe(false);
