@@ -33,6 +33,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import {
   ProposalSchema,
@@ -318,7 +319,8 @@ async function findPayloadRoot(): Promise<string | null> {
         name?: string;
       };
       if (pkg.name === PACKAGE_NAME) {
-        return (await exists(join(dir, ".sdd", "skills"))) ? join(dir, ".sdd") : null;
+        const root = join(dir, DEFINITION_DIR);
+        return (await exists(join(root, "skills"))) ? root : null;
       }
     } catch {
       /* no package.json here — keep walking */
@@ -530,7 +532,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   if (payloadRoot === null) {
     console.error(
       "\ncould not locate Whetstone's own skills directory, so the skills were NOT copied.\n" +
-        "  Everything else was written. Copy `.sdd/skills/` across by hand, or re-run from a\n" +
+        `  Everything else was written. Copy \`${DEFINITION_DIR}/skills/\` across by hand, or re-run from a\n` +
         "  checkout rather than a published package.",
     );
   }
@@ -544,7 +546,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
 
   const written = plan.files.length + (payloadRoot === null ? 0 : plan.copies.length);
   console.log(`\nwrote ${written} files. Review them, then commit:`);
-  console.log("  git add .sdd .claude AGENTS.md CLAUDE.md");
+  console.log(`  git add ${DEFINITION_DIR} .claude AGENTS.md CLAUDE.md`);
   console.log('  git commit -m "chore: bootstrap the agent workflow"');
   return payloadRoot === null ? 1 : 0;
 }

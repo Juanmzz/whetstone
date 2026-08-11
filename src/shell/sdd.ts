@@ -8,6 +8,19 @@ import { buildRegistry, parseCheckFile, type Registry } from "../core/checks/reg
 import { hashFixtureDir, loadCalibration } from "./calibration.js";
 import type { TriageRule } from "../core/contracts.js";
 import { DEFAULT_RULES, parseTriageRules } from "../core/triage/index.js";
+import { DEFINITION_DIR } from "../core/paths.js";
+
+/**
+ * The definition directory inside a repo.
+ *
+ * One function rather than `join(repoRoot, DEFINITION_DIR)` at six call sites:
+ * the commands that read the directory all need the same answer, and step 2 of
+ * ADR-0012 hangs the "you still have the old directory" diagnostic off exactly
+ * this seam.
+ */
+export function definitionRoot(repoRoot: string): string {
+  return join(repoRoot, DEFINITION_DIR);
+}
 
 export const CHECKS_DIR = "checks";
 export const INDEX_FILE = "_index.json";

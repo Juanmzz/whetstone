@@ -119,12 +119,22 @@ export function blankComments(text: string): string {
   return out.join("");
 }
 
-/** Lines still naming `needle` once comments are gone. 1-based. */
+/**
+ * Lines still naming `needle` as a DIRECTORY once comments are gone. 1-based.
+ *
+ * The trailing boundary is not decoration. `.sdd` as a bare substring also matches
+ * `facts.sddPresent`, a property access; `.wst` also matches `.wst-charter.md` and
+ * `.wst-lane`, which are real files and are not this directory. A guard that
+ * matches more than it says gets muted, so the name must be followed by something
+ * that cannot continue an identifier or a hyphenated filename.
+ */
 function codeLinesNaming(text: string, needle: string): { line: number; text: string }[] {
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const asDirectory = new RegExp(`${escaped}(?![A-Za-z0-9_-])`);
   return blankComments(text)
     .split("\n")
     .map((line, index) => ({ line: index + 1, text: line }))
-    .filter((l) => l.text.includes(needle));
+    .filter((l) => asDirectory.test(l.text));
 }
 
 /**
@@ -154,6 +164,12 @@ describe("the comment scanner", () => {
   it("does not read a comment marker inside a string as a comment", () => {
     expect(codeLinesNaming(`const u = "a//b"; const d = ".sdd";`, ".sdd")).toHaveLength(1);
   });
+
+  it("does not mistake a longer name that merely starts with it", () => {
+    expect(codeLinesNaming("if (facts.sddPresent) return;", ".sdd")).toEqual([]);
+    expect(codeLinesNaming('const p = ".wst-charter.md";', ".wst")).toEqual([]);
+    expect(codeLinesNaming('const p = ".wst/x";', ".wst")).toHaveLength(1);
+  });
 });
 
 describe("the definition directory has one owner (ADR-0012)", () => {
@@ -161,8 +177,10 @@ describe("the definition directory has one owner (ADR-0012)", () => {
     expect(DEFINITION_DIR).toMatch(/^\.[a-z]+$/);
   });
 
-  it("no value under src/ spells the directory name", async () => {
-    const files = (await walk(SRC)).filter(
+  it("no value under src/ or scripts/ spells the directory name", async () => {
+    // `scripts/` is in scope because it imports from `src/`: anything that CAN
+    // reach the constant has no excuse for spelling the name itself.
+    const files = [...(await walk(SRC)), ...(await walk(join(ROOT, "scripts")))].filter(
       (f) => !f.endsWith(".test.ts") && relative(SRC, f) !== "core/paths.ts",
     );
     expect(files.length).toBeGreaterThan(0);

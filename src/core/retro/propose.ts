@@ -12,6 +12,7 @@
  * and the blast radius (mechanical), the human disposes (authority).
  */
 
+import { DEFINITION_DIR } from "../paths.js";
 import type { Signal } from "./cluster.js";
 
 export type RecommendationKind =
@@ -45,7 +46,7 @@ export type Validation =
   | { readonly ok: false; readonly reasons: readonly string[] };
 
 /** Human-owned. The retro proposes rules; it never rewrites what rules may be. */
-const NEVER_TOUCH = [".sdd/constitution.md"];
+const NEVER_TOUCH = [`${DEFINITION_DIR}/constitution.md`];
 
 export function validateRecommendation(
   rec: Recommendation,
@@ -77,8 +78,10 @@ export function validateRecommendation(
       `targets ${rec.target}, which the retro never amends — the constitution is human-owned`,
     );
   }
-  if (!rec.target.startsWith(".sdd/")) {
-    reasons.push(`targets ${rec.target}, which is outside .sdd/ — the retro amends rules, not code`);
+  if (!rec.target.startsWith(`${DEFINITION_DIR}/`)) {
+    reasons.push(
+      `targets ${rec.target}, which is outside ${DEFINITION_DIR}/ — the retro amends rules, not code`,
+    );
   }
 
   // 3. A proposal a human cannot evaluate is not a proposal.

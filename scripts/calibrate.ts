@@ -28,7 +28,8 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { createClaudeJudge } from "../src/shell/claude.js";
-import { loadRegistry } from "../src/shell/sdd.js";
+import { definitionRoot, loadRegistry } from "../src/shell/sdd.js";
+import { DEFINITION_DIR } from "../src/core/paths.js";
 import { hashFixtureDir, receiptName } from "../src/shell/calibration.js";
 import { recordCalibration, type FixtureFile } from "../src/core/calibration/receipt.js";
 
@@ -45,9 +46,9 @@ const LensVerdict = z.object({
  * recorded `calibration:` block then vouches for text that never ran.
  */
 async function loadLens(repoRoot: string, checkId: string): Promise<string> {
-  const registry = await loadRegistry(join(repoRoot, ".sdd"));
+  const registry = await loadRegistry(definitionRoot(repoRoot));
   const check = registry.byId.get(checkId);
-  if (!check) throw new Error(`no check "${checkId}" in .sdd/checks/`);
+  if (!check) throw new Error(`no check "${checkId}" in ${DEFINITION_DIR}/checks/`);
   if (check.kind !== "agent-lens" || check.review_lens === undefined) {
     throw new Error(`check "${checkId}" is not an agent-lens check — nothing to calibrate`);
   }
@@ -281,9 +282,11 @@ async function main() {
     })),
     at: new Date(),
   });
-  const receiptPath = join(repoRoot, ".sdd", "checks", receiptName(CHECK_ID));
+  const receiptPath = join(definitionRoot(repoRoot), "checks", receiptName(CHECK_ID));
   await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf-8");
-  console.log(`\n  wrote .sdd/checks/${receiptName(CHECK_ID)} — verdict: ${receipt.verdict}`);
+  console.log(
+    `\n  wrote ${DEFINITION_DIR}/checks/${receiptName(CHECK_ID)} — verdict: ${receipt.verdict}`,
+  );
 
   console.log(
     receipt.verdict === "passed"

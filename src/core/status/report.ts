@@ -7,6 +7,8 @@
  * check-registry schema into the skeleton before that schema is decided.
  */
 
+import { DEFINITION_DIR } from "../paths.js";
+
 /** The `claude` build the adapter's flag set was measured against. */
 export const VALIDATED_JUDGE_VERSION = "2.1.224";
 
@@ -54,7 +56,7 @@ export function pluginInertReason(plugin: PluginFacts): string | null {
     return `\`${plugin.hookRoot}\` is not a git repository, so the gate cannot run there`;
   }
   if (!plugin.hookRootHasSdd) {
-    return `\`${plugin.hookRoot}\` has no \`.sdd/\`, so there is nothing to gate against`;
+    return `\`${plugin.hookRoot}\` has no \`${DEFINITION_DIR}/\`, so there is nothing to gate against`;
   }
   return null;
 }
@@ -98,7 +100,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     problems.push("not inside a git repository — Whetstone is git-native by design");
   }
   if (!facts.sddPresent) {
-    problems.push("no .sdd/ directory — run `wst init` to create one");
+    problems.push(`no ${DEFINITION_DIR}/ directory — run \`wst init\` to create one`);
   }
   if (facts.judge.version === null) {
     problems.push(
@@ -157,9 +159,9 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
       );
     } else if (!facts.plugin.sddTracked) {
       warnings.push(
-        `\`.sdd/\` is not tracked by git. Untracked files do not propagate into worktrees, ` +
+        `\`${DEFINITION_DIR}/\` is not tracked by git. Untracked files do not propagate into worktrees, ` +
           `so the plugin is inert in every worktree cut from this repo — including the ones ` +
-          `\`wst run\` leases. Commit \`.sdd/\` to fix it`,
+          `\`wst run\` leases. Commit \`${DEFINITION_DIR}/\` to fix it`,
       );
     }
   }
@@ -211,7 +213,7 @@ export function renderStatusReport(
     "",
     `  repo      ${facts.repoRoot ?? "(not a git repository)"}`,
     `  branch    ${facts.branch ?? "(none)"}`,
-    `  .sdd/     ${facts.sddPresent ? "present" : "missing"}`,
+    `  ${`${DEFINITION_DIR}/`.padEnd(9)} ${facts.sddPresent ? "present" : "missing"}`,
     `  judge     ${facts.judge.name} ${facts.judge.version ?? "(not found)"}`,
     `  node      ${facts.nodeVersion}`,
     // Names the owner when it is not us. "NOT active" alone reads as "nothing is

@@ -25,6 +25,7 @@
  * that quietly never joins the group it belongs to.
  */
 
+import { DEFINITION_DIR } from "../paths.js";
 import { signalId, type SignalSeverity } from "./emit.js";
 import type { SignalRecord } from "./parse.js";
 
@@ -140,7 +141,7 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
   for (const rule of rules) {
     if (!RULE.test(rule)) {
       errors.push(
-        `rule "${rule}" is not a .sdd-relative markdown path (e.g. \`skills/recording.md\`) — ` +
+        `rule "${rule}" is not a ${DEFINITION_DIR}-relative markdown path (e.g. \`skills/recording.md\`) — ` +
           `the retro reads it as a path and clusters on it verbatim`,
       );
     }

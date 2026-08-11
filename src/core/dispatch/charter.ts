@@ -14,6 +14,7 @@
 
 import type { Check } from "../checks/schema.js";
 import type { TriageRule } from "../contracts.js";
+import { DEFINITION_DIR } from "../paths.js";
 
 /** An orientation file the charter may point at, and what it is. */
 export interface OrientationDoc {
@@ -40,9 +41,12 @@ export interface OrientationDoc {
 export const ORIENTATION_DOCS: readonly OrientationDoc[] = [
   { path: "AGENTS.md", note: "orientation, and the hard rules" },
   { path: "CLAUDE.md", note: "orientation, and the hard rules" },
-  { path: ".sdd/architecture.md", note: "how this system is built" },
-  { path: ".sdd/constitution.md", note: "the non-negotiables this project governs itself by" },
-  { path: ".sdd/triage-rules.md", note: "which discipline this change earns" },
+  { path: `${DEFINITION_DIR}/architecture.md`, note: "how this system is built" },
+  {
+    path: `${DEFINITION_DIR}/constitution.md`,
+    note: "the non-negotiables this project governs itself by",
+  },
+  { path: `${DEFINITION_DIR}/triage-rules.md`, note: "which discipline this change earns" },
 ];
 
 /**
@@ -142,7 +146,7 @@ export function buildCharter(input: CharterInput): string {
     // worse than one that names none, because it reads as authoritative.
     lines.push(
       `This repo has no orientation file Whetstone can point you at. Read the code and`,
-      `whatever \`.sdd/\` holds before you write, and say so in your report if there was`,
+      `whatever \`${DEFINITION_DIR}/\` holds before you write, and say so in your report if there was`,
       `nothing to orient from.`,
     );
   }

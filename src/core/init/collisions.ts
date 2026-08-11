@@ -14,6 +14,7 @@
  * The fs check belongs to the caller. This decides what a collision MEANS.
  */
 
+import { DEFINITION_DIR, DEFINITION_DIR_PATTERN } from "../paths.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 
 /** The part of an `InitPlan` that can collide. Structural, so tests need not build a whole plan. */
@@ -33,6 +34,10 @@ export interface Collision {
  * `--force` actually needs. Uneven on purpose: an empty `signals.jsonl` coming back
  * empty is not the same event as a hand-written `CLAUDE.md` disappearing.
  */
+/** Anchored at a subpath of the definition directory. Most specific first. */
+const under = (subpath: string): RegExp =>
+  new RegExp(`^${DEFINITION_DIR_PATTERN}/${subpath}`);
+
 const STAKES: readonly (readonly [RegExp, string])[] = [
   [
     /^CLAUDE\.md$/,
@@ -40,18 +45,18 @@ const STAKES: readonly (readonly [RegExp, string])[] = [
   ],
   [
     /^AGENTS\.md$/,
-    "replaced by a generated artifact rendered from .sdd/. Hand-written guidance here is not merged",
+    `replaced by a generated artifact rendered from ${DEFINITION_DIR}/. Hand-written guidance here is not merged`,
   ],
   [
     /^\.claude\/settings\.json$/,
     "replaced wholesale with a file containing only Whetstone's hook. Existing permissions, env, statusLine and other hooks are NOT merged",
   ],
   [/^\.claude\/hooks\//, "an existing hook of the same name is replaced"],
-  [/^\.sdd\/memory\/decisions\//, "an architecture decision record. This is the record of WHY, and nothing else holds it"],
-  [/^\.sdd\/memory\//, "recorded memory: signals, retro history, patterns"],
-  [/^\.sdd\/checks\//, "a check definition this project already relies on"],
-  [/^\.sdd\/skills\//, "a skill this project may have amended since it was installed"],
-  [/^\.sdd\//, "part of the definition layer, which is the source of truth for this project's standards"],
+  [under("memory/decisions/"), "an architecture decision record. This is the record of WHY, and nothing else holds it"],
+  [under("memory/"), "recorded memory: signals, retro history, patterns"],
+  [under("checks/"), "a check definition this project already relies on"],
+  [under("skills/"), "a skill this project may have amended since it was installed"],
+  [under(""), "part of the definition layer, which is the source of truth for this project's standards"],
 ];
 
 const GENERIC = "an existing file that init writes. Its current contents are not preserved";

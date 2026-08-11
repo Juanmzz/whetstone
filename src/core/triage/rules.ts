@@ -14,6 +14,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { TIERS } from "../checks/schema.js";
 import type { TriageRule } from "../contracts.js";
+import { DEFINITION_DIR } from "../paths.js";
 
 /**
  * Format tag, same reasoning as `RECEIPT_INPUT_FORMAT`: reading a v2 document
@@ -50,7 +51,10 @@ const DocumentSchema = z.strictObject({
  * rule leaves the files that rule covered ungated, which is the worst possible
  * failure for a tool whose job is to not let things through.
  */
-export function parseTriageRules(text: string, source = ".sdd/triage.yaml"): TriageRule[] {
+export function parseTriageRules(
+  text: string,
+  source = `${DEFINITION_DIR}/triage.yaml`,
+): TriageRule[] {
   let raw: unknown;
   try {
     raw = parseYaml(text);
@@ -91,7 +95,7 @@ export function parseTriageRules(text: string, source = ".sdd/triage.yaml"): Tri
  * `.sdd/triage-rules.md` — that file is the source (ADR-0005), this is its
  * machine-readable form. Change the table first, never the reverse.
  */
-export const DEFAULT_RULES_YAML = `# Triage rules — the machine-readable form of the table in .sdd/triage-rules.md.
+export const DEFAULT_RULES_YAML = `# Triage rules — the machine-readable form of the table in ${DEFINITION_DIR}/triage-rules.md.
 # That table is the SOURCE (ADR-0005); this file is compiled from it by hand for
 # now. Change the table first, never the reverse.
 #
@@ -121,7 +125,7 @@ rules:
       verdict, the LLM verdict contract. A bug here silently mis-gates every
       change in every project that runs Whetstone.
 
-  - glob: ".sdd/skills/**"
+  - glob: "${DEFINITION_DIR}/skills/**"
     tier: strict
     reason: >-
       Payload that propagates verbatim into every bootstrapped project. The
@@ -131,18 +135,18 @@ rules:
   - glob: ".claude/hooks/**"
     tier: strict
     reason: >-
-      Emitter output, compiled from .sdd/ (ADR-0005). A wrong hook denies or
+      Emitter output, compiled from ${DEFINITION_DIR}/ (ADR-0005). A wrong hook denies or
       allows the wrong writes in every project it is installed into, and it
       fails open, which looks like working.
 
   # ── off — no ceremony ──────────────────────────────────────────────────────
   # Only the retro log is expressible as a path. The rest of the \`off\` row in
-  # .sdd/triage-rules.md (typos, formatting, changelog lines) is about CONTENT,
+  # ${DEFINITION_DIR}/triage-rules.md (typos, formatting, changelog lines) is about CONTENT,
   # which a path-glob engine cannot see; those changes land at \`light\` and are
-  # waved through by a human instead. Listed above the broader .sdd/memory rule
+  # waved through by a human instead. Listed above the broader ${DEFINITION_DIR}/memory rule
   # so it cannot be shadowed.
 
-  - glob: ".sdd/memory/retro-log.md"
+  - glob: "${DEFINITION_DIR}/memory/retro-log.md"
     tier: off
     reason: >-
       An append-only record of retros that already happened. Nothing downstream
@@ -170,7 +174,7 @@ rules:
       Commander wiring only, zero logic, so that the CLI surface stays
       swappable without touching the engine.
 
-  - glob: ".sdd/memory/decisions/**"
+  - glob: "${DEFINITION_DIR}/memory/decisions/**"
     tier: light
     reason: >-
       ADR bodies. Accepted text is never rewritten (ADR-0007) — it is superseded

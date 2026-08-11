@@ -22,6 +22,7 @@
  *    its own, which is exactly what a hand-maintained list never does.
  */
 
+import { DEFINITION_DIR, DEFINITION_DIR_PATTERN } from "../paths.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 
 export interface SelfContainmentViolation {
@@ -83,7 +84,10 @@ const DENY: readonly DenyRule[] = [
 ];
 
 /** Path-shaped tokens the plan is responsible for. */
-const OWNED_PATH = /(?:\.sdd|\.claude)\/[A-Za-z0-9_@\-./*<>{}]*/g;
+const OWNED_PATH = new RegExp(
+  `(?:${DEFINITION_DIR_PATTERN}|\\.claude)/[A-Za-z0-9_@\\-./*<>{}]*`,
+  "g",
+);
 
 /** Trailing prose punctuation swept up by the token regex. */
 function trimTrailing(token: string): string {
@@ -122,7 +126,7 @@ export function auditSelfContained(input: AuditInput): readonly SelfContainmentV
         // A directory, a glob or a `<placeholder>` names a shape, not a file.
         if (token.endsWith("/") || /[*<>{}]/.test(token)) continue;
         // `.sdd` or `.claude` on their own refer to the directory itself.
-        if (token === ".sdd" || token === ".claude") continue;
+        if (token === DEFINITION_DIR || token === ".claude") continue;
         if (created.has(token)) continue;
         violations.push({
           path: file.path,

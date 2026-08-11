@@ -19,6 +19,7 @@
  *   names, so it is not reproduced here.
  */
 
+import { DEFINITION_DIR } from "../paths.js";
 import type { CopyRequest } from "./artifact.js";
 import type { StackFacts } from "./detect.js";
 import { renderRiskProfile, type RiskProfile } from "./interview.js";
@@ -50,7 +51,10 @@ const SKILL_BLURBS: Readonly<Record<string, string>> = {
 };
 
 export function skillCopies(): readonly CopyRequest[] {
-  return SKILL_FILES.map((name) => ({ from: `skills/${name}`, to: `.sdd/skills/${name}` }));
+  return SKILL_FILES.map((name) => ({
+    from: `skills/${name}`,
+    to: `${DEFINITION_DIR}/skills/${name}`,
+  }));
 }
 
 /**
@@ -117,7 +121,8 @@ export function renderConstitution(input: ConstitutionInput): string {
 
   const stackFacts =
     stack.greenness === "greenfield"
-      ? "**Greenfield** — no code yet, so nothing was inferred. Fill this in as the stack is\nchosen; the first real decision belongs in `.sdd/memory/decisions/` as an ADR."
+      ? "**Greenfield** — no code yet, so nothing was inferred. Fill this in as the stack is\n" +
+        `chosen; the first real decision belongs in \`${DEFINITION_DIR}/memory/decisions/\` as an ADR.`
       : [
           `- **Language:** ${stack.language ?? "not identified"}`,
           `- **Package manager:** ${stack.packageManager ?? "not identified"}`,
@@ -144,9 +149,9 @@ status: active
 ---
 # ${input.repoName} — constitution
 
-Governance for this project. Every other file under \`.sdd/\` is calibrated against it.
+Governance for this project. Every other file under \`${DEFINITION_DIR}/\` is calibrated against it.
 
-**\`.sdd/constitution.md\` is amended by an explicit human edit and by nothing else.** The retro may
+**\`${DEFINITION_DIR}/constitution.md\` is amended by an explicit human edit and by nothing else.** The retro may
 propose changes to the triage rules, the skills and the checks; it never touches the
 constitution. A project whose definition of "correct" can be rewritten by the tool that
 enforces it does not have a definition of correct.
@@ -167,7 +172,7 @@ ${renderRiskProfile(input.risk)}
 3. A judgment check earns its \`block\`. A deterministic check may block freely; a check
    that depends on a model's opinion is capped at a warning until it has been measured
    against known-good and known-bad examples and agreed with itself every time.
-4. Corrections are appended, never overwritten. \`.sdd/memory/signals.jsonl\` is
+4. Corrections are appended, never overwritten. \`${DEFINITION_DIR}/memory/signals.jsonl\` is
    append-only; an ADR is superseded rather than rewritten.
 
 ## Stack facts
@@ -294,21 +299,23 @@ export function renderAgentsMd(input: AgentsMdInput): string {
     .map((path) => {
       const name = path.split("/").pop() ?? path;
       const blurb = SKILL_BLURBS[name];
-      return `- \`.sdd/${path}\`${blurb === undefined ? "" : ` — ${blurb}`}`;
+      return `- \`${DEFINITION_DIR}/${path}\`${blurb === undefined ? "" : ` — ${blurb}`}`;
     })
     .join("\n");
 
   const checks =
     input.checkIds.length > 0
-      ? `The gate runs: ${input.checkIds.map((id) => `\`${id}\``).join(", ")}. Each one is a\nfile under \`.sdd/checks/\` explaining what it is for and what to do when it fails.`
-      : "No checks are registered yet. Add one under `.sdd/checks/<id>.md` when a class of\nmistake proves worth catching automatically — not before.";
+      ? `The gate runs: ${input.checkIds.map((id) => `\`${id}\``).join(", ")}. Each one is a\n` +
+        `file under \`${DEFINITION_DIR}/checks/\` explaining what it is for and what to do when it fails.`
+      : `No checks are registered yet. Add one under \`${DEFINITION_DIR}/checks/<id>.md\` when a class of\n` +
+        "mistake proves worth catching automatically — not before.";
 
   return `# ${input.repoName} — agent workflow
 
-> **GENERATED from \`.sdd/\`. Do not edit by hand.** Everything below is a rendering of
-> files under \`.sdd/\`, which is the source of truth. Editing \`AGENTS.md\` changes nothing
+> **GENERATED from \`${DEFINITION_DIR}/\`. Do not edit by hand.** Everything below is a rendering of
+> files under \`${DEFINITION_DIR}/\`, which is the source of truth. Editing \`AGENTS.md\` changes nothing
 > durable: the next regeneration overwrites it, and the rule you meant to change is
-> still whatever \`.sdd/\` says.
+> still whatever \`${DEFINITION_DIR}/\` says.
 >
 > Every section below names its source file explicitly rather than referring to itself,
 > because the same sentence is true in its source and false here.
@@ -337,13 +344,13 @@ ${skills}
 This is the part that makes the rest improve rather than rot.
 
 - **Something goes wrong** — the agent takes a wrong turn and gets corrected, or nearly
-  does — append a line to \`.sdd/memory/signals.jsonl\`. The schema is in
-  \`.sdd/memory/README.md\`. Log the small ones; they are the ones that reveal patterns.
-- **A decision gets made** — add an ADR under \`.sdd/memory/decisions/\`, starting from
+  does — append a line to \`${DEFINITION_DIR}/memory/signals.jsonl\`. The schema is in
+  \`${DEFINITION_DIR}/memory/README.md\`. Log the small ones; they are the ones that reveal patterns.
+- **A decision gets made** — add an ADR under \`${DEFINITION_DIR}/memory/decisions/\`, starting from
   \`_TEMPLATE.md\`.
 - **Periodically** — run a retro: read the signals logged since the last one, cluster
   them, and decide what each cluster earns (amend a triage rule, add or retire a check,
-  sharpen a skill). Record the outcome in \`.sdd/memory/retro-log.md\`.
+  sharpen a skill). Record the outcome in \`${DEFINITION_DIR}/memory/retro-log.md\`.
 
 **The analysis is automatic; the write is not.** A human confirms every change to a
 rule. Nothing in this repo rewrites its own standard.

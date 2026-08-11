@@ -6,7 +6,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
-import { loadRegistry } from "../shell/sdd.js";
+import { definitionRoot, loadRegistry } from "../shell/sdd.js";
 import { parseNameStatus } from "../core/diff/parse.js";
 import { classify, DEFAULT_RULES, parseTriageRules, route } from "../core/triage/index.js";
 import type { TriageRule } from "../core/contracts.js";
@@ -59,7 +59,7 @@ export async function runTriage(
 ): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = (await git.repoRoot()) ?? cwd;
-  const sddRoot = join(repoRoot, ".sdd");
+  const sddRoot = definitionRoot(repoRoot);
   const range = opts.range ?? "HEAD";
 
   let source: RuleSource;

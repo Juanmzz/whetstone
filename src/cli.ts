@@ -15,6 +15,7 @@ import { runRetro } from "./commands/retro.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
+import { DEFINITION_DIR } from "./core/paths.js";
 
 const VERSION = "0.4.0-alpha";
 
@@ -30,7 +31,7 @@ program
 
 program
   .command("status")
-  .description("show repo, .sdd/ and judge-adapter health")
+  .description(`show repo, ${DEFINITION_DIR}/ and judge-adapter health`)
   .option("--quiet", "print only the final ready / NOT ready line")
   .action(async (opts: { quiet?: boolean }) => {
     process.exitCode = await runStatus(process.cwd(), { quiet: opts.quiet ?? false });
@@ -38,9 +39,9 @@ program
 
 program
   .command("check")
-  .description("list the check registry from .sdd/checks/")
+  .description(`list the check registry from ${DEFINITION_DIR}/checks/`)
   .option("--json", "print the compiled index as JSON")
-  .option("--compile", "write .sdd/checks/_index.json")
+  .option("--compile", `write ${DEFINITION_DIR}/checks/_index.json`)
   .action(async (opts: { json?: boolean; compile?: boolean }) => {
     process.exitCode = await runCheck(opts);
   });
@@ -135,7 +136,7 @@ program
   .command("signal")
   .argument("<type>", "kebab-case type, e.g. triage-miss — the retro clusters on it")
   .argument("<detail...>", "one or two sentences a reader can reconstruct the event from")
-  .description("record an observation in .sdd/memory/signals.jsonl (you are the human gate)")
+  .description(`record an observation in ${DEFINITION_DIR}/memory/signals.jsonl (you are the human gate)`)
   // The defaults come from `commands/signal.ts` rather than being written out
   // again here: the help text and the fallback the command applies are the same
   // fact, and two copies of a fact drift.
@@ -177,7 +178,7 @@ program
 
 program
   .command("init")
-  .description("interview this repo and generate its .sdd/")
+  .description(`interview this repo and generate its ${DEFINITION_DIR}/`)
   .option("--answers <file>", "JSON file of interview answers")
   .option("--purpose <text>", "one-line project purpose")
   .option("--risk <flags>", "comma-separated: money,personalData,productionData,authn,safetyCritical")
@@ -185,7 +186,7 @@ program
   .option("--propose", "draft the answers with the judge — you edit and sign (one model call)")
   .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
   .option("--agent-lens", "also seed an uncalibrated review lens (capped at warn)")
-  .option("--definitions-only", "write .sdd/ and nothing else — no AGENTS.md, no CLAUDE.md")
+  .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else — no AGENTS.md, no CLAUDE.md`)
   .option("--force", "overwrite existing files, listing them first")
   .option("--dry-run", "show the plan, write nothing")
   .option("--json", "print the plan as JSON")

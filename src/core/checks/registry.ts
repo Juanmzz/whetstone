@@ -8,6 +8,7 @@
 
 import { parse as parseYaml } from "yaml";
 import { blockAuthority, type CalibrationReceipt } from "../calibration/receipt.js";
+import { DEFINITION_DIR } from "../paths.js";
 import { CheckSchema, type Check } from "./schema.js";
 
 /**
@@ -121,7 +122,9 @@ export function buildRegistry(checks: readonly LoadedCheck[]): Registry {
   const byId = new Map<string, LoadedCheck>();
   for (const check of checks) {
     if (byId.has(check.id)) {
-      throw new Error(`duplicate check id "${check.id}" — ids must be unique across .sdd/checks/`);
+      throw new Error(
+        `duplicate check id "${check.id}" — ids must be unique across ${DEFINITION_DIR}/checks/`,
+      );
     }
     byId.set(check.id, check);
   }

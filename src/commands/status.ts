@@ -8,6 +8,8 @@ import { access } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
+import { definitionRoot } from "../shell/sdd.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { describePlugin } from "../shell/plugin.js";
 import {
@@ -51,7 +53,7 @@ async function hooksPath(cwd: string): Promise<string | null> {
  */
 async function sddTracked(cwd: string): Promise<boolean> {
   try {
-    const { stdout } = await promisify(execFile)("git", ["ls-files", "--", ".sdd"], { cwd });
+    const { stdout } = await promisify(execFile)("git", ["ls-files", "--", DEFINITION_DIR], { cwd });
     return stdout.trim() !== "";
   } catch {
     return false;
@@ -80,7 +82,7 @@ export async function runStatus(
   const report = buildStatusReport({
     repoRoot,
     branch,
-    sddPresent: await exists(join(repoRoot ?? cwd, ".sdd")),
+    sddPresent: await exists(definitionRoot(repoRoot ?? cwd)),
     judge: judgeInfo,
     hooks: {
       configuredPath: await hooksPath(repoRoot ?? cwd),
@@ -90,7 +92,7 @@ export async function runStatus(
       install: await describePlugin(),
       hookRoot,
       hookRootIsRepo: await isRepo(hookRoot),
-      hookRootHasSdd: await exists(join(hookRoot, ".sdd")),
+      hookRootHasSdd: await exists(definitionRoot(hookRoot)),
       sddTracked: await sddTracked(repoRoot ?? cwd),
     },
     nodeVersion: process.version,

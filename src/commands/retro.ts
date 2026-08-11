@@ -24,6 +24,8 @@ import {
 import { createGitAdapter } from "../shell/git.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { readCursor, readSignals, writeProposals } from "../shell/retro.js";
+import { definitionRoot } from "../shell/sdd.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import { readdir, readFile } from "node:fs/promises";
 
 export interface RetroOptions {
@@ -47,8 +49,8 @@ const LENS = [
   "Prefer the SMALLEST apparatus that fixes it: a rule beats a hook beats a command",
   "beats a whole new skill. Prefer curating a proven solution over generating a new one.",
   "",
-  "`target` MUST be a path under .sdd/ — a skill, a hook, or an ADR. You may NEVER",
-  "target .sdd/constitution.md; the constitution is human-owned.",
+  `\`target\` MUST be a path under ${DEFINITION_DIR}/ — a skill, a hook, or an ADR. You may NEVER`,
+  `target ${DEFINITION_DIR}/constitution.md; the constitution is human-owned.`,
   "",
   "`citedSignals` MUST list only signal ids that appear in the cluster you were given.",
   "Do not invent an id, and do not cite one twice. The citation is the receipt that",
@@ -88,13 +90,13 @@ async function describeCluster(
       const body = await readFile(join(sddRoot, rel), "utf-8");
       parts.push(
         "",
-        `CURRENT CONTENT of .sdd/${rel} — amend THIS text, and do not restate a rule it`,
+        `CURRENT CONTENT of ${DEFINITION_DIR}/${rel} — amend THIS text, and do not restate a rule it`,
         `already contains:`,
         "",
         body.slice(0, 6000),
       );
     } catch {
-      parts.push("", `(.sdd/${rel} could not be read — propose against the skill list above.)`);
+      parts.push("", `(${DEFINITION_DIR}/${rel} could not be read — propose against the skill list above.)`);
     }
   }
   return parts.join("\n");
@@ -105,7 +107,7 @@ async function listSkills(sddRoot: string): Promise<string> {
     const files = await readdir(join(sddRoot, "skills"));
     return files
       .filter((f) => f.endsWith(".md"))
-      .map((f) => `  - .sdd/skills/${f}`)
+      .map((f) => `  - ${DEFINITION_DIR}/skills/${f}`)
       .join("\n");
   } catch {
     return "  (none)";
@@ -114,7 +116,7 @@ async function listSkills(sddRoot: string): Promise<string> {
 
 export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Promise<number> {
   const repoRoot = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
-  const sddRoot = join(repoRoot, ".sdd");
+  const sddRoot = definitionRoot(repoRoot);
 
   const all = await readSignals(sddRoot);
   const cursor = await readCursor(sddRoot);
@@ -211,7 +213,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   console.log(`  cost: $${cost.toFixed(4)}`);
   console.log(`\n  wrote ${path}`);
   console.log(`  Review it. Nothing is applied until you apply it.`);
-  console.log(`  Then append a "## ${retroId}" entry to .sdd/memory/retro-log.md with`);
+  console.log(`  Then append a "## ${retroId}" entry to ${DEFINITION_DIR}/memory/retro-log.md with`);
   console.log(`  \`cursor: ${fresh[fresh.length - 1]?.id}\` so the next retro starts after it.`);
   return 0;
 }

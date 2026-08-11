@@ -40,7 +40,7 @@ import { classify, route } from "../core/triage/index.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { createGitAdapter } from "../shell/git.js";
 import { readReceipt, writeReceipt } from "../shell/receipts.js";
-import { loadRegistry, loadTriageRules, type LoadedTriageRules } from "../shell/sdd.js";
+import { definitionRoot, loadRegistry, loadTriageRules, type LoadedTriageRules } from "../shell/sdd.js";
 
 export interface GateOptions {
   /** A `git diff` range. Default `HEAD` — the working tree against the last commit. */
@@ -278,7 +278,7 @@ export async function runGate(
     console.error("not inside a git repository — the gate reads a diff, so it needs one");
     return EXIT_MISCONFIGURED;
   }
-  const sddRoot = join(repoRoot, ".sdd");
+  const sddRoot = definitionRoot(repoRoot);
   const range = opts.range ?? DEFAULT_RANGE;
 
   let registry: Registry;

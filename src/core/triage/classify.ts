@@ -20,6 +20,7 @@
 import type { Tier } from "../checks/schema.js";
 import type { TriageResult, TriageRule } from "../contracts.js";
 import type { ChangedFile } from "../diff/parse.js";
+import { DEFINITION_DIR } from "../paths.js";
 import { matchesPathGlob } from "./glob.js";
 
 /** The single entry in `TriageResult.matches`. `contracts.ts` leaves it unnamed. */
@@ -35,7 +36,7 @@ export type TriageMatch = TriageResult["matches"][number];
  */
 export const FALLBACK_TIER: Tier = "light";
 export const FALLBACK_REASON =
-  "no rule matched — default tier per .sdd/triage-rules.md (an unrecognised path is not evidence of triviality)";
+  `no rule matched — default tier per ${DEFINITION_DIR}/triage-rules.md (an unrecognised path is not evidence of triviality)`;
 
 /**
  * The tier of a diff with no files. The maximum over an empty set is the bottom

@@ -19,7 +19,7 @@ import {
   ORIENTATION_DOCS,
   type GatingCheck,
 } from "../core/dispatch/charter.js";
-import { loadRegistry, loadTriageRules } from "../shell/sdd.js";
+import { definitionRoot, loadRegistry, loadTriageRules } from "../shell/sdd.js";
 import { createGitAdapter } from "../shell/git.js";
 import { createTreehouseAdapter } from "../shell/treehouse.js";
 import { createCrewmateAdapter, type CrewmateMode } from "../shell/crewmate.js";
@@ -72,8 +72,9 @@ export interface RunOptions {
 export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = (await git.repoRoot()) ?? cwd;
-  const registry = await loadRegistry(join(repoRoot, ".sdd"));
-  const triage = await loadTriageRules(join(repoRoot, ".sdd"));
+  const sddRoot = definitionRoot(repoRoot);
+  const registry = await loadRegistry(sddRoot);
+  const triage = await loadTriageRules(sddRoot);
 
   const gatingChecks: GatingCheck[] = registry.active.map((c) => ({
     id: c.id,

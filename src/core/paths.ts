@@ -24,3 +24,12 @@
 
 /** The directory Whetstone writes into a repo. Relative to the repo root. */
 export const DEFINITION_DIR = ".sdd";
+
+/**
+ * The same name, escaped for interpolation into a `RegExp` source.
+ *
+ * Here rather than at each call site because the leading dot is the whole hazard:
+ * an unescaped `.sdd` matches `xsdd` too, and a path guard that quietly matches
+ * more than it says is worse than one that matches nothing.
+ */
+export const DEFINITION_DIR_PATTERN = DEFINITION_DIR.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

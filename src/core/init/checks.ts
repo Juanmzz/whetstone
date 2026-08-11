@@ -19,6 +19,7 @@
  */
 
 import type { Check } from "../checks/schema.js";
+import { DEFINITION_DIR } from "../paths.js";
 import { yamlBlock, yamlList, yamlString, type GeneratedFile } from "./artifact.js";
 import type { StackFacts } from "./detect.js";
 
@@ -77,7 +78,7 @@ function render(draft: Draft): GeneratedFile {
   // this with real signal ids the first time one of them catches something.
   lines.push("origin: []", "version: 1", "---", "", draft.body.trim(), "");
 
-  return { path: `.sdd/checks/${draft.id}.md`, contents: lines.join("\n") };
+  return { path: `${DEFINITION_DIR}/checks/${draft.id}.md`, contents: lines.join("\n") };
 }
 
 export function seedChecks(

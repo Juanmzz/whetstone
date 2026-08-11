@@ -17,7 +17,8 @@
  */
 
 import { access } from "node:fs/promises";
-import { join } from "node:path";
+import { DEFINITION_DIR } from "../core/paths.js";
+import { definitionRoot } from "../shell/sdd.js";
 import { humanSignal } from "../core/signals/human.js";
 import { createGitAdapter } from "../shell/git.js";
 import { appendSignalRecord } from "../shell/signals.js";
@@ -124,9 +125,9 @@ export async function runSignal(
   // misconfigured and exits 2. It gets worse downstream: `core/init/plan.ts` plans
   // this exact path, so the stray file makes `wst init` refuse to bootstrap, and
   // `init --force` overwrites it, deleting the human's only copy of what they saw.
-  const sddRoot = join(repoRoot, ".sdd");
+  const sddRoot = definitionRoot(repoRoot);
   if (!(await exists(sddRoot))) {
-    console.error(`no .sdd/ in ${repoRoot} — run \`wst init\` first`);
+    console.error(`no ${DEFINITION_DIR}/ in ${repoRoot} — run \`wst init\` first`);
     console.error("the observation, so it is not lost:");
     console.log(line);
     return EXIT_MISCONFIGURED;
@@ -141,7 +142,9 @@ export async function runSignal(
     // read-only checkout, so: one line of cause, and the record on stdout where a
     // redirect or a paste can still save it.
     console.error(`could not write the signal: ${(cause as Error).message}`);
-    console.error("the observation, so it is not lost — append this line to .sdd/memory/signals.jsonl:");
+    console.error(
+      `the observation, so it is not lost — append this line to ${DEFINITION_DIR}/memory/signals.jsonl:`,
+    );
     console.log(line);
     return EXIT_NOT_RECORDED;
   }
