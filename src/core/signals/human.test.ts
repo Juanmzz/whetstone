@@ -11,6 +11,7 @@ const observation = {
   detail: "Auth middleware change classified light; it should have been strict.",
   ruleAffected: [] as readonly string[],
   branch: "run/two-related-repairs" as string | null,
+  attested: true,
 };
 
 const ok = (over: Partial<typeof observation> = {}) => {
@@ -54,6 +55,23 @@ describe("humanSignal", () => {
     expect(ok().source).toBe("human");
   });
 
+  describe("the `human` claim is evidenced, never assumed", () => {
+    // `source: "human"` is the strongest provenance the log has, and an agent can
+    // run this command — `wst` is on a crewmate's PATH. Stamping it from the mere
+    // fact that the function was called is the hallucinated-signal-becomes-a-rule
+    // path the anti-poisoning gate exists to block.
+
+    it("downgrades the source when nothing evidenced a human", () => {
+      expect(ok({ attested: false }).source).toBe("cli");
+    });
+
+    it("still records the observation — provenance drops, evidence is not thrown away", () => {
+      const record = ok({ attested: false });
+      expect(record.detail).toBe(observation.detail);
+      expect(parseSignalLog(JSON.stringify(record))).toHaveLength(1);
+    });
+  });
+
   it("carries no fingerprint — dedupe is the gate's mechanism, not a human's", () => {
     // A fingerprint in the log means "an open signal at this identity"; the gate
     // drops candidates matching one. A human record wearing one would silence a
@@ -81,6 +99,52 @@ describe("humanSignal", () => {
     const record = ok({ type: "  triage-miss  ", detail: "  something happened  " });
     expect(record.type).toBe("triage-miss");
     expect(record.detail).toBe("something happened");
+  });
+
+  it("trims the severity too — the one field a stray space used to reject", () => {
+    // ` type ` was accepted and `-s high ` was not. Same shell, same accident.
+    expect(ok({ severity: " high " }).severity).toBe("high");
+  });
+
+  describe("rule_affected, the strongest cluster key", () => {
+    // `clusterSignals` buckets on `rule:<path>` VERBATIM and only calls a group of
+    // two actionable. Two spellings of one rule are two clusters of one, so the
+    // evidence produces nothing — the same failure the kebab-case `type` regex
+    // already prevents, on the axis that matters more.
+
+    it("resolves a bare skill filename to the form all 44 existing entries use", () => {
+      expect(ok({ ruleAffected: ["recording.md"] }).rule_affected).toEqual(["skills/recording.md"]);
+    });
+
+    it("leaves a top-level .sdd document where it is", () => {
+      // `.sdd/triage-rules.md` says of itself "This file **is** retro-amendable".
+      // Filing it under skills/ would name a path that does not exist.
+      expect(ok({ ruleAffected: ["triage-rules.md"] }).rule_affected).toEqual(["triage-rules.md"]);
+    });
+
+    it("normalises the spellings a shell and an editor produce", () => {
+      expect(
+        ok({ ruleAffected: ["  ./skills/Recording.md ", "/skills/voice.md"] }).rule_affected,
+      ).toEqual(["skills/recording.md", "skills/voice.md"]);
+    });
+
+    it("collapses two spellings of one rule instead of counting it twice", () => {
+      // A duplicate lands the SAME signal in the bucket twice, and `group.length >= 2`
+      // then reads one observation as recurrence. That is fabricated evidence.
+      expect(ok({ ruleAffected: ["recording.md", "skills/recording.md"] }).rule_affected).toEqual([
+        "skills/recording.md",
+      ]);
+    });
+
+    it("drops what the shell left behind rather than opening an empty cluster", () => {
+      expect(ok({ ruleAffected: ["", "   "] }).rule_affected).toEqual([]);
+    });
+
+    it("rejects a path that cannot name a rule file under .sdd/", () => {
+      for (const bad of ["skills/recording", "skills/Recording Notes.md", "../../etc/passwd.md"]) {
+        expect(errors({ ruleAffected: [bad] }).join()).toMatch(/rule/);
+      }
+    });
   });
 
   describe("rejects rather than writes", () => {
