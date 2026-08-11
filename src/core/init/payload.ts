@@ -204,6 +204,7 @@ rule, a retro over none produces a plausible one.
 | \`phase\` | yes | \`init\` \\| \`triage\` \\| \`plan\` \\| \`apply\` \\| \`verify\` \\| \`review\` \\| \`other\` |
 | \`severity\` | yes | \`low\` \\| \`medium\` \\| \`high\` |
 | \`detail\` | yes | one or two sentences a human can reconstruct the event from |
+| \`branch\` | no | the git branch it happened on — the unit of work. Read from git, never guessed from a ticket id. Omit it rather than writing \`null\` |
 | \`rule_affected\` | no | skill file(s) implicated, e.g. \`["skills/delegation.md"]\` |
 | \`supersedes\` | no | id of an earlier entry this one corrects |
 | \`resolved_by\` | no | filled by the retro: the amendment that addressed this signal |
@@ -215,7 +216,7 @@ records which amendment answered the signal, not what happened.
 Example:
 
 \`\`\`
-{"id":"sig-0001","ts":"2026-01-15T14:30:00Z","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at the repo root instead of the package directory.","rule_affected":["skills/delegation.md"]}
+{"id":"sig-0001","ts":"2026-01-15T14:30:00Z","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at the repo root instead of the package directory.","branch":"feat/import-csv","rule_affected":["skills/delegation.md"]}
 \`\`\`
 
 ## \`decisions/\` — one ADR per file (\`0001-slug.md\`)

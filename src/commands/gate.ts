@@ -351,7 +351,14 @@ export async function runGate(
   if (opts.noEmit !== true) {
     try {
       const candidates = signalsFromGate(run.verdict, range);
-      emitted = await appendSignals(sddRoot, dedupe(candidates, await readSignalLog(sddRoot)), new Date());
+      // The branch is read HERE, from the same adapter that read the diff, so the
+      // signal records the unit of work the verdict was actually about.
+      emitted = await appendSignals(
+        sddRoot,
+        dedupe(candidates, await readSignalLog(sddRoot)),
+        new Date(),
+        await git.currentBranch(),
+      );
     } catch (cause) {
       signalError = (cause as Error).message;
     }
