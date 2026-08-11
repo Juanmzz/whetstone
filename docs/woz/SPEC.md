@@ -56,6 +56,7 @@ One JSON object per line. Append-only for signal content — never edit or delet
 | `phase`         | string   | ✔   | workflow phase where it occurred: `init`, `triage`, `plan`, `apply`, `verify`, `review`, `other` |
 | `severity`      | string   | ✔   | `low` \| `medium` \| `high` |
 | `detail`        | string   | ✔   | free-text, one or two sentences, enough for a human to reconstruct what happened |
+| `branch`        | string   |     | git branch the signal was observed on — the unit of work the retro groups by. Sourced from git, never inferred from a ticket id or a task name. Omitted (never `null`) when there is no answer: a detached HEAD, or a line written before the field existed |
 | `rule_affected` | string[] |     | skill file(s) this signal implicates, e.g. `["skills/delegation.md"]`. Empty = unclassified (retro will attempt classification) |
 | `supersedes`    | string   |     | id of an earlier entry this one corrects |
 | `resolved_by`   | string   |     | filled by retro: amendment id that addressed this signal |
@@ -63,7 +64,7 @@ One JSON object per line. Append-only for signal content — never edit or delet
 **Example:**
 
 ```jsonl
-{"id":"sig-0001","ts":"2026-07-02T14:30:00-03:00","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at repo root instead of the package dir.","rule_affected":["skills/delegation.md"]}
+{"id":"sig-0001","ts":"2026-07-02T14:30:00-03:00","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at repo root instead of the package dir.","branch":"feat/import-csv","rule_affected":["skills/delegation.md"]}
 {"id":"sig-0002","ts":"2026-07-03T10:12:00-03:00","type":"triage-miss","phase":"triage","severity":"medium","detail":"Auth middleware change classified as light; should be strict.","rule_affected":["triage-rules.md"]}
 ```
 
