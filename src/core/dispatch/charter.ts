@@ -13,6 +13,74 @@
  */
 
 import type { Check } from "../checks/schema.js";
+import type { TriageRule } from "../contracts.js";
+
+/** An orientation file the charter may point at, and what it is. */
+export interface OrientationDoc {
+  /** Repo-relative. The composition root stats exactly these. */
+  readonly path: string;
+  readonly note: string;
+}
+
+/**
+ * Every file the charter is allowed to send a crewmate to, in reading order.
+ *
+ * The charter used to hardcode `AGENTS.md` and `.sdd/architecture.md`. Neither is
+ * written by `wst init --definitions-only` — the mode for a repo whose own harness
+ * already owns that surface — and `architecture.md` is written by no mode at all: it
+ * exists only in Whetstone's own repo. So the first install into a foreign repo
+ * produced a charter ordering an agent to read two files that were not there
+ * (sig-0041).
+ *
+ * The notes are deliberately generic. The old one explained `architecture.md` as
+ * "FCIS: `core/` is pure and must never import from `shell/`" — true here, asserted
+ * about someone else's repo, and the charter is a MAP, not a summary: the file says
+ * what it is, the crewmate is being told where to look.
+ */
+export const ORIENTATION_DOCS: readonly OrientationDoc[] = [
+  { path: "AGENTS.md", note: "orientation, and the hard rules" },
+  { path: "CLAUDE.md", note: "orientation, and the hard rules" },
+  { path: ".sdd/architecture.md", note: "how this system is built" },
+  { path: ".sdd/constitution.md", note: "the non-negotiables this project governs itself by" },
+  { path: ".sdd/triage-rules.md", note: "which discipline this change earns" },
+];
+
+/**
+ * `AGENTS.md` and `CLAUDE.md` are ONE source of truth (ADR-0002) — where both exist,
+ * `CLAUDE.md` is usually a one-line `@AGENTS.md` import. Naming both spends a
+ * crewmate's first two reads on the same content.
+ */
+const VENDOR_ALIASES: readonly string[] = ["AGENTS.md", "CLAUDE.md"];
+
+/**
+ * The strict-tier globs a project's OWN triage rules declare.
+ *
+ * `wst run` used to pass Whetstone's three as a literal. In `agilpay-backend` that
+ * told a crewmate three directories it would never touch were the dangerous ones, and
+ * told it nothing about `migrations/`. The rules are already loaded for `gatingChecks`
+ * one line earlier; this is the file that exists to answer the question.
+ *
+ * Order is the rules' order, which is precedence order — most specific first.
+ */
+export function strictPathsFrom(rules: readonly TriageRule[]): readonly string[] {
+  const globs = new Set<string>();
+  for (const rule of rules) {
+    if (rule.tier === "strict") globs.add(rule.glob);
+  }
+  return [...globs];
+}
+
+/** The docs to name: the candidate set, narrowed to what the target actually has. */
+function orientationFor(presentDocs: readonly string[]): readonly OrientationDoc[] {
+  const present = new Set(presentDocs);
+  const canonicalVendor = VENDOR_ALIASES.find((path) => present.has(path));
+
+  return ORIENTATION_DOCS.filter(
+    (doc) =>
+      present.has(doc.path) &&
+      (!VENDOR_ALIASES.includes(doc.path) || doc.path === canonicalVendor),
+  );
+}
 
 export interface GatingCheck {
   readonly id: string;
@@ -30,6 +98,11 @@ export interface CharterInput {
   readonly gatingChecks: readonly GatingCheck[];
   /** Path prefixes where full TDD is mandatory. */
   readonly strictPaths: readonly string[];
+  /**
+   * Which of `ORIENTATION_DOCS` the target repo ACTUALLY has, as stat'd by the
+   * composition root. The charter names nothing outside this set.
+   */
+  readonly presentDocs: readonly string[];
 }
 
 export function buildCharter(input: CharterInput): string {
@@ -54,17 +127,27 @@ export function buildCharter(input: CharterInput): string {
     ``,
     `## Read before you write`,
     ``,
-    `- \`AGENTS.md\` — orientation, and the hard rules`,
-    `- \`.sdd/architecture.md\` — how the engine is built (FCIS: \`core/\` is pure and must`,
-    `  never import from \`shell/\`)`,
-    `- \`.sdd/triage-rules.md\` — which discipline this change earns`,
-    ``,
-    `Read them from disk. They are not copied here on purpose — you have tools, and a`,
-    `charter that inlines everything wastes the budget you need for the work.`,
-    ``,
-    `## What will gate your work`,
-    ``,
   ];
+
+  const orientation = orientationFor(input.presentDocs);
+  if (orientation.length > 0) {
+    for (const doc of orientation) lines.push(`- \`${doc.path}\` — ${doc.note}`);
+    lines.push(
+      ``,
+      `Read them from disk. They are not copied here on purpose — you have tools, and a`,
+      `charter that inlines everything wastes the budget you need for the work.`,
+    );
+  } else {
+    // Never invent a pointer. A charter that names a file the repo does not have is
+    // worse than one that names none, because it reads as authoritative.
+    lines.push(
+      `This repo has no orientation file Whetstone can point you at. Read the code and`,
+      `whatever \`.sdd/\` holds before you write, and say so in your report if there was`,
+      `nothing to orient from.`,
+    );
+  }
+
+  lines.push(``, `## What will gate your work`, ``);
 
   if (blocking.length > 0) {
     lines.push(`These BLOCK — the change cannot land while any of them fails:`);
@@ -87,9 +170,19 @@ export function buildCharter(input: CharterInput): string {
     ``,
     `## Discipline`,
     ``,
-    `These paths are STRICT TIER — full TDD, RED first, no exceptions:`,
   );
-  for (const p of input.strictPaths) lines.push(`  - \`${p}\``);
+  if (input.strictPaths.length > 0) {
+    lines.push(`These paths are STRICT TIER — full TDD, RED first, no exceptions:`);
+    for (const p of input.strictPaths) lines.push(`  - \`${p}\``);
+  } else {
+    // `wst init` allows this and says so in its notes: a low-risk project legitimately
+    // classifies nothing strict. Printing the header with no paths under it reads as a
+    // truncated charter; asserting a strict tier that the rules never declared is worse.
+    lines.push(
+      `Nothing in this repo is classified STRICT TIER — its triage rules declare no path`,
+      `where full TDD is mandatory. That is the rules' answer, not permission to skip tests.`,
+    );
+  }
   lines.push(``);
 
   if (input.lane !== null) {

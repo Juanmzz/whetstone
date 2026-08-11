@@ -17,6 +17,46 @@ export interface StatusFacts {
   readonly judge: { readonly name: string; readonly version: string | null };
   readonly nodeVersion: string;
   readonly hooks: HookFacts;
+  readonly plugin: PluginFacts;
+}
+
+/**
+ * What the harness says about the Whetstone plugin. Four states, not a boolean —
+ * "never installed" and "installed and switched off" have different fixes, and
+ * "we could not ask" is not evidence of either.
+ */
+export type PluginInstall = "enabled" | "disabled" | "absent" | "unknown";
+
+/**
+ * Whether the plugin's hooks would DO anything from here.
+ *
+ * `plugin/hooks/gate-on-stop.mjs` exits silently whenever it cannot run — no `.sdd/`,
+ * no `wst`, not a repo. That is the right behaviour for a hook and it leaves the user
+ * with no way to discover it. These are the facts that answer it.
+ */
+export interface PluginFacts {
+  readonly install: PluginInstall;
+  /**
+   * The directory the Stop hook would run the gate in: `CLAUDE_PROJECT_DIR` when the
+   * harness sets it, else the cwd. NOT necessarily the repo — in the field it was an
+   * umbrella folder holding several repos, and every hook was inert because of it.
+   */
+  readonly hookRoot: string;
+  readonly hookRootIsRepo: boolean;
+  readonly hookRootHasSdd: boolean;
+  /** Whether `.sdd/` is tracked. Untracked files do not propagate into worktrees. */
+  readonly sddTracked: boolean;
+}
+
+/** Why the hooks would do nothing from here, or `null` when they would. */
+export function pluginInertReason(plugin: PluginFacts): string | null {
+  if (!plugin.hookRootIsRepo) {
+    return `\`${plugin.hookRoot}\` is not a git repository, so the gate cannot run there`;
+  }
+  if (!plugin.hookRootHasSdd) {
+    return `\`${plugin.hookRoot}\` has no \`.sdd/\`, so there is nothing to gate against`;
+  }
+  return null;
 }
 
 /** Where Whetstone's hooks live, when it owns them. */
@@ -97,6 +137,33 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     }
   }
 
+  // The plugin, and only when there IS one. A repo that never adopted it is not
+  // broken, and a warning about a hook nobody installed is the noise that gets muted.
+  if (facts.plugin.install === "disabled") {
+    warnings.push(
+      `the Whetstone plugin is installed but DISABLED, so neither the strict-path guard ` +
+        `nor the gate-on-stop hook will fire — enable it, or uninstall it so status stops ` +
+        `reporting it`,
+    );
+  }
+  if (facts.plugin.install === "enabled") {
+    const inert = pluginInertReason(facts.plugin);
+    if (inert !== null) {
+      // The hook exits silently here BY DESIGN, so this line is the only place the
+      // fact is available. Without it, inert and working produce identical output.
+      warnings.push(
+        `the plugin is loaded but INERT from here: ${inert}. Its hooks fail silently on ` +
+          `purpose, so nothing else will tell you`,
+      );
+    } else if (!facts.plugin.sddTracked) {
+      warnings.push(
+        `\`.sdd/\` is not tracked by git. Untracked files do not propagate into worktrees, ` +
+          `so the plugin is inert in every worktree cut from this repo — including the ones ` +
+          `\`wst run\` leases. Commit \`.sdd/\` to fix it`,
+      );
+    }
+  }
+
   if (facts.judge.version !== null && facts.judge.version !== VALIDATED_JUDGE_VERSION) {
     warnings.push(
       `${facts.judge.name} ${facts.judge.version} differs from the version the adapter was ` +
@@ -105,6 +172,29 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   }
 
   return { facts, ready: problems.length === 0, problems, warnings };
+}
+
+/**
+ * The plugin row. Says which of the four install states holds, and — when the plugin
+ * IS loaded — whether it would do anything from where you are standing.
+ *
+ * "loaded" alone would repeat the mistake the pre-push row already fixed once: a
+ * loaded-and-inert plugin and a loaded-and-working one produced identical output, and
+ * the whole point of the row is that they must not.
+ */
+function pluginRow(plugin: PluginFacts): string {
+  switch (plugin.install) {
+    case "absent":
+      return "not installed";
+    case "disabled":
+      return "installed but DISABLED — its hooks will not fire";
+    case "unknown":
+      return "unknown (could not ask the harness)";
+    case "enabled": {
+      const inert = pluginInertReason(plugin);
+      return inert === null ? "loaded — hooks active here" : `loaded, but INERT here: ${inert}`;
+    }
+  }
 }
 
 export function renderStatusReport(
@@ -133,6 +223,7 @@ export function renderStatusReport(
           ? `NOT active (\`${facts.hooks.configuredPath}\` owns core.hooksPath)`
           : "NOT active"
     }`,
+    `  plugin    ${pluginRow(facts.plugin)}`,
     "",
     `  ${report.ready ? "ready" : "NOT ready"}`,
   ];

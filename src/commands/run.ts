@@ -9,17 +9,45 @@
  */
 
 import { execFile } from "node:child_process";
-import { writeFile } from "node:fs/promises";
+import { access, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { buildCharter, branchNameFor, type GatingCheck } from "../core/dispatch/charter.js";
-import { loadRegistry } from "../shell/sdd.js";
+import {
+  buildCharter,
+  branchNameFor,
+  strictPathsFrom,
+  ORIENTATION_DOCS,
+  type GatingCheck,
+} from "../core/dispatch/charter.js";
+import { loadRegistry, loadTriageRules } from "../shell/sdd.js";
 import { createGitAdapter } from "../shell/git.js";
 import { createTreehouseAdapter } from "../shell/treehouse.js";
 import { createCrewmateAdapter, type CrewmateMode } from "../shell/crewmate.js";
 import { runGate } from "./gate.js";
 
 const exec = promisify(execFile);
+
+/**
+ * Which orientation docs exist WHERE THE CREWMATE WILL WORK.
+ *
+ * Stat'd in the worktree, never in the orchestrator's repo. An untracked `.sdd/`
+ * exists in one and not the other, and that gap is exactly what produced the field
+ * report's silent failure (sig-0044) — pointing at the orchestrator's copy would
+ * reintroduce the bug this fixes.
+ */
+async function presentDocsIn(root: string): Promise<string[]> {
+  const found = await Promise.all(
+    ORIENTATION_DOCS.map(async (doc) => {
+      try {
+        await access(join(root, doc.path));
+        return doc.path;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return found.filter((p): p is string => p !== null);
+}
 
 export interface RunOptions {
   readonly task: string;
@@ -45,12 +73,18 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
   const git = createGitAdapter(cwd);
   const repoRoot = (await git.repoRoot()) ?? cwd;
   const registry = await loadRegistry(join(repoRoot, ".sdd"));
+  const triage = await loadTriageRules(join(repoRoot, ".sdd"));
 
   const gatingChecks: GatingCheck[] = registry.active.map((c) => ({
     id: c.id,
     severity: c.severity,
     description: c.description,
   }));
+
+  // Derived, never literal. Hardcoding Whetstone's own three told a crewmate in
+  // `agilpay-backend` that three directories it would never touch were the dangerous
+  // ones, and said nothing about `migrations/` (sig-0041).
+  const strictPaths = strictPathsFrom(triage.rules);
 
   const branch = branchNameFor(opts.task);
   const treehouse = createTreehouseAdapter(repoRoot);
@@ -63,7 +97,10 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
         branch,
         lane: opts.lane ?? null,
         gatingChecks,
-        strictPaths: ["src/core/", ".sdd/skills/", ".claude/hooks/"],
+        strictPaths,
+        // No worktree has been leased, so this is the orchestrator's own tree. It
+        // over-reports anything untracked; the dispatch path below stats the real one.
+        presentDocs: await presentDocsIn(repoRoot),
       }),
     );
     return 0;
@@ -115,7 +152,8 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
       branch,
       lane: opts.lane ?? null,
       gatingChecks,
-      strictPaths: ["src/core/", ".sdd/skills/", ".claude/hooks/"],
+      strictPaths,
+      presentDocs: await presentDocsIn(worktree.path),
     });
 
     // --prepare: everything up to the dispatch, then stop.

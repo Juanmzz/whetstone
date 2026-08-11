@@ -22,6 +22,11 @@ _design/
 # worktree, not to the branch — committing it would scope every clone to one lane.
 .wst-lane
 
+# The briefing `wst run --prepare` writes into a leased worktree. Same argument as
+# .wst-lane: it belongs to the worktree, not the branch. Observed — a crewmate ran
+# `git add -A` and swept its own charter into the diff it was dispatched to produce.
+.wst-charter.md
+
 # Receipts are a derived cache: "check X passed on this exact input". Regenerable,
 # and a stale one would claim a pass that never happened for the current code.
 .sdd/receipts/

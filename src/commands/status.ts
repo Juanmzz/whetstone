@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
 import { createClaudeJudge } from "../shell/claude.js";
+import { describePlugin } from "../shell/plugin.js";
 import {
   buildStatusReport,
   renderStatusReport,
@@ -41,6 +42,26 @@ async function hooksPath(cwd: string): Promise<string | null> {
   }
 }
 
+/**
+ * Whether `.sdd/` is TRACKED, not merely present.
+ *
+ * Untracked files do not propagate into git worktrees, so an uncommitted `.sdd/` is
+ * present here and absent in every worktree cut from here — which silently disables
+ * the plugin's hooks in exactly the places `wst run` sends work (sig-0044).
+ */
+async function sddTracked(cwd: string): Promise<boolean> {
+  try {
+    const { stdout } = await promisify(execFile)("git", ["ls-files", "--", ".sdd"], { cwd });
+    return stdout.trim() !== "";
+  } catch {
+    return false;
+  }
+}
+
+async function isRepo(cwd: string): Promise<boolean> {
+  return (await createGitAdapter(cwd).repoRoot()) !== null;
+}
+
 export async function runStatus(
   cwd: string = process.cwd(),
   options: { readonly quiet?: boolean } = {},
@@ -51,6 +72,11 @@ export async function runStatus(
   const repoRoot = await git.repoRoot();
   const [branch, judgeInfo] = await Promise.all([git.currentBranch(), judge.describe()]);
 
+  // Where the plugin's Stop hook would run the gate. It reads `CLAUDE_PROJECT_DIR`,
+  // which is NOT always the repo — in the field it was the umbrella folder holding
+  // several repos, so both hooks were inert all session with nothing to show for it.
+  const hookRoot = process.env["CLAUDE_PROJECT_DIR"] ?? cwd;
+
   const report = buildStatusReport({
     repoRoot,
     branch,
@@ -59,6 +85,13 @@ export async function runStatus(
     hooks: {
       configuredPath: await hooksPath(repoRoot ?? cwd),
       whetstoneHooksPresent: await exists(join(repoRoot ?? cwd, WHETSTONE_HOOKS_PATH)),
+    },
+    plugin: {
+      install: await describePlugin(),
+      hookRoot,
+      hookRootIsRepo: await isRepo(hookRoot),
+      hookRootHasSdd: await exists(join(hookRoot, ".sdd")),
+      sddTracked: await sddTracked(repoRoot ?? cwd),
     },
     nodeVersion: process.version,
   });
