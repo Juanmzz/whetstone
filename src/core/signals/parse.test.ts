@@ -40,6 +40,29 @@ describe("parseSignalLog", () => {
     expect(s?.rule_affected).toEqual(["skills/voice.md"]);
   });
 
+  it("keeps the branch the signal was observed on", () => {
+    // The unit of work. Without it the retro can cluster by rule and by type but
+    // not by "these four things went wrong on one piece of work", which is the
+    // grouping a human actually reasons in.
+    const line = JSON.stringify({
+      ...(JSON.parse(good("sig-0031")) as object),
+      branch: "run/two-related-repairs",
+    });
+    expect(parseSignalLog(line)[0]?.branch).toBe("run/two-related-repairs");
+  });
+
+  it("accepts a line with no branch — every entry written before the field has none", () => {
+    expect(parseSignalLog(good("sig-0001"))[0]?.branch).toBeUndefined();
+  });
+
+  it("throws when branch is present but is not a string", () => {
+    // Checked, unlike the older optional fields, because there is no legacy line
+    // to break: nothing has ever written a `branch` that is not a string. A
+    // grouping key of `42` would silently open a cluster nobody can name.
+    const line = JSON.stringify({ ...(JSON.parse(good("sig-0031")) as object), branch: 42 });
+    expect(() => parseSignalLog(line)).toThrow(/`branch`/);
+  });
+
   it("throws rather than returning a subset when a line is not valid JSON", () => {
     // The whole point. Returning the readable lines lets the gate believe the log
     // holds nothing at that fingerprint and re-emit a signal it already recorded,
