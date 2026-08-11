@@ -1,7 +1,7 @@
 ---
 id: adr-0012
 ts: 2026-08-10
-status: proposed
+status: accepted
 supersedes: null
 rules_affected: ["skills/doc-locations.md"]
 ---
