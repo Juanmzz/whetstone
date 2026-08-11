@@ -41,6 +41,14 @@ export interface SignalRecord {
   readonly resolved_by?: string;
   readonly fingerprint?: string;
   readonly source?: string;
+  /**
+   * The branch the signal was observed on — the unit of work.
+   *
+   * Optional because the 45 entries written before the field have none, and
+   * because a detached HEAD has no honest answer. Absent means unknown; it is
+   * never written as `null`, which would read as present-and-empty.
+   */
+  readonly branch?: string;
 }
 
 export class SignalLogParseError extends Error {
@@ -70,6 +78,13 @@ function validate(value: unknown, line: number): SignalRecord {
     if (typeof record[field] !== "string") {
       throw new SignalLogParseError(line, `is missing a string \`${field}\``);
     }
+  }
+  // Checked where the other optional fields are not, and the asymmetry is
+  // deliberate: `branch` is new, so no accumulated line can break on it, and it is
+  // a GROUPING KEY. A `branch` of `42` would open a cluster nobody can name and
+  // nobody can trace back to a piece of work.
+  if (record["branch"] !== undefined && typeof record["branch"] !== "string") {
+    throw new SignalLogParseError(line, "has a `branch` that is not a string");
   }
   if (!SEVERITIES.includes(record["severity"] as string)) {
     throw new SignalLogParseError(

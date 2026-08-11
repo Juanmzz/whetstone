@@ -144,12 +144,22 @@ describe("the memory schema travels with the payload", () => {
     expect(MEMORY_README).toContain("supersedes");
   });
 
+  it("documents `branch`, or a hand-written line loses the unit of work the gate records", () => {
+    // ADR-0004: the payload is self-contained. A target repo whose gate writes a
+    // field its own schema never mentions has a documented schema that is wrong,
+    // and the drift is invisible until someone hand-writes a line without it.
+    expect(MEMORY_README).toContain("`branch`");
+  });
+
   it("gives a copyable example line", () => {
     const line = MEMORY_README.split("\n").find((l) => l.trim().startsWith('{"id":"sig-'));
     expect(line).toBeDefined();
     const parsed = JSON.parse(line?.trim() ?? "{}") as Record<string, unknown>;
     expect(parsed["id"]).toMatch(/^sig-\d{4}$/);
     expect(parsed["phase"]).toBeDefined();
+    // Copied verbatim more often than it is read, so the example is where the
+    // field either survives into a target repo's log or quietly does not.
+    expect(parsed["branch"]).toBeTypeOf("string");
   });
 
   it("ships an ADR template that is a fill-in, not a blank page", () => {

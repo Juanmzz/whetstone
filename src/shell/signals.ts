@@ -32,11 +32,20 @@ export async function readSignalLog(sddRoot: string): Promise<SignalRecord[]> {
   return parseSignalLog(text);
 }
 
-/** Returns the ids written. Empty when there was nothing new to say. */
+/**
+ * Returns the ids written. Empty when there was nothing new to say.
+ *
+ * `branch` is a REQUIRED parameter with a nullable type rather than an optional
+ * one, so a new caller has to answer the question instead of inheriting an
+ * unbranded signal by omission. It comes from the git adapter and from nowhere
+ * else — a branch inferred from a ticket id or a task name is a guess wearing the
+ * costume of a fact, and the retro would group work that never shared a branch.
+ */
 export async function appendSignals(
   sddRoot: string,
   signals: readonly EmittableSignal[],
   now: Date,
+  branch: string | null,
 ): Promise<string[]> {
   if (signals.length === 0) return [];
 
@@ -56,6 +65,8 @@ export async function appendSignals(
         phase: s.phase,
         severity: s.severity,
         detail: s.detail,
+        // Omitted, not nulled, on a detached HEAD. See `SignalRecord.branch`.
+        ...(branch !== null ? { branch } : {}),
         source: s.source,
         fingerprint: s.fingerprint,
         rule_affected: [],

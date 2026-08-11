@@ -21,6 +21,13 @@ export interface Signal {
   readonly rule_affected?: readonly string[];
   /** Machinery-owned back-pointer set when a retro resolves this signal. */
   readonly resolved_by?: string;
+  /**
+   * The branch the signal was observed on. Carried so the retro can SEE the unit
+   * of work; `clusterSignals` does not group on it yet, and adding a third axis
+   * is a change to what the retro proposes, not a field rename. Absent on every
+   * entry written before the field existed, and on a detached HEAD.
+   */
+  readonly branch?: string;
 }
 
 export interface Cluster {
