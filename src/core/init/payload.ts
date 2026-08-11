@@ -234,6 +234,14 @@ Front-matter: \`id\`, \`ts\`, \`status\` (\`proposed\` | \`accepted\` | \`supers
 a new ADR that says so. The value of the record is that it shows what was believed at
 the time, and editing it destroys exactly that.
 
+## \`out-of-scope/\` — what was deliberately refused
+
+One file per capability this project was asked for and decided not to build. A
+refusal that lives only in memory gets re-proposed every few months with the
+argument re-derived from scratch. Each entry says what was asked, why it is out of
+scope, what escape hatches already exist, and the request that prompted it. Empty
+until something is actually refused; the directory's own README has the form.
+
 ## \`patterns.md\` and \`retro-log.md\`
 
 \`patterns.md\` holds distilled recurring patterns — the output of a retro, not raw
@@ -247,6 +255,55 @@ cluster them, and decide what apparatus each cluster earns — amend a rule, add
 retire one that never fires. **The analysis is automatic; the write is not.** A human
 confirms every change to a rule, because a tool that can silently rewrite the standard
 it enforces against you is not a standard.
+`;
+
+/**
+ * The fourth memory artifact (ADR-0012).
+ *
+ * `memory/` records what went wrong (`signals.jsonl`), what was decided
+ * (`decisions/`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
+ * recorded what was deliberately REFUSED, and a refusal with no file gets
+ * re-proposed every six months with the argument re-derived from scratch — by a
+ * fresh agent that has no way to know the conversation already happened.
+ *
+ * The attribution is INLINE rather than a pointer, per the payload rule: this file
+ * lands in a repo that has never heard of Whetstone, so a reference to a LICENSE
+ * that lives here would dangle there.
+ */
+export const OUT_OF_SCOPE_README = `# Out of scope
+
+Things this project was asked for and decided NOT to build.
+
+A refusal that lives only in someone's memory gets re-proposed every few months,
+and the argument gets re-derived from scratch every time — usually worse, because
+the pressure that produced the original answer is no longer in the room. This
+directory is where a "no" keeps its reasoning.
+
+One file per refusal, \`kebab-case-name.md\`, and each one states four things:
+
+1. **What was asked** — the capability, in the words of whoever wanted it. Not a
+   strawman: if the request cannot be stated in a form its author would recognise,
+   it has not been understood well enough to refuse.
+2. **Why it is out of scope** — the reasoning, at the time, with the constraint or
+   the tradeoff that decided it.
+3. **What escape hatches already exist** — how someone who needs this can get it
+   today. A refusal with no alternative is usually a missing feature wearing a
+   decision's clothes.
+4. **The request that prompted it** — the date and the context, so a reader can
+   tell a one-off from a pattern. The fourth time the same thing is asked for, the
+   answer probably deserves revisiting.
+
+A "no" recorded here is not permanent. It is reviewable, which is the opposite of
+forgotten: what reverses it is new evidence, and the file is where the next person
+starts rather than where they stop.
+
+Empty until something is actually refused. An invented entry would be a decision
+nobody made.
+
+---
+
+The form of this directory is borrowed from \`mattpocock/skills\` (MIT licensed),
+whose \`.out-of-scope/\` is the same idea.
 `;
 
 export const ADR_TEMPLATE = `---

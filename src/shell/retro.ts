@@ -12,10 +12,10 @@ export const RETRO_LOG = "memory/retro-log.md";
 export const SIGNALS = "memory/signals.jsonl";
 export const PROPOSALS_DIR = "memory/proposals";
 
-export async function readSignals(sddRoot: string): Promise<Signal[]> {
+export async function readSignals(definitionRoot: string): Promise<Signal[]> {
   let text: string;
   try {
-    text = await readFile(join(sddRoot, SIGNALS), "utf-8");
+    text = await readFile(join(definitionRoot, SIGNALS), "utf-8");
   } catch {
     return [];
   }
@@ -29,10 +29,10 @@ export async function readSignals(sddRoot: string): Promise<Signal[]> {
  * The cursor is the last signal id a previous retro processed. Stored as a line
  * `cursor: sig-NNNN` in the newest retro-log entry.
  */
-export async function readCursor(sddRoot: string): Promise<string | null> {
+export async function readCursor(definitionRoot: string): Promise<string | null> {
   let text: string;
   try {
-    text = await readFile(join(sddRoot, RETRO_LOG), "utf-8");
+    text = await readFile(join(definitionRoot, RETRO_LOG), "utf-8");
   } catch {
     return null;
   }
@@ -41,11 +41,11 @@ export async function readCursor(sddRoot: string): Promise<string | null> {
 }
 
 export async function writeProposals(
-  sddRoot: string,
+  definitionRoot: string,
   retroId: string,
   contents: string,
 ): Promise<string> {
-  const dir = join(sddRoot, PROPOSALS_DIR);
+  const dir = join(definitionRoot, PROPOSALS_DIR);
   await mkdir(dir, { recursive: true });
   const path = join(dir, `${retroId}.md`);
   await writeFile(path, contents, "utf-8");

@@ -33,7 +33,7 @@ export interface Recommendation {
   /** The cluster this came from, so the proposal traces back to its evidence. */
   readonly clusterKey: string;
   readonly kind: RecommendationKind;
-  /** The `.sdd/` file this would change. */
+  /** The `.wst/` file this would change. */
   readonly target: string;
   readonly summary: string;
   readonly rationale: string;
@@ -72,7 +72,7 @@ export function validateRecommendation(
     seen.add(id);
   }
 
-  // 2. Blast radius. The retro may only change `.sdd/`, and never the constitution.
+  // 2. Blast radius. The retro may only change `.wst/`, and never the constitution.
   if (NEVER_TOUCH.includes(rec.target)) {
     reasons.push(
       `targets ${rec.target}, which the retro never amends — the constitution is human-owned`,

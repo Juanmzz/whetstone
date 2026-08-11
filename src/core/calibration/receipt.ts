@@ -8,7 +8,7 @@
  * `status: passed` with `runs >= 1`? Two hand-typed fields.
  *
  * That was demonstrated, not theorised: editing three lines of
- * `.sdd/checks/correctness.md` in a text editor took a lens sitting at
+ * `.wst/checks/correctness.md` in a text editor took a lens sitting at
  * `uncalibrated`, `runs: 0` and loaded it at `severity: block`. No measurement ran.
  * The one property an outside survey could not find in any comparable tool was, in
  * practice, an honour-system checkbox.

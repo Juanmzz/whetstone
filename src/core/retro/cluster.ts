@@ -2,7 +2,7 @@
  * Retro steps 1-2: read the new signals, find the PATTERNS rather than the incidents.
  * PURE — this half is deterministic on purpose.
  *
- * The split that matters (see `.sdd/architecture.md`): clustering is mechanical and
+ * The split that matters (see `.wst/architecture.md`): clustering is mechanical and
  * belongs to the engine; NAMING the meta-pattern and forming a recommendation is
  * judgment and belongs to the LLM; approving it is the human's. Clustering in code
  * means the evidence behind a proposal is always reproducible — you can re-derive

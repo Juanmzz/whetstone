@@ -87,7 +87,7 @@ one `spawn` failure. The distribution is not random: **zero** errors across 40 r
 fixtures (`known-*`, `swallow-*`, `nullish-*`, all ≤10 diff lines) and **13 errors across the 40
 runs** of the four long ones (`race-*`, `boundary-*`, 11–15 diff lines) — a 33% blind rate on the
 longer inputs alone. The contamination that
-`.sdd/architecture.md` records as fixed by `--append-system-prompt` is not fixed — it is merely rare
+`.wst/architecture.md` records as fixed by `--append-system-prompt` is not fixed — it is merely rare
 on short inputs, and a real gate reviews diffs far longer than 15 lines.
 
 This is an adapter defect (`src/shell/claude.ts` / `src/core/llm/verdict.ts`), not a fixture problem
@@ -134,7 +134,7 @@ Two changes since the run above, so this measures both at once:
 2. **The adapter stops discarding correct verdicts** (sig-0008) — trailing tool-call markup
    is stripped rather than rejected.
 
-The harness now READS the lens from `.sdd/checks/correctness.md` instead of keeping its own
+The harness now READS the lens from `.wst/checks/correctness.md` instead of keeping its own
 copy. The old "must stay in sync" comment was a receipt-integrity hole: on drift you
 calibrate one lens and ship another, and the `calibration:` block vouches for text that
 never ran.

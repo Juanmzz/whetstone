@@ -4,16 +4,16 @@ import { auditSelfContained } from "./selfcontained.js";
 const audit = (contents: string, extra: { files?: string[]; copies?: string[] } = {}) =>
   auditSelfContained({
     files: [
-      { path: ".sdd/constitution.md", contents },
+      { path: ".wst/constitution.md", contents },
       ...(extra.files ?? []).map((p) => ({ path: p, contents: "" })),
     ],
-    copies: (extra.copies ?? []).map((to) => ({ from: to.replace(".sdd/", ""), to })),
+    copies: (extra.copies ?? []).map((to) => ({ from: to.replace(".wst/", ""), to })),
   });
 
 describe("auditSelfContained — Whetstone's own files may never be referenced", () => {
   it("passes content that mentions nothing outside the target repo", () => {
-    expect(audit("Run `npm test`. Log signals in `.sdd/memory/signals.jsonl`.", {
-      files: [".sdd/memory/signals.jsonl"],
+    expect(audit("Run `npm test`. Log signals in `.wst/memory/signals.jsonl`.", {
+      files: [".wst/memory/signals.jsonl"],
     })).toEqual([]);
   });
 
@@ -34,40 +34,40 @@ describe("auditSelfContained — Whetstone's own files may never be referenced",
   });
 
   it("catches a possessive reference to Whetstone's own tree", () => {
-    expect(audit("Copy the eight files from Whetstone's `.sdd/skills/`.").length).toBeGreaterThan(0);
+    expect(audit("Copy the eight files from Whetstone's `.wst/skills/`.").length).toBeGreaterThan(0);
   });
 
   it("reports the file and line, so the violation is fixable without a search", () => {
     const found = audit("line one\nline two\nsee docs/woz/init.md\n");
-    expect(found[0]?.path).toBe(".sdd/constitution.md");
+    expect(found[0]?.path).toBe(".wst/constitution.md");
     expect(found[0]?.line).toBe(3);
     expect(found[0]?.why.length).toBeGreaterThan(0);
   });
 });
 
-describe("auditSelfContained — every .sdd/ path named must be a path that gets created", () => {
-  it("catches a reference to a .sdd/ file the plan does not write", () => {
-    const found = audit("Architecture lives in `.sdd/architecture.md`.");
+describe("auditSelfContained — every .wst/ path named must be a path that gets created", () => {
+  it("catches a reference to a .wst/ file the plan does not write", () => {
+    const found = audit("Architecture lives in `.wst/architecture.md`.");
     expect(found).toHaveLength(1);
-    expect(found[0]?.match).toBe(".sdd/architecture.md");
+    expect(found[0]?.match).toBe(".wst/architecture.md");
   });
 
   it("accepts a reference to a file the plan does write", () => {
     expect(
-      audit("The schema is in `.sdd/memory/README.md`.", { files: [".sdd/memory/README.md"] }),
+      audit("The schema is in `.wst/memory/README.md`.", { files: [".wst/memory/README.md"] }),
     ).toEqual([]);
   });
 
   it("accepts a reference to a skill that is copied rather than generated", () => {
-    expect(audit("See `.sdd/skills/voice.md`.", { copies: [".sdd/skills/voice.md"] })).toEqual([]);
+    expect(audit("See `.wst/skills/voice.md`.", { copies: [".wst/skills/voice.md"] })).toEqual([]);
   });
 
   it("accepts a directory reference", () => {
-    expect(audit("Add an ADR under `.sdd/memory/decisions/`.")).toEqual([]);
+    expect(audit("Add an ADR under `.wst/memory/decisions/`.")).toEqual([]);
   });
 
   it("accepts a placeholder or a glob", () => {
-    expect(audit("Add `.sdd/checks/<id>.md`, matched by `.sdd/skills/**`.")).toEqual([]);
+    expect(audit("Add `.wst/checks/<id>.md`, matched by `.wst/skills/**`.")).toEqual([]);
   });
 
   it("applies the same closure to .claude/, which init also writes", () => {
@@ -80,7 +80,7 @@ describe("auditSelfContained — every .sdd/ path named must be a path that gets
   });
 
   it("is not fooled by trailing punctuation", () => {
-    expect(audit("It lives at `.sdd/memory/README.md`.", { files: [".sdd/memory/README.md"] }))
+    expect(audit("It lives at `.wst/memory/README.md`.", { files: [".wst/memory/README.md"] }))
       .toEqual([]);
   });
 

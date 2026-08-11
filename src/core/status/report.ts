@@ -2,12 +2,12 @@
  * `wst status`. PURE — the command gathers facts through ports, this decides what
  * they mean.
  *
- * Scope note: this deliberately does NOT parse `.sdd/` — it only checks that the
+ * Scope note: this deliberately does NOT parse `.wst/` — it only checks that the
  * directory exists. The loader is Step 1; reaching for it here would drag the
  * check-registry schema into the skeleton before that schema is decided.
  */
 
-import { DEFINITION_DIR } from "../paths.js";
+import { DEFINITION_DIR, legacyDirectoryMessage } from "../paths.js";
 
 /** The `claude` build the adapter's flag set was measured against. */
 export const VALIDATED_JUDGE_VERSION = "2.1.224";
@@ -15,7 +15,16 @@ export const VALIDATED_JUDGE_VERSION = "2.1.224";
 export interface StatusFacts {
   readonly repoRoot: string | null;
   readonly branch: string | null;
-  readonly sddPresent: boolean;
+  readonly definitionPresent: boolean;
+  /**
+   * Whether the directory Whetstone USED to write is still here (ADR-0012).
+   *
+   * A separate fact rather than folded into the one above, because the two have
+   * different fixes and the wrong one is destructive: `wst init` on a repo whose
+   * rules live under the old name either refuses on a collision or, with
+   * `--force`, overwrites a layer it cannot see.
+   */
+  readonly legacyPresent: boolean;
   readonly judge: { readonly name: string; readonly version: string | null };
   readonly nodeVersion: string;
   readonly hooks: HookFacts;
@@ -32,7 +41,7 @@ export type PluginInstall = "enabled" | "disabled" | "absent" | "unknown";
 /**
  * Whether the plugin's hooks would DO anything from here.
  *
- * `plugin/hooks/gate-on-stop.mjs` exits silently whenever it cannot run — no `.sdd/`,
+ * `plugin/hooks/gate-on-stop.mjs` exits silently whenever it cannot run — no `.wst/`,
  * no `wst`, not a repo. That is the right behaviour for a hook and it leaves the user
  * with no way to discover it. These are the facts that answer it.
  */
@@ -45,9 +54,9 @@ export interface PluginFacts {
    */
   readonly hookRoot: string;
   readonly hookRootIsRepo: boolean;
-  readonly hookRootHasSdd: boolean;
-  /** Whether `.sdd/` is tracked. Untracked files do not propagate into worktrees. */
-  readonly sddTracked: boolean;
+  readonly hookRootHasDefinition: boolean;
+  /** Whether `.wst/` is tracked. Untracked files do not propagate into worktrees. */
+  readonly definitionTracked: boolean;
 }
 
 /** Why the hooks would do nothing from here, or `null` when they would. */
@@ -55,7 +64,7 @@ export function pluginInertReason(plugin: PluginFacts): string | null {
   if (!plugin.hookRootIsRepo) {
     return `\`${plugin.hookRoot}\` is not a git repository, so the gate cannot run there`;
   }
-  if (!plugin.hookRootHasSdd) {
+  if (!plugin.hookRootHasDefinition) {
     return `\`${plugin.hookRoot}\` has no \`${DEFINITION_DIR}/\`, so there is nothing to gate against`;
   }
   return null;
@@ -99,8 +108,14 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   if (facts.repoRoot === null) {
     problems.push("not inside a git repository — Whetstone is git-native by design");
   }
-  if (!facts.sddPresent) {
-    problems.push(`no ${DEFINITION_DIR}/ directory — run \`wst init\` to create one`);
+  if (!facts.definitionPresent) {
+    // Never "missing, run init" when the rules are sitting right there under the
+    // old name. That advice is how someone loses them.
+    problems.push(
+      facts.legacyPresent
+        ? legacyDirectoryMessage(facts.repoRoot ?? ".")
+        : `no ${DEFINITION_DIR}/ directory — run \`wst init\` to create one`,
+    );
   }
   if (facts.judge.version === null) {
     problems.push(
@@ -157,7 +172,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
         `the plugin is loaded but INERT from here: ${inert}. Its hooks fail silently on ` +
           `purpose, so nothing else will tell you`,
       );
-    } else if (!facts.plugin.sddTracked) {
+    } else if (!facts.plugin.definitionTracked) {
       warnings.push(
         `\`${DEFINITION_DIR}/\` is not tracked by git. Untracked files do not propagate into worktrees, ` +
           `so the plugin is inert in every worktree cut from this repo — including the ones ` +
@@ -213,7 +228,7 @@ export function renderStatusReport(
     "",
     `  repo      ${facts.repoRoot ?? "(not a git repository)"}`,
     `  branch    ${facts.branch ?? "(none)"}`,
-    `  ${`${DEFINITION_DIR}/`.padEnd(9)} ${facts.sddPresent ? "present" : "missing"}`,
+    `  ${`${DEFINITION_DIR}/`.padEnd(9)} ${facts.definitionPresent ? "present" : "missing"}`,
     `  judge     ${facts.judge.name} ${facts.judge.version ?? "(not found)"}`,
     `  node      ${facts.nodeVersion}`,
     // Names the owner when it is not us. "NOT active" alone reads as "nothing is

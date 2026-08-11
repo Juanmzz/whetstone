@@ -33,9 +33,9 @@ describe("seedChecks — round-trips through the real registry loader", () => {
     expect(registry.active.length).toBe(checks.length);
   });
 
-  it("writes every file under .sdd/checks/<id>.md so the id matches the filename stem", () => {
+  it("writes every file under .wst/checks/<id>.md so the id matches the filename stem", () => {
     for (const file of seedChecks(tsRepo, { date: "2026-08-08" })) {
-      expect(file.path).toMatch(/^\.sdd\/checks\/[a-z0-9-]+\.md$/);
+      expect(file.path).toMatch(/^\.wst\/checks\/[a-z0-9-]+\.md$/);
     }
   });
 

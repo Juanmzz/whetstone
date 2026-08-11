@@ -49,7 +49,7 @@ describe("FCIS boundary", () => {
    *
    * `node:crypto`'s `createHash` is deterministic computation — same input, same
    * output, no I/O, no clock, no ambient state — so it belongs in the core, and
-   * `.sdd/architecture.md` already lists receipt hashing as an engine
+   * `.wst/architecture.md` already lists receipt hashing as an engine
    * responsibility. It was previously allowed only by omission from this list;
    * recording it here makes it a decision rather than an oversight.
    *

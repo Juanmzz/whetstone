@@ -40,14 +40,19 @@ import { classify, route } from "../core/triage/index.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { createGitAdapter } from "../shell/git.js";
 import { readReceipt, writeReceipt } from "../shell/receipts.js";
-import { definitionRoot, loadRegistry, loadTriageRules, type LoadedTriageRules } from "../shell/sdd.js";
+import {
+  loadRegistry,
+  loadTriageRules,
+  resolveDefinitionRoot,
+  type LoadedTriageRules,
+} from "../shell/sdd.js";
 
 export interface GateOptions {
   /** A `git diff` range. Default `HEAD` — the working tree against the last commit. */
   readonly range?: string;
   /**
    * Force a tier instead of the one triage classified. An ESCAPE HATCH, not the
-   * normal path: `.sdd/triage.yaml` is where a project says what a change earns.
+   * normal path: `.wst/triage.yaml` is where a project says what a change earns.
    * Kept because escalating by hand ("verify this as if it were strict") is a
    * legitimate thing to want, and because it is how the tier-specific behaviour
    * gets exercised without fabricating a diff.
@@ -145,11 +150,11 @@ function unifiedDiff(range: string, paths: readonly string[], cwd: string): Prom
   });
 }
 
-function createReceiptStore(sddRoot: string): ReceiptStore {
+function createReceiptStore(definitionRoot: string): ReceiptStore {
   return {
-    read: (checkId) => readReceipt(sddRoot, checkId),
+    read: (checkId) => readReceipt(definitionRoot, checkId),
     write: async (receipt) => {
-      await writeReceipt(sddRoot, receipt);
+      await writeReceipt(definitionRoot, receipt);
     },
   };
 }
@@ -278,13 +283,17 @@ export async function runGate(
     console.error("not inside a git repository — the gate reads a diff, so it needs one");
     return EXIT_MISCONFIGURED;
   }
-  const sddRoot = definitionRoot(repoRoot);
   const range = opts.range ?? DEFAULT_RANGE;
 
+  let definitionRoot: string;
   let registry: Registry;
   let rules: LoadedTriageRules;
   try {
-    [registry, rules] = await Promise.all([loadRegistry(sddRoot), loadTriageRules(sddRoot)]);
+    definitionRoot = await resolveDefinitionRoot(repoRoot);
+    [registry, rules] = await Promise.all([
+      loadRegistry(definitionRoot),
+      loadTriageRules(definitionRoot),
+    ]);
   } catch (cause) {
     // Configuration that will not load means an UNGATED change. It must be loud.
     // Triage rules belong in the same breath as the registry: rules the gate
@@ -304,7 +313,7 @@ export async function runGate(
   }
 
   // The same two calls `wst pr` makes, deliberately. The gate is the enforcement
-  // channel; if it routed from anything other than `.sdd/triage.yaml`, the project's
+  // channel; if it routed from anything other than `.wst/triage.yaml`, the project's
   // triage rules would be decorative exactly where they matter, and the annotation
   // would describe a tier the gate never used.
   const triage = classify(files, rules.rules, rules.origin);
@@ -316,7 +325,7 @@ export async function runGate(
       hashFile: (path) => git.hashFile(path),
       clock: { now: () => new Date() },
       receipts:
-        opts.noReceipts === true ? createDistrustfulReceiptStore() : createReceiptStore(sddRoot),
+        opts.noReceipts === true ? createDistrustfulReceiptStore() : createReceiptStore(definitionRoot),
       run: createCheckRunner({
         cwd: repoRoot,
         range,
@@ -354,8 +363,8 @@ export async function runGate(
       // The branch is read HERE, from the same adapter that read the diff, so the
       // signal records the unit of work the verdict was actually about.
       emitted = await appendSignals(
-        sddRoot,
-        dedupe(candidates, await readSignalLog(sddRoot)),
+        definitionRoot,
+        dedupe(candidates, await readSignalLog(definitionRoot)),
         new Date(),
         await git.currentBranch(),
       );

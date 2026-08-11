@@ -43,8 +43,8 @@ describe("skills", () => {
     const copies = skillCopies();
     expect(copies).toHaveLength(8);
     for (const copy of copies) {
-      expect(copy.to).toMatch(/^\.sdd\/skills\/[a-z-]+\.md$/);
-      expect(copy.from).toBe(copy.to.replace(".sdd/", ""));
+      expect(copy.to).toMatch(/^\.wst\/skills\/[a-z-]+\.md$/);
+      expect(copy.from).toBe(copy.to.replace(".wst/", ""));
     }
   });
 
@@ -215,8 +215,8 @@ describe("renderAgentsMd", () => {
   });
 
   it("tells the agent how to record a signal, pointing at the schema that shipped with it", () => {
-    expect(agents).toContain(".sdd/memory/signals.jsonl");
-    expect(agents).toContain(".sdd/memory/README.md");
+    expect(agents).toContain(".wst/memory/signals.jsonl");
+    expect(agents).toContain(".wst/memory/README.md");
   });
 
   it("names the seeded checks so the gate is not a surprise", () => {
@@ -230,7 +230,7 @@ describe("renderAgentsMd", () => {
   it('never says "this file" — inlined prose must name the file it means', () => {
     // The constitution and the triage table are both inlined here. A sentence
     // reading "this file is amended only by a human" is true in
-    // `.sdd/constitution.md` and false in `AGENTS.md`, which is generated and
+    // `.wst/constitution.md` and false in `AGENTS.md`, which is generated and
     // overwritten. Referring by name is the only rendering that stays true.
     expect(agents.toLowerCase()).not.toMatch(/\bthis file\b/);
   });

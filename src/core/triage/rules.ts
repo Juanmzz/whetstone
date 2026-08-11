@@ -1,9 +1,9 @@
 /**
  * The triage rules loader. PURE — text in, validated rules out. Reading
- * `.sdd/triage.yaml` off disk belongs to the composition root
+ * `.wst/triage.yaml` off disk belongs to the composition root
  * (`src/commands/triage.ts`), so the format stays testable without a filesystem.
  *
- * `DEFAULT_RULES_YAML` is the exact text shipped as `.sdd/triage.yaml`, and
+ * `DEFAULT_RULES_YAML` is the exact text shipped as `.wst/triage.yaml`, and
  * `DEFAULT_RULES` is its parse — one source, so the built-in fallback and the
  * file on disk cannot drift apart. It also keeps the payload self-contained
  * (ADR-0004): a project that has not written a `triage.yaml` yet still gets a
@@ -91,8 +91,8 @@ export function parseTriageRules(
 }
 
 /**
- * The text of `.sdd/triage.yaml`. Compiled BY HAND from the table in
- * `.sdd/triage-rules.md` — that file is the source (ADR-0005), this is its
+ * The text of `.wst/triage.yaml`. Compiled BY HAND from the table in
+ * `.wst/triage-rules.md` — that file is the source (ADR-0005), this is its
  * machine-readable form. Change the table first, never the reverse.
  */
 export const DEFAULT_RULES_YAML = `# Triage rules — the machine-readable form of the table in ${DEFINITION_DIR}/triage-rules.md.

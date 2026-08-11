@@ -6,7 +6,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
-import { definitionRoot, loadRegistry } from "../shell/sdd.js";
+import { loadRegistry, resolveDefinitionRoot } from "../shell/sdd.js";
 import { parseNameStatus } from "../core/diff/parse.js";
 import { classify, DEFAULT_RULES, parseTriageRules, route } from "../core/triage/index.js";
 import type { TriageRule } from "../core/contracts.js";
@@ -27,13 +27,13 @@ interface RuleSource {
 }
 
 /**
- * A missing `.sdd/triage.yaml` is NOT an error: the built-in defaults are the
+ * A missing `.wst/triage.yaml` is NOT an error: the built-in defaults are the
  * same ruleset, and a project that has not written one yet should still be
  * triaged rather than crash. A malformed one IS an error — falling back there
  * would silently ignore rules someone deliberately wrote.
  */
-async function loadRules(sddRoot: string): Promise<RuleSource> {
-  const path = join(sddRoot, TRIAGE_RULES_FILE);
+async function loadRules(definitionRoot: string): Promise<RuleSource> {
+  const path = join(definitionRoot, TRIAGE_RULES_FILE);
 
   let text: string;
   try {
@@ -59,13 +59,13 @@ export async function runTriage(
 ): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = (await git.repoRoot()) ?? cwd;
-  const sddRoot = definitionRoot(repoRoot);
   const range = opts.range ?? "HEAD";
 
   let source: RuleSource;
   let registry;
   try {
-    [source, registry] = await Promise.all([loadRules(sddRoot), loadRegistry(sddRoot)]);
+    const root = await resolveDefinitionRoot(repoRoot);
+    [source, registry] = await Promise.all([loadRules(root), loadRegistry(root)]);
   } catch (cause) {
     // Same posture as `wst check`: unloadable configuration means an unclassified
     // change, and the whole point is that this cannot happen quietly.

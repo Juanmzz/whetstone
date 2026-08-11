@@ -16,9 +16,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSignalLog } from "../src/core/signals/parse.js";
 
-const LOG = join(import.meta.dirname, "..", ".sdd", "memory", "signals.jsonl");
+const LOG = join(import.meta.dirname, "..", ".wst", "memory", "signals.jsonl");
 
-describe("parseSignalLog against .sdd/memory/signals.jsonl", () => {
+describe("parseSignalLog against .wst/memory/signals.jsonl", () => {
   it("accepts every entry the real log has accumulated", async () => {
     const text = await readFile(LOG, "utf-8");
     const lines = text.split("\n").filter((l) => l.trim() !== "");

@@ -12,7 +12,7 @@
  * is acceptable — and an autofix on a strict change is a second, unreviewed
  * change smuggled in under the first one's review.
  *
- * The frugality half is the same table read the other way (`.sdd/architecture.md`):
+ * The frugality half is the same table read the other way (`.wst/architecture.md`):
  * opus judgment is spent only where a wrong verdict is expensive.
  */
 

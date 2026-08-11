@@ -30,7 +30,7 @@ for await (const _ of process.stdin) void _;
 /**
  * Every failure to RUN exits silently.
  *
- * No `.sdd/`, no `wst` on PATH, not a git repo: none of those are facts about the
+ * No `.wst/`, no `wst` on PATH, not a git repo: none of those are facts about the
  * work, and a hook that complains about its own absence on every stop is a hook
  * people remove. This is the same distinction the gate itself draws between a check
  * that failed and a check that could not run — applied to the hook.

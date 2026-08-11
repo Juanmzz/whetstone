@@ -1,5 +1,5 @@
 /**
- * Seeding `.sdd/checks/`.
+ * Seeding `.wst/checks/`.
  *
  * Two rules govern this module, and both of them are about what NOT to write.
  *

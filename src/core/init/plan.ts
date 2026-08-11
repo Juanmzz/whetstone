@@ -31,6 +31,7 @@ import {
   ADR_TEMPLATE,
   CLAUDE_MD,
   MEMORY_README,
+  OUT_OF_SCOPE_README,
   activeSkills,
   renderAgentsMd,
   renderConstitution,
@@ -46,9 +47,9 @@ import {
 
 export interface InitOptions {
   /**
-   * Emit `.sdd/` only: no `AGENTS.md`, no `CLAUDE.md`.
+   * Emit `.wst/` only: no `AGENTS.md`, no `CLAUDE.md`.
    *
-   * `.sdd/` is the vendor-neutral source of truth (ADR-0002) and the vendor files are
+   * `.wst/` is the vendor-neutral source of truth (ADR-0002) and the vendor files are
    * RENDERINGS of it. A repo that already has its own `AGENTS.md` — because another
    * harness owns that surface — needs the definitions without the rendering, and
    * refusing to install at all was the only previous answer.
@@ -148,9 +149,12 @@ export function planInit(input: InitPlanInput): InitPlan {
         "\nit deliberately did not change. The next retro starts where the last one stopped.\n",
     },
     { path: `${DEFINITION_DIR}/memory/decisions/_TEMPLATE.md`, contents: ADR_TEMPLATE },
+    // No entries, only the home. A seeded refusal would be a decision nobody made,
+    // and it would be read as one — the same reason `signals.jsonl` ships empty.
+    { path: `${DEFINITION_DIR}/memory/out-of-scope/README.md`, contents: OUT_OF_SCOPE_README },
   ];
 
-  // The vendor files are RENDERINGS of `.sdd/` (ADR-0002), which is why they can be
+  // The vendor files are RENDERINGS of `.wst/` (ADR-0002), which is why they can be
   // withheld without withholding anything: a repo whose harness already owns
   // `AGENTS.md` gets the definitions and keeps its own front door. Refusing to
   // install at all used to be the only answer to that.
@@ -174,7 +178,7 @@ export function planInit(input: InitPlanInput): InitPlan {
   if (options.definitionsOnly !== true) files.push(...vendorFiles);
 
   // No `.claude/` any more (ADR-0010). `init` writes DEFINITIONS; the editor hook is
-  // the plugin's, which reads `.sdd/triage.yaml` at run time rather than baking the
+  // the plugin's, which reads `.wst/triage.yaml` at run time rather than baking the
   // paths in, and composes with a repo's existing hooks instead of replacing their
   // `settings.json` wholesale. That write is what forced `collisions.ts` to exist.
 

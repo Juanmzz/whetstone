@@ -2,7 +2,7 @@
  * What `init` would destroy. PURE.
  *
  * `init` writes files into somebody else's repository. Until this module existed the
- * only guard was on `.sdd/` itself (`commands/init.ts`), so a repo that had never
+ * only guard was on `.wst/` itself (`commands/init.ts`), so a repo that had never
  * seen Whetstone but did have a hand-written `AGENTS.md`, a `CLAUDE.md` and a
  * populated `.claude/settings.json` lost all three, silently, with no backup and no
  * mention in the output. The writer is `mkdir -p` + `writeFile`, unconditional.

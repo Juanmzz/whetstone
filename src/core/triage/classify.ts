@@ -3,7 +3,7 @@
  *
  * Turns `ChangedFile[]` + `TriageRule[]` into the one number the whole gate hangs
  * off: which discipline this change gets. Three rules, all from
- * `.sdd/triage-rules.md`, and all of them load-bearing:
+ * `.wst/triage-rules.md`, and all of them load-bearing:
  *
  * 1. **First-match-wins, in rule order.** Order IS precedence. Not
  *    most-specific-wins: that would be an implicit ranking nobody wrote down,
@@ -27,7 +27,7 @@ import { matchesPathGlob } from "./glob.js";
 export type TriageMatch = TriageResult["matches"][number];
 
 /**
- * Where a file lands when no rule matches it. `.sdd/triage-rules.md`: "Default
+ * Where a file lands when no rule matches it. `.wst/triage-rules.md`: "Default
  * when a change matches nothing above: light." Deliberately NOT `off` — an
  * unrecognised path is an unknown, and an unknown gets reasoned about before
  * merge. It is also why a config cannot express the fallback as a trailing `**`

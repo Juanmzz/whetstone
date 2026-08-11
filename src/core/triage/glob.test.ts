@@ -24,13 +24,13 @@ describe("matchesPathGlob", () => {
 
   it("matches dot-leading directories when the pattern spells the dot out", () => {
     // MEASURED, and load-bearing for the default ruleset: `**` does NOT cross a
-    // dot-leading segment (".sdd/x.md" vs "**" is false), but ".sdd/skills/**"
-    // does match. Every rule covering .sdd/ or .claude/ must therefore name the
+    // dot-leading segment (".wst/x.md" vs "**" is false), but ".wst/skills/**"
+    // does match. Every rule covering .wst/ or .claude/ must therefore name the
     // dotted segment literally — and a catch-all "**" rule would NOT be a
     // catch-all, which is why the unmatched-file fallback lives in code.
-    expect(matchesPathGlob(".sdd/skills/tdd-discipline.md", ".sdd/skills/**")).toBe(true);
+    expect(matchesPathGlob(".wst/skills/tdd-discipline.md", ".wst/skills/**")).toBe(true);
     expect(matchesPathGlob(".claude/hooks/lane-guard.mjs", ".claude/hooks/**")).toBe(true);
-    expect(matchesPathGlob(".sdd/skills/tdd-discipline.md", "**")).toBe(false);
+    expect(matchesPathGlob(".wst/skills/tdd-discipline.md", "**")).toBe(false);
   });
 
   it("is case sensitive, like the paths git reports", () => {

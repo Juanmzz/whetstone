@@ -24,7 +24,7 @@ const CHECK_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export interface Receipt {
   readonly format: typeof RECEIPT_FORMAT;
-  /** The check that passed. Matches the `.sdd/checks/` filename stem. */
+  /** The check that passed. Matches the `.wst/checks/` filename stem. */
   readonly checkId: string;
   /** Recorded for the human reading the file; the binding lives inside `inputHash`. */
   readonly checkVersion: number;

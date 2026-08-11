@@ -32,7 +32,7 @@ shared:
   - package.json                # dependencies are a shared decision
   - tsconfig.json
   - tsconfig.build.json
-  - .sdd/                       # governance, checks, triage, this file
+  - .wst/                       # governance, checks, triage, this file
   - .claude/                    # hooks and settings, incl. this guard
 
 lanes:
@@ -73,7 +73,7 @@ DECIDED by the orchestrator: use node:path matchesGlob. Verified against every
 
   init:
     step: 6
-    description: wst init — interview a repo and generate its .sdd/.
+    description: wst init — interview a repo and generate its .wst/.
     owns:
       - src/core/init/
       - src/commands/init.ts
@@ -91,5 +91,5 @@ DECIDED by the orchestrator: use node:path matchesGlob. Verified against every
                                # harness at new fixtures without owning it
     note: >-
       Report whether the correctness lens should be demoted; do NOT edit
-      .sdd/checks/correctness.md yourself — changing a check's severity is a gate
-      policy decision and .sdd/ is shared.
+      .wst/checks/correctness.md yourself — changing a check's severity is a gate
+      policy decision and .wst/ is shared.

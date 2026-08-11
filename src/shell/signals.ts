@@ -22,10 +22,10 @@ export const SIGNALS_PATH = "memory/signals.jsonl";
  * gate's problem: an empty log deduplicates against nothing, so every signal was
  * re-emitted and the retro clustered on recurrence that never happened.
  */
-export async function readSignalLog(sddRoot: string): Promise<SignalRecord[]> {
+export async function readSignalLog(definitionRoot: string): Promise<SignalRecord[]> {
   let text: string;
   try {
-    text = await readFile(join(sddRoot, SIGNALS_PATH), "utf-8");
+    text = await readFile(join(definitionRoot, SIGNALS_PATH), "utf-8");
   } catch {
     return [];
   }
@@ -74,14 +74,14 @@ async function separator(path: string): Promise<string> {
  * costume of a fact, and the retro would group work that never shared a branch.
  */
 export async function appendSignals(
-  sddRoot: string,
+  definitionRoot: string,
   signals: readonly EmittableSignal[],
   now: Date,
   branch: string | null,
 ): Promise<string[]> {
   if (signals.length === 0) return [];
 
-  const path = join(sddRoot, SIGNALS_PATH);
+  const path = join(definitionRoot, SIGNALS_PATH);
   await mkdir(dirname(path), { recursive: true });
 
   const ids: string[] = [];
@@ -121,8 +121,8 @@ export async function appendSignals(
  * log). Folding a human's single record into it would mean one branch deciding
  * which half of the contract applies, which is how two paths drift into each other.
  */
-export async function appendSignalRecord(sddRoot: string, record: SignalRecord): Promise<string> {
-  const path = join(sddRoot, SIGNALS_PATH);
+export async function appendSignalRecord(definitionRoot: string, record: SignalRecord): Promise<string> {
+  const path = join(definitionRoot, SIGNALS_PATH);
   await mkdir(dirname(path), { recursive: true });
   await appendFile(path, `${await separator(path)}${JSON.stringify(record)}\n`, "utf-8");
   return path;

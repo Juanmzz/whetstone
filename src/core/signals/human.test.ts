@@ -116,8 +116,8 @@ describe("humanSignal", () => {
       expect(ok({ ruleAffected: ["recording.md"] }).rule_affected).toEqual(["skills/recording.md"]);
     });
 
-    it("leaves a top-level .sdd document where it is", () => {
-      // `.sdd/triage-rules.md` says of itself "This file **is** retro-amendable".
+    it("leaves a top-level .wst document where it is", () => {
+      // `.wst/triage-rules.md` says of itself "This file **is** retro-amendable".
       // Filing it under skills/ would name a path that does not exist.
       expect(ok({ ruleAffected: ["triage-rules.md"] }).rule_affected).toEqual(["triage-rules.md"]);
     });
@@ -140,7 +140,7 @@ describe("humanSignal", () => {
       expect(ok({ ruleAffected: ["", "   "] }).rule_affected).toEqual([]);
     });
 
-    it("rejects a path that cannot name a rule file under .sdd/", () => {
+    it("rejects a path that cannot name a rule file under .wst/", () => {
       for (const bad of ["skills/recording", "skills/Recording Notes.md", "../../etc/passwd.md"]) {
         expect(errors({ ruleAffected: [bad] }).join()).toMatch(/rule/);
       }

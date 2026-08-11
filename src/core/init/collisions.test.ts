@@ -9,7 +9,7 @@ const plan = (paths: readonly string[], copies: readonly string[] = []): Collida
 
 describe("collisionsIn", () => {
   it("reports nothing when the repo is empty of everything planned", () => {
-    expect(collisionsIn(plan([".sdd/constitution.md", "AGENTS.md"]), [])).toEqual([]);
+    expect(collisionsIn(plan([".wst/constitution.md", "AGENTS.md"]), [])).toEqual([]);
   });
 
   it("reports a planned file that already exists", () => {
@@ -20,8 +20,8 @@ describe("collisionsIn", () => {
   it("covers COPIES too, not just generated files", () => {
     // The skills are copied rather than generated, and a copy overwrites just as
     // hard. Guarding only `files` would leave half the payload unguarded.
-    const found = collisionsIn(plan([], ["/.sdd/skills/voice.md"]), ["/.sdd/skills/voice.md"]);
-    expect(found.map((c) => c.path)).toEqual(["/.sdd/skills/voice.md"]);
+    const found = collisionsIn(plan([], ["/.wst/skills/voice.md"]), ["/.wst/skills/voice.md"]);
+    expect(found.map((c) => c.path)).toEqual(["/.wst/skills/voice.md"]);
   });
 
   it("ignores existing files the plan does not write", () => {
@@ -43,7 +43,7 @@ describe("collisionsIn", () => {
  * The stake is the whole point of the module.
  *
  * A bare list of paths tells the human WHAT is about to be destroyed but not what
- * it costs them, and the cost is wildly uneven: losing `.sdd/memory/signals.jsonl`
+ * it costs them, and the cost is wildly uneven: losing `.wst/memory/signals.jsonl`
  * is an empty file coming back empty, losing a hand-written `CLAUDE.md` is losing
  * work nothing else records. The refusal message has to let them tell those apart
  * without opening every file.

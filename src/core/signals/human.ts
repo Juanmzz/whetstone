@@ -67,15 +67,15 @@ const isSeverity = (value: string): value is SignalSeverity =>
   (SEVERITIES as readonly string[]).includes(value);
 
 /**
- * A `.sdd`-relative path to a markdown rule file: `skills/recording.md`,
+ * A `.wst`-relative path to a markdown rule file: `skills/recording.md`,
  * `triage-rules.md`, `memory/decisions/0007-adr-process.md`. Kebab-case segments,
  * no `.` or `..`, because the string is written into a permanent record and read
- * back as a path by the retro (`commands/retro.ts` reads `.sdd/<rule>`).
+ * back as a path by the retro (`commands/retro.ts` reads `.wst/<rule>`).
  */
 const RULE = /^(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)*[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 
 /**
- * The rule documents that live at the ROOT of `.sdd/` rather than under `skills/`.
+ * The rule documents that live at the ROOT of `.wst/` rather than under `skills/`.
  * Named explicitly so a bare filename can be resolved without guessing: everything
  * else with no directory is a skill, which is what all 44 accumulated entries mean
  * when they write one.

@@ -19,7 +19,7 @@ import {
   ORIENTATION_DOCS,
   type GatingCheck,
 } from "../core/dispatch/charter.js";
-import { definitionRoot, loadRegistry, loadTriageRules } from "../shell/sdd.js";
+import { loadRegistry, loadTriageRules, resolveDefinitionRoot } from "../shell/sdd.js";
 import { createGitAdapter } from "../shell/git.js";
 import { createTreehouseAdapter } from "../shell/treehouse.js";
 import { createCrewmateAdapter, type CrewmateMode } from "../shell/crewmate.js";
@@ -30,7 +30,7 @@ const exec = promisify(execFile);
 /**
  * Which orientation docs exist WHERE THE CREWMATE WILL WORK.
  *
- * Stat'd in the worktree, never in the orchestrator's repo. An untracked `.sdd/`
+ * Stat'd in the worktree, never in the orchestrator's repo. An untracked `.wst/`
  * exists in one and not the other, and that gap is exactly what produced the field
  * report's silent failure (sig-0044) — pointing at the orchestrator's copy would
  * reintroduce the bug this fixes.
@@ -72,9 +72,9 @@ export interface RunOptions {
 export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = (await git.repoRoot()) ?? cwd;
-  const sddRoot = definitionRoot(repoRoot);
-  const registry = await loadRegistry(sddRoot);
-  const triage = await loadTriageRules(sddRoot);
+  const definitionRoot = await resolveDefinitionRoot(repoRoot);
+  const registry = await loadRegistry(definitionRoot);
+  const triage = await loadTriageRules(definitionRoot);
 
   const gatingChecks: GatingCheck[] = registry.active.map((c) => ({
     id: c.id,
@@ -223,7 +223,7 @@ export async function runRun(opts: RunOptions, cwd: string = process.cwd()): Pro
 
     console.log(`--- gate (${base.slice(0, 7)}..HEAD) ---`);
     // `noReceipts`: this gate is judging the crewmate, INSIDE the crewmate's own
-    // worktree, where the crewmate had write access to `.sdd/receipts/`. Measured on
+    // worktree, where the crewmate had write access to `.wst/receipts/`. Measured on
     // the first real dispatch — every check came back `skipped (receipt)`, so the
     // supervising gate verified nothing and the worker's own run had vouched for it.
     const gateExit = await runGate(

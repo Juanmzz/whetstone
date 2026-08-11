@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildStatusReport, renderStatusReport, type StatusFacts } from "./report.js";
+import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../paths.js";
 
 const base = {
   repoRoot: "/repo",
   branch: "engine-skeleton",
-  sddPresent: true,
+  definitionPresent: true,
+  legacyPresent: false,
   judge: { name: "claude", version: "2.1.224" },
   nodeVersion: "v24.19.0",
   hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },
@@ -12,13 +14,13 @@ const base = {
     install: "enabled" as const,
     hookRoot: "/repo",
     hookRootIsRepo: true,
-    hookRootHasSdd: true,
-    sddTracked: true,
+    hookRootHasDefinition: true,
+    definitionTracked: true,
   },
 };
 
 describe("buildStatusReport", () => {
-  it("is ready when the repo, .sdd/ and the judge are all present", () => {
+  it("is ready when the repo, .wst/ and the judge are all present", () => {
     const r = buildStatusReport(base);
     expect(r.ready).toBe(true);
     expect(r.problems).toEqual([]);
@@ -30,8 +32,8 @@ describe("buildStatusReport", () => {
     expect(r.problems.join(" ")).toMatch(/git repository/i);
   });
 
-  it("is not ready without .sdd/", () => {
-    const r = buildStatusReport({ ...base, sddPresent: false });
+  it("is not ready without .wst/", () => {
+    const r = buildStatusReport({ ...base, definitionPresent: false });
     expect(r.ready).toBe(false);
     expect(r.problems.join(" ")).toMatch(/wst init/i);
   });
@@ -49,8 +51,8 @@ describe("buildStatusReport", () => {
     const r = buildStatusReport({ ...base, definitionPresent: false, legacyPresent: true });
     expect(r.ready).toBe(false);
     const said = r.problems.join(" ");
-    expect(said).toContain(".sdd");
-    expect(said).toContain("git mv .sdd .wst");
+    expect(said).toContain(LEGACY_DEFINITION_DIR);
+    expect(said).toContain(`git mv ${LEGACY_DEFINITION_DIR} ${DEFINITION_DIR}`);
     expect(said).not.toMatch(/wst init/i);
   });
 
@@ -76,7 +78,7 @@ describe("buildStatusReport", () => {
   it("reports every problem at once rather than only the first", () => {
     const r = buildStatusReport({
       ...base,
-      sddPresent: false,
+      definitionPresent: false,
       judge: { name: "claude", version: null },
     });
     expect(r.problems).toHaveLength(2);
@@ -96,7 +98,7 @@ describe("renderStatusReport", () => {
   });
 
   it("in quiet mode prints only the NOT ready line, omitting problems", () => {
-    const report = buildStatusReport({ ...base, sddPresent: false });
+    const report = buildStatusReport({ ...base, definitionPresent: false });
     const text = renderStatusReport(report, { quiet: true });
     expect(text).toBe("NOT ready");
   });
@@ -123,7 +125,7 @@ describe("the plugin row", () => {
       .split("\n")
       .find((l) => l.trim().startsWith("plugin")) ?? "";
 
-  it("reports the plugin alongside .sdd/, judge and pre-push", () => {
+  it("reports the plugin alongside .wst/, judge and pre-push", () => {
     expect(row()).not.toBe("");
   });
 
@@ -149,7 +151,7 @@ describe("the plugin row", () => {
 
   /**
    * Reason 1 from the field: the orchestrating session's `CLAUDE_PROJECT_DIR` was the
-   * ChytaPay umbrella folder, which is not a repo and has no `.sdd/`. Both hooks were
+   * ChytaPay umbrella folder, which is not a repo and has no `.wst/`. Both hooks were
    * inert all session and nothing said so.
    */
   it("names the directory the hooks would run in when it is not a git repository", () => {
@@ -159,32 +161,32 @@ describe("the plugin row", () => {
     expect(r.warnings.join(" ")).toMatch(/git repository/i);
   });
 
-  it("gives a different reason when the directory is a repo with no .sdd/", () => {
-    const r = withPlugin({ hookRootHasSdd: false });
-    expect(r.warnings.join(" ")).toMatch(/\.sdd/);
+  it("gives a different reason when the directory is a repo with no .wst/", () => {
+    const r = withPlugin({ hookRootHasDefinition: false });
+    expect(r.warnings.join(" ")).toMatch(/\.wst/);
     expect(r.warnings.join(" ")).not.toMatch(/git repository/i);
   });
 
   /**
    * Reason 2, and the one that generalises worst: untracked files do not propagate
-   * into git worktrees, so an UNCOMMITTED `.sdd/` silently disables the plugin in
+   * into git worktrees, so an UNCOMMITTED `.wst/` silently disables the plugin in
    * every worktree — including the ones `wst run` leases. That is the posture of
    * anyone trialling Whetstone before proposing it to their team.
    */
-  it("warns that an untracked .sdd/ leaves the plugin inert in every worktree", () => {
-    const r = withPlugin({ sddTracked: false });
+  it("warns that an untracked .wst/ leaves the plugin inert in every worktree", () => {
+    const r = withPlugin({ definitionTracked: false });
     expect(r.warnings.join(" ")).toMatch(/worktree/i);
     expect(r.warnings.join(" ")).toMatch(/untracked|commit/i);
   });
 
-  it("does not raise the worktree warning once .sdd/ is tracked", () => {
-    expect(withPlugin({ sddTracked: true }).warnings.join(" ")).not.toMatch(/worktree/i);
+  it("does not raise the worktree warning once .wst/ is tracked", () => {
+    expect(withPlugin({ definitionTracked: true }).warnings.join(" ")).not.toMatch(/worktree/i);
   });
 
   it("says nothing about inertness when the plugin is not installed to be inert", () => {
     // Nothing is broken about a repo that never adopted the plugin. Reporting the
     // hook's would-be root as a problem there is noise, and noise is what gets muted.
-    const r = withPlugin({ install: "absent", hookRootIsRepo: false, sddTracked: false });
+    const r = withPlugin({ install: "absent", hookRootIsRepo: false, definitionTracked: false });
     expect(r.warnings.join(" ")).not.toMatch(/inert/i);
     expect(r.warnings.join(" ")).not.toMatch(/worktree/i);
   });
@@ -194,7 +196,7 @@ describe("the plugin row", () => {
     // repo, and `ready` has to keep meaning what it meant.
     for (const install of ["enabled", "disabled", "absent", "unknown"] as const) {
       for (const hookRootIsRepo of [true, false]) {
-        const r = withPlugin({ install, hookRootIsRepo, sddTracked: false });
+        const r = withPlugin({ install, hookRootIsRepo, definitionTracked: false });
         expect(r.problems.join(" ")).not.toMatch(/plugin/i);
         expect(r.ready).toBe(true);
       }

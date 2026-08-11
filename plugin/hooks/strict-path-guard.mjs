@@ -2,7 +2,7 @@
 /**
  * Warns Claude, at the moment of the edit, that a path ships with full TDD.
  *
- * Reads `.sdd/triage.yaml` AT RUN TIME. The version `wst init` wrote into each repo had
+ * Reads `.wst/triage.yaml` AT RUN TIME. The version `wst init` wrote into each repo had
  * the strict paths compiled in, so editing triage.yaml left the hook warning about
  * yesterday's rules with nothing to say so. A plugin serves every project and cannot
  * bake anything in, which turns that constraint into the fix.
@@ -41,7 +41,7 @@ if (rel.startsWith("..")) process.exit(0); // outside the project
  */
 function strictGlobs() {
   try {
-    const lines = readFileSync(join(root, ".sdd", "triage.yaml"), "utf8").split("\n");
+    const lines = readFileSync(join(root, ".wst", "triage.yaml"), "utf8").split("\n");
     const out = [];
     for (let i = 0; i < lines.length; i++) {
       const glob = /^\s*-\s*glob:\s*["']?(.+?)["']?\s*$/.exec(lines[i] ?? "");
@@ -90,7 +90,7 @@ if (hit !== undefined) {
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         additionalContext:
-          `STRICT-TIER EDIT (${rel}, matched \`${hit}\`). Per .sdd/triage-rules.md this ` +
+          `STRICT-TIER EDIT (${rel}, matched \`${hit}\`). Per .wst/triage-rules.md this ` +
           `path ships with full TDD — RED first — and a fresh-context review. ` +
           `Write the failing test before the implementation.`,
       },
