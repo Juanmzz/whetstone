@@ -12,7 +12,7 @@ import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
 import { runRun } from "./commands/run.js";
 import { runRetro } from "./commands/retro.js";
-import { runSignal } from "./commands/signal.js";
+import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 
@@ -136,22 +136,40 @@ program
   .argument("<type>", "kebab-case type, e.g. triage-miss — the retro clusters on it")
   .argument("<detail...>", "one or two sentences a reader can reconstruct the event from")
   .description("record an observation in .sdd/memory/signals.jsonl (you are the human gate)")
-  .option("-p, --phase <phase>", "where it happened: init, plan, apply, verify, review, …", "other")
-  .option("-s, --severity <severity>", "low | medium | high", "medium")
-  .option("-r, --rule <path...>", "skill file(s) this implicates, e.g. skills/recording.md")
+  // The defaults come from `commands/signal.ts` rather than being written out
+  // again here: the help text and the fallback the command applies are the same
+  // fact, and two copies of a fact drift.
+  .option(
+    "-p, --phase <phase>",
+    "where it happened: init, plan, apply, verify, review, …",
+    DEFAULT_PHASE,
+  )
+  .option("-s, --severity <severity>", "low | medium | high", DEFAULT_SEVERITY)
+  // NOT variadic, and repeatable instead. A variadic option next to a variadic
+  // `<detail...>` argument eats the rest of the sentence: `--rule skills/x.md
+  // mis-triaged an auth change` stored four words as rules and truncated the
+  // observation, in an APPEND-ONLY file that may not be edited to fix it.
+  .option(
+    "-r, --rule <path>",
+    "skill file this implicates, e.g. skills/recording.md — repeat for more",
+    (value: string, previous: string[] | undefined) => [...(previous ?? []), value],
+  )
   .option("--dry-run", "print the line that would be appended, write nothing")
   .action(
     async (
       type: string,
       detail: string[],
-      opts: { phase?: string; severity?: string; rule?: string[]; dryRun?: boolean },
+      // `phase` and `severity` are not optional: Commander always supplies the
+      // defaults above, so a conditional spread would be a branch that never takes
+      // its second path.
+      opts: { phase: string; severity: string; rule?: string[]; dryRun?: boolean },
     ) => {
       process.exitCode = await runSignal({
         type,
         detail: detail.join(" "),
-        ...(opts.phase !== undefined ? { phase: opts.phase } : {}),
-        ...(opts.severity !== undefined ? { severity: opts.severity } : {}),
-        ...(opts.rule !== undefined ? { rule: opts.rule } : {}),
+        phase: opts.phase,
+        severity: opts.severity,
+        rule: opts.rule ?? [],
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
       });
     },
