@@ -77,3 +77,21 @@ export async function appendSignals(
   await appendFile(path, `${lines.join("\n")}\n`, "utf-8");
   return ids;
 }
+
+/**
+ * Append one already-built record, returning the path written. For `wst signal`,
+ * where the record is composed and validated in `core/signals/human.ts` and this
+ * only writes it.
+ *
+ * Same `appendFile`, same reason, and it is a SECOND function rather than a
+ * generalisation of `appendSignals` on purpose: that one owns the machine path
+ * (ids derived from fingerprints, `source: "gate"`, a batch to dedupe against the
+ * log). Folding a human's single record into it would mean one branch deciding
+ * which half of the contract applies, which is how two paths drift into each other.
+ */
+export async function appendSignalRecord(sddRoot: string, record: SignalRecord): Promise<string> {
+  const path = join(sddRoot, SIGNALS_PATH);
+  await mkdir(dirname(path), { recursive: true });
+  await appendFile(path, `${JSON.stringify(record)}\n`, "utf-8");
+  return path;
+}

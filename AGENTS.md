@@ -32,6 +32,7 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst run <task>` | dispatch a crewmate in an isolated worktree, then gate its work |
+| `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
 | `wst init` | interview a repo and generate its `.sdd/` |
 

@@ -12,6 +12,7 @@ import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
 import { runRun } from "./commands/run.js";
 import { runRetro } from "./commands/retro.js";
+import { runSignal } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 
@@ -127,6 +128,34 @@ program
   .action(async (opts: { dryRun?: boolean; model?: "haiku" | "sonnet" | "opus" }) => {
     process.exitCode = await runRetro(opts);
   });
+
+// The human gate for a memory write, discharged by the human typing this. Every
+// other route into `signals.jsonl` is the engine recording what it observed.
+program
+  .command("signal")
+  .argument("<type>", "kebab-case type, e.g. triage-miss — the retro clusters on it")
+  .argument("<detail...>", "one or two sentences a reader can reconstruct the event from")
+  .description("record an observation in .sdd/memory/signals.jsonl (you are the human gate)")
+  .option("-p, --phase <phase>", "where it happened: init, plan, apply, verify, review, …", "other")
+  .option("-s, --severity <severity>", "low | medium | high", "medium")
+  .option("-r, --rule <path...>", "skill file(s) this implicates, e.g. skills/recording.md")
+  .option("--dry-run", "print the line that would be appended, write nothing")
+  .action(
+    async (
+      type: string,
+      detail: string[],
+      opts: { phase?: string; severity?: string; rule?: string[]; dryRun?: boolean },
+    ) => {
+      process.exitCode = await runSignal({
+        type,
+        detail: detail.join(" "),
+        ...(opts.phase !== undefined ? { phase: opts.phase } : {}),
+        ...(opts.severity !== undefined ? { severity: opts.severity } : {}),
+        ...(opts.rule !== undefined ? { rule: opts.rule } : {}),
+        ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+      });
+    },
+  );
 
 program
   .command("init")

@@ -10,7 +10,7 @@ const observation = {
   severity: "medium",
   detail: "Auth middleware change classified light; it should have been strict.",
   ruleAffected: [] as readonly string[],
-  branch: "run/two-related-repairs",
+  branch: "run/two-related-repairs" as string | null,
 };
 
 const ok = (over: Partial<typeof observation> = {}) => {
