@@ -1,0 +1,202 @@
+/**
+ * ADR-0012, part 1: the definition directory's name has exactly ONE owner.
+ *
+ * The rename it enables is a one-line change only while nothing else spells the
+ * name out. 225 sites spelled it out before this test existed, and the ADR is
+ * explicit about what that costs: "a rename done as a find-and-replace over 225
+ * sites will drift the first time someone touches one of them." Only 9 of those
+ * were the path literal; the rest sit inside prose `init` GENERATES and writes
+ * into a target repo, which is why the constant has to reach both.
+ *
+ * What is checked, and what is deliberately not:
+ *
+ * - **String and template literals under `src/`** may not spell the name. Prose in
+ *   a COMMENT may: a comment cannot interpolate, and "see `.wst/architecture.md`"
+ *   is worth more to a reader than a sentence that talks around the name. This is
+ *   why the scan below distinguishes the two instead of grepping.
+ * - **`*.test.ts` is exempt** from that rule. A test asserting the literal
+ *   `.wst/constitution.md` against generated output is the PIN on the constant's
+ *   value; rewriting those to interpolate the constant would make them agree with
+ *   whatever the constant says and assert nothing.
+ * - **Files that cannot import it** — the plugin hooks, the emitter's output under
+ *   `.claude/hooks/`, `package.json` — are cross-checked instead: they must spell
+ *   the current name, and (once there is an old one) never the old one.
+ */
+
+import { readdir, readFile } from "node:fs/promises";
+import { join, relative } from "node:path";
+import { describe, expect, it } from "vitest";
+import { DEFINITION_DIR } from "../src/core/paths.js";
+
+const ROOT = join(import.meta.dirname, "..");
+const SRC = join(ROOT, "src");
+
+async function walk(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (e) => {
+      const full = join(dir, e.name);
+      return e.isDirectory() ? walk(full) : [full];
+    }),
+  );
+  return files.flat().filter((f) => f.endsWith(".ts"));
+}
+
+/**
+ * Blank out every comment, leaving code and its literals in place.
+ *
+ * Hand-written rather than parsed: TypeScript 7 is the native compiler and no
+ * longer exposes `createSourceFile` to JS, so there is nothing to hand the file
+ * to. A character scanner is enough for the one question asked here — is this
+ * occurrence of the name in a comment, or in a value? — but only if it tracks
+ * strings too, and this codebase proves why both directions matter:
+ *
+ * - `"src/core/**"` is a GLOB in a string. A comment scanner blind to strings
+ *   reads its `/*` as a comment opener and swallows the rest of the file.
+ * - `/[.,;:)\]`'"]+$/` (`core/init/selfcontained.ts`) is a regex containing a
+ *   backtick, a single quote and a double quote. A string scanner blind to regex
+ *   literals mistakes it for the start of three different strings.
+ *
+ * Replacing comment bodies with spaces rather than deleting them keeps line and
+ * column numbers intact, so a violation still points at the real line.
+ */
+export function blankComments(text: string): string {
+  const out = text.split("");
+  const blank = (from: number, to: number): void => {
+    for (let i = from; i < to; i++) if (out[i] !== "\n") out[i] = " ";
+  };
+
+  /** Whether a `/` here opens a regex literal or divides. */
+  const regexAllowed = (upTo: number): boolean => {
+    for (let i = upTo - 1; i >= 0; i--) {
+      const c = text[i] as string;
+      if (/\s/.test(c)) continue;
+      // After a value, `/` divides. After an operator or an opener, it cannot.
+      return !/[\w$)\]]/.test(c);
+    }
+    return true;
+  };
+
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    const next = text[i + 1];
+
+    if (c === "/" && next === "/") {
+      const end = text.indexOf("\n", i);
+      const stop = end === -1 ? text.length : end;
+      blank(i, stop);
+      i = stop;
+    } else if (c === "/" && next === "*") {
+      const end = text.indexOf("*/", i + 2);
+      const stop = end === -1 ? text.length : end + 2;
+      blank(i, stop);
+      i = stop;
+    } else if (c === '"' || c === "'" || c === "`") {
+      // Skip the literal WITHOUT blanking it — its contents are what we search.
+      i++;
+      while (i < text.length && text[i] !== c) {
+        if (text[i] === "\\") i++;
+        i++;
+      }
+      i++;
+    } else if (c === "/" && regexAllowed(i)) {
+      i++;
+      let inClass = false;
+      while (i < text.length && (inClass || text[i] !== "/")) {
+        if (text[i] === "\\") i++;
+        else if (text[i] === "[") inClass = true;
+        else if (text[i] === "]") inClass = false;
+        else if (text[i] === "\n") break; // not a regex after all; bail
+        i++;
+      }
+      i++;
+    } else {
+      i++;
+    }
+  }
+
+  return out.join("");
+}
+
+/** Lines still naming `needle` once comments are gone. 1-based. */
+function codeLinesNaming(text: string, needle: string): { line: number; text: string }[] {
+  return blankComments(text)
+    .split("\n")
+    .map((line, index) => ({ line: index + 1, text: line }))
+    .filter((l) => l.text.includes(needle));
+}
+
+/**
+ * The scanner is load-bearing: if it mis-parsed every file into one big comment,
+ * every check below would pass while proving nothing. So it is tested first, on
+ * the exact shapes that broke the naive versions.
+ */
+describe("the comment scanner", () => {
+  it("keeps a glob that looks like a comment opener", () => {
+    expect(codeLinesNaming(`const g = ".sdd/skills/**";`, ".sdd")).toHaveLength(1);
+  });
+
+  it("keeps a name inside a template literal", () => {
+    expect(codeLinesNaming("const p = `${root}/.sdd/x.md`;", ".sdd")).toHaveLength(1);
+  });
+
+  it("drops a name that is only in prose", () => {
+    expect(codeLinesNaming("// see `.sdd/architecture.md`\nconst x = 1;", ".sdd")).toEqual([]);
+    expect(codeLinesNaming("/**\n * `.sdd/` is the source of truth.\n */", ".sdd")).toEqual([]);
+  });
+
+  it("is not derailed by a regex holding quotes and backticks", () => {
+    const line = 'const t = s.replace(/[.,;:)\\]`\'"]+$/, "") + ".sdd";';
+    expect(codeLinesNaming(line, ".sdd")).toHaveLength(1);
+  });
+
+  it("does not read a comment marker inside a string as a comment", () => {
+    expect(codeLinesNaming(`const u = "a//b"; const d = ".sdd";`, ".sdd")).toHaveLength(1);
+  });
+});
+
+describe("the definition directory has one owner (ADR-0012)", () => {
+  it("is exported as a constant", () => {
+    expect(DEFINITION_DIR).toMatch(/^\.[a-z]+$/);
+  });
+
+  it("no value under src/ spells the directory name", async () => {
+    const files = (await walk(SRC)).filter(
+      (f) => !f.endsWith(".test.ts") && relative(SRC, f) !== "core/paths.ts",
+    );
+    expect(files.length).toBeGreaterThan(0);
+
+    const violations: string[] = [];
+    for (const file of files) {
+      const text = await readFile(file, "utf-8");
+      if (!text.includes(DEFINITION_DIR)) continue; // cheap reject before scanning
+      for (const hit of codeLinesNaming(text, DEFINITION_DIR)) {
+        violations.push(`${relative(ROOT, file)}:${hit.line}  ${hit.text.trim()}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  /**
+   * The files that CANNOT import it. A hook shipped in the plugin runs in a repo
+   * with no Whetstone build to import from, so it hardcodes the name — and a
+   * hardcoded name with nothing checking it is precisely the drift ADR-0012 is
+   * about. Checking it here is what gives the constant ownership of it anyway.
+   */
+  it("every file that must hardcode the name agrees with the constant", async () => {
+    const mustAgree = [
+      "plugin/hooks/strict-path-guard.mjs",
+      "plugin/hooks/gate-on-stop.mjs",
+      ".claude/hooks/lane-guard.mjs",
+      "package.json",
+    ];
+
+    const disagreements: string[] = [];
+    for (const rel of mustAgree) {
+      const text = await readFile(join(ROOT, rel), "utf-8");
+      if (!text.includes(DEFINITION_DIR)) disagreements.push(`${rel} never names ${DEFINITION_DIR}`);
+    }
+    expect(disagreements).toEqual([]);
+  });
+});
