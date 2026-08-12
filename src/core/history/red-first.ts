@@ -29,9 +29,17 @@ export interface HistoryCommit {
 }
 
 export interface RedFirstOptions {
-  /** Whether a path is strict-tier. Supplied by the caller so triage stays the
-   *  one place that decides tiers — this module must not re-encode the globs. */
-  readonly isStrict: (path: string) => boolean;
+  /**
+   * Whether a path is one this rule can speak about: strict-tier, and a module
+   * that could carry a colocated test at all.
+   *
+   * A PARAMETER rather than a glob list, so triage stays the one place that
+   * decides what strict means — a second copy here would disagree with
+   * `triage.yaml` the first time either changed. It also carries the second
+   * filter, which triage cannot: `.claude/hooks/**` and the skills are strict and
+   * have no colocated test, so measuring them against one says nothing.
+   */
+  readonly inScope: (path: string) => boolean;
   /** Module keys already carrying a test before the first commit in the range. */
   readonly testedAtBase: readonly string[];
 }
@@ -70,6 +78,18 @@ export function moduleKey(path: string): string {
     : path.replace(/\.ts$/, "");
 }
 
+/** The half of a violation that is just "where" — shared by both kinds. */
+const where = (
+  commit: HistoryCommit,
+  file: ChangedFile,
+  module: string,
+): Omit<RedFirstViolation, "kind"> => ({
+  sha: commit.sha,
+  subject: commit.subject,
+  file: file.path,
+  module,
+});
+
 /**
  * Walks the range OLDEST FIRST, accumulating which modules have a test as it
  * goes. Order is the whole measurement: the same commits replayed newest-first
@@ -83,30 +103,37 @@ export function findRedFirstViolations(
   const violations: RedFirstViolation[] = [];
 
   for (const commit of commits) {
-    const strict = commit.files.filter((file) => options.isStrict(file.path));
+    const scoped = commit.files.filter((file) => options.inScope(file.path));
 
     // A deletion removes implementation rather than adding any, so it cannot owe
     // a test. Renames are excluded for the same reason a rename is not new
     // behaviour — the code arrived under its old path, where this already ran.
-    const implementation = strict.filter(
+    const implementation = scoped.filter(
       (file) =>
         !isTestPath(file.path) && (file.status === "added" || file.status === "modified"),
     );
 
     const testsHere = new Set(
-      strict.filter((file) => isTestPath(file.path)).map((file) => moduleKey(file.path)),
+      scoped.filter((file) => isTestPath(file.path)).map((file) => moduleKey(file.path)),
     );
 
     for (const file of implementation) {
       const key = moduleKey(file.path);
       if (tested.has(key)) continue;
-      violations.push({
-        sha: commit.sha,
-        subject: commit.subject,
-        file: file.path,
-        module: key,
-        kind: testsHere.has(key) ? "same-commit" : "no-test",
-      });
+
+      if (testsHere.has(key)) {
+        violations.push({ ...where(commit, file, key), kind: "same-commit" });
+        continue;
+      }
+
+      // `no-test` is reported only where the module ARRIVES. Editing a module
+      // that never had a test is a coverage hole, not a statement about the
+      // order of a test and the code it covers, and reporting it would fire on
+      // every future edit to a type declaration — a check nothing can satisfy,
+      // which is the permanently-warning check `core/init/checks.ts` calls noise.
+      if (file.status === "added") {
+        violations.push({ ...where(commit, file, key), kind: "no-test" });
+      }
     }
 
     // Applied AFTER the commit is judged, never during. A test added here is

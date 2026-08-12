@@ -19,13 +19,13 @@ const commit = (sha: string, subject: string, ...files: ChangedFile[]): HistoryC
 });
 
 /** Everything under src/core is strict here, matching this repo's triage.yaml. */
-const isStrict = (path: string): boolean => path.startsWith("src/core/");
+const inScope = (path: string): boolean => path.startsWith("src/core/");
 
 const violations = (
   commits: readonly HistoryCommit[],
   testedAtBase: readonly string[] = [],
 ): ReturnType<typeof findRedFirstViolations> =>
-  findRedFirstViolations(commits, { isStrict, testedAtBase });
+  findRedFirstViolations(commits, { inScope, testedAtBase });
 
 describe("pairing a module with its test", () => {
   it("maps an implementation path and its colocated test to the same module", () => {
@@ -103,6 +103,48 @@ describe("RED first, measured over a sequence of commits", () => {
     expect(
       violations([commit("aaa", "feat: adapter", f("src/shell/git.ts", "added"))]),
     ).toEqual([]);
+  });
+
+  /**
+   * Measured, not chosen ([TD7]). Run unfiltered over this repo, `no-test` on a
+   * MODIFIED file reported `ports.ts` and `contracts.ts` — type declarations with
+   * no behaviour to test — and did so on every future edit to them. A check that
+   * fires forever on work it can never be satisfied by is the permanently-warning
+   * check `core/init/checks.ts` calls noise, and noise is what makes the real
+   * finding unreadable.
+   *
+   * The narrowing is principled, not a mute: editing a module that never had a
+   * test is a pre-existing coverage hole, and this check is about the ORDER of a
+   * test and the code it covers. A NEW module arriving untested is that, and is
+   * still reported below.
+   */
+  it("does not flag an edit to a module that never had a test", () => {
+    expect(
+      violations([commit("aaa", "refactor: tidy types", f("src/core/contracts.ts", "modified"))]),
+    ).toEqual([]);
+  });
+
+  it("still flags a NEW module that arrives with no test", () => {
+    const found = violations([
+      commit("aaa", "feat: a new module", f("src/core/gate/fresh.ts", "added")),
+    ]);
+
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ kind: "no-test" });
+  });
+
+  it("flags a modified module whose first test arrives alongside it", () => {
+    const found = violations([
+      commit(
+        "aaa",
+        "feat: behaviour plus its test",
+        f("src/core/gate/run.ts", "modified"),
+        f("src/core/gate/run.test.ts", "added"),
+      ),
+    ]);
+
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ kind: "same-commit" });
   });
 
   it("ignores a commit that only deletes implementation", () => {
