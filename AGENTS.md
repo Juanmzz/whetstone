@@ -30,6 +30,7 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
 | `wst check` | the check registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |
+| `wst plan` | read a plan's declared `paths:` → predicted tier → which checks will judge it, split blocking/advisory, and which paths **nothing** covers. Reads, never authors; no LLM; **never blocks** (ADR-0013) |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst run <task>` | dispatch a crewmate in an isolated worktree, then gate its work |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
@@ -37,7 +38,8 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst init` | interview a repo and generate its `.wst/` |
 
 Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
-record signals; for when you are testing the gate itself) · `run --dry-run` · `retro --dry-run`.
+record signals; for when you are testing the gate itself) · `run --dry-run` · `retro --dry-run` ·
+`plan --json` (the full triage reason, untruncated). The plan format is in `.wst/architecture.md`.
 
 ## Where things live
 

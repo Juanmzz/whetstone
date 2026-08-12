@@ -23,10 +23,13 @@ judgment is irreducible.
 
 | Deterministic → ENGINE | LLM (judgment only) |
 |---|---|
-| triage classification · check selection · running deterministic checks · enforcing the gate · receipts (hashing) · signal collection + clustering · hooks | `agent-lens` checks · proposing a new check |
+| triage classification · check selection · **the plan preview (`wst plan`)** · running deterministic checks · enforcing the gate · receipts (hashing) · signal collection + clustering · hooks | `agent-lens` checks · proposing a new check |
 
-Both columns list what EXISTS. The plan gate named in layer 3 below is declared and not
-built; it is not in the right-hand column until it is.
+Both columns list what EXISTS. The plan gate landed on the LEFT (ADR-0013), and which column
+it landed in was the decision: having the engine reason about a plan — read the task, propose
+the approach — "puts an LLM in the engine for something that is not irreducible judgment".
+`wst plan` reads a plan somebody else authored and answers what will judge it, which is globs
+and a registry lookup all the way down.
 
 This buys reproducibility, testability, auditability, frugality, and trust — a non-negotiable
 cannot be "forgotten".
@@ -68,13 +71,36 @@ architectural fact, not a promise.
 | 0 | **Definition** (`.wst/`) | Per-project source of truth: constitution, triage, check registry, skills, memory | constitution/triage/skills ✅ · registry = Step 1 |
 | 1 | **Apply** (`wst init`) | Interview the project → generate `.wst/` + bootstrap the toolchain | WoZ validated (`docs/woz/init.md`) · code = Step 6 |
 | 2 | **Triage / Routing** | Classify a change → criticality → {autonomy, model tier, which checks run} | Step 2 |
-| 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate was to live here | charter ✅ (`wst run`, Step 5) · **plan gate NOT BUILT** — declared, never implemented, no ADR either way |
+| 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate reads a plan BEFORE the work starts and reports what will judge it | charter ✅ (`wst run`, Step 5) · plan gate ✅ (`wst plan`, ADR-0013) — a standalone command, not a step inside `wst run`, and not gated on criticality |
 | 4 | **Verification gate** (lean) | Triage-gated: deterministic checks always, calibrated agent review only when critical. Receipts skip what already passed | Step 3 — the central build |
 | 5 | ~~**Reviewable output**~~ | ~~PR annotated by criticality~~ — **removed, ADR-0009**. Verification artifacts remain. | — |
 | 6 | **Self-sharpening** (retro) | Signals → distill → propose/tune/prune checks → human gate → amend | WoZ validated (`docs/woz/retro.md`) · code = Step 7 |
 
 Cross-cutting: **memory** (tiered, behind ADR-0001's `save`/`search`/`summarize` port) and
 **receipts** (skip re-work, audit, tamper-guard).
+
+### The plan `wst plan` reads
+
+Markdown with YAML frontmatter — the format every other human-written artifact here already
+uses. `paths:` is the machine-readable half; the body is prose the engine never reads.
+
+```markdown
+---
+intent: one line, what this change is for   # optional; echoed, never interpreted
+paths:                                      # required, a list, repo-relative
+  - src/core/plan/preview.ts
+  - README.md
+---
+The approach a human iterated on. Not read by the engine.
+```
+
+A path that is absolute, or climbs out with `..`, is REJECTED rather than classified: no
+triage glob can match it, so it would land on the `light` fallback — and that fallback means
+"unrecognised", not "trivial". The command reads a file argument, or stdin when given none.
+
+The tier it reports is a PREDICTION from paths a plan declared about itself. `wst gate`
+classifies the real diff, so the front door cannot be routed around: it was never the thing
+doing the enforcing.
 
 ## The LLM verdict contract
 
