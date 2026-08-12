@@ -10,9 +10,10 @@ runs in a pre-push hook and in CI, so it does not depend on an agent choosing to
 because it records the friction it hits, the checks a project needs grow
 and tighten over time — each carrying a receipt for why it exists.
 
-> Status: alpha (v0.4.0). The engine is under construction — the CLI skeleton and the calibrated LLM
-> boundary landed; the gate is next. The retro loop has produced its first earned rule from a real
-> project. Read [VISION.md](./VISION.md) first.
+> Status: alpha (v0.4.0). The gate has landed and runs on this repo's own changes, in a pre-push
+> hook and in CI. What is not done is the judgment tier: the lens is `uncalibrated` at v4, so it may
+> only warn. The retro loop has produced its first earned rule from a real project. Read
+> [VISION.md](./VISION.md) first.
 
 ## Why
 
@@ -34,9 +35,11 @@ wst gate   → select checks → skip what receipts prove unchanged → run → 
 wst retro  → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-*Shipped today: all eight commands — `status`, `check`, `triage`, `gate`, `run`, `pr`, `retro`,
-`init` — as a TypeScript engine (ADR-0008). The Wizard-of-Oz procedures under
-[`docs/woz/`](./docs/woz/) are reference specs, not current procedure.*
+*Shipped today: all eight commands — `status`, `check`, `triage`, `gate`, `run`, `retro`, `signal`,
+`init` — as a TypeScript engine (ADR-0008). `wst pr` was removed by ADR-0009: the gate's exit code
+is the whole enforcement surface, and a second channel that only advised was one more thing to keep
+honest. The Wizard-of-Oz procedures under [`docs/woz/`](./docs/woz/) are reference specs, not
+current procedure.*
 
 The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst run` has dispatched a
 crewmate whose work was gated before a human saw it, and `wst retro` has produced amendments across
