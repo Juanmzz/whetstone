@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "red-first": "tsx scripts/red-first.ts",
     "calibrate": "tsx scripts/calibrate.ts",
     "mutate": "tsx scripts/mutate.ts"
   },
