@@ -21,7 +21,10 @@ import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
 import { exitCodeFor, renderGateRun } from "../core/gate/report.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
+import { NULL_SINK } from "../core/events/record.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import { appendSignals, readSignalLog } from "../shell/signals.js";
+import { createEventLog, EVENTS_PATH, type EventLog } from "../shell/events.js";
 import {
   runGate as executeGate,
   type CheckRunner,
@@ -102,6 +105,10 @@ const MAX_BUFFER = 64 * 1024 * 1024;
 
 /** Exit code for a gate that could not even start. Distinct from a block. */
 const EXIT_MISCONFIGURED = 2;
+
+/** `--no-emit` means no log at all, so every drain has to tolerate its absence. */
+const drain = (log: EventLog | null): Promise<string | null> =>
+  log === null ? Promise.resolve(null) : log.drain();
 
 // ── adapters (see the file header: these belong in src/shell/) ───────────────
 
@@ -285,11 +292,42 @@ export async function runGate(
   }
   const range = opts.range ?? DEFAULT_RANGE;
 
+  // Resolved on its own, ahead of everything else, because the event log lives
+  // under it: a failure after this point can be RECORDED, and a failure before it
+  // cannot be. That is the whole reason this is no longer one `try` with the
+  // registry — the two config failures below used to vanish into stderr, and they
+  // are exactly the runs where "the gate was broken, not the change" has to be
+  // provable afterwards.
   let definitionRoot: string;
+  try {
+    definitionRoot = await resolveDefinitionRoot(repoRoot);
+  } catch (cause) {
+    console.error(`configuration failed to load\n  ${(cause as Error).message}`);
+    return EXIT_MISCONFIGURED;
+  }
+
+  const startedAt = new Date();
+  const events =
+    opts.noEmit === true
+      ? null
+      : createEventLog(
+          definitionRoot,
+          `gate|${range}|${startedAt.toISOString()}`,
+          () => new Date(),
+        );
+  const emit = events?.sink ?? NULL_SINK;
+  emit({ kind: "run-started", detail: `wst gate --range ${range}` });
+
+  const failed = async (detail: string, exit: number): Promise<number> => {
+    emit({ kind: "run-failed", detail, exit });
+    console.error(detail);
+    await drain(events);
+    return exit;
+  };
+
   let registry: Registry;
   let rules: LoadedTriageRules;
   try {
-    definitionRoot = await resolveDefinitionRoot(repoRoot);
     [registry, rules] = await Promise.all([
       loadRegistry(definitionRoot),
       loadTriageRules(definitionRoot),
@@ -298,8 +336,10 @@ export async function runGate(
     // Configuration that will not load means an UNGATED change. It must be loud.
     // Triage rules belong in the same breath as the registry: rules the gate
     // could not read would silently route every change at the fallback tier.
-    console.error(`configuration failed to load\n  ${(cause as Error).message}`);
-    return EXIT_MISCONFIGURED;
+    return await failed(
+      `configuration failed to load\n  ${(cause as Error).message}`,
+      EXIT_MISCONFIGURED,
+    );
   }
 
   let files: ChangedFile[];
@@ -308,8 +348,10 @@ export async function runGate(
   } catch (cause) {
     // `parseNameStatus` throws rather than dropping a line it cannot read, because
     // a dropped line is a file that silently went ungated.
-    console.error(`could not read the diff for ${range}\n  ${(cause as Error).message}`);
-    return EXIT_MISCONFIGURED;
+    return await failed(
+      `could not read the diff for ${range}\n  ${(cause as Error).message}`,
+      EXIT_MISCONFIGURED,
+    );
   }
 
   // The same two calls `wst pr` makes, deliberately. The gate is the enforcement
@@ -318,12 +360,18 @@ export async function runGate(
   // would describe a tier the gate never used.
   const triage = classify(files, rules.rules, rules.origin);
   const routing = route(opts.tier ?? triage.tier, registry.active);
+  emit({
+    kind: "triage-classified",
+    detail: `${files.length} file(s) classified as ${routing.tier}`,
+    tier: routing.tier,
+  });
 
   const run = await executeGate(
     { routing, registry, files },
     {
       hashFile: (path) => git.hashFile(path),
       clock: { now: () => new Date() },
+      events: emit,
       receipts:
         opts.noReceipts === true ? createDistrustfulReceiptStore() : createReceiptStore(definitionRoot),
       run: createCheckRunner({
@@ -373,15 +421,43 @@ export async function runGate(
     }
   }
 
+  const exit = exitCodeFor(run.verdict);
+  emit({
+    kind: "run-finished",
+    // The verdict, plus what it was made of. A `block` line that does not name the
+    // check that blocked sends the reader back to a console the run already lost.
+    detail:
+      run.verdict.verdict === "block"
+        ? `blocked by ${run.verdict.blocking.join(", ")}`
+        : `passed — ${run.verdict.results.length} check(s), ${run.verdict.errored.length} errored`,
+    status: run.verdict.verdict,
+    exit,
+    ms: Math.max(0, Date.now() - startedAt.getTime()),
+  });
+  const eventError = await drain(events);
+
   if (opts.json === true) {
     console.log(
-      JSON.stringify({ range, tier: routing.tier, emitted, signalError, ...run.verdict }, null, 2),
+      JSON.stringify(
+        { range, tier: routing.tier, emitted, signalError, run: events?.run ?? null, eventError, ...run.verdict },
+        null,
+        2,
+      ),
     );
   } else {
     console.log(renderGateRun(run));
     if (emitted.length > 0) {
       console.log(`\n  signals emitted: ${emitted.join(", ")}`);
     }
+    if (events !== null) {
+      console.log(`  events: ${events.run} in ${DEFINITION_DIR}/${EVENTS_PATH}`);
+    }
+  }
+  if (eventError !== null) {
+    // Reported, never fatal, and never confused with the signal warning above: no
+    // verdict is derived from this log, so a failure to write it costs a record and
+    // nothing else.
+    console.error(`\n  ⚠ the event log for this run is incomplete — ${eventError}`);
   }
   if (signalError !== null) {
     console.error(
@@ -390,5 +466,5 @@ export async function runGate(
     );
   }
 
-  return exitCodeFor(run.verdict);
+  return exit;
 }

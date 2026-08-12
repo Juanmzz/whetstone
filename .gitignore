@@ -27,6 +27,19 @@ _design/
 # `git add -A` and swept its own charter into the diff it was dispatched to produce.
 .wst-charter.md
 
+# The execution log: what a gate run did, minute by minute. NOT committed, and this
+# is the one call in ADR-0011's first move the proposal did not cover — flagged on
+# the PR rather than settled here.
+#
+# Two reasons. It is per-machine runtime state: `signals.jsonl` records judgments a
+# team shares, this records that one laptop ran the gate at 14:02. And committing it
+# closes a loop — the pre-push hook runs the gate, the gate writes this file, the
+# tree is dirty after the push, and the NEXT run sees a changed file to triage.
+#
+# What that costs: comparing two agents across machines needs a shared log. That is
+# move 3, and it wants a real answer about retention, not a default set today.
+.wst/events.jsonl
+
 # Receipts are a derived cache: "check X passed on this exact input". Regenerable,
 # and a stale one would claim a pass that never happened for the current code.
 # Worse than stale if COMMITTED: a receipt authorises skipping a check, so every
