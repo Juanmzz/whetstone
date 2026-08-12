@@ -1,16 +1,17 @@
 /**
  * Appending engine-emitted signals. THIN.
  *
- * APPEND ONLY, with `appendFile`, never read-modify-write. The log is the evidence
- * the retro reasons over and the receipts point at; rewriting it to add a line is
- * how a concurrent gate run silently drops someone else's signal, and a lost signal
- * is invisible by construction.
+ * APPEND ONLY, never read-modify-write. The log is the evidence the retro reasons
+ * over and the receipts point at; rewriting it to add a line is how a concurrent
+ * gate run silently drops someone else's signal, and a lost signal is invisible by
+ * construction. The append itself is `shell/jsonl.ts`, shared with the event log.
  */
 
-import { appendFile, mkdir, open, readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { signalId, type EmittableSignal } from "../core/signals/emit.js";
 import { parseSignalLog, type SignalRecord } from "../core/signals/parse.js";
+import { appendJsonl } from "./jsonl.js";
 
 export const SIGNALS_PATH = "memory/signals.jsonl";
 
@@ -33,38 +34,6 @@ export async function readSignalLog(definitionRoot: string): Promise<SignalRecor
 }
 
 /**
- * `"\n"` when the file exists, is non-empty, and does not end in one — otherwise `""`.
- *
- * Hand-editing this log is the DOCUMENTED workflow and 45 of this repo's entries
- * were written that way, so a last line with no newline after it is the ordinary
- * state of the file. Appending to it welds two JSON objects onto one line, and the
- * parser fails closed by design: one bad line rejects the WHOLE log, so the retro
- * stops and the gate stops emitting until a human repairs a file that is supposed
- * to be append-only.
- *
- * One byte is read, not the file. This stays an append: a read-modify-write is how
- * a concurrent run silently drops someone else's signal. And the newline is added
- * only when it is missing — an unconditional one grows a blank line per append.
- */
-async function separator(path: string): Promise<string> {
-  let handle;
-  try {
-    handle = await open(path, "r");
-  } catch {
-    return ""; // no file yet; `appendFile` creates it
-  }
-  try {
-    const { size } = await handle.stat();
-    if (size === 0) return "";
-    const last = Buffer.alloc(1);
-    await handle.read(last, 0, 1, size - 1);
-    return last[0] === 0x0a ? "" : "\n";
-  } finally {
-    await handle.close();
-  }
-}
-
-/**
  * Returns the ids written. Empty when there was nothing new to say.
  *
  * `branch` is a REQUIRED parameter with a nullable type rather than an optional
@@ -82,7 +51,6 @@ export async function appendSignals(
   if (signals.length === 0) return [];
 
   const path = join(definitionRoot, SIGNALS_PATH);
-  await mkdir(dirname(path), { recursive: true });
 
   const ids: string[] = [];
   const lines: string[] = [];
@@ -106,7 +74,7 @@ export async function appendSignals(
     );
   }
 
-  await appendFile(path, `${await separator(path)}${lines.join("\n")}\n`, "utf-8");
+  await appendJsonl(path, lines);
   return ids;
 }
 
@@ -123,7 +91,6 @@ export async function appendSignals(
  */
 export async function appendSignalRecord(definitionRoot: string, record: SignalRecord): Promise<string> {
   const path = join(definitionRoot, SIGNALS_PATH);
-  await mkdir(dirname(path), { recursive: true });
-  await appendFile(path, `${await separator(path)}${JSON.stringify(record)}\n`, "utf-8");
+  await appendJsonl(path, [JSON.stringify(record)]);
   return path;
 }
