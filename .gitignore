@@ -6,17 +6,17 @@ node_modules
 dist/
 
 # Scaffolding: design drafts, research, sprint notes. Working material, not the product.
-# The decisions they produced live in .sdd/memory/decisions/ — that is what travels.
+# The decisions they produced live in .wst/memory/decisions/ — that is what travels.
 _design/
 
 # Whetstone: memory index is a regenerable cache (M2 SQLite adapter).
-# Files under .sdd/memory/ remain the source of truth and ARE committed.
-.sdd/memory/index.db
+# Files under .wst/memory/ remain the source of truth and ARE committed.
+.wst/memory/index.db
 
-# Compiled check index: regenerable from .sdd/checks/*.md via `wst check --compile`.
+# Compiled check index: regenerable from .wst/checks/*.md via `wst check --compile`.
 # Deliberately NOT committed — a compiled artifact that can silently go stale is the
 # same trap as trusting a version string for identity.
-.sdd/checks/_index.json
+.wst/checks/_index.json
 
 # Per-worktree lane marker, read by .claude/hooks/lane-guard.mjs. Belongs to the
 # worktree, not to the branch — committing it would scope every clone to one lane.
@@ -29,4 +29,6 @@ _design/
 
 # Receipts are a derived cache: "check X passed on this exact input". Regenerable,
 # and a stale one would claim a pass that never happened for the current code.
-.sdd/receipts/
+# Worse than stale if COMMITTED: a receipt authorises skipping a check, so every
+# clone would inherit skips it never earned — one of them a paid LLM verdict.
+.wst/receipts/
