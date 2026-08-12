@@ -23,6 +23,7 @@
     "check:docs": "tsx scripts/check-docs-fresh.ts",
     "check:provenance": "tsx scripts/check-provenance.ts",
     "check:skills": "tsx scripts/check-skills.ts",
+    "red-first": "tsx scripts/red-first.ts",
     "untested": "tsx scripts/untested.ts",
     "calibrate": "tsx scripts/calibrate.ts",
     "mutate": "tsx scripts/mutate.ts"
