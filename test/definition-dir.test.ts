@@ -277,10 +277,21 @@ describe("the old directory name is gone (ADR-0012)", () => {
       if (root === ROOT) continue;
       for (const f of await walkAll(root)) files.add(f);
     }
-    // Root-level files that name the path, per the ADR's "Harder" section.
-    for (const f of ["README.md", "VISION.md", "AGENTS.md", "package.json", "docs/PARALLEL.md"]) {
-      files.add(join(ROOT, f));
+    // Every FILE at the repo root, plus the one nested doc that names the path.
+    //
+    // This was an explicit allowlist — README, VISION, AGENTS, package.json — and
+    // the allowlist is what let the rename miss `.gitignore`, whose three entries
+    // went on ignoring a directory that no longer existed while UNIGNORING the one
+    // that did. Receipts were committed for a week as a result, and a receipt
+    // authorises skipping a check, so the drift shipped skips nobody earned.
+    //
+    // Naming the files to scan means a guard that only catches the drift someone
+    // already thought of. Enumerating the root instead means the next config file
+    // added there is covered on the day it lands, by nobody's decision.
+    for (const e of await readdir(ROOT, { withFileTypes: true })) {
+      if (!e.isDirectory()) files.add(join(ROOT, e.name));
     }
+    files.add(join(ROOT, "docs/PARALLEL.md"));
 
     const survivors: string[] = [];
     for (const file of files) {
