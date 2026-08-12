@@ -21,12 +21,6 @@ export interface GitPort {
   hashFile(path: string): Promise<string>;
 }
 
-export interface FsPort {
-  exists(path: string): Promise<boolean>;
-  readText(path: string): Promise<string>;
-  writeText(path: string, contents: string): Promise<void>;
-}
-
 export interface ClockPort {
   now(): Date;
 }
