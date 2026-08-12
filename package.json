@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:adrs": "tsx scripts/check-adrs.ts",
     "untested": "tsx scripts/untested.ts",
     "calibrate": "tsx scripts/calibrate.ts",
     "mutate": "tsx scripts/mutate.ts"
