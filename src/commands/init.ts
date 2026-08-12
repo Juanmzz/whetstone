@@ -14,8 +14,8 @@
  *
  * ## Never clobber
  *
- * ANY existing file the plan would write stops the command dead, not just `.sdd/`.
- * The guard used to cover `.sdd/` alone, which meant a repo that had never seen
+ * ANY existing file the plan would write stops the command dead, not just `.wst/`.
+ * The guard used to cover `.wst/` alone, which meant a repo that had never seen
  * Whetstone but did have a hand-written `AGENTS.md`, a `CLAUDE.md` and a populated
  * `.claude/settings.json` lost all three on the first command a new user ran. The
  * writer is `mkdir -p` + `writeFile` with no existence check of its own, so this is
@@ -33,6 +33,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import {
   ProposalSchema,
@@ -75,7 +76,7 @@ export interface InitOptions {
   readonly out?: string;
   readonly agentLens?: boolean;
   /**
-   * Write `.sdd/` and nothing else.
+   * Write `.wst/` and nothing else.
    *
    * For a repo that already has a harness. ChytaPay has its own `CLAUDE.md`, its own
    * `AGENTS.md` and a plugin that owns `.claude/`; the collision guard stops `init`
@@ -302,7 +303,7 @@ async function exists(path: string): Promise<boolean> {
  *
  * IT MUST STOP AT WHETSTONE'S OWN PACKAGE ROOT. Installed as a dependency the
  * module sits at `<target>/node_modules/whetstone/dist/commands/`, and an unbounded
- * walk escapes the package and finds `<target>/.sdd/skills` — the TARGET's skills.
+ * walk escapes the package and finds `<target>/.wst/skills` — the TARGET's skills.
  * `init` would then copy a project's own skills back onto itself and report success,
  * which looks exactly like a correct bootstrap. So the walk is bounded by the
  * package.json that declares this package, and never crosses a node_modules boundary.
@@ -318,7 +319,8 @@ async function findPayloadRoot(): Promise<string | null> {
         name?: string;
       };
       if (pkg.name === PACKAGE_NAME) {
-        return (await exists(join(dir, ".sdd", "skills"))) ? join(dir, ".sdd") : null;
+        const root = join(dir, DEFINITION_DIR);
+        return (await exists(join(root, "skills"))) ? root : null;
       }
     } catch {
       /* no package.json here — keep walking */
@@ -370,7 +372,7 @@ async function judgeAvailable(): Promise<boolean> {
  * Draft the answers with the judge and write them for the human to edit.
  *
  * It writes a FILE rather than proceeding straight to `planInit`. That gap is the
- * point: a draft that flowed directly into a written `.sdd/` would make the model's
+ * point: a draft that flowed directly into a written `.wst/` would make the model's
  * reading of the project the project's constitution, with no moment where anyone
  * had to look at it. ADR-0003 calls the human gate the moat.
  */
@@ -530,7 +532,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   if (payloadRoot === null) {
     console.error(
       "\ncould not locate Whetstone's own skills directory, so the skills were NOT copied.\n" +
-        "  Everything else was written. Copy `.sdd/skills/` across by hand, or re-run from a\n" +
+        `  Everything else was written. Copy \`${DEFINITION_DIR}/skills/\` across by hand, or re-run from a\n` +
         "  checkout rather than a published package.",
     );
   }
@@ -544,7 +546,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
 
   const written = plan.files.length + (payloadRoot === null ? 0 : plan.copies.length);
   console.log(`\nwrote ${written} files. Review them, then commit:`);
-  console.log("  git add .sdd .claude AGENTS.md CLAUDE.md");
+  console.log(`  git add ${DEFINITION_DIR} .claude AGENTS.md CLAUDE.md`);
   console.log('  git commit -m "chore: bootstrap the agent workflow"');
   return payloadRoot === null ? 1 : 0;
 }

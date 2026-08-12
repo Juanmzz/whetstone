@@ -3,9 +3,9 @@
  * compiles the index. No decisions here.
  */
 
-import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
-import { loadRegistry, writeIndex } from "../shell/sdd.js";
+import { loadRegistry, resolveDefinitionRoot, writeIndex } from "../shell/sdd.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import type { LoadedCheck } from "../core/checks/registry.js";
 
 export interface CheckOptions {
@@ -20,11 +20,11 @@ function severityMark(check: LoadedCheck): string {
 
 export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()): Promise<number> {
   const repoRoot = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
-  const sddRoot = join(repoRoot, ".sdd");
-
+  let definitionRoot: string;
   let registry;
   try {
-    registry = await loadRegistry(sddRoot);
+    definitionRoot = await resolveDefinitionRoot(repoRoot);
+    registry = await loadRegistry(definitionRoot);
   } catch (cause) {
     // A malformed check must fail loudly: an unloadable registry means an
     // ungated change, and the whole point is that this cannot happen quietly.
@@ -38,7 +38,7 @@ export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()):
   }
 
   if (registry.all.length === 0) {
-    console.log("no checks registered — add files under .sdd/checks/<id>.md");
+    console.log(`no checks registered — add files under ${DEFINITION_DIR}/checks/<id>.md`);
     return 0;
   }
 
@@ -58,7 +58,7 @@ export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()):
   }
 
   if (opts.compile === true) {
-    const path = await writeIndex(sddRoot, registry);
+    const path = await writeIndex(definitionRoot, registry);
     console.log(`\n  wrote ${path}`);
   }
 

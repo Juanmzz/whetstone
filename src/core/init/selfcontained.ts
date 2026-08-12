@@ -3,7 +3,7 @@
  *
  * Everything `init` writes travels into someone else's repository. A generated
  * sentence that says "see `docs/woz/SPEC.md`" or "copy the skills from
- * Whetstone's `.sdd/skills/`" produces a reference to a file that does not exist
+ * Whetstone's `.wst/skills/`" produces a reference to a file that does not exist
  * there. The reader — usually an agent — then either invents the missing content
  * or drops the rule, and both failures are silent.
  *
@@ -16,12 +16,13 @@
  *
  * 1. **Deny-list.** Named Whetstone-only artefacts, and possessive references to
  *    its tree. Catches the cases a generic rule cannot see.
- * 2. **Reference closure.** Every `.sdd/…` and `.claude/…` path mentioned in
+ * 2. **Reference closure.** Every `.wst/…` and `.claude/…` path mentioned in
  *    generated content must be a path the plan actually creates. This one needs no
  *    maintenance: add a reference to a file init stopped writing and it fails on
  *    its own, which is exactly what a hand-maintained list never does.
  */
 
+import { DEFINITION_DIR, DEFINITION_DIR_PATTERN } from "../paths.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 
 export interface SelfContainmentViolation {
@@ -83,7 +84,10 @@ const DENY: readonly DenyRule[] = [
 ];
 
 /** Path-shaped tokens the plan is responsible for. */
-const OWNED_PATH = /(?:\.sdd|\.claude)\/[A-Za-z0-9_@\-./*<>{}]*/g;
+const OWNED_PATH = new RegExp(
+  `(?:${DEFINITION_DIR_PATTERN}|\\.claude)/[A-Za-z0-9_@\\-./*<>{}]*`,
+  "g",
+);
 
 /** Trailing prose punctuation swept up by the token regex. */
 function trimTrailing(token: string): string {
@@ -121,8 +125,8 @@ export function auditSelfContained(input: AuditInput): readonly SelfContainmentV
         const token = trimTrailing(match[0]);
         // A directory, a glob or a `<placeholder>` names a shape, not a file.
         if (token.endsWith("/") || /[*<>{}]/.test(token)) continue;
-        // `.sdd` or `.claude` on their own refer to the directory itself.
-        if (token === ".sdd" || token === ".claude") continue;
+        // `.wst` or `.claude` on their own refer to the directory itself.
+        if (token === DEFINITION_DIR || token === ".claude") continue;
         if (created.has(token)) continue;
         violations.push({
           path: file.path,

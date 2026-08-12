@@ -44,15 +44,15 @@ const record = (): Record<string, unknown> =>
     [...out, ...err].find((l) => l.trimStart().startsWith("{")) ?? "null",
   ) as Record<string, unknown>;
 
-describe("a repository with no .sdd/", () => {
-  it("refuses, the way every other command that touches .sdd/ refuses", async () => {
+describe("a repository with no .wst/", () => {
+  it("refuses, the way every other command that touches .wst/ refuses", async () => {
     // `appendSignalRecord` creates its parents. Without a guard an uninitialised
     // repo gets a fabricated memory tree and a success message — and then
     // `wst init` refuses to bootstrap over the stray file, and `init --force`
     // deletes it.
     const dir = await repo();
     expect(await runSignal(observation, dir)).toBe(2);
-    await expect(readFile(join(dir, ".sdd/memory/signals.jsonl"), "utf-8")).rejects.toThrow();
+    await expect(readFile(join(dir, ".wst/memory/signals.jsonl"), "utf-8")).rejects.toThrow();
   });
 
   it("still prints the record, because the human already typed it", async () => {
@@ -60,17 +60,17 @@ describe("a repository with no .sdd/", () => {
     expect(record()["detail"]).toBe(observation.detail);
   });
 
-  it("but --dry-run needs no .sdd/ — it writes nothing to begin with", async () => {
+  it("but --dry-run needs no .wst/ — it writes nothing to begin with", async () => {
     expect(await runSignal({ ...observation, dryRun: true }, await repo())).toBe(0);
   });
 });
 
 describe("a write that fails", () => {
-  /** `.sdd/memory` as a FILE: the same ENOTDIR a read-only or full disk produces. */
+  /** `.wst/memory` as a FILE: the same ENOTDIR a read-only or full disk produces. */
   async function unwritable(): Promise<string> {
     const dir = await repo();
-    await mkdir(join(dir, ".sdd"), { recursive: true });
-    await writeFile(join(dir, ".sdd/memory"), "not a directory", "utf-8");
+    await mkdir(join(dir, ".wst"), { recursive: true });
+    await writeFile(join(dir, ".wst/memory"), "not a directory", "utf-8");
     return dir;
   }
 

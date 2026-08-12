@@ -1,5 +1,5 @@
 /**
- * Layer 1 — `wst init`. The engine that reads a repo and decides what its `.sdd/`
+ * Layer 1 — `wst init`. The engine that reads a repo and decides what its `.wst/`
  * should contain. PURE: facts in, file contents out. `src/commands/init.ts` does
  * the reading and the writing.
  *

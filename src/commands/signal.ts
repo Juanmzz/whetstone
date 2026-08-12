@@ -6,7 +6,7 @@
  * valid signal is lives there, where the tests can reach it.
  *
  * **This is the only command that may write to memory, and the reason is narrow:**
- * the human typed it, which IS [RC3]'s human gate (`.sdd/skills/recording.md`).
+ * the human typed it, which IS [RC3]'s human gate (`.wst/skills/recording.md`).
  * Nothing else inherits that. An agent that thinks it has spotted a signal still
  * proposes it and waits — including an agent that could technically run this
  * command, since a gate discharged by "an agent ran the human's tool" is not a gate.
@@ -17,7 +17,8 @@
  */
 
 import { access } from "node:fs/promises";
-import { join } from "node:path";
+import { DEFINITION_DIR } from "../core/paths.js";
+import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { humanSignal } from "../core/signals/human.js";
 import { createGitAdapter } from "../shell/git.js";
 import { appendSignalRecord } from "../shell/signals.js";
@@ -118,15 +119,25 @@ export async function runSignal(
     return 0;
   }
 
-  // `.sdd/` must already be there. `appendSignalRecord` creates its parents, so
+  // `.wst/` must already be there. `appendSignalRecord` creates its parents, so
   // without this check an uninitialised repo gets a fabricated memory tree and a
-  // success message — and every other command that touches `.sdd/` calls that
+  // success message — and every other command that touches `.wst/` calls that
   // misconfigured and exits 2. It gets worse downstream: `core/init/plan.ts` plans
   // this exact path, so the stray file makes `wst init` refuse to bootstrap, and
   // `init --force` overwrites it, deleting the human's only copy of what they saw.
-  const sddRoot = join(repoRoot, ".sdd");
-  if (!(await exists(sddRoot))) {
-    console.error(`no .sdd/ in ${repoRoot} — run \`wst init\` first`);
+  //
+  // A repo still holding the OLD directory gets the migration message rather than
+  // "run `wst init` first" (ADR-0012). Following that advice here would refuse on
+  // a collision, or with `--force` overwrite the signal log this command exists to
+  // append to — losing exactly the record the human is standing here trying to make.
+  let root: string;
+  try {
+    root = await resolveDefinitionRoot(repoRoot);
+    if (!(await exists(root))) {
+      throw new Error(`no ${DEFINITION_DIR}/ in ${repoRoot} — run \`wst init\` first`);
+    }
+  } catch (cause) {
+    console.error((cause as Error).message);
     console.error("the observation, so it is not lost:");
     console.log(line);
     return EXIT_MISCONFIGURED;
@@ -134,14 +145,16 @@ export async function runSignal(
 
   let path: string;
   try {
-    path = await appendSignalRecord(sddRoot, result.record);
+    path = await appendSignalRecord(root, result.record);
   } catch (cause) {
     // The human typed this at the moment they had the thought. A raw stack trace
     // that also loses the words is the worst possible answer to a full disk or a
     // read-only checkout, so: one line of cause, and the record on stdout where a
     // redirect or a paste can still save it.
     console.error(`could not write the signal: ${(cause as Error).message}`);
-    console.error("the observation, so it is not lost — append this line to .sdd/memory/signals.jsonl:");
+    console.error(
+      `the observation, so it is not lost — append this line to ${DEFINITION_DIR}/memory/signals.jsonl:`,
+    );
     console.log(line);
     return EXIT_NOT_RECORDED;
   }

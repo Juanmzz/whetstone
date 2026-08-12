@@ -28,7 +28,7 @@ layer that makes a non-negotiable actually non-negotiable.
 ## How it works
 
 ```
-wst init   → interview the project, generate .sdd/
+wst init   → interview the project, generate .wst/
 wst run    → triage → plan gate (critical changes only) → dispatch → gate → branch
 wst gate   → select checks → skip what receipts prove unchanged → run → pass or block
 wst retro  → cluster signals → propose checks → human approves → amend with a receipt
@@ -45,7 +45,7 @@ for worktree isolation, and agent-lens checks need the `claude` CLI; neither is 
 still weak is stated in [AGENTS.md](./AGENTS.md#known-weaknesses-stated-plainly) — chiefly that the
 lens is uncalibrated at v4, so the judgment tier is advisory.
 
-1. **`.sdd/` is data.** Constitution, triage rules, and a registry of checks — one file per check,
+1. **`.wst/` is data.** Constitution, triage rules, and a registry of checks — one file per check,
    each declaring what it triggers on, whether it is deterministic or judgment, and whether it may
    block or only warn.
 2. **The engine is code.** It classifies changes by glob, selects checks, hashes inputs so unchanged
@@ -65,8 +65,8 @@ worktrees, GitHub and execution to tools that already do those well. See
 
 ## Roadmap
 
-- **M1 — Bootstrap** ✅ — the init procedure, `.sdd/` schema, eight-skill set, signal logging.
-- **M2 — Code tier** ✅ — the emitter compiles `.sdd/` into per-vendor apparatus, hooks first.
+- **M1 — Bootstrap** ✅ — the init procedure, `.wst/` schema, eight-skill set, signal logging.
+- **M2 — Code tier** ✅ — the emitter compiles `.wst/` into per-vendor apparatus, hooks first.
 - **M3 — The retro loop** ✅ *(first pass)* — pattern detection + apparatus recommendation, validated
   in the wild. Still N=1; repeatability unproven.
 - **M4 — The engine** ← *current* — `wst` CLI, deterministic core, calibrated LLM boundary, check

@@ -18,8 +18,8 @@ const base: CharterInput = {
     { id: "test", severity: "block", description: "The suite passes." },
     { id: "correctness", severity: "warn", description: "No correctness bug." },
   ],
-  strictPaths: ["src/core/", ".sdd/skills/"],
-  presentDocs: ["AGENTS.md", "CLAUDE.md", ".sdd/architecture.md", ".sdd/triage-rules.md"],
+  strictPaths: ["src/core/", ".wst/skills/"],
+  presentDocs: ["AGENTS.md", "CLAUDE.md", ".wst/architecture.md", ".wst/triage-rules.md"],
 };
 
 describe("buildCharter", () => {
@@ -50,15 +50,15 @@ describe("buildCharter", () => {
   it("names the strict paths so the crewmate knows where TDD is mandatory", () => {
     const c = buildCharter(base);
     expect(c).toContain("src/core/");
-    expect(c).toContain(".sdd/skills/");
+    expect(c).toContain(".wst/skills/");
   });
 
-  it("points at .sdd/ rather than inlining it — progressive disclosure", () => {
+  it("points at .wst/ rather than inlining it — progressive disclosure", () => {
     // Pasting the whole constitution into every crewmate prompt is the token
     // waste `token-economy` exists to stop. The charter is a map, not a copy.
     const c = buildCharter(base);
     expect(c).toContain("AGENTS.md");
-    expect(c).toContain(".sdd/");
+    expect(c).toContain(".wst/");
     expect(c.length).toBeLessThan(4000);
   });
 
@@ -106,9 +106,9 @@ describe("buildCharter", () => {
  */
 describe("a charter for a repo Whetstone did not grow up in", () => {
   // What `wst init --definitions-only` leaves behind, and nothing more: no AGENTS.md
-  // (the host harness owns that surface), no .sdd/architecture.md (init never writes
+  // (the host harness owns that surface), no .wst/architecture.md (init never writes
   // one — it exists only in Whetstone's own repo).
-  const foreignDocs = [".sdd/constitution.md", ".sdd/triage-rules.md", "CLAUDE.md"];
+  const foreignDocs = [".wst/constitution.md", ".wst/triage-rules.md", "CLAUDE.md"];
 
   const foreignRules: readonly TriageRule[] = [
     { glob: "migrations/**", tier: "strict", reason: "a bad migration is unrecoverable" },
@@ -128,19 +128,19 @@ describe("a charter for a repo Whetstone did not grow up in", () => {
   });
 
   it("names none of Whetstone's own strict paths in a repo that has none of them", () => {
-    for (const whetstoneOnly of ["src/core/", ".sdd/skills/", ".claude/hooks/"]) {
+    for (const whetstoneOnly of ["src/core/", ".wst/skills/", ".claude/hooks/"]) {
       expect(charter).not.toContain(whetstoneOnly);
     }
   });
 
   it("does not order the crewmate to read files this repo does not have", () => {
     expect(charter).not.toContain("AGENTS.md");
-    expect(charter).not.toContain(".sdd/architecture.md");
+    expect(charter).not.toContain(".wst/architecture.md");
   });
 
   it("points at the orientation file this repo does have", () => {
     expect(charter).toContain("CLAUDE.md");
-    expect(charter).toContain(".sdd/constitution.md");
+    expect(charter).toContain(".wst/constitution.md");
   });
 
   it("does not describe the target with facts that are only true of Whetstone", () => {
@@ -155,7 +155,7 @@ describe("a charter for a repo Whetstone did not grow up in", () => {
   it("still names AGENTS.md and architecture.md in a repo that has them", () => {
     const own = buildCharter(base);
     expect(own).toContain("AGENTS.md");
-    expect(own).toContain(".sdd/architecture.md");
+    expect(own).toContain(".wst/architecture.md");
   });
 
   // AGENTS.md and CLAUDE.md are one source of truth under ADR-0002 — CLAUDE.md is a
@@ -169,7 +169,7 @@ describe("a charter for a repo Whetstone did not grow up in", () => {
   it("says so plainly rather than inventing a pointer when the repo has no orientation file", () => {
     const bare = buildCharter({ ...base, presentDocs: [] });
     expect(bare).not.toContain("AGENTS.md");
-    expect(bare).not.toContain(".sdd/triage-rules.md");
+    expect(bare).not.toContain(".wst/triage-rules.md");
     expect(bare.toLowerCase()).toMatch(/no orientation/);
   });
 
@@ -183,7 +183,7 @@ describe("a charter for a repo Whetstone did not grow up in", () => {
 describe("strictPathsFrom", () => {
   const rules: readonly TriageRule[] = [
     { glob: "src/core/**", tier: "strict", reason: "the engine" },
-    { glob: ".sdd/memory/retro-log.md", tier: "off", reason: "a record" },
+    { glob: ".wst/memory/retro-log.md", tier: "off", reason: "a record" },
     { glob: "src/shell/**", tier: "light", reason: "thin adapters" },
     { glob: ".claude/hooks/**", tier: "strict", reason: "emitter output" },
   ];
@@ -194,7 +194,7 @@ describe("strictPathsFrom", () => {
 
   it("drops every tier that is not strict", () => {
     expect(strictPathsFrom(rules)).not.toContain("src/shell/**");
-    expect(strictPathsFrom(rules)).not.toContain(".sdd/memory/retro-log.md");
+    expect(strictPathsFrom(rules)).not.toContain(".wst/memory/retro-log.md");
   });
 
   it("returns nothing when a low-risk project declares nothing strict", () => {
@@ -223,9 +223,9 @@ describe("ORIENTATION_DOCS", () => {
   });
 
   it("never renders a path the caller did not report as present", () => {
-    const c = buildCharter({ ...base, presentDocs: [".sdd/triage-rules.md"] });
+    const c = buildCharter({ ...base, presentDocs: [".wst/triage-rules.md"] });
     for (const doc of ORIENTATION_DOCS) {
-      if (doc.path === ".sdd/triage-rules.md") continue;
+      if (doc.path === ".wst/triage-rules.md") continue;
       expect(c).not.toContain(doc.path);
     }
   });

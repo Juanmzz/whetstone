@@ -106,7 +106,7 @@ describe("renderTriageYaml — must round-trip through the real loader", () => {
     it(`round-trips: ${name}`, () => {
       const rules = buildTriageRules(stack, ans);
       const yaml = renderTriageYaml(rules);
-      expect(parseTriageRules(yaml, ".sdd/triage.yaml")).toEqual(rules);
+      expect(parseTriageRules(yaml, ".wst/triage.yaml")).toEqual(rules);
     });
   }
 

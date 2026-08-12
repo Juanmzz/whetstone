@@ -64,6 +64,17 @@ The split:
 `init` stops writing `.claude/` entirely. `--code-tier` becomes unnecessary and is
 removed with it.
 
+**Nor does it write CI.** Whetstone does not install a workflow into a repo it does not
+own. In a brownfield repo the seeded checks are read from `package.json`, so they are the
+same `lint`, `test` and `typecheck` the host's own CI already runs: a second workflow buys
+a second name for one verification, and it reports at PR time, which is after the author
+has moved on. In a host repo the gate's channel is the push. What Whetstone owes that repo
+instead is an answer to whether the CI it already has covers what the gate requires,
+reported by `wst status` alongside the other rows.
+
+Whetstone's own repo keeps its workflow. It is its own product, it has no other CI, and it
+has to self-gate somewhere that cannot be skipped.
+
 The tradeoff accepted: a project that uses Whetstone WITHOUT Claude Code loses the
 edit-time warning and keeps only the gate. That is the correct degradation — the gate
 was already the only channel that does not depend on an agent cooperating (ADR-0009),
@@ -78,6 +89,16 @@ becomes installable by a stranger.
 
 **Harder.** Two artifacts to release in step, and a version skew to reason about: a
 plugin newer than the binary, or the reverse. Neither exists today.
+
+**What declining to write CI costs, stated plainly.** A gate that lives only in a pre-push
+hook is an honour system. `--no-verify` skips it, and on 2026-08-10 it was skipped
+deliberately, for sound reasons, by the people who wrote it. That weakens ADR-0009's claim
+that the gate is "the only channel that does not depend on an agent cooperating": in a host
+repo it now depends on nobody passing a flag. Accepted, because installing a workflow into
+someone else's repository is a larger intrusion than the risk it removes, and because the
+host's own CI is the right place for an un-bypassable check that the host already owns.
+Reporting whether that CI is sufficient is the smaller apparatus, and the smaller apparatus
+wins (`retro.ts:47`).
 
 **Blocked on.** Nothing technically — but deliberately sequenced after the value is
 demonstrated. Distributing a tool whose value is unproven recruits people into an

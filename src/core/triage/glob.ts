@@ -5,13 +5,13 @@
  * ambient state — so it belongs in the core under exactly the rule that lets
  * `node:crypto` in (see `core/receipts/hash.ts` and `test/architecture.test.ts`:
  * the boundary is about EFFECTS, not built-ins). Using it is a recorded decision
- * (`.sdd/lanes.yaml`, lane `triage`): no glob dependency is added.
+ * (`.wst/lanes.yaml`, lane `triage`): no glob dependency is added.
  *
  * Two measured behaviours of `matchesGlob` that callers must know:
  *
- * 1. **`**` does not cross a dot-leading segment.** `matchesGlob(".sdd/x.md", "**")`
- *    is FALSE. Any pattern covering `.sdd/` or `.claude/` must spell the dotted
- *    segment out (`.sdd/skills/**` works). A consequence worth stating plainly:
+ * 1. **`**` does not cross a dot-leading segment.** `matchesGlob(".wst/x.md", "**")`
+ *    is FALSE. Any pattern covering `.wst/` or `.claude/` must spell the dotted
+ *    segment out (`.wst/skills/**` works). A consequence worth stating plainly:
  *    **`"**"` is not a catch-all**, which is why triage's unmatched-file fallback
  *    is a constant in code rather than a final `**` rule in the config.
  *

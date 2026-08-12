@@ -28,12 +28,12 @@ export const receiptName = (checkId: string): string => `${checkId}.calibration.
  * denial message names the reason.
  */
 export async function loadCalibration(
-  sddRoot: string,
+  definitionRoot: string,
   checkId: string,
 ): Promise<CalibrationReceipt | null> {
   try {
     const raw: unknown = JSON.parse(
-      await readFile(join(sddRoot, "checks", receiptName(checkId)), "utf-8"),
+      await readFile(join(definitionRoot, "checks", receiptName(checkId)), "utf-8"),
     );
     const parsed = CalibrationReceiptSchema.safeParse(raw);
     return parsed.success ? parsed.data : null;

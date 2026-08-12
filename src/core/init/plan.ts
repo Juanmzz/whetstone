@@ -21,6 +21,7 @@
  */
 
 import type { TriageRule } from "../contracts.js";
+import { DEFINITION_DIR } from "../paths.js";
 import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 import { seedChecks } from "./checks.js";
@@ -30,6 +31,7 @@ import {
   ADR_TEMPLATE,
   CLAUDE_MD,
   MEMORY_README,
+  OUT_OF_SCOPE_README,
   activeSkills,
   renderAgentsMd,
   renderConstitution,
@@ -45,9 +47,9 @@ import {
 
 export interface InitOptions {
   /**
-   * Emit `.sdd/` only: no `AGENTS.md`, no `CLAUDE.md`.
+   * Emit `.wst/` only: no `AGENTS.md`, no `CLAUDE.md`.
    *
-   * `.sdd/` is the vendor-neutral source of truth (ADR-0002) and the vendor files are
+   * `.wst/` is the vendor-neutral source of truth (ADR-0002) and the vendor files are
    * RENDERINGS of it. A repo that already has its own `AGENTS.md` — because another
    * harness owns that surface — needs the definitions without the rendering, and
    * refusing to install at all was the only previous answer.
@@ -84,7 +86,9 @@ function isoDate(clock: ClockPort): string {
 export function planInit(input: InitPlanInput): InitPlan {
   const errors = validateAnswers(input.answers);
   if (errors.length > 0) {
-    throw new Error(`cannot generate .sdd/ from these answers:\n${errors.map((e) => `  - ${e}`).join("\n")}`);
+    throw new Error(
+      `cannot generate ${DEFINITION_DIR}/ from these answers:\n${errors.map((e) => `  - ${e}`).join("\n")}`,
+    );
   }
 
   const options = input.options ?? {};
@@ -115,11 +119,11 @@ export function planInit(input: InitPlanInput): InitPlan {
   const triageRulesMd = renderTriageRulesMd(rules, { date });
 
   const files: GeneratedFile[] = [
-    { path: ".sdd/constitution.md", contents: constitution },
-    { path: ".sdd/triage-rules.md", contents: triageRulesMd },
-    { path: ".sdd/triage.yaml", contents: renderTriageYaml(rules) },
+    { path: `${DEFINITION_DIR}/constitution.md`, contents: constitution },
+    { path: `${DEFINITION_DIR}/triage-rules.md`, contents: triageRulesMd },
+    { path: `${DEFINITION_DIR}/triage.yaml`, contents: renderTriageYaml(rules) },
     {
-      path: ".sdd/wst.yaml",
+      path: `${DEFINITION_DIR}/wst.yaml`,
       contents: renderWstYaml({
         backend: options.backend ?? "files",
         skills,
@@ -127,27 +131,30 @@ export function planInit(input: InitPlanInput): InitPlan {
       }),
     },
     ...checkFiles,
-    { path: ".sdd/memory/README.md", contents: MEMORY_README },
+    { path: `${DEFINITION_DIR}/memory/README.md`, contents: MEMORY_README },
     // Empty on purpose. A seeded example would be the first line of the log, and
     // then every count, every "since the last retro" cursor and every cluster is
     // computed over a fact that never happened.
-    { path: ".sdd/memory/signals.jsonl", contents: "" },
+    { path: `${DEFINITION_DIR}/memory/signals.jsonl`, contents: "" },
     {
-      path: ".sdd/memory/patterns.md",
+      path: `${DEFINITION_DIR}/memory/patterns.md`,
       contents:
         "# Patterns\n\nRecurring patterns distilled by a retro. Empty until one has run —" +
         "\nthis file holds conclusions, not observations.\n",
     },
     {
-      path: ".sdd/memory/retro-log.md",
+      path: `${DEFINITION_DIR}/memory/retro-log.md`,
       contents:
         "# Retro log\n\nOne entry per retro: which signals it read, what it changed, and what" +
         "\nit deliberately did not change. The next retro starts where the last one stopped.\n",
     },
-    { path: ".sdd/memory/decisions/_TEMPLATE.md", contents: ADR_TEMPLATE },
+    { path: `${DEFINITION_DIR}/memory/decisions/_TEMPLATE.md`, contents: ADR_TEMPLATE },
+    // No entries, only the home. A seeded refusal would be a decision nobody made,
+    // and it would be read as one — the same reason `signals.jsonl` ships empty.
+    { path: `${DEFINITION_DIR}/memory/out-of-scope/README.md`, contents: OUT_OF_SCOPE_README },
   ];
 
-  // The vendor files are RENDERINGS of `.sdd/` (ADR-0002), which is why they can be
+  // The vendor files are RENDERINGS of `.wst/` (ADR-0002), which is why they can be
   // withheld without withholding anything: a repo whose harness already owns
   // `AGENTS.md` gets the definitions and keeps its own front door. Refusing to
   // install at all used to be the only answer to that.
@@ -159,7 +166,9 @@ export function planInit(input: InitPlanInput): InitPlan {
         constitution,
         triageRulesMd,
         activeSkills: skills,
-        checkIds: checkFiles.map((f) => f.path.replace(".sdd/checks/", "").replace(/\.md$/, "")),
+        checkIds: checkFiles.map((f) =>
+          f.path.replace(`${DEFINITION_DIR}/checks/`, "").replace(/\.md$/, ""),
+        ),
       }),
     },
     // NOT a copy of AGENTS.md. Claude Code reads only CLAUDE.md but honours the
@@ -169,7 +178,7 @@ export function planInit(input: InitPlanInput): InitPlan {
   if (options.definitionsOnly !== true) files.push(...vendorFiles);
 
   // No `.claude/` any more (ADR-0010). `init` writes DEFINITIONS; the editor hook is
-  // the plugin's, which reads `.sdd/triage.yaml` at run time rather than baking the
+  // the plugin's, which reads `.wst/triage.yaml` at run time rather than baking the
   // paths in, and composes with a repo's existing hooks instead of replacing their
   // `settings.json` wholesale. That write is what forced `collisions.ts` to exist.
 
@@ -178,7 +187,7 @@ export function planInit(input: InitPlanInput): InitPlan {
       "no checks were seeded: this repo declares no test, typecheck or lint command that " +
         "is certain to exist. A check whose command cannot run reports `errored` on every " +
         "change, which reads as a broken gate — so nothing was invented. Add one under " +
-        "`.sdd/checks/` once the project has a runner.",
+        `\`${DEFINITION_DIR}/checks/\` once the project has a runner.`,
     );
   }
 

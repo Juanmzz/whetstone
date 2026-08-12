@@ -41,7 +41,7 @@ export interface TriageResult {
   /** Which rule won, per file — first-match-wins, so this is auditable. */
   readonly matches: readonly TriageMatch[];
   /**
-   * Where the rules came from: `.sdd/triage.yaml`, or the built-in defaults. A receipt
+   * Where the rules came from: `.wst/triage.yaml`, or the built-in defaults. A receipt
    * has to be re-checkable, and "which rules were in force" is part of that.
    */
   readonly rulesSource: string;

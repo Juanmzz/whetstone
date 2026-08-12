@@ -1,13 +1,13 @@
 # Whetstone — agent orientation
 
-> **Keep this file thin.** Per ADR-0002 the content lives in `.sdd/` and vendor files render
-> from it. If you are about to explain architecture here, put it in `.sdd/architecture.md` and
+> **Keep this file thin.** Per ADR-0002 the content lives in `.wst/` and vendor files render
+> from it. If you are about to explain architecture here, put it in `.wst/architecture.md` and
 > link instead.
 >
 > ⚠ This file has gone stale four times. That is structural, not careless: a hand-maintained
 > vendor file drifts the moment work outpaces documentation. `wst init` already generates this
 > artifact for target repos, so making Whetstone's own copy emitter output is the obvious next
-> step. **Until then, `.sdd/` is authoritative wherever the two disagree.**
+> step. **Until then, `.wst/` is authoritative wherever the two disagree.**
 
 Whetstone is a **self-sharpening standards layer** for AI coding agents. It captures a
 project's definition of *correct* as plain files in git, enforces it with a deterministic
@@ -16,25 +16,25 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 ## Read first
 
-1. **`.sdd/architecture.md`** — `.sdd`=data / engine=code / LLM=judgment, FCIS, the 7 layers,
+1. **`.wst/architecture.md`** — `.wst`=data / engine=code / LLM=judgment, FCIS, the 7 layers,
    the verdict contract, the measured `claude -p` invocation.
-2. **`.sdd/constitution.md`** — governance and the seven non-negotiables.
-3. **`.sdd/triage-rules.md`** — which discipline a change earns. Read BEFORE editing.
-4. **`.sdd/memory/decisions/`** — ADRs 0001–0008. Read the file, not a summary.
-5. **`docs/PARALLEL.md`** + **`.sdd/lanes.yaml`** — if you are a crewmate in a lane.
+2. **`.wst/constitution.md`** — governance and the seven non-negotiables.
+3. **`.wst/triage-rules.md`** — which discipline a change earns. Read BEFORE editing.
+4. **`.wst/memory/decisions/`** — ADRs 0001–0008. Read the file, not a summary.
+5. **`docs/PARALLEL.md`** + **`.wst/lanes.yaml`** — if you are a crewmate in a lane.
 
 ## The commands
 
 | | |
 |---|---|
-| `wst status` | repo, `.sdd/`, judge health, version drift, whether the pre-push gate is armed |
+| `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
 | `wst check` | the check registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst run <task>` | dispatch a crewmate in an isolated worktree, then gate its work |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
-| `wst init` | interview a repo and generate its `.sdd/` |
+| `wst init` | interview a repo and generate its `.wst/` |
 
 Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
 record signals; for when you are testing the gate itself) · `run --dry-run` · `retro --dry-run`.
@@ -43,16 +43,16 @@ record signals; for when you are testing the gate itself) · `run --dry-run` · 
 
 | Path | What |
 |---|---|
-| `.sdd/` | The definition layer. Source of truth. |
-| `.sdd/checks/` · `lanes.yaml` · `triage.yaml` | Registry, lane ownership, triage rules |
-| `.sdd/memory/` | ADRs, `signals.jsonl`, `retro-log.md`, `proposals/` |
+| `.wst/` | The definition layer. Source of truth. |
+| `.wst/checks/` · `lanes.yaml` · `triage.yaml` | Registry, lane ownership, triage rules |
+| `.wst/memory/` | ADRs, `signals.jsonl`, `retro-log.md`, `proposals/` |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
 | `src/shell/` | Thin adapters: git, fs, claude, crewmate, treehouse, github, sdd, signals |
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
 | `docs/woz/` | Wizard-of-Oz reference specs. Not current procedure. |
-| `.claude/hooks/` | Emitter output compiled from `.sdd/`. Hand-edits are drift. |
+| `.claude/hooks/` | Emitter output compiled from `.wst/`. Hand-edits are drift. |
 
 ## Hard rules
 
@@ -73,7 +73,7 @@ record signals; for when you are testing the gate itself) · `run --dry-run` · 
 8. **Ground API claims against the docs before writing code** — prefer Context7.
 9. **Judge = hermetic, crewmate = charged.** `shell/claude.ts` strips the target repo's MCP,
    hooks and `AGENTS.md` so a repo cannot hijack its own reviewer. `shell/crewmate.ts` loads them
-   deliberately: `.sdd/` IS the charter. Backwards in either direction is a serious bug. A
+   deliberately: `.wst/` IS the charter. Backwards in either direction is a serious bug. A
    hermetic judge cannot resolve a path, so everything it must judge is inlined (delegation D7).
 10. **Isolate a negative control.** When you break something on purpose to prove a check catches
     it, that defect must be the ONLY uncommitted change, and use `--no-emit`. Twice now it has
@@ -81,7 +81,7 @@ record signals; for when you are testing the gate itself) · `run --dry-run` · 
 
 ## Memory
 
-Backend is `files`; `.sdd/memory/` is the source of truth, human-gated. **Engram namespace is
+Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under `chytapay-workspace`.
 
 ## Status — Steps 0–7 complete · branch `engine-skeleton` · 581 tests

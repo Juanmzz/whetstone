@@ -24,6 +24,8 @@ import {
 import { createGitAdapter } from "../shell/git.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { readCursor, readSignals, writeProposals } from "../shell/retro.js";
+import { resolveDefinitionRoot } from "../shell/sdd.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import { readdir, readFile } from "node:fs/promises";
 
 export interface RetroOptions {
@@ -47,8 +49,8 @@ const LENS = [
   "Prefer the SMALLEST apparatus that fixes it: a rule beats a hook beats a command",
   "beats a whole new skill. Prefer curating a proven solution over generating a new one.",
   "",
-  "`target` MUST be a path under .sdd/ — a skill, a hook, or an ADR. You may NEVER",
-  "target .sdd/constitution.md; the constitution is human-owned.",
+  `\`target\` MUST be a path under ${DEFINITION_DIR}/ — a skill, a hook, or an ADR. You may NEVER`,
+  `target ${DEFINITION_DIR}/constitution.md; the constitution is human-owned.`,
   "",
   "`citedSignals` MUST list only signal ids that appear in the cluster you were given.",
   "Do not invent an id, and do not cite one twice. The citation is the receipt that",
@@ -63,12 +65,12 @@ const LENS = [
  * The proposer runs HERMETIC (no tools, no filesystem — see `shell/claude.ts`), so
  * everything it needs must be in the prompt. The first real run proved why: three of
  * four proposals came back as the literal word "placeholder", one of them explaining
- * "I don't have visibility into .sdd/skills/voice.md". It was asked to amend a rule
+ * "I don't have visibility into .wst/skills/voice.md". It was asked to amend a rule
  * it had never been shown.
  */
 async function describeCluster(
   cluster: Cluster,
-  sddRoot: string,
+  definitionRoot: string,
   skillIndex: string,
 ): Promise<string> {
   const parts = [
@@ -85,27 +87,27 @@ async function describeCluster(
   if (cluster.key.startsWith("rule:")) {
     const rel = cluster.key.slice("rule:".length);
     try {
-      const body = await readFile(join(sddRoot, rel), "utf-8");
+      const body = await readFile(join(definitionRoot, rel), "utf-8");
       parts.push(
         "",
-        `CURRENT CONTENT of .sdd/${rel} — amend THIS text, and do not restate a rule it`,
+        `CURRENT CONTENT of ${DEFINITION_DIR}/${rel} — amend THIS text, and do not restate a rule it`,
         `already contains:`,
         "",
         body.slice(0, 6000),
       );
     } catch {
-      parts.push("", `(.sdd/${rel} could not be read — propose against the skill list above.)`);
+      parts.push("", `(${DEFINITION_DIR}/${rel} could not be read — propose against the skill list above.)`);
     }
   }
   return parts.join("\n");
 }
 
-async function listSkills(sddRoot: string): Promise<string> {
+async function listSkills(definitionRoot: string): Promise<string> {
   try {
-    const files = await readdir(join(sddRoot, "skills"));
+    const files = await readdir(join(definitionRoot, "skills"));
     return files
       .filter((f) => f.endsWith(".md"))
-      .map((f) => `  - .sdd/skills/${f}`)
+      .map((f) => `  - ${DEFINITION_DIR}/skills/${f}`)
       .join("\n");
   } catch {
     return "  (none)";
@@ -114,10 +116,10 @@ async function listSkills(sddRoot: string): Promise<string> {
 
 export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Promise<number> {
   const repoRoot = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
-  const sddRoot = join(repoRoot, ".sdd");
+  const definitionRoot = await resolveDefinitionRoot(repoRoot);
 
-  const all = await readSignals(sddRoot);
-  const cursor = await readCursor(sddRoot);
+  const all = await readSignals(definitionRoot);
+  const cursor = await readCursor(definitionRoot);
 
   let fresh;
   try {
@@ -153,7 +155,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
     return 0;
   }
 
-  const skillIndex = await listSkills(sddRoot);
+  const skillIndex = await listSkills(definitionRoot);
   const judge = createClaudeJudge();
   const accepted: Recommendation[] = [];
   const rejected: { rec: Recommendation; reasons: readonly string[] }[] = [];
@@ -163,7 +165,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   for (const cluster of actionable) {
     const result = await judge.judge({
       lens: LENS,
-      prompt: await describeCluster(cluster, sddRoot, skillIndex),
+      prompt: await describeCluster(cluster, definitionRoot, skillIndex),
       schema: RecommendationSchema,
       model: opts.model ?? "sonnet",
       maxAttempts: 3,
@@ -201,7 +203,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   }
 
   const retroId = `retro-${String(all.length).padStart(4, "0")}`;
-  const path = await writeProposals(sddRoot, retroId, lines.join("\n"));
+  const path = await writeProposals(definitionRoot, retroId, lines.join("\n"));
 
   console.log(`\n  ${accepted.length} proposal(s) survived the anti-poisoning gate`);
   if (rejected.length > 0) {
@@ -211,7 +213,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   console.log(`  cost: $${cost.toFixed(4)}`);
   console.log(`\n  wrote ${path}`);
   console.log(`  Review it. Nothing is applied until you apply it.`);
-  console.log(`  Then append a "## ${retroId}" entry to .sdd/memory/retro-log.md with`);
+  console.log(`  Then append a "## ${retroId}" entry to ${DEFINITION_DIR}/memory/retro-log.md with`);
   console.log(`  \`cursor: ${fresh[fresh.length - 1]?.id}\` so the next retro starts after it.`);
   return 0;
 }

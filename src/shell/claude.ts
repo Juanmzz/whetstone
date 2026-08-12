@@ -2,7 +2,7 @@
  * The `claude` adapter — the only place in Whetstone that spawns an LLM.
  *
  * THE FLAG SET IS LOAD-BEARING. Every flag below was measured against claude
- * v2.1.224; see `.sdd/architecture.md` for the evidence table. Do not "simplify" it:
+ * v2.1.224; see `.wst/architecture.md` for the evidence table. Do not "simplify" it:
  *
  *  - `--strict-mcp-config --mcp-config {}` + `--settings {hooks:{}}` make the call
  *    HERMETIC. Without them the child inherits the caller's MCP servers, plugins and

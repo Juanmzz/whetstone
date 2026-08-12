@@ -19,6 +19,7 @@
  *   names, so it is not reproduced here.
  */
 
+import { DEFINITION_DIR } from "../paths.js";
 import type { CopyRequest } from "./artifact.js";
 import type { StackFacts } from "./detect.js";
 import { renderRiskProfile, type RiskProfile } from "./interview.js";
@@ -50,7 +51,10 @@ const SKILL_BLURBS: Readonly<Record<string, string>> = {
 };
 
 export function skillCopies(): readonly CopyRequest[] {
-  return SKILL_FILES.map((name) => ({ from: `skills/${name}`, to: `.sdd/skills/${name}` }));
+  return SKILL_FILES.map((name) => ({
+    from: `skills/${name}`,
+    to: `${DEFINITION_DIR}/skills/${name}`,
+  }));
 }
 
 /**
@@ -117,7 +121,8 @@ export function renderConstitution(input: ConstitutionInput): string {
 
   const stackFacts =
     stack.greenness === "greenfield"
-      ? "**Greenfield** — no code yet, so nothing was inferred. Fill this in as the stack is\nchosen; the first real decision belongs in `.sdd/memory/decisions/` as an ADR."
+      ? "**Greenfield** — no code yet, so nothing was inferred. Fill this in as the stack is\n" +
+        `chosen; the first real decision belongs in \`${DEFINITION_DIR}/memory/decisions/\` as an ADR.`
       : [
           `- **Language:** ${stack.language ?? "not identified"}`,
           `- **Package manager:** ${stack.packageManager ?? "not identified"}`,
@@ -144,9 +149,9 @@ status: active
 ---
 # ${input.repoName} — constitution
 
-Governance for this project. Every other file under \`.sdd/\` is calibrated against it.
+Governance for this project. Every other file under \`${DEFINITION_DIR}/\` is calibrated against it.
 
-**\`.sdd/constitution.md\` is amended by an explicit human edit and by nothing else.** The retro may
+**\`${DEFINITION_DIR}/constitution.md\` is amended by an explicit human edit and by nothing else.** The retro may
 propose changes to the triage rules, the skills and the checks; it never touches the
 constitution. A project whose definition of "correct" can be rewritten by the tool that
 enforces it does not have a definition of correct.
@@ -167,7 +172,7 @@ ${renderRiskProfile(input.risk)}
 3. A judgment check earns its \`block\`. A deterministic check may block freely; a check
    that depends on a model's opinion is capped at a warning until it has been measured
    against known-good and known-bad examples and agreed with itself every time.
-4. Corrections are appended, never overwritten. \`.sdd/memory/signals.jsonl\` is
+4. Corrections are appended, never overwritten. \`${DEFINITION_DIR}/memory/signals.jsonl\` is
    append-only; an ADR is superseded rather than rewritten.
 
 ## Stack facts
@@ -229,6 +234,14 @@ Front-matter: \`id\`, \`ts\`, \`status\` (\`proposed\` | \`accepted\` | \`supers
 a new ADR that says so. The value of the record is that it shows what was believed at
 the time, and editing it destroys exactly that.
 
+## \`out-of-scope/\` — what was deliberately refused
+
+One file per capability this project was asked for and decided not to build. A
+refusal that lives only in memory gets re-proposed every few months with the
+argument re-derived from scratch. Each entry says what was asked, why it is out of
+scope, what escape hatches already exist, and the request that prompted it. Empty
+until something is actually refused; the directory's own README has the form.
+
 ## \`patterns.md\` and \`retro-log.md\`
 
 \`patterns.md\` holds distilled recurring patterns — the output of a retro, not raw
@@ -242,6 +255,55 @@ cluster them, and decide what apparatus each cluster earns — amend a rule, add
 retire one that never fires. **The analysis is automatic; the write is not.** A human
 confirms every change to a rule, because a tool that can silently rewrite the standard
 it enforces against you is not a standard.
+`;
+
+/**
+ * The fourth memory artifact (ADR-0012).
+ *
+ * `memory/` records what went wrong (`signals.jsonl`), what was decided
+ * (`decisions/`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
+ * recorded what was deliberately REFUSED, and a refusal with no file gets
+ * re-proposed every six months with the argument re-derived from scratch — by a
+ * fresh agent that has no way to know the conversation already happened.
+ *
+ * The attribution is INLINE rather than a pointer, per the payload rule: this file
+ * lands in a repo that has never heard of Whetstone, so a reference to a LICENSE
+ * that lives here would dangle there.
+ */
+export const OUT_OF_SCOPE_README = `# Out of scope
+
+Things this project was asked for and decided NOT to build.
+
+A refusal that lives only in someone's memory gets re-proposed every few months,
+and the argument gets re-derived from scratch every time — usually worse, because
+the pressure that produced the original answer is no longer in the room. This
+directory is where a "no" keeps its reasoning.
+
+One file per refusal, \`kebab-case-name.md\`, and each one states four things:
+
+1. **What was asked** — the capability, in the words of whoever wanted it. Not a
+   strawman: if the request cannot be stated in a form its author would recognise,
+   it has not been understood well enough to refuse.
+2. **Why it is out of scope** — the reasoning, at the time, with the constraint or
+   the tradeoff that decided it.
+3. **What escape hatches already exist** — how someone who needs this can get it
+   today. A refusal with no alternative is usually a missing feature wearing a
+   decision's clothes.
+4. **The request that prompted it** — the date and the context, so a reader can
+   tell a one-off from a pattern. The fourth time the same thing is asked for, the
+   answer probably deserves revisiting.
+
+A "no" recorded here is not permanent. It is reviewable, which is the opposite of
+forgotten: what reverses it is new evidence, and the file is where the next person
+starts rather than where they stop.
+
+Empty until something is actually refused. An invented entry would be a decision
+nobody made.
+
+---
+
+The form of this directory is borrowed from \`mattpocock/skills\` (MIT licensed),
+whose \`.out-of-scope/\` is the same idea.
 `;
 
 export const ADR_TEMPLATE = `---
@@ -294,21 +356,23 @@ export function renderAgentsMd(input: AgentsMdInput): string {
     .map((path) => {
       const name = path.split("/").pop() ?? path;
       const blurb = SKILL_BLURBS[name];
-      return `- \`.sdd/${path}\`${blurb === undefined ? "" : ` — ${blurb}`}`;
+      return `- \`${DEFINITION_DIR}/${path}\`${blurb === undefined ? "" : ` — ${blurb}`}`;
     })
     .join("\n");
 
   const checks =
     input.checkIds.length > 0
-      ? `The gate runs: ${input.checkIds.map((id) => `\`${id}\``).join(", ")}. Each one is a\nfile under \`.sdd/checks/\` explaining what it is for and what to do when it fails.`
-      : "No checks are registered yet. Add one under `.sdd/checks/<id>.md` when a class of\nmistake proves worth catching automatically — not before.";
+      ? `The gate runs: ${input.checkIds.map((id) => `\`${id}\``).join(", ")}. Each one is a\n` +
+        `file under \`${DEFINITION_DIR}/checks/\` explaining what it is for and what to do when it fails.`
+      : `No checks are registered yet. Add one under \`${DEFINITION_DIR}/checks/<id>.md\` when a class of\n` +
+        "mistake proves worth catching automatically — not before.";
 
   return `# ${input.repoName} — agent workflow
 
-> **GENERATED from \`.sdd/\`. Do not edit by hand.** Everything below is a rendering of
-> files under \`.sdd/\`, which is the source of truth. Editing \`AGENTS.md\` changes nothing
+> **GENERATED from \`${DEFINITION_DIR}/\`. Do not edit by hand.** Everything below is a rendering of
+> files under \`${DEFINITION_DIR}/\`, which is the source of truth. Editing \`AGENTS.md\` changes nothing
 > durable: the next regeneration overwrites it, and the rule you meant to change is
-> still whatever \`.sdd/\` says.
+> still whatever \`${DEFINITION_DIR}/\` says.
 >
 > Every section below names its source file explicitly rather than referring to itself,
 > because the same sentence is true in its source and false here.
@@ -337,13 +401,13 @@ ${skills}
 This is the part that makes the rest improve rather than rot.
 
 - **Something goes wrong** — the agent takes a wrong turn and gets corrected, or nearly
-  does — append a line to \`.sdd/memory/signals.jsonl\`. The schema is in
-  \`.sdd/memory/README.md\`. Log the small ones; they are the ones that reveal patterns.
-- **A decision gets made** — add an ADR under \`.sdd/memory/decisions/\`, starting from
+  does — append a line to \`${DEFINITION_DIR}/memory/signals.jsonl\`. The schema is in
+  \`${DEFINITION_DIR}/memory/README.md\`. Log the small ones; they are the ones that reveal patterns.
+- **A decision gets made** — add an ADR under \`${DEFINITION_DIR}/memory/decisions/\`, starting from
   \`_TEMPLATE.md\`.
 - **Periodically** — run a retro: read the signals logged since the last one, cluster
   them, and decide what each cluster earns (amend a triage rule, add or retire a check,
-  sharpen a skill). Record the outcome in \`.sdd/memory/retro-log.md\`.
+  sharpen a skill). Record the outcome in \`${DEFINITION_DIR}/memory/retro-log.md\`.
 
 **The analysis is automatic; the write is not.** A human confirms every change to a
 rule. Nothing in this repo rewrites its own standard.

@@ -25,6 +25,7 @@
  * that quietly never joins the group it belongs to.
  */
 
+import { DEFINITION_DIR } from "../paths.js";
 import { signalId, type SignalSeverity } from "./emit.js";
 import type { SignalRecord } from "./parse.js";
 
@@ -66,15 +67,15 @@ const isSeverity = (value: string): value is SignalSeverity =>
   (SEVERITIES as readonly string[]).includes(value);
 
 /**
- * A `.sdd`-relative path to a markdown rule file: `skills/recording.md`,
+ * A `.wst`-relative path to a markdown rule file: `skills/recording.md`,
  * `triage-rules.md`, `memory/decisions/0007-adr-process.md`. Kebab-case segments,
  * no `.` or `..`, because the string is written into a permanent record and read
- * back as a path by the retro (`commands/retro.ts` reads `.sdd/<rule>`).
+ * back as a path by the retro (`commands/retro.ts` reads `.wst/<rule>`).
  */
 const RULE = /^(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)*[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 
 /**
- * The rule documents that live at the ROOT of `.sdd/` rather than under `skills/`.
+ * The rule documents that live at the ROOT of `.wst/` rather than under `skills/`.
  * Named explicitly so a bare filename can be resolved without guessing: everything
  * else with no directory is a skill, which is what all 44 accumulated entries mean
  * when they write one.
@@ -140,7 +141,7 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
   for (const rule of rules) {
     if (!RULE.test(rule)) {
       errors.push(
-        `rule "${rule}" is not a .sdd-relative markdown path (e.g. \`skills/recording.md\`) — ` +
+        `rule "${rule}" is not a ${DEFINITION_DIR}-relative markdown path (e.g. \`skills/recording.md\`) — ` +
           `the retro reads it as a path and clusters on it verbatim`,
       );
     }

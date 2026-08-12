@@ -3,9 +3,9 @@
  *
  * The asymmetry worth understanding: when Whetstone runs a REVIEW LENS it makes the
  * call hermetic, stripping the target repo's `AGENTS.md`, MCP servers and hooks so a
- * repo cannot hijack its own reviewer. A CREWMATE is the exact opposite — `.sdd/` IS
+ * repo cannot hijack its own reviewer. A CREWMATE is the exact opposite — `.wst/` IS
  * its charter and must be loaded. Same binary, opposite flags. See
- * `.sdd/architecture.md` and `src/shell/claude.ts`.
+ * `.wst/architecture.md` and `src/shell/claude.ts`.
  *
  * The charter is a MAP, not a copy. Inlining the constitution into every crewmate
  * prompt is exactly the waste `token-economy` exists to stop; the crewmate can read
@@ -14,6 +14,7 @@
 
 import type { Check } from "../checks/schema.js";
 import type { TriageRule } from "../contracts.js";
+import { DEFINITION_DIR } from "../paths.js";
 
 /** An orientation file the charter may point at, and what it is. */
 export interface OrientationDoc {
@@ -25,7 +26,7 @@ export interface OrientationDoc {
 /**
  * Every file the charter is allowed to send a crewmate to, in reading order.
  *
- * The charter used to hardcode `AGENTS.md` and `.sdd/architecture.md`. Neither is
+ * The charter used to hardcode `AGENTS.md` and `.wst/architecture.md`. Neither is
  * written by `wst init --definitions-only` — the mode for a repo whose own harness
  * already owns that surface — and `architecture.md` is written by no mode at all: it
  * exists only in Whetstone's own repo. So the first install into a foreign repo
@@ -40,9 +41,12 @@ export interface OrientationDoc {
 export const ORIENTATION_DOCS: readonly OrientationDoc[] = [
   { path: "AGENTS.md", note: "orientation, and the hard rules" },
   { path: "CLAUDE.md", note: "orientation, and the hard rules" },
-  { path: ".sdd/architecture.md", note: "how this system is built" },
-  { path: ".sdd/constitution.md", note: "the non-negotiables this project governs itself by" },
-  { path: ".sdd/triage-rules.md", note: "which discipline this change earns" },
+  { path: `${DEFINITION_DIR}/architecture.md`, note: "how this system is built" },
+  {
+    path: `${DEFINITION_DIR}/constitution.md`,
+    note: "the non-negotiables this project governs itself by",
+  },
+  { path: `${DEFINITION_DIR}/triage-rules.md`, note: "which discipline this change earns" },
 ];
 
 /**
@@ -142,7 +146,7 @@ export function buildCharter(input: CharterInput): string {
     // worse than one that names none, because it reads as authoritative.
     lines.push(
       `This repo has no orientation file Whetstone can point you at. Read the code and`,
-      `whatever \`.sdd/\` holds before you write, and say so in your report if there was`,
+      `whatever \`${DEFINITION_DIR}/\` holds before you write, and say so in your report if there was`,
       `nothing to orient from.`,
     );
   }

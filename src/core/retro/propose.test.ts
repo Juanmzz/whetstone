@@ -10,7 +10,7 @@ const log: Signal[] = [
 const rec = (over: Partial<Recommendation> = {}): Recommendation => ({
   clusterKey: "type:t",
   kind: "amend",
-  target: ".sdd/skills/voice.md",
+  target: ".wst/skills/voice.md",
   summary: "strengthen V2 to cover sub-agent output",
   rationale:
     "Two signals show a claim asserted without verification, both times from a sub-agent " +
@@ -42,15 +42,15 @@ describe("validateRecommendation — the anti-poisoning gate", () => {
   // The constitution is human-owned. The retro proposes rules; it never rewrites
   // the document that says what the rules may be.
   it("REFUSES to touch the constitution", () => {
-    const r = validateRecommendation(rec({ target: ".sdd/constitution.md" }), log);
+    const r = validateRecommendation(rec({ target: ".wst/constitution.md" }), log);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reasons.join(" ")).toMatch(/constitution/i);
   });
 
-  it("REFUSES to touch anything outside .sdd/", () => {
+  it("REFUSES to touch anything outside .wst/", () => {
     const r = validateRecommendation(rec({ target: "src/core/gate/aggregate.ts" }), log);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reasons.join(" ")).toMatch(/\.sdd/);
+    if (!r.ok) expect(r.reasons.join(" ")).toMatch(/\.wst/);
   });
 
   it("REJECTS an empty rationale — an unexplained rule cannot be reviewed", () => {
@@ -59,7 +59,7 @@ describe("validateRecommendation — the anti-poisoning gate", () => {
 
   it("reports EVERY reason at once rather than only the first", () => {
     const r = validateRecommendation(
-      rec({ target: ".sdd/constitution.md", citedSignals: ["sig-9999"], rationale: "" }),
+      rec({ target: ".wst/constitution.md", citedSignals: ["sig-9999"], rationale: "" }),
       log,
     );
     expect(r.ok).toBe(false);
@@ -68,7 +68,7 @@ describe("validateRecommendation — the anti-poisoning gate", () => {
 
   it("allows an ADR flip, since ADR-0007 makes decisions retro-amendable", () => {
     const r = validateRecommendation(
-      rec({ kind: "flip-adr", target: ".sdd/memory/decisions/0004-x.md" }),
+      rec({ kind: "flip-adr", target: ".wst/memory/decisions/0004-x.md" }),
       log,
     );
     expect(r.ok).toBe(true);

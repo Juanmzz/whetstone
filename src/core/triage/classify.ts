@@ -3,7 +3,7 @@
  *
  * Turns `ChangedFile[]` + `TriageRule[]` into the one number the whole gate hangs
  * off: which discipline this change gets. Three rules, all from
- * `.sdd/triage-rules.md`, and all of them load-bearing:
+ * `.wst/triage-rules.md`, and all of them load-bearing:
  *
  * 1. **First-match-wins, in rule order.** Order IS precedence. Not
  *    most-specific-wins: that would be an implicit ranking nobody wrote down,
@@ -20,13 +20,14 @@
 import type { Tier } from "../checks/schema.js";
 import type { TriageResult, TriageRule } from "../contracts.js";
 import type { ChangedFile } from "../diff/parse.js";
+import { DEFINITION_DIR } from "../paths.js";
 import { matchesPathGlob } from "./glob.js";
 
 /** The single entry in `TriageResult.matches`. `contracts.ts` leaves it unnamed. */
 export type TriageMatch = TriageResult["matches"][number];
 
 /**
- * Where a file lands when no rule matches it. `.sdd/triage-rules.md`: "Default
+ * Where a file lands when no rule matches it. `.wst/triage-rules.md`: "Default
  * when a change matches nothing above: light." Deliberately NOT `off` — an
  * unrecognised path is an unknown, and an unknown gets reasoned about before
  * merge. It is also why a config cannot express the fallback as a trailing `**`
@@ -35,7 +36,7 @@ export type TriageMatch = TriageResult["matches"][number];
  */
 export const FALLBACK_TIER: Tier = "light";
 export const FALLBACK_REASON =
-  "no rule matched — default tier per .sdd/triage-rules.md (an unrecognised path is not evidence of triviality)";
+  `no rule matched — default tier per ${DEFINITION_DIR}/triage-rules.md (an unrecognised path is not evidence of triviality)`;
 
 /**
  * The tier of a diff with no files. The maximum over an empty set is the bottom

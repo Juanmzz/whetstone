@@ -1,7 +1,7 @@
 # Constitution — Whetstone
 
 > Hand-seeded pre-wizard. `wst init` will eventually generate this from a project interview; for now
-> it is maintained by hand so the project can dogfood its own `.sdd/`.
+> it is maintained by hand so the project can dogfood its own `.wst/`.
 
 ## Purpose
 
@@ -60,4 +60,4 @@ Rules 6 and 7 originate in ADR-0008; rules 1–5 predate it and are unchanged.
   different account, so moving between the two workspaces means switching. Whetstone itself has no
   GitHub surface to break (ADR-0009 deleted the only one), so this is purely about git plumbing.
 
-See `.sdd/architecture.md` for how these fit together.
+See `.wst/architecture.md` for how these fit together.

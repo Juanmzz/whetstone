@@ -8,6 +8,8 @@ import { access } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
+import { definitionRoot } from "../shell/sdd.js";
+import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../core/paths.js";
 import { createClaudeJudge } from "../shell/claude.js";
 import { describePlugin } from "../shell/plugin.js";
 import {
@@ -43,15 +45,15 @@ async function hooksPath(cwd: string): Promise<string | null> {
 }
 
 /**
- * Whether `.sdd/` is TRACKED, not merely present.
+ * Whether `.wst/` is TRACKED, not merely present.
  *
- * Untracked files do not propagate into git worktrees, so an uncommitted `.sdd/` is
+ * Untracked files do not propagate into git worktrees, so an uncommitted `.wst/` is
  * present here and absent in every worktree cut from here — which silently disables
  * the plugin's hooks in exactly the places `wst run` sends work (sig-0044).
  */
-async function sddTracked(cwd: string): Promise<boolean> {
+async function definitionTracked(cwd: string): Promise<boolean> {
   try {
-    const { stdout } = await promisify(execFile)("git", ["ls-files", "--", ".sdd"], { cwd });
+    const { stdout } = await promisify(execFile)("git", ["ls-files", "--", DEFINITION_DIR], { cwd });
     return stdout.trim() !== "";
   } catch {
     return false;
@@ -80,7 +82,8 @@ export async function runStatus(
   const report = buildStatusReport({
     repoRoot,
     branch,
-    sddPresent: await exists(join(repoRoot ?? cwd, ".sdd")),
+    definitionPresent: await exists(definitionRoot(repoRoot ?? cwd)),
+    legacyPresent: await exists(join(repoRoot ?? cwd, LEGACY_DEFINITION_DIR)),
     judge: judgeInfo,
     hooks: {
       configuredPath: await hooksPath(repoRoot ?? cwd),
@@ -90,8 +93,8 @@ export async function runStatus(
       install: await describePlugin(),
       hookRoot,
       hookRootIsRepo: await isRepo(hookRoot),
-      hookRootHasSdd: await exists(join(hookRoot, ".sdd")),
-      sddTracked: await sddTracked(repoRoot ?? cwd),
+      hookRootHasDefinition: await exists(definitionRoot(hookRoot)),
+      definitionTracked: await definitionTracked(repoRoot ?? cwd),
     },
     nodeVersion: process.version,
   });

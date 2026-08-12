@@ -26,7 +26,7 @@ same outcome.
    and re-cache.
 6. [T6] Apply the delegation triggers (see [[delegation]]) BEFORE inline context piles up —
    don't read/write your way into a bloated window and delegate as an afterthought.
-7. [T7] Emitted agent-config (`CLAUDE.md` / `AGENTS.md`) is stitched from the `.sdd/` source
+7. [T7] Emitted agent-config (`CLAUDE.md` / `AGENTS.md`) is stitched from the `.wst/` source
    by the emitter — do not paste raw source into it. Conditionally-relevant rules belong in
    skills, which lazy-load on demand, NOT in the always-on config.
 8. [T8] Never forward accumulated orchestrator session context to a sub-agent (see T2). Fresh

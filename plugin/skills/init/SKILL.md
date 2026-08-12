@@ -1,5 +1,5 @@
 ---
-description: Bootstrap Whetstone in this repo — detect the stack, agree on what a bug costs here, and write .sdd/. Use when the user asks to set up, install or initialise Whetstone, or when a repo has no .sdd/ directory and they want the gate.
+description: Bootstrap Whetstone in this repo — detect the stack, agree on what a bug costs here, and write .wst/. Use when the user asks to set up, install or initialise Whetstone, or when a repo has no .wst/ directory and they want the gate.
 ---
 
 # Initialising Whetstone in a repository
@@ -14,7 +14,7 @@ how much ceremony every future change buys.
 wst status
 ```
 
-If `.sdd/` already exists, STOP and say so. `init` is not re-init.
+If `.wst/` already exists, STOP and say so. `init` is not re-init.
 
 Then look at what the repo already has, because it changes which flags you need:
 
@@ -103,7 +103,7 @@ wst gate --no-lens --no-emit
 Then commit only Whetstone's own files, never `-A`:
 
 ```bash
-git add .sdd .claude AGENTS.md CLAUDE.md
+git add .wst .claude AGENTS.md CLAUDE.md
 ```
 
 ## What not to do

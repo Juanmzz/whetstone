@@ -109,9 +109,9 @@ describe("parseTriageRules", () => {
 
 /**
  * DEFAULT_RULES is derived by parsing DEFAULT_RULES_YAML, so the built-in
- * fallback and the text we ship as `.sdd/triage.yaml` cannot drift apart. These
+ * fallback and the text we ship as `.wst/triage.yaml` cannot drift apart. These
  * tests are the acceptance criteria for that YAML: they encode the table in
- * `.sdd/triage-rules.md` as executable assertions.
+ * `.wst/triage-rules.md` as executable assertions.
  */
 describe("the default ruleset", () => {
   const tierOf = (path: string): string =>
@@ -133,12 +133,12 @@ describe("the default ruleset", () => {
   });
 
   it("rates the payload that propagates verbatim strict", () => {
-    expect(tierOf(".sdd/skills/tdd-discipline.md")).toBe("strict");
+    expect(tierOf(".wst/skills/tdd-discipline.md")).toBe("strict");
   });
 
   /**
    * THE DEFAULTS TRAVEL. `DEFAULT_RULES_YAML` is what any repo without its own
-   * `.sdd/triage.yaml` is triaged by, so a path that exists only in Whetstone is
+   * `.wst/triage.yaml` is triaged by, so a path that exists only in Whetstone is
    * this project's biography imposed as another project's policy — the same class
    * of leak `core/init/selfcontained.ts` exists to stop, in the one file it does
    * not audit.
@@ -176,11 +176,11 @@ describe("the default ruleset", () => {
     expect(tierOf("VISION.md")).toBe("light");
     expect(tierOf("AGENTS.md")).toBe("light");
     expect(tierOf("docs/woz/OPEN_QUESTIONS.md")).toBe("light");
-    expect(tierOf(".sdd/memory/decisions/adr-0008-engine.md")).toBe("light");
+    expect(tierOf(".wst/memory/decisions/adr-0008-engine.md")).toBe("light");
   });
 
   it("rates the retro log off", () => {
-    expect(tierOf(".sdd/memory/retro-log.md")).toBe("off");
+    expect(tierOf(".wst/memory/retro-log.md")).toBe("off");
   });
 
   it("falls back to light for anything it does not recognise", () => {
@@ -190,8 +190,8 @@ describe("the default ruleset", () => {
 
   it("does not let a broad rule shadow a stricter one", () => {
     // Guards the ordering of the shipped file itself: if a later edit hoists a
-    // general `.sdd/**` or `src/**` rule above the strict ones, this fails.
+    // general `.wst/**` or `src/**` rule above the strict ones, this fails.
     expect(tierOf("src/core/gate/aggregate.ts")).toBe("strict");
-    expect(tierOf(".sdd/skills/voice.md")).toBe("strict");
+    expect(tierOf(".wst/skills/voice.md")).toBe("strict");
   });
 });

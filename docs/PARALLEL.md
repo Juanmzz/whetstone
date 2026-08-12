@@ -4,7 +4,7 @@ The check schema (`src/core/checks/schema.ts`) is now fixed, which is what makes
 Before it existed, Steps 2 and 3 would each have invented it and collided in the one place that
 hurts most. This document is the contract and the split.
 
-**Read first:** `.sdd/architecture.md` (the layers, the FCIS rule), `.sdd/triage-rules.md` (`src/core/**`
+**Read first:** `.wst/architecture.md` (the layers, the FCIS rule), `.wst/triage-rules.md` (`src/core/**`
 is strict tier — full TDD, RED first).
 
 ## The rules that make parallel work safe
@@ -24,7 +24,7 @@ is strict tier — full TDD, RED first).
 These are independent given the schema. Each is a full vertical: types, tests, module, wiring.
 
 ### Lane A — triage + routing (Step 2)
-**Owns** `src/core/triage/`, `.sdd/triage.yaml`, `src/commands/triage.ts`
+**Owns** `src/core/triage/`, `.wst/triage.yaml`, `src/commands/triage.ts`
 **Consumes** `core/diff/parse.ts` (`ChangedFile[]`), `Check["tiers"]`, `Check["include"/"exclude"]`
 **Delivers** `classify(files, rules) -> { tier, reason }` and `route(tier) -> { checks, autonomy, model }`
 
@@ -89,7 +89,7 @@ passing calibration receipt is *refused by the loader*. Constitution non-negotia
 rule so it cannot be forgotten under deadline. Verify with:
 
 ```bash
-node dist/cli.js check     # after dropping an uncalibrated blocking lens into .sdd/checks/
+node dist/cli.js check     # after dropping an uncalibrated blocking lens into .wst/checks/
 ```
 
 ## Before you fan out

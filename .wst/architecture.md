@@ -7,17 +7,17 @@ origin: [adr-0005, adr-0008]
 # Architecture
 
 > Source of truth for how Whetstone is built. `AGENTS.md` points here; it does not restate this.
-> Per ADR-0002, `.sdd/` is the vendor-neutral source and vendor files are rendered from it — so
+> Per ADR-0002, `.wst/` is the vendor-neutral source and vendor files are rendered from it — so
 > content belongs **here**, never in `AGENTS.md` or `CLAUDE.md`.
 
 ## The principle
 
 Files alone would be advisory — the model reads them and hopefully complies. Whetstone is an
-**engine (code)** driven by **declarative definitions (`.sdd/`)**, calling the LLM **only** where
+**engine (code)** driven by **declarative definitions (`.wst/`)**, calling the LLM **only** where
 judgment is irreducible.
 
-- **`.sdd/` = DATA** (the *what*): constitution, triage, check registry. Git-versioned config.
-- **Engine = CODE** (the *how*, deterministic): reads `.sdd/`, classifies (globs, not LLM), selects
+- **`.wst/` = DATA** (the *what*): constitution, triage, check registry. Git-versioned config.
+- **Engine = CODE** (the *how*, deterministic): reads `.wst/`, classifies (globs, not LLM), selects
   and runs checks, enforces the gate, writes receipts, collects signals, clusters the retro.
 - **LLM = judgment only**: `agent-lens` checks, proposing new checks (human-gated).
 
@@ -65,8 +65,8 @@ architectural fact, not a promise.
 
 | # | Layer | Role | Status |
 |---|---|---|---|
-| 0 | **Definition** (`.sdd/`) | Per-project source of truth: constitution, triage, check registry, skills, memory | constitution/triage/skills ✅ · registry = Step 1 |
-| 1 | **Apply** (`wst init`) | Interview the project → generate `.sdd/` + bootstrap the toolchain | WoZ validated (`docs/woz/init.md`) · code = Step 6 |
+| 0 | **Definition** (`.wst/`) | Per-project source of truth: constitution, triage, check registry, skills, memory | constitution/triage/skills ✅ · registry = Step 1 |
+| 1 | **Apply** (`wst init`) | Interview the project → generate `.wst/` + bootstrap the toolchain | WoZ validated (`docs/woz/init.md`) · code = Step 6 |
 | 2 | **Triage / Routing** | Classify a change → criticality → {autonomy, model tier, which checks run} | Step 2 |
 | 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate was to live here | charter ✅ (`wst run`, Step 5) · **plan gate NOT BUILT** — declared, never implemented, no ADR either way |
 | 4 | **Verification gate** (lean) | Triage-gated: deterministic checks always, calibrated agent review only when critical. Receipts skip what already passed | Step 3 — the central build |
@@ -129,7 +129,7 @@ Step 0 skeleton **(current)** → 1 check registry → 2 triage/routing → 2.5 
 3 lean gate + receipts *(first real value: Whetstone gates its own PRs)* → ~~4 annotated PR~~
 **(built, then removed — ADR-0009)** → 5 `wst run` dispatch → 6 `init` → 7 `retro` *(loop closed)*.
 
-Self-hosting: Whetstone's own `.sdd/` exists from Step 0; **self-gating starts at Step 3**, and
+Self-hosting: Whetstone's own `.wst/` exists from Step 0; **self-gating starts at Step 3**, and
 signals are emitted from then on so the retro has real volume to process.
 
 Detail lives in `_design/WHETSTONE-BUILD-PLAN.md` (untracked working material).

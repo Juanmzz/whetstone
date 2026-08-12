@@ -128,7 +128,7 @@ describe("classify — the tier is the MAXIMUM across touched files", () => {
 });
 
 describe("classify — unmatched files", () => {
-  it("falls back to light, per .sdd/triage-rules.md", () => {
+  it("falls back to light, per .wst/triage-rules.md", () => {
     const result = classify([file("some/unknown/path.txt")], RULES);
     expect(result.tier).toBe(FALLBACK_TIER);
     expect(FALLBACK_TIER).toBe("light");

@@ -1,13 +1,64 @@
 /**
- * `.sdd/` filesystem adapter. THIN: reads files, hands text to the pure core.
+ * `.wst/` filesystem adapter. THIN: reads files, hands text to the pure core.
  */
 
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { buildRegistry, parseCheckFile, type Registry } from "../core/checks/registry.js";
 import { hashFixtureDir, loadCalibration } from "./calibration.js";
 import type { TriageRule } from "../core/contracts.js";
 import { DEFAULT_RULES, parseTriageRules } from "../core/triage/index.js";
+import {
+  DEFINITION_DIR,
+  LEGACY_DEFINITION_DIR,
+  legacyDirectoryMessage,
+} from "../core/paths.js";
+
+/**
+ * The definition directory inside a repo.
+ *
+ * One function rather than `join(repoRoot, DEFINITION_DIR)` at six call sites:
+ * the commands that read the directory all need the same answer, and step 2 of
+ * ADR-0012 hangs the "you still have the old directory" diagnostic off exactly
+ * this seam.
+ */
+export function definitionRoot(repoRoot: string): string {
+  return join(repoRoot, DEFINITION_DIR);
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The definition root for a command that READS it, or an error a human can act on.
+ *
+ * ADR-0012 chose a clean migration with no dual path, and the cost of that choice
+ * lands exactly here: a repo installed before the rename would otherwise get
+ * "no checks registered" or an empty ruleset — a gate that reports fine while
+ * enforcing nothing, which is the worst failure this project has.
+ *
+ * DIAGNOSIS, NOT COMPATIBILITY. The old directory is stat'd and named; nothing is
+ * ever read from it. Returning its path here instead of throwing would reintroduce
+ * the dual path the ADR rejected.
+ *
+ * An absent directory is NOT an error at this layer: `wst init` has to work in a
+ * repo that has neither, and every reading command already reports "nothing
+ * registered" in its own words.
+ */
+export async function resolveDefinitionRoot(repoRoot: string): Promise<string> {
+  const root = definitionRoot(repoRoot);
+  if (await exists(root)) return root;
+  if (await exists(join(repoRoot, LEGACY_DEFINITION_DIR))) {
+    throw new Error(legacyDirectoryMessage(repoRoot));
+  }
+  return root;
+}
 
 export const CHECKS_DIR = "checks";
 export const INDEX_FILE = "_index.json";
@@ -23,8 +74,8 @@ function fixturesDirFor(contents: string): string {
   return /^\s*fixtures:\s*(\S+)\s*$/m.exec(contents)?.[1] ?? "test/fixtures";
 }
 
-export async function loadRegistry(sddRoot: string): Promise<Registry> {
-  const dir = join(sddRoot, CHECKS_DIR);
+export async function loadRegistry(root: string): Promise<Registry> {
+  const dir = join(root, CHECKS_DIR);
 
   let entries: string[];
   try {
@@ -43,9 +94,9 @@ export async function loadRegistry(sddRoot: string): Promise<Registry> {
       // Gathered for EVERY check, not only the ones that ask to block. Deciding here
       // whether the evidence is needed would mean parsing the file twice, and the
       // cheap read is not worth the second parse being a place the two can disagree.
-      const receipt = await loadCalibration(sddRoot, checkId);
+      const receipt = await loadCalibration(root, checkId);
       const currentFixturesHash =
-        receipt === null ? null : await hashFixtureDir(join(sddRoot, "..", fixturesDirFor(contents)));
+        receipt === null ? null : await hashFixtureDir(join(root, "..", fixturesDirFor(contents)));
 
       return parseCheckFile(file, contents, { receipt, currentFixturesHash });
     }),
@@ -69,8 +120,8 @@ export interface LoadedTriageRules {
  * a gate run that never happened. Same reasoning as `createCheckRunner` being
  * exported from `commands/gate.ts` instead of copied.
  */
-export async function loadTriageRules(sddRoot: string): Promise<LoadedTriageRules> {
-  const path = join(sddRoot, TRIAGE_FILE);
+export async function loadTriageRules(root: string): Promise<LoadedTriageRules> {
+  const path = join(root, TRIAGE_FILE);
   try {
     return { rules: parseTriageRules(await readFile(path, "utf-8"), path), origin: path };
   } catch (cause) {
@@ -85,8 +136,8 @@ export async function loadTriageRules(sddRoot: string): Promise<LoadedTriageRule
 }
 
 /** Writes the compiled index. Regenerable — it is a cache, not a source. */
-export async function writeIndex(sddRoot: string, registry: Registry): Promise<string> {
-  const path = join(sddRoot, CHECKS_DIR, INDEX_FILE);
+export async function writeIndex(root: string, registry: Registry): Promise<string> {
+  const path = join(root, CHECKS_DIR, INDEX_FILE);
   await writeFile(path, `${JSON.stringify(registry.index, null, 2)}\n`, "utf-8");
   return path;
 }

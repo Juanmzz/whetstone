@@ -7,7 +7,7 @@
  * MCP servers, hooks, output style and `AGENTS.md` so a repo cannot hijack its own
  * reviewer (`NeutralizesGateInstructions`).
  *
- * A crewmate is the inverse. `.sdd/` and `AGENTS.md` ARE its charter, its hooks are
+ * A crewmate is the inverse. `.wst/` and `AGENTS.md` ARE its charter, its hooks are
  * the guardrails we want firing, and it needs real tools to do the work. So it runs
  * CHARGED — the repo's own configuration loaded on purpose.
  *

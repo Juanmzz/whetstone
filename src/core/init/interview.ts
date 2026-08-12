@@ -23,6 +23,7 @@
  * on nothing. A backend other than `files` is a flag on the composition root.
  */
 
+import { DEFINITION_DIR } from "../paths.js";
 import type { StackFacts } from "./detect.js";
 
 export type QuestionId = "purpose" | "risk" | "strict-paths" | "conventions";
@@ -164,7 +165,7 @@ export function renderRiskProfile(risk: RiskProfile): string {
   const lines = hits.map((h) => `- ${h}`).join("\n");
   const tail =
     "\n\nA bug in these areas is expensive, which is what the `strict` row in " +
-    "`.sdd/triage-rules.md` exists to slow down.";
+    `\`${DEFINITION_DIR}/triage-rules.md\` exists to slow down.`;
   return note === null ? `${lines}${tail}` : `${lines}${tail}\n\n${note}`;
 }
 
