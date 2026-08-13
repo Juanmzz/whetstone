@@ -169,9 +169,14 @@ function createReceiptStore(definitionRoot: string): ReceiptStore {
 /**
  * A store that remembers nothing, for a gate that must not take the subject's word.
  *
- * Exported so `wst run` uses THIS rather than deciding for itself what "do not trust
- * the worker's cache" means — the same reason `createCheckRunner` is exported. Three
- * bugs in this codebase were one rule implemented twice and drifting.
+ * Exported so a second caller uses THIS rather than deciding for itself what "do not
+ * trust the worker's cache" means — the same reason `createCheckRunner` is exported.
+ * Three bugs in this codebase were one rule implemented twice and drifting.
+ *
+ * That second caller was `wst run`, which gated a crewmate inside the crewmate's own
+ * worktree. ADR-0014 deleted that half of the command, so `--no-receipts` is the only
+ * consumer now. The export stays for the reason above: the day something else needs to
+ * distrust a receipt, it must not reimplement this.
  */
 export function createDistrustfulReceiptStore(): ReceiptStore {
   return {

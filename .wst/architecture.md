@@ -71,7 +71,7 @@ architectural fact, not a promise.
 | 0 | **Definition** (`.wst/`) | Per-project source of truth: constitution, triage, check registry, skills, memory | constitution/triage/skills ✅ · registry = Step 1 |
 | 1 | **Apply** (`wst init`) | Interview the project → generate `.wst/` + bootstrap the toolchain | WoZ validated (`docs/woz/init.md`) · code = Step 6 |
 | 2 | **Triage / Routing** | Classify a change → criticality → {autonomy, model tier, which checks run} | Step 2 |
-| 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate reads a plan BEFORE the work starts and reports what will judge it | charter ✅ (`wst run`, Step 5) · plan gate ✅ (`wst plan`, ADR-0013) — a standalone command, not a step inside `wst run`, and not gated on criticality |
+| 3 | **Execution seam** | Inject the charter into whatever executes. The plan gate reads a plan BEFORE the work starts and reports what will judge it | charter ✅ (`wst prepare`, Step 5) · plan gate ✅ (`wst plan`, ADR-0013) — a standalone command, not a step inside another one, and not gated on criticality. The seam INJECTS and stops: ADR-0014 removed the dispatcher that used to execute through it |
 | 4 | **Verification gate** (lean) | Triage-gated: deterministic checks always, calibrated agent review only when critical. Receipts skip what already passed | Step 3 — the central build |
 | 5 | ~~**Reviewable output**~~ | ~~PR annotated by criticality~~ — **removed, ADR-0009**. Verification artifacts remain. | — |
 | 6 | **Self-sharpening** (retro) | Signals → distill → propose/tune/prune checks → human gate → amend | WoZ validated (`docs/woz/retro.md`) · code = Step 7 |
@@ -153,7 +153,8 @@ above neutralises all of them at once.
 
 Step 0 skeleton **(current)** → 1 check registry → 2 triage/routing → 2.5 verdict calibration →
 3 lean gate + receipts *(first real value: Whetstone gates its own PRs)* → ~~4 annotated PR~~
-**(built, then removed — ADR-0009)** → 5 `wst run` dispatch → 6 `init` → 7 `retro` *(loop closed)*.
+**(built, then removed — ADR-0009)** → 5 `wst run` dispatch *(the charter survives as `wst prepare`;
+the dispatcher was removed — ADR-0014)* → 6 `init` → 7 `retro` *(loop closed)*.
 
 Self-hosting: Whetstone's own `.wst/` exists from Step 0; **self-gating starts at Step 3**, and
 signals are emitted from then on so the retro has real volume to process.
