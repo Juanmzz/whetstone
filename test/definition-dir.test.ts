@@ -23,7 +23,7 @@
  *   the current name, and (once there is an old one) never the old one.
  */
 
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../src/core/paths.js";
@@ -288,8 +288,28 @@ describe("the old directory name is gone (ADR-0012)", () => {
     // Naming the files to scan means a guard that only catches the drift someone
     // already thought of. Enumerating the root instead means the next config file
     // added there is covered on the day it lands, by nobody's decision.
+    // `stat`, not the Dirent, and this is the whole fix. `readdir` reports a SYMLINK
+    // as a symlink — `isDirectory()` is false for it — so `!e.isDirectory()` handed
+    // `node_modules` to `readFile` and the read died with EISDIR.
+    //
+    // That is not a hypothetical: `wst prepare` leases a treehouse worktree whose
+    // `node_modules` is a symlink back to the main checkout, so THIS TEST FAILED IN
+    // EVERY WORKTREE THE TOOL PREPARES. `test` is a blocking check, so every
+    // crewmate's gate failed on it before the crewmate had written a line.
+    //
+    // Resolving the link and asking what it points AT keeps the enumeration honest:
+    // a symlinked directory is skipped like any directory, and a symlinked config
+    // file is still scanned. Filtering on `e.isFile()` would have fixed the crash by
+    // quietly dropping the second case, which is the allowlist mistake this test's
+    // own comment warns about, one level down.
     for (const e of await readdir(ROOT, { withFileTypes: true })) {
-      if (!e.isDirectory()) files.add(join(ROOT, e.name));
+      const full = join(ROOT, e.name);
+      try {
+        if ((await stat(full)).isFile()) files.add(full);
+      } catch {
+        // A broken symlink points at nothing, so there is nothing to scan. Skipped
+        // rather than thrown: this test guards a rename, not the filesystem.
+      }
     }
     files.add(join(ROOT, "docs/PARALLEL.md"));
 
