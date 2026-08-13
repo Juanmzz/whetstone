@@ -1,24 +1,32 @@
 /**
- * Deterministic repo detection — Layer 1 (`wst init`), the "infer, don't ask" half.
+ * Deterministic repo reading — Layer 1 (`wst init`).
  *
  * PURE. Every fact arrives as DATA (`RepoFacts`); the composition root does the
  * walking and reading. That is what makes "a repo with no tests seeds no test
  * check" a unit test instead of a fixture directory.
  *
- * The governing rule, from `docs/woz/init.md`: **whatever the engine can KNOW it
- * must not ask.** The 15-minute ceiling in the WoZ procedure is not a stylistic
- * preference — every question spent on something the repo already answered is a
- * question the human stops answering carefully.
+ * ## What this module is allowed to know (ADR-0016)
  *
- * The second rule, and the sharper one: **never infer a command that might not
- * exist.** A seeded check whose `command` cannot run does not fail the build in a
- * legible way — it makes the gate `errored` on every single run, which reads as
- * "the gate is broken" and gets the gate switched off. Silence is strictly better
- * than a guess here, so every command below is either read from the project's own
- * scripts or is a command the detected toolchain guarantees.
+ * It reads what a repo DECLARES about itself and nothing else. `package.json`
+ * states its scripts; a lockfile states its package manager; a test file is a
+ * test file. Reading those is cheap, deterministic, auditable, and it produces
+ * the one thing a check cannot do without — a `command` to run.
+ *
+ * WHAT USED TO LIVE HERE, and why it is gone: a file-extension table that decided
+ * `language`, a list of fashionable directory names that decided `sourceGlobs`, a
+ * five-entry marker table that decided `ci`, and a regex over recent commit
+ * subjects that decided whether a project "uses Conventional Commits". All four
+ * were inference, and inference breaks on the stack nobody tabulated — `sig-0041`
+ * is what that costs from inside a foreign repo. Those facts are asked now, of a
+ * human through the interview or of an agent through `--propose`.
+ *
+ * The second rule, and it survives unchanged: **never infer a command that might
+ * not exist.** A seeded check whose `command` cannot run does not fail the build
+ * in a legible way — it makes the gate `errored` on every single run, which reads
+ * as "the gate is broken" and gets the gate switched off. So every command below
+ * is either read from the project's own scripts or is one the manifest's own
+ * toolchain guarantees.
  */
-
-import { matchesPathGlob } from "../triage/glob.js";
 
 export interface PackageJson {
   readonly name?: unknown;
@@ -26,13 +34,15 @@ export interface PackageJson {
   readonly scripts?: Readonly<Record<string, unknown>>;
   readonly dependencies?: Readonly<Record<string, unknown>>;
   readonly devDependencies?: Readonly<Record<string, unknown>>;
-  /** npm/bun `["apps/*"]` or yarn-classic `{ packages: ["apps/*"] }`. */
-  readonly workspaces?: unknown;
 }
 
 /**
  * The facts a shell adapter must gather before `init` can decide anything. Kept
  * deliberately small: a bigger surface means a slower walk and more to mock.
+ *
+ * `commitSubjects` and `contributors` are no longer read by `detectStack` — they
+ * are context for the judge in `buildProposalPrompt`, which is now the thing that
+ * answers "what is this project" instead of a regex.
  */
 export interface RepoFacts {
   /** Directory basename of the target repo. Used in generated titles. */
@@ -47,128 +57,19 @@ export interface RepoFacts {
   readonly contributors: number | null;
 }
 
-export type Greenness = "greenfield" | "brownfield";
-export type CommitStyle = "conventional" | "unknown";
-
 export interface DetectedCommands {
   readonly test: string | null;
   readonly typecheck: string | null;
   readonly lint: string | null;
 }
 
+/** Everything the repo states about itself. Four fields, all of them read. */
 export interface StackFacts {
-  readonly greenness: Greenness;
-  readonly language: string | null;
   readonly packageManager: string | null;
   readonly commands: DetectedCommands;
-  readonly ci: string | null;
-  /** Source directories found, as globs (`src/**`). Empty when none are recognisable. */
-  readonly sourceGlobs: readonly string[];
-  /** Globs matching this language's source files, for a check's `include`. */
-  readonly sourceFileGlobs: readonly string[];
   readonly hasTests: boolean;
-  readonly commitStyle: CommitStyle;
-  /** Solo work: `doc-locations` runs at reduced scope (WoZ init, step 3 calibration). */
-  readonly solo: boolean;
-  /** What was inferred and from which file. A plan a human cannot audit is a guess. */
+  /** What was read and from which file. A plan a human cannot audit is a guess. */
   readonly evidence: readonly string[];
-}
-
-/** Extensions that mean "there is code here". Config and prose deliberately excluded. */
-const SOURCE_EXT = [
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-  ".py",
-  ".go",
-  ".rs",
-  ".rb",
-  ".java",
-  ".kt",
-  ".php",
-  ".cs",
-  ".swift",
-  ".scala",
-  ".ex",
-  ".exs",
-];
-
-const SOURCE_DIRS = ["src", "lib", "app", "pkg", "internal", "cmd"];
-
-/**
- * Where a monorepo keeps its packages, read from the root manifest's `workspaces`
- * rather than guessed from a list of fashionable directory names.
- *
- * The guess is the tempting fix — add `apps` and `packages` to `SOURCE_DIRS` and
- * sift lights up. It is also wrong in both directions: it names `apps/` in a repo
- * that keeps documentation there, and it stays blind to the repo that calls the
- * same directory `services/` or `modules/`. The declaration is not a heuristic;
- * it is the project stating where its code lives, in the file the package manager
- * itself reads.
- *
- * Two spellings exist. npm, pnpm and bun take an array; yarn classic wraps it in
- * `{ packages: [...] }`. A leading `!` negates, which npm supports and which a
- * repo uses precisely to keep a stale package out of the workspace — so honouring
- * it is honouring the project's own exclusion.
- */
-function workspacePatterns(pkg: PackageJson | null): {
-  readonly include: readonly string[];
-  readonly exclude: readonly string[];
-} {
-  const declared = pkg?.workspaces;
-  const raw = Array.isArray(declared)
-    ? declared
-    : typeof declared === "object" && declared !== null && "packages" in declared
-      ? (declared as { readonly packages?: unknown }).packages
-      : undefined;
-  if (!Array.isArray(raw)) return { include: [], exclude: [] };
-
-  const include: string[] = [];
-  const exclude: string[] = [];
-  for (const entry of raw) {
-    if (typeof entry !== "string") continue;
-    const negated = entry.startsWith("!");
-    const pattern = normalise(negated ? entry.slice(1) : entry).replace(/\/+$/, "");
-    if (pattern.length === 0) continue;
-    (negated ? exclude : include).push(pattern);
-  }
-  return { include, exclude };
-}
-
-/**
- * The declared patterns that actually matched a package on disk, each paired with
- * the packages it matched.
- *
- * Grounded on both sides on purpose: a pattern with no package behind it names
- * nothing (a `services/*` line left over from a directory that was deleted), and a
- * directory with a `package.json` that no pattern claims is not a workspace (sift's
- * `plan/`, which holds planning documents and a lockfile). Either one alone would
- * put a glob over code that is not there, or over prose that is not code.
- */
-function workspaceRoots(
-  files: readonly string[],
-  pkg: PackageJson | null,
-): readonly { readonly pattern: string; readonly roots: readonly string[] }[] {
-  const { include, exclude } = workspacePatterns(pkg);
-  if (include.length === 0) return [];
-
-  const packages = files
-    .filter((f) => f.endsWith("/package.json"))
-    .map((f) => f.slice(0, -"/package.json".length))
-    .filter((dir) => dir.length > 0);
-
-  return include
-    .map((pattern) => ({
-      pattern,
-      roots: packages.filter(
-        (dir) =>
-          matchesPathGlob(dir, pattern) && !exclude.some((no) => matchesPathGlob(dir, no)),
-      ),
-    }))
-    .filter((entry) => entry.roots.length > 0);
 }
 
 /**
@@ -178,23 +79,12 @@ function workspaceRoots(
  */
 const NPM_PLACEHOLDER_TEST = /^\s*echo\s+["']?Error: no test specified/i;
 
-const CONVENTIONAL =
-  /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]*\))?!?: .+/;
-
 const LOCKFILES: readonly (readonly [string, string])[] = [
   ["pnpm-lock.yaml", "pnpm"],
   ["bun.lockb", "bun"],
   ["bun.lock", "bun"],
   ["yarn.lock", "yarn"],
   ["package-lock.json", "npm"],
-];
-
-const CI_MARKERS: readonly (readonly [string, string])[] = [
-  [".github/workflows/", "GitHub Actions"],
-  [".gitlab-ci.yml", "GitLab CI"],
-  [".circleci/config.yml", "CircleCI"],
-  ["Jenkinsfile", "Jenkins"],
-  [".buildkite/", "Buildkite"],
 ];
 
 function normalise(path: string): string {
@@ -230,31 +120,10 @@ function script(pkg: PackageJson | null, names: readonly string[]): string | nul
 export function detectStack(facts: RepoFacts): StackFacts {
   const files = facts.files.map(normalise);
   const has = (p: string): boolean => files.includes(p);
-  const under = (prefix: string): boolean => files.some((f) => f.startsWith(prefix));
-  const anyExt = (ext: string): boolean => files.some((f) => f.endsWith(ext));
   const evidence: string[] = [];
   const note = (what: string, from: string): void => {
     evidence.push(`${what} (from ${from})`);
   };
-
-  // ── language ──────────────────────────────────────────────────────────────
-  let language: string | null = null;
-  if (has("tsconfig.json") || anyExt(".ts") || anyExt(".tsx")) {
-    language = "TypeScript";
-    note("language: TypeScript", has("tsconfig.json") ? "tsconfig.json" : "*.ts files");
-  } else if (has("go.mod")) {
-    language = "Go";
-    note("language: Go", "go.mod");
-  } else if (has("Cargo.toml")) {
-    language = "Rust";
-    note("language: Rust", "Cargo.toml");
-  } else if (has("pyproject.toml") || has("requirements.txt") || anyExt(".py")) {
-    language = "Python";
-    note("language: Python", has("pyproject.toml") ? "pyproject.toml" : "*.py files");
-  } else if (facts.packageJson !== null || anyExt(".js") || anyExt(".mjs")) {
-    language = "JavaScript";
-    note("language: JavaScript", "package.json");
-  }
 
   // ── package manager ───────────────────────────────────────────────────────
   // Corepack's `packageManager` field is a declaration; a lockfile is an
@@ -278,21 +147,13 @@ export function detectStack(facts: RepoFacts): StackFacts {
       note("package manager: npm (no lockfile — assumed)", "package.json");
     }
   }
-  if (packageManager === null && language === "Go") packageManager = "go";
-  if (packageManager === null && language === "Rust") packageManager = "cargo";
+  // Not a guess at a language: `go.mod` and `Cargo.toml` each name their own
+  // tool, and the evidence line says which file said so.
+  if (packageManager === null && has("go.mod")) packageManager = "go";
+  if (packageManager === null && has("Cargo.toml")) packageManager = "cargo";
 
   // ── commands ──────────────────────────────────────────────────────────────
-  const commands = detectCommands(facts.packageJson, language, packageManager, has, note);
-
-  // ── layout ────────────────────────────────────────────────────────────────
-  const workspaces = workspaceRoots(files, facts.packageJson);
-  const sourceGlobs = layoutGlobs(under, workspaces);
-  if (sourceGlobs.length > 0) {
-    note(
-      `source dirs: ${sourceGlobs.join(", ")}`,
-      workspaces.length > 0 ? "package.json workspaces + directory listing" : "directory listing",
-    );
-  }
+  const commands = detectCommands(facts.packageJson, packageManager, has, note);
 
   const hasTests = files.some(
     (f) =>
@@ -303,60 +164,24 @@ export function detectStack(facts: RepoFacts): StackFacts {
   );
   if (hasTests) note("tests: present", "test file paths");
 
-  let ci: string | null = null;
-  for (const [marker, name] of CI_MARKERS) {
-    if (marker.endsWith("/") ? under(marker) : has(marker)) {
-      ci = name;
-      note(`CI: ${name}`, marker);
-      break;
-    }
-  }
-
-  // ── commit style ──────────────────────────────────────────────────────────
-  // Three commits is the floor: below that a "style" is a coincidence, and
-  // asserting a convention the project does not hold is worse than asking.
-  let commitStyle: CommitStyle = "unknown";
-  if (facts.commitSubjects.length >= 3) {
-    const hits = facts.commitSubjects.filter((s) => CONVENTIONAL.test(s)).length;
-    if (hits / facts.commitSubjects.length >= 0.6) {
-      commitStyle = "conventional";
-      note("commit style: Conventional Commits", `${hits}/${facts.commitSubjects.length} commits`);
-    }
-  }
-
-  // ── greenness ─────────────────────────────────────────────────────────────
-  const hasCode = files.some((f) => SOURCE_EXT.some((e) => f.endsWith(e)));
-  const greenness: Greenness = hasCode || facts.packageJson !== null ? "brownfield" : "greenfield";
-
-  return {
-    greenness,
-    language,
-    packageManager,
-    commands,
-    ci,
-    sourceGlobs,
-    sourceFileGlobs: sourceFileGlobs(language, sourceGlobs),
-    hasTests,
-    commitStyle,
-    solo: facts.contributors !== null && facts.contributors <= 1,
-    evidence,
-  };
+  return { packageManager, commands, hasTests, evidence };
 }
 
 function detectCommands(
   pkg: PackageJson | null,
-  language: string | null,
   pm: string | null,
   has: (p: string) => boolean,
   note: (what: string, from: string) => void,
 ): DetectedCommands {
   // Toolchains where the command ships with the toolchain itself, so its
-  // existence is guaranteed by the marker file we already saw.
-  if (language === "Go") {
+  // existence is guaranteed by the manifest we already saw. `go.mod` is a
+  // declaration, not a file-extension count — reading it is the same act as
+  // reading `package.json` for its scripts.
+  if (has("go.mod")) {
     note("commands: go toolchain", "go.mod");
     return { test: "go test ./...", typecheck: "go build ./...", lint: "go vet ./..." };
   }
-  if (language === "Rust") {
+  if (has("Cargo.toml")) {
     note("commands: cargo", "Cargo.toml");
     // No clippy: it is a separate rustup component and may not be installed.
     return { test: "cargo test", typecheck: "cargo check", lint: null };
@@ -394,54 +219,4 @@ function detectCommands(
     typecheck,
     lint: lintScript === null ? null : run(lintScript),
   };
-}
-
-/**
- * The source globs: the repo's own top-level source dirs, then one glob per
- * declared workspace pattern.
- *
- * The workspace globs keep the pattern (`apps/*​/src/**`) rather than expanding to
- * one glob per package. Both are correct against the glob engine; the pattern is
- * what a human wrote in `package.json`, it stays two lines in `triage.yaml`
- * instead of fifty in a large monorepo, and it already covers the package added
- * next week. The source dir INSIDE the pattern is still measured, not assumed —
- * `src` appears only because a package actually has one.
- */
-function layoutGlobs(
-  under: (prefix: string) => boolean,
-  workspaces: readonly { readonly pattern: string; readonly roots: readonly string[] }[],
-): string[] {
-  const globs = SOURCE_DIRS.filter((d) => under(`${d}/`)).map((d) => `${d}/**`);
-
-  for (const { pattern, roots } of workspaces) {
-    const dirs = SOURCE_DIRS.filter((d) => roots.some((root) => under(`${root}/${d}/`)));
-    // A package that keeps its code at its own root (`packages/tiny/index.ts`) is
-    // still application code. Naming the package is less precise than naming a
-    // source dir and strictly better than naming nothing.
-    const found = dirs.length > 0 ? dirs.map((d) => `${pattern}/${d}/**`) : [`${pattern}/**`];
-    for (const glob of found) if (!globs.includes(glob)) globs.push(glob);
-  }
-
-  return globs;
-}
-
-/**
- * Globs for a check's `include`. Scoped to the detected source dirs when there
- * are any: a bare `**` /*.ts also matches `node_modules` fixtures and generated
- * output in repos that commit them.
- */
-function sourceFileGlobs(language: string | null, sourceGlobs: readonly string[]): string[] {
-  const exts: Record<string, readonly string[]> = {
-    TypeScript: ["ts", "tsx"],
-    JavaScript: ["js", "jsx", "mjs", "cjs"],
-    Python: ["py"],
-    Go: ["go"],
-    Rust: ["rs"],
-  };
-  const list = language === null ? undefined : exts[language];
-  if (list === undefined) return [];
-
-  const roots = sourceGlobs.map((g) => g.replace(/\/\*\*$/, ""));
-  if (roots.length === 0) return list.map((e) => `**/*.${e}`);
-  return roots.flatMap((root) => list.map((e) => `${root}/**/*.${e}`));
 }

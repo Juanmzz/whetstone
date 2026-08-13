@@ -96,13 +96,20 @@ export function planInit(input: InitPlanInput): InitPlan {
   const stack = detectStack(input.facts);
   const notes: string[] = [...stack.evidence];
 
-  const rules = buildTriageRules(stack, input.answers);
+  // Trimmed once, here, so the triage rules and the check `include` cannot end up
+  // with different spellings of the same declared glob.
+  const sourcePaths = input.answers.sourcePaths
+    .map((glob) => glob.trim())
+    .filter((glob) => glob.length > 0);
+
+  const rules = buildTriageRules({ ...input.answers, sourcePaths });
   const checkFiles = seedChecks(stack, {
     date,
+    include: sourcePaths,
     ...(options.seedAgentLens === true ? { agentLens: true } : {}),
   });
 
-  const skills = activeSkills(stack);
+  const skills = activeSkills();
   const copies = skillCopies();
 
   // Compiled BEFORE the prose, because the prose refers to it: `triage-rules.md`
@@ -114,7 +121,8 @@ export function planInit(input: InitPlanInput): InitPlan {
     purpose: input.answers.purpose,
     risk: input.answers.risk,
     conventions: input.answers.conventions,
-    stack,
+    detected: stack,
+    declared: input.answers.stack,
   });
   const triageRulesMd = renderTriageRulesMd(rules, { date });
 
@@ -182,7 +190,16 @@ export function planInit(input: InitPlanInput): InitPlan {
   // paths in, and composes with a repo's existing hooks instead of replacing their
   // `settings.json` wholesale. That write is what forced `collisions.ts` to exist.
 
-  if (checkFiles.length === 0) {
+  // Two different silences, and telling them apart is the difference between "add
+  // a test script" and "answer the question you skipped".
+  if (checkFiles.length === 0 && sourcePaths.length === 0) {
+    notes.push(
+      "no checks were seeded: no source path was named, so a check would have nothing to " +
+        "put in its `include` but `**` — which covers build output and vendored code and " +
+        "still misses every dotfile. Re-run naming where the code lives, or add a check " +
+        `under \`${DEFINITION_DIR}/checks/\` by hand.`,
+    );
+  } else if (checkFiles.length === 0) {
     notes.push(
       "no checks were seeded: this repo declares no test, typecheck or lint command that " +
         "is certain to exist. A check whose command cannot run reports `errored` on every " +

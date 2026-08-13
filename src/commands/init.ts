@@ -65,8 +65,12 @@ export interface InitOptions {
   readonly purpose?: string;
   /** Comma-separated risk flags: money,personalData,productionData,authn,safetyCritical */
   readonly risk?: string;
+  /** Repeatable glob naming where the project's code lives. */
+  readonly source?: readonly string[];
   /** Repeatable `glob:reason`. */
   readonly strict?: readonly string[];
+  /** What the project is built with, verbatim into the constitution. */
+  readonly stack?: string;
   readonly force?: boolean;
   readonly dryRun?: boolean;
   readonly json?: boolean;
@@ -190,9 +194,13 @@ const AnswersSchema = z.strictObject({
       note: z.string().nullable().default(null),
     })
     .default(NO_RISK),
+  // Defaulted, not required: an answers file written before these two questions
+  // existed still parses, and lands on the same blank a skipped question does.
+  sourcePaths: z.array(z.string()).default([]),
   strictPaths: z
     .array(z.strictObject({ glob: z.string(), reason: z.string() }))
     .default([]),
+  stack: z.string().nullable().default(null),
   conventions: z.array(z.string()).default([]),
 });
 
@@ -229,7 +237,9 @@ function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
       ...NO_RISK,
       ...Object.fromEntries(RISK_KEYS.map((k) => [k, flags.includes(k)])),
     },
+    sourcePaths: opts.source ?? [],
     strictPaths,
+    stack: opts.stack ?? null,
     conventions: [],
   };
 }
@@ -245,17 +255,17 @@ async function loadAnswers(opts: InitOptions, cwd: string): Promise<InterviewAns
 // ── output ───────────────────────────────────────────────────────────────────
 
 function printDetection(stack: ReturnType<typeof detectStack>): void {
-  console.log(`\ndetected (${stack.greenness})`);
+  console.log(`\nread from this repo`);
   if (stack.evidence.length === 0) {
-    console.log("  nothing — no code, no manifest, no history");
+    console.log("  nothing — no manifest, no lockfile, no tests");
     return;
   }
   for (const line of stack.evidence) console.log(`  ${line}`);
 }
 
-function printQuestions(stack: ReturnType<typeof detectStack>): void {
-  const questions = buildInterview(stack);
-  console.log(`\n${questions.length} question(s) the repo could not answer:\n`);
+function printQuestions(): void {
+  const questions = buildInterview();
+  console.log(`\n${questions.length} question(s) this repo does not declare an answer to:\n`);
   for (const [i, q] of questions.entries()) {
     console.log(`  ${i + 1}. [${q.id}] ${q.prompt}`);
     console.log(`     why: ${q.why}`);
@@ -265,7 +275,10 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
   }
   console.log("Answer them, then re-run with either:");
   console.log("  wst init --answers <file.json>");
-  console.log('  wst init --purpose "..." --risk money,authn --strict "src/billing/**:moves money"');
+  console.log(
+    '  wst init --purpose "..." --risk money,authn --source "src/**" \\\n' +
+      '           --strict "src/billing/**:moves money" --stack "TypeScript on Node 24"',
+  );
   console.log("\nNothing was written.");
 }
 
@@ -469,7 +482,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   if (answers === null) {
     console.log(`${banner()}\n\ninit — ${root}`);
     printDetection(stack);
-    printQuestions(stack);
+    printQuestions();
     if (await judgeAvailable()) {
       console.log(
         "\nOr let the judge draft them from what it can see:\n" +

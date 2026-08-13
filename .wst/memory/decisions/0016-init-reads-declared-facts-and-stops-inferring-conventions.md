@@ -1,7 +1,7 @@
 ---
 id: adr-0016
 ts: 2026-08-13
-status: proposed
+status: accepted
 supersedes: null
 rules_affected: []
 ---

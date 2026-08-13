@@ -21,31 +21,38 @@ const tsRepo = detectStack(
   }),
 );
 
+/**
+ * Where the code lives is DECLARED now, not detected. `include` arrives as the
+ * globs somebody answered with, so these options carry them the way `planInit`
+ * does.
+ */
+const seeded = { date: "2026-08-08", include: ["src/**"] } as const;
+
 /** Every seeded file must load through the real loader, under its real filename. */
 const load = (files: ReturnType<typeof seedChecks>) =>
   files.map((f) => parseCheckFile(f.path.split("/").pop() ?? "", f.contents));
 
 describe("seedChecks — round-trips through the real registry loader", () => {
   it("every generated check file parses, and the registry builds from them", () => {
-    const checks = load(seedChecks(tsRepo, { date: "2026-08-08" }));
+    const checks = load(seedChecks(tsRepo, seeded));
     expect(checks.length).toBeGreaterThan(0);
     const registry = buildRegistry(checks);
     expect(registry.active.length).toBe(checks.length);
   });
 
   it("writes every file under .wst/checks/<id>.md so the id matches the filename stem", () => {
-    for (const file of seedChecks(tsRepo, { date: "2026-08-08" })) {
+    for (const file of seedChecks(tsRepo, seeded)) {
       expect(file.path).toMatch(/^\.wst\/checks\/[a-z0-9-]+\.md$/);
     }
   });
 
   it("seeds typecheck, test and lint for a TS repo that declares all three scripts", () => {
-    const ids = load(seedChecks(tsRepo, { date: "2026-08-08" })).map((c) => c.id).sort();
+    const ids = load(seedChecks(tsRepo, seeded)).map((c) => c.id).sort();
     expect(ids).toEqual(["lint", "test", "typecheck"]);
   });
 
   it("bakes in the DETECTED command, not a guess", () => {
-    const checks = load(seedChecks(tsRepo, { date: "2026-08-08" }));
+    const checks = load(seedChecks(tsRepo, seeded));
     expect(checks.find((c) => c.id === "test")?.command).toBe("pnpm run test");
     expect(checks.find((c) => c.id === "typecheck")?.command).toBe("pnpm run typecheck");
   });
@@ -53,12 +60,19 @@ describe("seedChecks — round-trips through the real registry loader", () => {
 
 describe("seedChecks — never seed a check that cannot run", () => {
   it("seeds NOTHING for a repo with no package.json, no tests and no typechecker", () => {
-    expect(seedChecks(detectStack(facts()), { date: "2026-08-08" })).toEqual([]);
+    expect(seedChecks(detectStack(facts()), seeded)).toEqual([]);
   });
 
   it("seeds nothing for a Python repo whose runner it could not identify", () => {
     const python = detectStack(facts({ files: ["pyproject.toml", "src/app.py"] }));
-    expect(seedChecks(python, { date: "2026-08-08" })).toEqual([]);
+    expect(seedChecks(python, seeded)).toEqual([]);
+  });
+
+  it("seeds nothing when nobody said where the code lives", () => {
+    // A check with no `include` would have to declare `**`, which matches build
+    // output and vendored code — and is not even the catch-all it looks like,
+    // since `**` does not cross a dot-leading segment. Silence is the answer.
+    expect(seedChecks(tsRepo, { date: "2026-08-08", include: [] })).toEqual([]);
   });
 
   it("omits the test check when the only test script is npm's placeholder", () => {
@@ -71,7 +85,7 @@ describe("seedChecks — never seed a check that cannot run", () => {
         },
       }),
     );
-    const ids = load(seedChecks(stack, { date: "2026-08-08" })).map((c) => c.id);
+    const ids = load(seedChecks(stack, seeded)).map((c) => c.id);
     expect(ids).not.toContain("test");
     expect(ids).toContain("typecheck");
   });
@@ -86,24 +100,24 @@ describe("seedChecks — never seed a check that cannot run", () => {
         packageJson: { scripts: { test: "vitest run" } },
       }),
     );
-    const test = load(seedChecks(stack, { date: "2026-08-08" })).find((c) => c.id === "test");
+    const test = load(seedChecks(stack, seeded)).find((c) => c.id === "test");
     expect(test?.severity).toBe("warn");
   });
 
   it("lets the test check block once the repo actually has tests", () => {
-    const test = load(seedChecks(tsRepo, { date: "2026-08-08" })).find((c) => c.id === "test");
+    const test = load(seedChecks(tsRepo, seeded)).find((c) => c.id === "test");
     expect(test?.severity).toBe("block");
   });
 });
 
 describe("seedChecks — the agent-lens rule", () => {
   it("seeds no agent-lens check by default — apparatus is earned, not sprayed", () => {
-    const kinds = load(seedChecks(tsRepo, { date: "2026-08-08" })).map((c) => c.kind);
+    const kinds = load(seedChecks(tsRepo, seeded)).map((c) => c.kind);
     expect(kinds).not.toContain("agent-lens");
   });
 
   it("seeds one on request, uncalibrated and capped at warn", () => {
-    const checks = load(seedChecks(tsRepo, { date: "2026-08-08", agentLens: true }));
+    const checks = load(seedChecks(tsRepo, { ...seeded, agentLens: true }));
     const lens = checks.find((c) => c.kind === "agent-lens");
     expect(lens).toBeDefined();
     expect(lens?.severity).toBe("warn");
@@ -114,7 +128,7 @@ describe("seedChecks — the agent-lens rule", () => {
     // so an init that emitted one would produce a repo whose registry will not load.
     const checks = load(
       seedChecks(tsRepo, {
-        date: "2026-08-08",
+        ...seeded,
         agentLens: true,
         agentLensSeverity: "block",
       }),
@@ -125,7 +139,7 @@ describe("seedChecks — the agent-lens rule", () => {
   });
 
   it("a deterministic check may block freely — that asymmetry is the whole rule", () => {
-    const checks = load(seedChecks(tsRepo, { date: "2026-08-08" }));
+    const checks = load(seedChecks(tsRepo, seeded));
     expect(checks.filter((c) => c.severity === "block").every((c) => c.kind === "deterministic"))
       .toBe(true);
   });
@@ -133,23 +147,23 @@ describe("seedChecks — the agent-lens rule", () => {
 
 describe("seedChecks — check bodies", () => {
   it("gives every check a body that says what to do when it fails", () => {
-    for (const check of load(seedChecks(tsRepo, { date: "2026-08-08", agentLens: true }))) {
+    for (const check of load(seedChecks(tsRepo, { ...seeded, agentLens: true }))) {
       expect(check.body.length).toBeGreaterThan(80);
       expect(check.body).toMatch(/when it fails/i);
     }
   });
 
   it("marks the seeded checks as unearned, so the retro can replace them with real receipts", () => {
-    for (const check of load(seedChecks(tsRepo, { date: "2026-08-08" }))) {
+    for (const check of load(seedChecks(tsRepo, seeded))) {
       expect(check.origin).toEqual([]);
       expect(check.body).toMatch(/seeded/i);
     }
   });
 
-  it("scopes include globs to the detected source layout", () => {
-    const typecheck = load(seedChecks(tsRepo, { date: "2026-08-08" })).find(
-      (c) => c.id === "typecheck",
+  it("scopes include globs to the DECLARED source layout, verbatim", () => {
+    const checks = load(
+      seedChecks(tsRepo, { date: "2026-08-08", include: ["apps/*/src/**"] }),
     );
-    expect(typecheck?.include).toContain("src/**/*.ts");
+    for (const check of checks) expect(check.include).toEqual(["apps/*/src/**"]);
   });
 });

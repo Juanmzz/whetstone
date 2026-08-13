@@ -50,6 +50,16 @@ export const ProposalSchema = z.object({
     .string()
     .min(1)
     .describe("Which of the listed files or commits support that reading."),
+  stack: z
+    .string()
+    .min(1)
+    .describe("What this project is built with: language, runtime, framework, where it runs."),
+  sourcePaths: z
+    .array(z.string())
+    .describe(
+      "Globs where this project's own code lives, read off the file list — `src/**`, or " +
+        "`apps/*/src/**` for a monorepo. Not tests, not docs, not build output.",
+    ),
   risk: z
     .array(
       z.object({
@@ -100,7 +110,9 @@ export function proposalToAnswers(proposal: Proposal): InterviewAnswers {
   return {
     purpose: proposal.purpose,
     risk,
+    sourcePaths: proposal.sourcePaths,
     strictPaths: proposal.strictPaths.map((p) => ({ glob: p.glob, reason: p.reason })),
+    stack: proposal.stack,
     // Left empty on purpose. Conventions are house style, and a model inferring them
     // from two commit subjects would be guessing at the one thing a team is touchiest
     // about. The human adds them or they stay empty.
@@ -155,13 +167,15 @@ export function buildProposalPrompt(
     ``,
     `## Repository: ${facts.repoName}`,
     ``,
-    `language: ${stack.language ?? "unknown"}`,
-    `package manager: ${stack.packageManager ?? "unknown"}`,
-    `CI: ${stack.ci ?? "none detected"}`,
+    // No `language:` line, and that is deliberate (ADR-0016). It used to be
+    // decided by counting file extensions, and handing a judge a guess dressed as
+    // a fact anchors its answer on the table's mistake. The file list is right
+    // there; the judge reads it better than a table does.
+    `package manager: ${stack.packageManager ?? "not declared anywhere readable"}`,
     `tests present: ${stack.hasTests ? "yes" : "no"}`,
     `contributors: ${facts.contributors === null ? "unknown" : String(facts.contributors)}`,
     ``,
-    bullets("already inferred", stack.evidence),
+    bullets("read off this repo's own files", stack.evidence),
     readmeBlock,
     bullets("package scripts", scripts),
     bullets("dependencies", deps, 80),
@@ -172,14 +186,25 @@ export function buildProposalPrompt(
     `1. **purpose** — what this project is FOR, not what it contains. One or two`,
     `   sentences. Cite which files or commits led you there.`,
     ``,
-    `2. **risk** — where a bug is expensive. Include a flag ONLY if you can point at`,
+    `2. **stack** — what it is built with: language, runtime, framework, where it`,
+    `   runs. Two lines at most, from the files and dependencies above. Say`,
+    `   "unclear from what I was shown" rather than picking the likeliest ecosystem.`,
+    ``,
+    `3. **sourcePaths** — globs covering where this project's OWN code lives, read`,
+    `   off the file list. \`src/**\`, or \`apps/*/src/**\` when the packages sit under`,
+    `   one parent. Exclude tests, docs, config and build output. These become the`,
+    `   scope of every check the gate runs, so a glob that is too wide makes the`,
+    `   gate judge files nobody meant it to, and one that is too narrow leaves real`,
+    `   code unwatched.`,
+    ``,
+    `4. **risk** — where a bug is expensive. Include a flag ONLY if you can point at`,
     `   a listed path that justifies it, and put those paths in citedPaths. A flag`,
     `   with no cited path is discarded before the owner sees it, so an unjustified`,
     `   guess costs you the finding. Omit flags that do not apply rather than`,
     `   listing them. Be specific in \`why\`: "webhook handler has no idempotency key,`,
     `   so a retry double-charges" beats "handles payments".`,
     ``,
-    `3. **strictPaths** — paths that must never ship without full TDD and review.`,
+    `5. **strictPaths** — paths that must never ship without full TDD and review.`,
     `   Few or none. Each needs a reason that would still make sense to someone`,
     `   deciding whether to RETIRE the rule in a year.`,
     ``,
@@ -195,6 +220,14 @@ export function renderProposal(proposal: Proposal): string {
     `purpose`,
     `  ${proposal.purpose}`,
     `  why: ${proposal.purposeEvidence}`,
+    ``,
+    `stack`,
+    `  ${proposal.stack}`,
+    ``,
+    `source paths`,
+    ...(proposal.sourcePaths.length === 0
+      ? [`  none named — no check will be seeded, since one would have nothing to judge`]
+      : proposal.sourcePaths.map((glob) => `  ${glob}`)),
     ``,
     `risk`,
   ];

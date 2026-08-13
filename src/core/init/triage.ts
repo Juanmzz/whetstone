@@ -17,7 +17,6 @@
 import type { TriageRule } from "../contracts.js";
 import { DEFINITION_DIR } from "../paths.js";
 import { TRIAGE_RULES_FORMAT } from "../triage/rules.js";
-import type { StackFacts } from "./detect.js";
 import type { InterviewAnswers } from "./interview.js";
 
 /**
@@ -30,10 +29,12 @@ function oneLine(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-export function buildTriageRules(
-  stack: StackFacts,
-  answers: InterviewAnswers,
-): readonly TriageRule[] {
+/**
+ * Every rule comes from an answer or from a constant. Nothing here reads the
+ * repo: ADR-0016 moved the source layout out of `detect.ts` and into the
+ * interview, so `stack` is no longer an input to this function at all.
+ */
+export function buildTriageRules(answers: InterviewAnswers): readonly TriageRule[] {
   const rules: TriageRule[] = [];
   const seen = new Set<string>();
 
@@ -65,7 +66,10 @@ export function buildTriageRules(
   });
 
   // ── light ─────────────────────────────────────────────────────────────────
-  for (const glob of stack.sourceGlobs) {
+  // The declared source roots, verbatim. A repo that named none gets no rule over
+  // its code, and the `light` fallback in `classify` catches those files instead
+  // — which is the same tier, arrived at honestly.
+  for (const glob of answers.sourcePaths) {
     push({
       glob,
       tier: "light",

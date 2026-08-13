@@ -30,7 +30,9 @@ const TS_REPO = facts({
 const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   purpose: "A billing service for widget subscriptions.",
   risk: NO_RISK,
+  sourcePaths: ["src/**"],
   strictPaths: [],
+  stack: "TypeScript on Node.",
   conventions: [],
   ...over,
 });
@@ -208,8 +210,47 @@ describe("planInit — refuses to produce a broken payload", () => {
   });
 });
 
+/**
+ * The declared source layout is the single input two different outputs hang off,
+ * and it arrives from the interview rather than from a directory-name list. If
+ * they ever disagree, one of them is judging code the other one does not know
+ * about.
+ */
+describe("planInit — the declared source paths reach both places that need them", () => {
+  const p = plan({
+    answers: answers({ sourcePaths: ["apps/*/src/**", "packages/*/src/**"] }),
+  });
+
+  it("puts a light triage rule over each of them", () => {
+    const globs = parseTriageRules(at(p, ".wst/triage.yaml") ?? "")
+      .filter((r) => r.tier === "light")
+      .map((r) => r.glob);
+    expect(globs).toContain("apps/*/src/**");
+    expect(globs).toContain("packages/*/src/**");
+  });
+
+  it("scopes every seeded check's include to them, and to nothing else", () => {
+    const checks = p.files
+      .filter((f) => f.path.startsWith(".wst/checks/"))
+      .map((f) => parseCheckFile(f.path.replace(".wst/checks/", ""), f.contents));
+    expect(checks.length).toBeGreaterThan(0);
+    for (const check of checks) {
+      expect(check.include).toEqual(["apps/*/src/**", "packages/*/src/**"]);
+    }
+  });
+
+  it("seeds no check at all when nobody said where the code lives", () => {
+    const blind = plan({ answers: answers({ sourcePaths: [] }) });
+    expect(blind.files.filter((f) => f.path.startsWith(".wst/checks/"))).toEqual([]);
+    expect(blind.notes.join("\n")).toMatch(/source path/i);
+  });
+});
+
 describe("planInit — a repo with nothing to detect", () => {
-  const p = plan({ facts: facts(), answers: answers({ purpose: "Not started yet." }) });
+  const p = plan({
+    facts: facts(),
+    answers: answers({ purpose: "Not started yet.", sourcePaths: [], stack: null }),
+  });
 
   it("seeds no checks rather than commands that would error on every run", () => {
     expect(p.files.filter((f) => f.path.startsWith(".wst/checks/"))).toEqual([]);
@@ -231,8 +272,9 @@ describe("planInit — a repo with nothing to detect", () => {
 });
 
 describe("planInit — notes", () => {
-  it("reports what was inferred, so the human can correct a wrong guess", () => {
-    expect(plan({ answers: MONEY }).notes.join("\n")).toMatch(/typescript/i);
+  it("reports what it READ and where from, so a wrong reading can be corrected", () => {
+    const notes = plan({ answers: MONEY }).notes.join("\n");
+    expect(notes).toMatch(/pnpm-lock\.yaml/);
+    expect(notes).toMatch(/package\.json scripts/);
   });
-
 });
