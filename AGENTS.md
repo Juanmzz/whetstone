@@ -4,10 +4,9 @@
 > from it. If you are about to explain architecture here, put it in `.wst/architecture.md` and
 > link instead.
 >
-> ⚠ This file has gone stale four times. That is structural, not careless: a hand-maintained
-> vendor file drifts the moment work outpaces documentation. `wst init` already generates this
-> artifact for target repos, so making Whetstone's own copy emitter output is the obvious next
-> step. **Until then, `.wst/` is authoritative wherever the two disagree.**
+> ⚠ This file went stale five times before anything checked it. `docs-fresh` now verifies the
+> counts in the status block, which is the part that drifted; the prose is still hand-maintained
+> and **`.wst/` is authoritative wherever the two disagree.**
 
 Whetstone is a **self-sharpening standards layer** for AI coding agents. It captures a
 project's definition of *correct* as plain files in git, enforces it with a deterministic
@@ -91,14 +90,9 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under `chytapay-workspace`.
 
-## Status — branch `main` · 884 tests · 16 ADRs · 46 signals
+## Status — branch `main` · 16 ADRs · 46 signals · 10 commands
 
-<!-- Every number above is measurable. Before editing this block, run:
-     npx vitest run | grep Tests · ls .wst/memory/decisions/*.md | grep -v TEMPLATE | wc -l
-     grep -c . .wst/memory/signals.jsonl
-     A status block that is cheaper to guess than to measure is why this file has
-     gone stale five times. -->
-
+<!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
 ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
 `init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
