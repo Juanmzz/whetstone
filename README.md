@@ -33,16 +33,17 @@ wst init   → interview the project, generate .wst/
 wst plan   → read a plan's declared paths → tier → which checks will judge it, and what nothing covers
 wst prepare → lease a worktree → branch → write the charter the live registry generates → stop
 wst gate   → select checks → skip what receipts prove unchanged → run → pass or block
+wst events → read the log back: what a run did, which check took how long, how it ended
 wst retro  → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-*Shipped today: all nine commands — `status`, `check`, `triage`, `plan`, `gate`, `prepare`, `retro`,
-`signal`, `init` — as a TypeScript engine (ADR-0008). Two removals point the same way: `wst pr` went
-by ADR-0009, because the gate's exit code is the whole enforcement surface and a second channel that
-only advised was one more thing to keep honest; `wst run`'s dispatcher went by ADR-0014, because
-running agents in worktrees is commoditised and the gate is not. What survived the second is `wst
-prepare`. The Wizard-of-Oz procedures under [`docs/woz/`](./docs/woz/) are reference specs, not
-current procedure.*
+*Shipped today: all ten commands — `status`, `check`, `triage`, `plan`, `gate`, `events`, `prepare`,
+`retro`, `signal`, `init` — as a TypeScript engine (ADR-0008). Two removals point the same way: `wst
+pr` went by ADR-0009, because the gate's exit code is the whole enforcement surface and a second
+channel that only advised was one more thing to keep honest; `wst run`'s dispatcher went by
+ADR-0014, because running agents in worktrees is commoditised and the gate is not. What survived the
+second is `wst prepare`. The Wizard-of-Oz procedures under [`docs/woz/`](./docs/woz/) are reference
+specs, not current procedure.*
 
 The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst prepare` briefs a
 crewmate from the registry as it stands right now, and `wst retro` has produced amendments across

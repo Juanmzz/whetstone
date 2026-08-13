@@ -17,10 +17,12 @@
  * interleaved into one corrupt line.
  */
 
+import { unwatchFile, watchFile } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseEventLog } from "../core/events/parse.js";
 import { runId, toRecord, type EventRecord, type EventSink } from "../core/events/record.js";
+import { completeLinePrefix } from "../core/events/timeline.js";
 import { appendJsonl } from "./jsonl.js";
 
 /** Relative to the definition root — `.wst/events.jsonl`. */
@@ -71,13 +73,65 @@ export function createEventLog(definitionRoot: string, seed: string, now: () => 
   return { run, sink, drain: async () => (await tail, firstError) };
 }
 
+/** `null` when there is no log at all, which is not an error — it is a repo that has not run the gate. */
+async function readLogText(definitionRoot: string): Promise<string | null> {
+  try {
+    return await readFile(join(definitionRoot, EVENTS_PATH), "utf-8");
+  } catch {
+    return null;
+  }
+}
+
 /** A MISSING log is empty; a CORRUPT one throws, from `core/events/parse.ts`. */
 export async function readEventLog(definitionRoot: string): Promise<EventRecord[]> {
-  let text: string;
-  try {
-    text = await readFile(join(definitionRoot, EVENTS_PATH), "utf-8");
-  } catch {
-    return [];
-  }
-  return parseEventLog(text);
+  const text = await readLogText(definitionRoot);
+  return text === null ? [] : parseEventLog(text);
+}
+
+/**
+ * The same read, stopping at the last COMPLETE line. For `wst events --follow` only.
+ *
+ * A poll that lands between the write of a line and the write of its newline sees
+ * half a record. Handing that half to `parseEventLog` would report the log as
+ * CORRUPT — the loudest thing this system says about this file — for a write that
+ * is merely still in flight, and it would do it while tailing a live run, which is
+ * exactly when the log is being appended to.
+ *
+ * This is not a quieter parser. Everything before the last newline is parsed
+ * normally and still throws; only a trailing fragment, which is not yet a line, is
+ * left for the next poll. The one-shot read above deliberately does NOT use it: a
+ * finished log that ends mid-line was truncated, and that is worth saying.
+ */
+export async function readCompleteEvents(definitionRoot: string): Promise<EventRecord[]> {
+  const text = await readLogText(definitionRoot);
+  return text === null ? [] : parseEventLog(completeLinePrefix(text));
+}
+
+/** How often `--follow` looks. Fast enough to feel live, slow enough to cost nothing. */
+export const FOLLOW_INTERVAL_MS = 300;
+
+/**
+ * Call `onChange` whenever the log is touched. Returns the stopper.
+ *
+ * `fs.watchFile` POLLS, and that is the deliberate choice: `fs.watch` is
+ * inotify-backed and its behaviour differs per platform, per editor and across
+ * network and container filesystems — and a watcher that silently stops firing
+ * makes a tail that silently stops tailing. A `stat` every 300ms is not a cost
+ * worth engineering around, and it brings in no dependency, which is the constraint
+ * this flag was given.
+ *
+ * A path that does not exist yet is fine: `watchFile` polls it and fires when the
+ * file appears, so following a run whose first append has not landed still works.
+ */
+export function watchEventLog(
+  definitionRoot: string,
+  onChange: () => void,
+  intervalMs: number = FOLLOW_INTERVAL_MS,
+): () => void {
+  const path = join(definitionRoot, EVENTS_PATH);
+  const listener = (): void => onChange();
+  watchFile(path, { interval: intervalMs }, listener);
+  // Unwatching also releases the event loop, which is what lets the process exit
+  // once the run being followed has ended.
+  return () => unwatchFile(path, listener);
 }
