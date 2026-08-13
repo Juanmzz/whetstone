@@ -44,6 +44,43 @@ describe("renderGateRun", () => {
     expect(text).toContain("2 tests failed");
   });
 
+  it("does not headline a run as passed when a blocking check never ran", () => {
+    // This file's own header names THREE outcomes and says they are kept apart on
+    // purpose: blocked, incomplete, and passed. The render had two — a blocking
+    // check that errored produced the headline `passed`, and the fact that nothing
+    // had verified it arrived several lines later as a footnote.
+    //
+    // The exit code was already right (2). That is what makes this worth fixing
+    // rather than shrugging at: a human reads the word, a script reads the code,
+    // and they were being told different things about the same run.
+    const text = renderGateRun(
+      gateRun([
+        result("typecheck", "block", { status: "pass" }),
+        result("test", "block", { status: "errored", detail: "spawn ENOENT" }),
+      ]),
+    );
+
+    expect(text).toMatch(/INCOMPLETE/);
+    expect(text).not.toMatch(/^\s*passed\s*$/m);
+    expect(text).not.toMatch(/BLOCKED/);
+  });
+
+  it("still headlines a pass when only an ADVISORY check could not run", () => {
+    // The other side of the same line, and the reason this is not "any error means
+    // incomplete". An errored `warn` lens cost an annotation, not a verification —
+    // exactly the reasoning `exitCodeFor` already applies to the exit code. Failing
+    // the headline over a flaky advisory model is how a gate gets routed around.
+    const text = renderGateRun(
+      gateRun([
+        result("typecheck", "block", { status: "pass" }),
+        result("correctness", "warn", { status: "errored", detail: "budget exhausted" }),
+      ]),
+    );
+
+    expect(text).toMatch(/passed/);
+    expect(text).not.toMatch(/INCOMPLETE/);
+  });
+
   it("says pass when nothing blocked", () => {
     const text = renderGateRun(gateRun([result("typecheck", "block", { status: "pass" })]));
     expect(text).toMatch(/passed/i);

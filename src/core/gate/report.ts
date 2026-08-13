@@ -29,13 +29,23 @@ export const EXIT_INCOMPLETE = 2;
  * errored `warn`/`annotate` lens cost you an annotation, not a verification, and
  * failing CI over a flaky advisory model is precisely how a gate gets routed around.
  */
+/**
+ * A check that COULD have blocked did not run, so nothing it covers was verified.
+ *
+ * Named once and shared by the exit code and the render, because those two were the
+ * fourth place in this codebase where one rule lived in two implementations: the
+ * number said `2` while the headline said `passed`. An errored `warn` lens is
+ * deliberately NOT this — it cost an annotation, not a verification, and failing
+ * over a flaky advisory model is how a gate gets routed around.
+ */
+function lostGating(verdict: GateVerdict): boolean {
+  return verdict.results.some((r) => r.outcome.status === "errored" && r.severity === "block");
+}
+
 export function exitCodeFor(verdict: GateVerdict): number {
   if (verdict.verdict === "block") return EXIT_BLOCKED;
 
-  const lostGating = verdict.results.some(
-    (r) => r.outcome.status === "errored" && r.severity === "block",
-  );
-  if (lostGating) return EXIT_INCOMPLETE;
+  if (lostGating(verdict)) return EXIT_INCOMPLETE;
 
   // A run that verified NOTHING is not a pass, and this file's header has always
   // said so — in the render, one layer above the number anyone consumes. A crewmate
@@ -104,6 +114,12 @@ export function renderGateRun(run: GateRun): string {
   } else if (verdict.results.length === 0) {
     // Do NOT say "verified". Nothing was.
     lines.push("  passed — but no check applied, so nothing about this change was verified");
+  } else if (lostGating(verdict)) {
+    // The third outcome this file's header names, which the render used to lack.
+    // It said `passed`, and the fact that a blocking check never ran arrived some
+    // lines later as a footnote — while `exitCodeFor` returned 2 for the same run.
+    // A human read the word and a script read the code, and they disagreed.
+    lines.push("  INCOMPLETE — a check that can block never ran, so this change is unverified");
   } else {
     lines.push("  passed");
   }
