@@ -9,6 +9,7 @@ import { banner } from "./banner.js";
 import { runStatus } from "./commands/status.js";
 import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
+import { runPlan } from "./commands/plan.js";
 import { runGate } from "./commands/gate.js";
 import { runRun } from "./commands/run.js";
 import { runRetro } from "./commands/retro.js";
@@ -54,6 +55,23 @@ program
   .option("--why", "show the rule that matched each file")
   .action(async (opts: { range?: string; json?: boolean; why?: boolean }) => {
     process.exitCode = await runTriage(opts);
+  });
+
+// The front door (ADR-0013). Placed between triage and gate because that is where
+// it sits in the loop: a plan is read before the work starts, and the same rules
+// classify the real diff at the other end.
+program
+  .command("plan")
+  .argument("[file]", "a plan declaring `paths:` in its frontmatter — stdin when omitted")
+  .description("read a plan and report which checks will judge it, and what nothing covers")
+  .option("--json", "print the preview as JSON")
+  .action(async (file: string | undefined, opts: { json?: boolean }) => {
+    // No exit code stops anything here: `wst plan` does not block, so 0 means the
+    // plan was readable and 2 means this command could not run at all.
+    process.exitCode = await runPlan({
+      ...(file !== undefined ? { file } : {}),
+      ...(opts.json !== undefined ? { json: opts.json } : {}),
+    });
   });
 
 program

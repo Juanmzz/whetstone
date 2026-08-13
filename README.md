@@ -30,13 +30,14 @@ layer that makes a non-negotiable actually non-negotiable.
 
 ```
 wst init   → interview the project, generate .wst/
-wst run    → triage → plan gate (critical changes only) → dispatch → gate → branch
+wst plan   → read a plan's declared paths → tier → which checks will judge it, and what nothing covers
+wst run    → triage → dispatch → gate → branch
 wst gate   → select checks → skip what receipts prove unchanged → run → pass or block
 wst retro  → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-*Shipped today: all eight commands — `status`, `check`, `triage`, `gate`, `run`, `retro`, `signal`,
-`init` — as a TypeScript engine (ADR-0008). `wst pr` was removed by ADR-0009: the gate's exit code
+*Shipped today: all nine commands — `status`, `check`, `triage`, `plan`, `gate`, `run`, `retro`,
+`signal`, `init` — as a TypeScript engine (ADR-0008). `wst pr` was removed by ADR-0009: the gate's exit code
 is the whole enforcement surface, and a second channel that only advised was one more thing to keep
 honest. The Wizard-of-Oz procedures under [`docs/woz/`](./docs/woz/) are reference specs, not
 current procedure.*
