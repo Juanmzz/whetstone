@@ -32,6 +32,7 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst plan` | read a plan's declared `paths:` → predicted tier → which checks will judge it, split blocking/advisory, and which paths **nothing** covers. Reads, never authors; no LLM; **never blocks** (ADR-0013) |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
+| `wst events` | read the log `gate` writes: a run's timeline, which check took how long, how it ended. Reads only — no LLM, no verdict, writes nothing |
 | `wst prepare <task>` | lease a worktree, branch it, write the charter built from the live registry — then stop. Dispatches nothing, waits for nothing, and the lease is yours (ADR-0014) |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
@@ -39,8 +40,9 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
 record signals; for when you are testing the gate itself) · `prepare --dry-run` (print the charter,
-lease nothing) · `retro --dry-run` ·
-`plan --json` (the full triage reason, untruncated). The plan format is in `.wst/architecture.md`.
+lease nothing) · `retro --dry-run` · `plan --json` (the full triage reason, untruncated) ·
+`events --list` (every run, newest first) · `events --follow` (tail a run in progress). The plan
+format is in `.wst/architecture.md`.
 
 ## Where things live
 
