@@ -94,6 +94,47 @@ describe("the git adapter", () => {
       /could not hash/,
     );
   });
+
+  describe("an inherited git environment", () => {
+    /**
+     * `sig-82dec46b`, and it is not a hypothetical.
+     *
+     * Git exports `GIT_DIR` and friends to everything a hook spawns, and the
+     * pre-push hook spawns `wst gate`. The adapter took a `cwd` and inherited the
+     * rest of the environment, so a command pointed at directory A read repository
+     * B — and worse than read: the main repository's INDEX was written with another
+     * worktree's file state, twice, staging a revert of ~3,500 lines that a
+     * `git commit` would have made permanent. `core.bare` flipped to `true` in the
+     * same incident.
+     *
+     * The cwd is the adapter's whole contract. An environment variable that
+     * silently overrides it makes the parameter a suggestion.
+     */
+    const REDIRECTORS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"];
+
+    afterEach(() => {
+      for (const key of REDIRECTORS) delete process.env[key];
+    });
+
+    it("reads the directory it was given, not the repository GIT_DIR points at", async () => {
+      const [mine, theirs] = [await seeded(), await seeded()];
+      process.env["GIT_DIR"] = join(theirs, ".git");
+      process.env["GIT_WORK_TREE"] = theirs;
+
+      expect(await createGitAdapter(mine).repoRoot()).toBe(mine);
+    });
+
+
+    it("still reports no repository when there is none, whatever GIT_DIR claims", async () => {
+      // Without this, a hook's environment makes every directory on the machine
+      // look like a repository, and `wst gate` cheerfully gates the wrong diff.
+      const theirs = await seeded();
+      process.env["GIT_DIR"] = join(theirs, ".git");
+      process.env["GIT_WORK_TREE"] = theirs;
+
+      expect(await createGitAdapter(await temp("wst-git-none-")).repoRoot()).toBeNull();
+    });
+  });
 });
 
 // ── receipts ─────────────────────────────────────────────────────────────────
