@@ -28,4 +28,18 @@ export function isolateFromInheritedGit(): void {
   for (const key of Object.keys(process.env)) {
     if (key.startsWith("GIT_")) delete process.env[key];
   }
+
+  // Then put back the four git cannot do without. Clearing the block leaves
+  // `git commit` reaching for `~/.gitconfig`, which exists on a developer's
+  // machine and does NOT exist on a CI runner — so the suite passed here and
+  // failed there with "Author identity unknown", which is the same class of bug
+  // the comment above describes, arrived at from the opposite direction.
+  //
+  // Set rather than merely defaulted: a test that commits under whoever happens
+  // to be running it has a fixture that differs per machine, and a fixture that
+  // differs per machine is not a fixture.
+  process.env["GIT_AUTHOR_NAME"] = "whetstone tests";
+  process.env["GIT_AUTHOR_EMAIL"] = "tests@whetstone.invalid";
+  process.env["GIT_COMMITTER_NAME"] = "whetstone tests";
+  process.env["GIT_COMMITTER_EMAIL"] = "tests@whetstone.invalid";
 }
