@@ -67,6 +67,32 @@ default backend stays files, so the core remains fully functional without engram
 engram is an adapter selected by configuration. Building `MemoryPort` is part of this
 work, not a prerequisite someone else supplies.
 
+**`MemoryPort`'s scope is bounded to what the plan actually needs**, and the bound is
+part of this decision rather than an implementation detail, because the unbounded
+version is a known trap. `src/core/ports.ts` today declares `GitPort`, `ClockPort` and
+`LlmJudge` and nothing else; four adapters — `signals.ts`, `retro.ts`, `events.ts`,
+`jsonl.ts` — reach `.wst/memory/` by direct filesystem access. ADR-0001 deferred the
+port on purpose (*"M1 memory = files + grep"*), and it was right to: a port with no
+consumer is the scope trap that same ADR names as this project's biggest.
+
+So:
+
+- **Declare all three verbs, implement two.** The plan needs `save` and `search`.
+  `summarize` is the expensive one and has no caller. The file backend implements the
+  two and `summarize` throws `not implemented` rather than returning something
+  plausible — a port that lies about what it supports is worse than one that is
+  visibly incomplete, and this repo has a rule about exactly that confusion.
+- **Do not migrate the four existing adapters behind it.** They work, they are tested,
+  and moving them is risk with no benefit until someone wants signals or retro
+  artifacts in a non-file backend too. When that happens it is its own decision, with
+  its own evidence.
+
+The honest risk in even this bounded version: a port with a single consumer is the
+same bet as `init`'s 2,529 lines written for a user who does not exist yet. What
+separates them is that this consumer is present and running a backend today, rather
+than hypothesised. If the plan-in-engram path goes unused, this port should be deleted
+on the same argument the project applied to `wst pr`.
+
 **Approval is a status flip in the plan's own frontmatter, and it is enforced.** A
 plan is born `proposed`. A human moves it to `approved`. `wst prepare` REFUSES to
 build a charter from a plan that is not `approved`, the same way an `agent-lens`
