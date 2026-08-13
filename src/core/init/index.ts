@@ -5,11 +5,11 @@
  *
  * The three things this module is responsible for, in the order they happen:
  *
- * 1. `detectStack` — everything the repo can answer about itself. Whatever the
- *    engine can KNOW it must not ask, and it must never infer a command that
- *    might not exist.
- * 2. `buildInterview` — the questions the repo could NOT answer, returned as data.
- *    Three of them by default.
+ * 1. `detectStack` — what the repo DECLARES about itself: its scripts, its
+ *    lockfile, whether tests exist. Whatever the engine can read it must not ask,
+ *    and it must never infer a command that might not exist.
+ * 2. `buildInterview` — everything else, returned as questions. Six of them, and
+ *    they do not shrink when detection gets lucky (ADR-0016).
  * 3. `planInit` — the generated payload, which must parse through the same
  *    loaders the rest of the engine uses and must not reference a single file
  *    that lives only in Whetstone.
@@ -19,9 +19,7 @@ export type { CopyRequest, GeneratedFile } from "./artifact.js";
 export { seedChecks, type SeedChecksOptions } from "./checks.js";
 export {
   detectStack,
-  type CommitStyle,
   type DetectedCommands,
-  type Greenness,
   type PackageJson,
   type RepoFacts,
   type StackFacts,

@@ -1,32 +1,45 @@
 /**
- * The interview — the "ask only what you cannot infer" half of `wst init`.
+ * The interview — the "ask everything the repo does not declare" half of `wst init`.
  *
  * PURE, and deliberately so: this module returns the QUESTIONS AS DATA. It never
  * prompts, never reads stdin, never prints. The composition root decides how to
  * ask (a coding agent asking a human in chat, flags on the CLI, a JSON file), and
  * the engine stays testable and non-interactive.
  *
- * `docs/woz/init.md` step 2 lists six questions. Four of them are answerable
- * from the repo once `detectStack` has run, so this module asks THREE by default:
+ * Six questions, and two of them are new (ADR-0016). `source-paths` and `stack`
+ * used to be answered by a directory-name list and a file-extension table inside
+ * `detect.ts`; both are gone, because a table is confidently wrong on the stack
+ * nobody enumerated and a blank a human fills is worth more than that.
  *
- * | WoZ question         | here                                                   |
- * |----------------------|--------------------------------------------------------|
- * | purpose              | asked — prose intent is not on disk                     |
- * | risk profile         | asked — the one thing no file states                    |
- * | strict paths         | asked, pre-filled with the detected source dirs         |
- * | conventions          | asked ONLY when git history revealed no commit style    |
+ * | question             | why it is here                                          |
+ * |----------------------|---------------------------------------------------------|
+ * | purpose              | prose intent is not on disk                             |
+ * | risk profile         | the one thing no file states                            |
+ * | source paths         | a directory called `src` is a convention, not a claim   |
+ * | strict paths         | which code is dangerous is a judgement, not a layout    |
+ * | stack                | a repo declares its scripts, never what it is built with |
+ * | conventions          | a commit history is a pattern, not a promise            |
  * | working relationship | not asked — `skills/voice.md` ships calibrated defaults |
  * | backend              | not asked — `files` is the default AND the recommendation |
  *
  * The last two are recorded deviations, not oversights: neither answer changes a
  * single byte of what init generates, so asking would spend the human's attention
  * on nothing. A backend other than `files` is a flag on the composition root.
+ *
+ * The ceiling still matters. Every question spent on something the repo already
+ * answered is a question the human stops answering carefully — which is why
+ * `commands`, `packageManager` and `hasTests` are read and never asked.
  */
 
 import { DEFINITION_DIR } from "../paths.js";
-import type { StackFacts } from "./detect.js";
 
-export type QuestionId = "purpose" | "risk" | "strict-paths" | "conventions";
+export type QuestionId =
+  | "purpose"
+  | "risk"
+  | "source-paths"
+  | "strict-paths"
+  | "stack"
+  | "conventions";
 
 export interface QuestionOption {
   readonly value: string;
@@ -77,7 +90,16 @@ export interface StrictPath {
 export interface InterviewAnswers {
   readonly purpose: string;
   readonly risk: RiskProfile;
+  /**
+   * Where this project's code lives, as globs. The single source of two outputs:
+   * the `light` triage rules and the `include` of every seeded check. Empty is a
+   * legitimate answer — a repo with no code yet — and it means no check is seeded
+   * rather than one scoped to `**`.
+   */
+  readonly sourcePaths: readonly string[];
   readonly strictPaths: readonly StrictPath[];
+  /** What the project is built with, verbatim into the constitution. May be null. */
+  readonly stack: string | null;
   /** Free-form bullets for the constitution's Conventions section. May be empty. */
   readonly conventions: readonly string[];
 }
@@ -90,7 +112,14 @@ const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
   ["safetyCritical", "safety-critical — physical control, medical, anything that can hurt someone"],
 ];
 
-export function buildInterview(stack: StackFacts): readonly InitQuestion[] {
+/**
+ * The questions, in the order they are asked. They do not depend on what was
+ * read: `detectStack` answers a disjoint set of facts, so nothing it finds can
+ * remove a question from this list or pre-fill one. That independence is the
+ * point — an interview that shrinks when a table gets lucky is an interview whose
+ * coverage nobody can state.
+ */
+export function buildInterview(): readonly InitQuestion[] {
   const questions: InitQuestion[] = [
     {
       id: "purpose",
@@ -113,35 +142,58 @@ export function buildInterview(stack: StackFacts): readonly InitQuestion[] {
       defaultAnswer: null,
     },
     {
+      id: "source-paths",
+      prompt:
+        "Where does this project's code live? One glob per source root " +
+        "(`src/**`, or `apps/*/src/**` for a monorepo).",
+      why:
+        "A directory called `src` is a convention, not a declaration — and the repo that " +
+        "calls it `services/` is invisible to any list of names. These globs become the " +
+        "`light` triage rules and the `include` of every seeded check, so a wrong one puts " +
+        "the gate over the wrong files.",
+      kind: "paths",
+      options: [],
+      defaultAnswer: null,
+    },
+    {
       id: "strict-paths",
       prompt:
         "Which paths must never ship without full TDD and review? Give a glob and the " +
         "reason it earns that (`src/billing/** : moves money`).",
       why:
-        stack.sourceGlobs.length > 0
-          ? "The source layout is visible; which part of it is dangerous is not."
-          : "Nothing recognisable to point at yet — name the core domain once it exists.",
+        "Which part of the code is dangerous is a judgement about what you are willing to " +
+        "lose. No layout states it.",
       kind: "paths",
       options: [],
-      defaultAnswer: stack.sourceGlobs.length > 0 ? (stack.sourceGlobs[0] ?? null) : null,
+      defaultAnswer: null,
     },
-  ];
-
-  // Only asked when git could not answer it. A repo with a commit history has
-  // already voted on its own convention, and asking again invites a different
-  // answer than the one the repo actually follows.
-  if (stack.commitStyle === "unknown") {
-    questions.push({
+    {
+      id: "stack",
+      prompt:
+        "What is this project built with? Language, runtime, framework, where it runs — " +
+        "the two lines a new contributor needs.",
+      why:
+        "A repo declares its scripts and its package manager, and `init` reads both. What " +
+        "it is WRITTEN in is not stated anywhere; it used to be counted off file " +
+        "extensions, which is exactly the guess that breaks on an unusual stack.",
+      kind: "text",
+      options: [],
+      defaultAnswer: null,
+    },
+    {
       id: "conventions",
       prompt:
         "Any non-negotiable conventions? (commit format, language of code and docs, style " +
         "rules a reviewer would reject a PR over)",
-      why: "Git history is too short or too varied to infer a commit convention from.",
+      why:
+        "A commit history is a pattern, not a promise. Reading four `feat:` subjects and " +
+        "writing `this project uses Conventional Commits` into a constitution states a rule " +
+        "nobody agreed to.",
       kind: "text",
       options: [],
-      defaultAnswer: "code and config in English; Conventional Commits",
-    });
-  }
+      defaultAnswer: null,
+    },
+  ];
 
   return questions;
 }
@@ -189,6 +241,15 @@ export function validateAnswers(answers: InterviewAnswers): readonly string[] {
         `profile that maps to nothing concrete is a comment, not a rule — name the paths ` +
         `where that risk actually lives.`,
     );
+  }
+
+  for (const glob of answers.sourcePaths) {
+    if (glob.trim().length === 0) {
+      errors.push(
+        "a source path is blank. It would travel into a check's `include`, where a glob " +
+          "matching nothing makes the check silently judge no file at all.",
+      );
+    }
   }
 
   const seen = new Set<string>();

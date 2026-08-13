@@ -26,6 +26,12 @@ import type { StackFacts } from "./detect.js";
 export interface SeedChecksOptions {
   /** ISO date, from `ClockPort`. Recorded on the calibration stub. */
   readonly date: string;
+  /**
+   * What every seeded check judges: the source globs the interview DECLARED
+   * (ADR-0016). Used verbatim — narrowing a human's glob to a file-extension list
+   * would put the guess back one layer down.
+   */
+  readonly include: readonly string[];
   /** Seed a starter review lens. Off by default: apparatus is earned, not sprayed. */
   readonly agentLens?: boolean;
   /** What the caller ASKED for. `block` is clamped — see rule 2 above. */
@@ -85,7 +91,7 @@ export function seedChecks(
   stack: StackFacts,
   options: SeedChecksOptions,
 ): readonly GeneratedFile[] {
-  const include = stack.sourceFileGlobs;
+  const include = options.include;
   // Without a source glob a check would have to declare `include: ["**"]`, which
   // matches build output and vendored code — and `**` does not cross a
   // dot-leading segment anyway, so it is not even the catch-all it looks like.
@@ -160,7 +166,7 @@ export function seedChecks(
   }
 
   if (options.agentLens === true) {
-    drafts.push(agentLensDraft(stack, options));
+    drafts.push(agentLensDraft(options));
   }
 
   return drafts.map(render);
@@ -172,7 +178,7 @@ export function seedChecks(
  * in init where an input is overridden rather than validated, and it is deliberate
  * — the alternative is a generated repo whose check registry refuses to load.
  */
-function agentLensDraft(stack: StackFacts, options: SeedChecksOptions): Draft {
+function agentLensDraft(options: SeedChecksOptions): Draft {
   const asked = options.agentLensSeverity ?? "warn";
   const severity: Check["severity"] = asked === "block" ? "warn" : asked;
 
@@ -184,7 +190,7 @@ function agentLensDraft(stack: StackFacts, options: SeedChecksOptions): Draft {
     kind: "agent-lens",
     severity,
     tiers: ["strict"],
-    include: stack.sourceFileGlobs,
+    include: options.include,
     exclude: testGlobs,
     calibrationDate: options.date,
     reviewLens: [

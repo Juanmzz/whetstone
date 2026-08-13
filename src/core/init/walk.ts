@@ -18,7 +18,10 @@
  * `hasTests` off that list, and `seedChecks` writes "no test files were found at
  * init" into the generated `test` check when it is false. On a monorepo with a
  * blocking test suite in CI that sentence is not a conservative default, it is a
- * false statement that DEGRADES a guarantee the project already enforces.
+ * false statement that DEGRADES a guarantee the project already enforces. That
+ * cost is now the ONLY thing paying for this module: ADR-0016 deleted the layout
+ * and language inference the walk also used to feed, and `hasTests` plus the file
+ * list handed to `--propose` are what is left.
  *
  * So the budget restarts at every package manifest: a monorepo is a repo of repos,
  * and each of them gets the same depth a flat repo gets. `MAX_DEPTH` still bounds
@@ -57,9 +60,13 @@ export function skipDir(name: string): boolean {
 }
 
 /**
- * The files that mean "a package starts here". Deliberately the manifests of the
- * toolchains `detectStack` already knows how to read: a marker the engine cannot
- * interpret is a marker it should not be spending walk budget on.
+ * The files that mean "a package starts here".
+ *
+ * These are package BOUNDARIES, not evidence: the walker restarts its depth
+ * budget at each one so a monorepo's packages are each read as deeply as a flat
+ * repo is. `pyproject.toml` earns its place on that ground alone — since
+ * ADR-0016 `detectStack` reads nothing out of it, and a Python monorepo's test
+ * files still have to be visible for `hasTests` to be true.
  */
 const MANIFESTS: ReadonlySet<string> = new Set([
   "package.json",

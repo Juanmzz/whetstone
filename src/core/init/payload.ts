@@ -58,18 +58,21 @@ export function skillCopies(): readonly CopyRequest[] {
 }
 
 /**
- * Which skills are ON. Deactivation is calibration, not deletion: a rule that does
- * not apply to this project still costs context every session it is loaded.
+ * Which skills are ON at init: all of them.
  *
- * Only one deactivation is inferable today. `doc-locations` splits documents into
- * team-shared and personal, a distinction a single-contributor repo does not have.
- * Everything else stays on unless a human turns it off, and an UNKNOWN contributor
- * count activates everything — absence of evidence is not evidence of solo work.
+ * Deactivation is calibration, not deletion — a rule that does not apply to this
+ * project still costs context every session it is loaded — and `wst.yaml` is
+ * where it happens, by hand, listing the inactive ones as comments.
+ *
+ * WHAT USED TO BE HERE: `doc-locations` was switched off for a repo whose commit
+ * log named one author, on the theory that a solo project has no team/personal
+ * split. That was a guess about how a project WORKS read off a headcount, and
+ * ADR-0016 took it out with the rest of the inference. Nothing asks for it now,
+ * and "on" is the answer the old code already gave whenever the count was
+ * unknown: absence of evidence was never evidence of solo work.
  */
-export function activeSkills(stack: StackFacts): readonly string[] {
-  return SKILL_FILES.filter((name) => !(stack.solo && name === "doc-locations.md")).map(
-    (name) => `skills/${name}`,
-  );
+export function activeSkills(): readonly string[] {
+  return SKILL_FILES.map((name) => `skills/${name}`);
 }
 
 export interface WstYamlInput {
@@ -113,33 +116,48 @@ export interface ConstitutionInput {
   readonly purpose: string;
   readonly risk: RiskProfile;
   readonly conventions: readonly string[];
-  readonly stack: StackFacts;
+  /** What the repo declares about itself. Read, never guessed. */
+  readonly detected: StackFacts;
+  /** What somebody SAID the project is built with. Null until anyone says. */
+  readonly declared: string | null;
+}
+
+/**
+ * The two halves of the stack section, kept visibly apart.
+ *
+ * Above the line is a sentence a person or a judge wrote and signed. Below it is
+ * what `init` read, each item next to the file it came from. Merging them into
+ * one bullet list is how "counted 40 `.ts` files" ends up reading exactly like
+ * "the owner told us it is TypeScript".
+ */
+function stackSection(detected: StackFacts, declared: string | null): string {
+  const stated =
+    declared === null || declared.trim().length === 0
+      ? "**Not stated.** `wst init` reads what this repo declares — its scripts, its lockfile —\n" +
+        "and it does not guess what the code is written in. Fill this in; nothing downstream\n" +
+        "depends on it, and a reader does."
+      : declared.trim();
+
+  const read = [
+    `- **Package manager:** ${detected.packageManager ?? "not declared anywhere init could read"}`,
+    `- **Tests:** ${detected.commands.test ?? "no runner declared"}`,
+    `- **Typecheck:** ${detected.commands.typecheck ?? "none declared"}`,
+    `- **Lint:** ${detected.commands.lint ?? "none declared"}`,
+    `- **Test files present at init:** ${detected.hasTests ? "yes" : "no"}`,
+  ].join("\n");
+
+  return `${stated}\n\nRead off this repo's own files at init, and correctable here:\n\n${read}`;
 }
 
 export function renderConstitution(input: ConstitutionInput): string {
-  const { stack } = input;
-
-  const stackFacts =
-    stack.greenness === "greenfield"
-      ? "**Greenfield** — no code yet, so nothing was inferred. Fill this in as the stack is\n" +
-        `chosen; the first real decision belongs in \`${DEFINITION_DIR}/memory/decisions/\` as an ADR.`
-      : [
-          `- **Language:** ${stack.language ?? "not identified"}`,
-          `- **Package manager:** ${stack.packageManager ?? "not identified"}`,
-          `- **Tests:** ${stack.commands.test ?? "no runner detected"}`,
-          `- **Typecheck:** ${stack.commands.typecheck ?? "none detected"}`,
-          `- **Lint:** ${stack.commands.lint ?? "none detected"}`,
-          `- **CI:** ${stack.ci ?? "none detected"}`,
-        ].join("\n");
+  const stackFacts = stackSection(input.detected, input.declared);
 
   const conventions =
     input.conventions.length > 0
       ? input.conventions.map((c) => `- ${c}`).join("\n")
       : [
           "- Code, configuration and comments in English.",
-          stack.commitStyle === "conventional"
-            ? "- Commits follow Conventional Commits (inferred from this repo's git history)."
-            : "- Commit style not yet established — pick one and record it here.",
+          "- Commit style not yet established — pick one and record it here.",
         ].join("\n");
 
   return `---

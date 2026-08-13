@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseTriageRules } from "../triage/rules.js";
 import { matchesPathGlob } from "../triage/glob.js";
-import { detectStack, type RepoFacts } from "./detect.js";
 import { NO_RISK, type InterviewAnswers } from "./interview.js";
 import {
   buildTriageRules,
@@ -9,33 +8,24 @@ import {
   renderTriageYaml,
 } from "./triage.js";
 
-const facts = (over: Partial<RepoFacts> = {}): RepoFacts => ({
-  repoName: "acme",
-  files: [],
-  packageJson: null,
-  commitSubjects: [],
-  contributors: null,
-  ...over,
-});
-
-const tsRepo = detectStack(
-  facts({
-    files: ["package.json", "tsconfig.json", "src/index.ts", "docs/adr.md"],
-    packageJson: {},
-  }),
-);
-
+/**
+ * The source layout is now DECLARED, not detected: `sourcePaths` is an interview
+ * answer, so a `light` rule over the code exists exactly when somebody said where
+ * the code is.
+ */
 const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   purpose: "A billing service.",
   risk: NO_RISK,
+  sourcePaths: ["src/**"],
   strictPaths: [],
+  stack: null,
   conventions: [],
   ...over,
 });
 
 describe("buildTriageRules", () => {
   it("puts the declared strict paths first — first-match-wins means order is precedence", () => {
-    const rules = buildTriageRules(tsRepo, {
+    const rules = buildTriageRules({
       ...answers(),
       strictPaths: [{ glob: "src/billing/**", reason: "moves money" }],
     });
@@ -48,11 +38,11 @@ describe("buildTriageRules", () => {
 
   it("always produces at least one rule — an empty document classifies nothing", () => {
     // Greenfield, no strict paths, nothing detected: still a usable ruleset.
-    expect(buildTriageRules(detectStack(facts()), answers()).length).toBeGreaterThan(0);
+    expect(buildTriageRules(answers({ sourcePaths: [] })).length).toBeGreaterThan(0);
   });
 
   it("never emits a duplicate glob, even when a strict path collides with a default", () => {
-    const rules = buildTriageRules(tsRepo, {
+    const rules = buildTriageRules({
       ...answers(),
       strictPaths: [{ glob: "src/**", reason: "the whole domain is dangerous" }],
     });
@@ -62,14 +52,29 @@ describe("buildTriageRules", () => {
     expect(rules.find((r) => r.glob === "src/**")?.tier).toBe("strict");
   });
 
+  it("puts a light rule over every DECLARED source path, and invents none", () => {
+    const rules = buildTriageRules(answers({ sourcePaths: ["apps/*/src/**", "packages/*/src/**"] }));
+    const light = rules.filter((r) => r.tier === "light").map((r) => r.glob);
+    expect(light).toContain("apps/*/src/**");
+    expect(light).toContain("packages/*/src/**");
+    // `src/**` was never named, so nothing may claim it. The old detector would
+    // have found it from a directory-name list.
+    expect(light).not.toContain("src/**");
+  });
+
+  it("covers no code at all when nobody said where the code is", () => {
+    const globs = buildTriageRules(answers({ sourcePaths: [] })).map((r) => r.glob);
+    expect(globs).not.toContain("src/**");
+  });
+
   it("gives every rule a non-blank reason", () => {
-    for (const rule of buildTriageRules(tsRepo, answers())) {
+    for (const rule of buildTriageRules(answers())) {
       expect(rule.reason.trim().length).toBeGreaterThan(0);
     }
   });
 
   it("normalises reasons to a single line, so the YAML round-trip is exact", () => {
-    const rules = buildTriageRules(tsRepo, {
+    const rules = buildTriageRules({
       ...answers(),
       strictPaths: [{ glob: "src/pay/**", reason: "  moves\n  real   money  " }],
     });
@@ -78,9 +83,9 @@ describe("buildTriageRules", () => {
 });
 
 describe("renderTriageYaml — must round-trip through the real loader", () => {
-  const cases: readonly (readonly [string, InterviewAnswers, ReturnType<typeof detectStack>])[] = [
-    ["greenfield, no strict paths", answers(), detectStack(facts())],
-    ["typical TS repo", answers(), tsRepo],
+  const cases: readonly (readonly [string, InterviewAnswers])[] = [
+    ["greenfield: no source paths, no strict paths", answers({ sourcePaths: [] })],
+    ["typical TS repo", answers()],
     [
       "money project with several strict paths",
       answers({
@@ -91,31 +96,33 @@ describe("renderTriageYaml — must round-trip through the real loader", () => {
           { glob: "migrations/*.sql", reason: "destructive and irreversible in production" },
         ],
       }),
-      tsRepo,
     ],
     [
       "a reason containing YAML metacharacters",
       answers({
         strictPaths: [{ glob: "src/a/**", reason: 'colon: hash # dash - quote " brace {} @ %' }],
       }),
-      tsRepo,
+    ],
+    [
+      "a monorepo that declares several source roots",
+      answers({ sourcePaths: ["apps/*/src/**", "packages/*/src/**"] }),
     ],
   ];
 
-  for (const [name, ans, stack] of cases) {
+  for (const [name, ans] of cases) {
     it(`round-trips: ${name}`, () => {
-      const rules = buildTriageRules(stack, ans);
+      const rules = buildTriageRules(ans);
       const yaml = renderTriageYaml(rules);
       expect(parseTriageRules(yaml, ".wst/triage.yaml")).toEqual(rules);
     });
   }
 
   it("declares the format version the loader demands", () => {
-    expect(renderTriageYaml(buildTriageRules(tsRepo, answers()))).toContain("version: 1");
+    expect(renderTriageYaml(buildTriageRules(answers()))).toContain("version: 1");
   });
 
   it("produces globs that actually match the files they were written for", () => {
-    const rules = buildTriageRules(tsRepo, {
+    const rules = buildTriageRules({
       ...answers(),
       strictPaths: [{ glob: "src/billing/**", reason: "moves money" }],
     });
@@ -127,7 +134,7 @@ describe("renderTriageYaml — must round-trip through the real loader", () => {
 
 describe("renderTriageRulesMd", () => {
   it("is the human table the YAML is compiled from, and says so", () => {
-    const md = renderTriageRulesMd(buildTriageRules(tsRepo, answers()), { date: "2026-08-08" });
+    const md = renderTriageRulesMd(buildTriageRules(answers()), { date: "2026-08-08" });
     expect(md).toMatch(/^---\n/);
     expect(md).toContain("id: triage-rules");
     expect(md).toContain("2026-08-08");
@@ -137,7 +144,7 @@ describe("renderTriageRulesMd", () => {
   });
 
   it("lists every declared strict glob in the strict row", () => {
-    const rules = buildTriageRules(tsRepo, {
+    const rules = buildTriageRules({
       ...answers(),
       strictPaths: [
         { glob: "src/billing/**", reason: "moves money" },
@@ -150,7 +157,7 @@ describe("renderTriageRulesMd", () => {
   });
 
   it("says plainly that nothing is strict yet when nothing is", () => {
-    const md = renderTriageRulesMd(buildTriageRules(tsRepo, answers()), { date: "2026-08-08" });
+    const md = renderTriageRulesMd(buildTriageRules(answers()), { date: "2026-08-08" });
     expect(md).toMatch(/nothing is strict yet/i);
   });
 });

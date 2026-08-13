@@ -33,10 +33,6 @@ const tsRepo = detectStack(
   }),
 );
 
-const solo = detectStack(
-  facts({ files: ["package.json", "src/a.ts"], packageJson: {}, contributors: 1 }),
-);
-
 describe("skills", () => {
   it("copies all eight skills verbatim, whatever is active", () => {
     expect(SKILL_FILES).toHaveLength(8);
@@ -48,24 +44,21 @@ describe("skills", () => {
     }
   });
 
-  it("activates all eight for a team repo", () => {
-    expect(activeSkills(tsRepo)).toHaveLength(8);
-  });
-
-  it("leaves doc-locations inactive for solo work — there is no team/personal split", () => {
-    const active = activeSkills(solo);
-    expect(active).not.toContain("skills/doc-locations.md");
-    expect(active).toContain("skills/voice.md");
-  });
-
-  it("activates everything when contributor count is unknown — silence is not evidence", () => {
-    const unknown = detectStack(facts({ files: ["src/a.ts"], contributors: null }));
-    expect(activeSkills(unknown)).toHaveLength(8);
+  /**
+   * All eight, always. The one deactivation that used to happen at init keyed off
+   * a contributor count — `doc-locations` was switched off for "solo" repos —
+   * and a headcount read from `git shortlog` is a guess about how a project
+   * works, not a fact it declares. Nothing asks for it now, and the honest
+   * default is the one the old code already used for an unknown count: on.
+   */
+  it("activates all eight, and needs nothing about the repo to decide that", () => {
+    expect(activeSkills()).toHaveLength(8);
+    expect(activeSkills()).toContain("skills/doc-locations.md");
   });
 });
 
 describe("renderWstYaml", () => {
-  const yaml = renderWstYaml({ backend: "files", skills: activeSkills(tsRepo), namespace: "acme" });
+  const yaml = renderWstYaml({ backend: "files", skills: activeSkills(), namespace: "acme" });
 
   it("is valid YAML with the fields the loader and the retro read", () => {
     const parsed = parseYaml(yaml) as Record<string, unknown>;
@@ -81,7 +74,11 @@ describe("renderWstYaml", () => {
   });
 
   it("lists the inactive skills as commented-out entries, so they can be switched on later", () => {
-    const y = renderWstYaml({ backend: "files", skills: activeSkills(solo), namespace: "solo" });
+    const y = renderWstYaml({
+      backend: "files",
+      skills: activeSkills().filter((s) => s !== "skills/doc-locations.md"),
+      namespace: "solo",
+    });
     expect(y).toContain("# - skills/doc-locations.md");
     expect((parseYaml(y) as Record<string, unknown>)["skills"]).not.toContain(
       "skills/doc-locations.md",
@@ -96,7 +93,8 @@ describe("renderConstitution", () => {
     purpose: "A billing service for widget subscriptions.",
     risk: { ...NO_RISK, money: true },
     conventions: ["code and docs in English"],
-    stack: tsRepo,
+    detected: tsRepo,
+    declared: "TypeScript on Node 24, deployed to Fly.io.",
   });
 
   it("carries the interview's answers, not placeholders", () => {
@@ -109,21 +107,28 @@ describe("renderConstitution", () => {
     expect(constitution).not.toMatch(/\{\{|\}\}/);
   });
 
-  it("records the stack facts that were inferred, so they can be corrected", () => {
-    expect(constitution).toContain("TypeScript");
-    expect(constitution).toContain("pnpm");
+  it("prints the stack as it was DECLARED, not as it was guessed from file extensions", () => {
+    expect(constitution).toContain("TypeScript on Node 24, deployed to Fly.io.");
   });
 
-  it("states plainly that a greenfield repo has no stack yet", () => {
+  it("prints the facts it actually read, so a wrong one can be corrected", () => {
+    expect(constitution).toContain("pnpm");
+    expect(constitution).toContain("pnpm run test");
+  });
+
+  it("leaves the stack blank, and says so, when nobody stated one", () => {
+    // A blank a human fills beats a table's confident wrong answer. What it may
+    // not do is stay silent, which reads as "there was nothing to say".
     const green = renderConstitution({
       repoName: "new",
       date: "2026-08-08",
       purpose: "Nothing yet.",
       risk: NO_RISK,
       conventions: [],
-      stack: detectStack(facts()),
+      detected: detectStack(facts()),
+      declared: null,
     });
-    expect(green).toMatch(/greenfield/i);
+    expect(green).toMatch(/not stated/i);
   });
 
   it("says who may amend it — the retro never touches the constitution", () => {
@@ -171,10 +176,12 @@ describe("the memory schema travels with the payload", () => {
 });
 
 describe("renderAgentsMd", () => {
-  const rules = buildTriageRules(tsRepo, {
+  const rules = buildTriageRules({
     purpose: "p",
     risk: NO_RISK,
+    sourcePaths: ["src/**"],
     strictPaths: [{ glob: "src/billing/**", reason: "moves money" }],
+    stack: null,
     conventions: [],
   });
 
@@ -186,10 +193,11 @@ describe("renderAgentsMd", () => {
       purpose: "A billing service.",
       risk: NO_RISK,
       conventions: [],
-      stack: tsRepo,
+      detected: tsRepo,
+      declared: null,
     }),
     triageRulesMd: renderTriageRulesMd(rules, { date: "2026-08-08" }),
-    activeSkills: activeSkills(tsRepo),
+    activeSkills: activeSkills(),
     checkIds: ["typecheck", "test"],
   });
 
@@ -208,7 +216,7 @@ describe("renderAgentsMd", () => {
       repoName: "solo",
       constitution: "x",
       triageRulesMd: "y",
-      activeSkills: activeSkills(solo),
+      activeSkills: activeSkills().filter((s) => s !== "skills/doc-locations.md"),
       checkIds: [],
     });
     expect(soloAgents).not.toContain("doc-locations");

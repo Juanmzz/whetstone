@@ -18,22 +18,17 @@ const facts: RepoFacts = {
 };
 
 const stack: StackFacts = {
-  greenness: "brownfield",
-  language: "TypeScript",
   packageManager: "npm",
   commands: { test: "npm run test", typecheck: null, lint: "npm run lint" },
-  ci: "GitHub Actions",
-  sourceGlobs: ["apps/**"],
-  sourceFileGlobs: ["apps/**/*.ts"],
   hasTests: true,
-  commitStyle: "conventional",
-  solo: true,
-  evidence: ["language: TypeScript (from *.ts files)"],
+  evidence: ["package manager: npm (from package-lock.json)"],
 };
 
 const proposal = (over: Partial<Proposal> = {}): Proposal => ({
   purpose: "A personal task manager with quick capture and daily review.",
   purposeEvidence: "README.md describes capture and review; apps/bot is a Telegram capture path.",
+  stack: "TypeScript on Node, Vitest, and a CI workflow.",
+  sourcePaths: ["apps/*/src/**"],
   risk: [],
   strictPaths: [],
   ...over,
@@ -90,8 +85,26 @@ describe("buildProposalPrompt", () => {
     expect(prompt).toContain("feat: daily rollover");
   });
 
-  it("inlines what detection already concluded, so the judge does not re-derive it", () => {
-    expect(buildProposalPrompt(facts, stack)).toContain("TypeScript");
+  it("inlines what was READ off the repo, with the file it came from", () => {
+    const prompt = buildProposalPrompt(facts, stack);
+    expect(prompt).toContain("package manager: npm (from package-lock.json)");
+    expect(prompt).toContain("tests present: yes");
+  });
+
+  /**
+   * The prompt used to open with `language: TypeScript`, decided by counting file
+   * extensions. Handing the judge a guess dressed as a fact is worse than handing
+   * it nothing: it anchors the answer on the table's mistake, and the judge has
+   * the file list right there and can do better than the table.
+   */
+  it("asserts no language of its own — it asks the judge for one", () => {
+    const prompt = buildProposalPrompt(facts, stack);
+    expect(prompt).not.toMatch(/^language: /m);
+    expect(prompt).toMatch(/stack/i);
+  });
+
+  it("asks where the code lives, from the file list it was given", () => {
+    expect(buildProposalPrompt(facts, stack)).toContain("sourcePaths");
   });
 
   it("never instructs the judge to read, open or explore anything", () => {
@@ -144,8 +157,21 @@ describe("a risk flag must carry evidence or it does not count", () => {
 describe("proposalToAnswers", () => {
   it("produces answers a strict AnswersSchema will accept — no reasoning leaks in", () => {
     const answers = proposalToAnswers(proposal());
-    expect(Object.keys(answers).sort()).toEqual(["conventions", "purpose", "risk", "strictPaths"]);
+    expect(Object.keys(answers).sort()).toEqual([
+      "conventions",
+      "purpose",
+      "risk",
+      "sourcePaths",
+      "stack",
+      "strictPaths",
+    ]);
     expect(JSON.stringify(answers)).not.toContain("Evidence");
+  });
+
+  it("carries the stack and the source paths through — they are answers now, not guesses", () => {
+    const answers = proposalToAnswers(proposal());
+    expect(answers.stack).toBe("TypeScript on Node, Vitest, and a CI workflow.");
+    expect(answers.sourcePaths).toEqual(["apps/*/src/**"]);
   });
 
   it("carries a strict path's reason through, since a rule that cannot say why cannot be retired", () => {
@@ -176,7 +202,14 @@ describe("renderProposal", () => {
 
 describe("ProposalSchema", () => {
   it("rejects a risk entry with no `why`, so the judge cannot return a bare flag", () => {
-    const bad = { purpose: "x", purposeEvidence: "y", risk: [{ flag: "money", citedPaths: [] }], strictPaths: [] };
+    const bad = {
+      purpose: "x",
+      purposeEvidence: "y",
+      stack: "z",
+      sourcePaths: [],
+      risk: [{ flag: "money", citedPaths: [] }],
+      strictPaths: [],
+    };
     expect(ProposalSchema.safeParse(bad).success).toBe(false);
   });
 
@@ -184,6 +217,8 @@ describe("ProposalSchema", () => {
     const bad = {
       purpose: "x",
       purposeEvidence: "y",
+      stack: "z",
+      sourcePaths: [],
       risk: [{ flag: "vibes", why: "z", citedPaths: ["a.ts"] }],
       strictPaths: [],
     };
@@ -192,5 +227,10 @@ describe("ProposalSchema", () => {
 
   it("accepts a well-formed proposal", () => {
     expect(ProposalSchema.safeParse(proposal()).success).toBe(true);
+  });
+
+  it("rejects a proposal that skips the stack — it is asked for, not optional", () => {
+    const { stack: _dropped, ...rest } = proposal();
+    expect(ProposalSchema.safeParse(rest).success).toBe(false);
   });
 });
