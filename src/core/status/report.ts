@@ -176,7 +176,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
       warnings.push(
         `\`${DEFINITION_DIR}/\` is not tracked by git. Untracked files do not propagate into worktrees, ` +
           `so the plugin is inert in every worktree cut from this repo — including the ones ` +
-          `\`wst run\` leases. Commit \`${DEFINITION_DIR}/\` to fix it`,
+          `\`wst prepare\` leases. Commit \`${DEFINITION_DIR}/\` to fix it`,
       );
     }
   }

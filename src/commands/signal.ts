@@ -70,8 +70,8 @@ const exists = async (path: string): Promise<boolean> =>
  * carries every word the human wrote.
  */
 function humanIsAtTheKeyboard(): boolean {
-  // A crewmate is spawned with its stdin piped — `shell/crewmate.ts` writes the
-  // charter into it — so it has no terminal. Neither does a hook or a CI job.
+  // A crewmate spawned headless has its stdin piped — that is how a charter reaches
+  // it — so it has no terminal. Neither does a hook or a CI job.
   if (process.stdin.isTTY !== true) return false;
   // And an agent running inside an interactive session INHERITS that terminal, so
   // a TTY alone evidences nothing. Claude Code marks its own subprocesses; this

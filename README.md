@@ -31,20 +31,22 @@ layer that makes a non-negotiable actually non-negotiable.
 ```
 wst init   → interview the project, generate .wst/
 wst plan   → read a plan's declared paths → tier → which checks will judge it, and what nothing covers
-wst run    → triage → dispatch → gate → branch
+wst prepare → lease a worktree → branch → write the charter the live registry generates → stop
 wst gate   → select checks → skip what receipts prove unchanged → run → pass or block
 wst retro  → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-*Shipped today: all nine commands — `status`, `check`, `triage`, `plan`, `gate`, `run`, `retro`,
-`signal`, `init` — as a TypeScript engine (ADR-0008). `wst pr` was removed by ADR-0009: the gate's exit code
-is the whole enforcement surface, and a second channel that only advised was one more thing to keep
-honest. The Wizard-of-Oz procedures under [`docs/woz/`](./docs/woz/) are reference specs, not
+*Shipped today: all nine commands — `status`, `check`, `triage`, `plan`, `gate`, `prepare`, `retro`,
+`signal`, `init` — as a TypeScript engine (ADR-0008). Two removals point the same way: `wst pr` went
+by ADR-0009, because the gate's exit code is the whole enforcement surface and a second channel that
+only advised was one more thing to keep honest; `wst run`'s dispatcher went by ADR-0014, because
+running agents in worktrees is commoditised and the gate is not. What survived the second is `wst
+prepare`. The Wizard-of-Oz procedures under [`docs/woz/`](./docs/woz/) are reference specs, not
 current procedure.*
 
-The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst run` has dispatched a
-crewmate whose work was gated before a human saw it, and `wst retro` has produced amendments across
-four skills, each carrying the signals that earned it. **`wst run` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
+The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst prepare` briefs a
+crewmate from the registry as it stands right now, and `wst retro` has produced amendments across
+four skills, each carrying the signals that earned it. **`wst prepare` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
 for worktree isolation, and agent-lens checks need the `claude` CLI; neither is bundled.** What is
 still weak is stated in [AGENTS.md](./AGENTS.md#known-weaknesses-stated-plainly) — chiefly that the
 lens is uncalibrated at v4, so the judgment tier is advisory.
