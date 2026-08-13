@@ -43,8 +43,8 @@ export interface HumanObservation {
    *
    * REQUIRED, not optional, and the reason is the same one `appendSignals` gives
    * for `branch`: a new caller has to answer the question rather than inherit the
-   * log's strongest provenance class by omission. `wst` is on a crewmate's PATH
-   * (`shell/crewmate.ts`), so "this function was called" evidences nothing — an
+   * log's strongest provenance class by omission. `wst` is on a crewmate's PATH,
+   * so "this function was called" evidences nothing — an
    * agent minting `source: "human"` is the hallucinated-signal-becomes-a-rule path
    * the anti-poisoning gate exists to block. What counts as evidence is the
    * command's to decide, because it is the layer that can see a terminal.

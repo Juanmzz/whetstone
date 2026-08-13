@@ -11,7 +11,7 @@ import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
 import { runPlan } from "./commands/plan.js";
 import { runGate } from "./commands/gate.js";
-import { runRun } from "./commands/run.js";
+import { runPrepare } from "./commands/prepare.js";
 import { runRetro } from "./commands/retro.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
@@ -105,39 +105,22 @@ program
     });
   });
 
+// Was `wst run`, which dispatched and gated too (ADR-0014). No `--model`, `--budget`
+// or `--keep`: nothing is spawned, so there is nothing to charge or bound, and the
+// worktree is always kept because the lease is yours from the moment it is handed over.
 program
-  .command("run")
+  .command("prepare")
   .argument("<task...>", "what the crewmate should do")
-  .description("dispatch a crewmate in an isolated worktree, then gate its work")
-  .option("--dry-run", "print the charter and exit, spending nothing")
-  .option("--prepare", "lease the worktree and write the charter, but do not dispatch")
+  .description("lease a worktree, branch it, and write the charter — then stop")
+  .option("--dry-run", "print the charter and exit, leasing nothing")
   .option("--lane <lane>", "scope the crewmate to a lane (boundary enforced by hook)")
-  .option("--model <model>", "model for the crewmate")
-  .option("--budget <usd>", "hard spend ceiling for the crewmate", "5")
-  .option("--keep", "keep the worktree even when the gate passes")
-  .action(
-    async (
-      task: string[],
-      opts: {
-        dryRun?: boolean;
-        prepare?: boolean;
-        lane?: string;
-        model?: string;
-        budget?: string;
-        keep?: boolean;
-      },
-    ) => {
-      process.exitCode = await runRun({
-        task: task.join(" "),
-        ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
-        ...(opts.prepare !== undefined ? { prepare: opts.prepare } : {}),
-        ...(opts.lane !== undefined ? { lane: opts.lane } : {}),
-        ...(opts.model !== undefined ? { model: opts.model } : {}),
-        ...(opts.budget !== undefined ? { budgetUsd: Number(opts.budget) } : {}),
-        ...(opts.keep !== undefined ? { keep: opts.keep } : {}),
-      });
-    },
-  );
+  .action(async (task: string[], opts: { dryRun?: boolean; lane?: string }) => {
+    process.exitCode = await runPrepare({
+      task: task.join(" "),
+      ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+      ...(opts.lane !== undefined ? { lane: opts.lane } : {}),
+    });
+  });
 
 program
   .command("retro")

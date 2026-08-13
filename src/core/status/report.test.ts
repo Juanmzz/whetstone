@@ -170,7 +170,7 @@ describe("the plugin row", () => {
   /**
    * Reason 2, and the one that generalises worst: untracked files do not propagate
    * into git worktrees, so an UNCOMMITTED `.wst/` silently disables the plugin in
-   * every worktree — including the ones `wst run` leases. That is the posture of
+   * every worktree — including the ones `wst prepare` leases. That is the posture of
    * anyone trialling Whetstone before proposing it to their team.
    */
   it("warns that an untracked .wst/ leaves the plugin inert in every worktree", () => {

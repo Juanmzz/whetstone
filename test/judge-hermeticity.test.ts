@@ -1,39 +1,45 @@
 /**
- * HARD RULE 9, from the outside: judge = hermetic, crewmate = charged.
+ * HARD RULE 9, from the outside: the judge is hermetic.
  *
  * `shell/claude.ts` strips the target repo's MCP servers, hooks, setting sources and
- * tools so a repo cannot hijack its own reviewer. `shell/crewmate.ts` loads them
- * deliberately, because `.wst/` and `AGENTS.md` ARE the crewmate's charter. Both
- * files say so in their headers, at length. Until this test nothing checked it.
+ * tools so a repo cannot hijack its own reviewer. Its header says so at length.
+ * Until this test nothing checked it.
  *
- * That gap mattered more than most, because inverting the pair fails SILENTLY in
- * both directions. A charged judge still returns verdicts — worse ones, shaped by
- * whatever the repo under review told it — and the measured cost of the leak was
- * 140,682 input tokens / $0.84 for a one-word answer against ~11.4k hermetic, plus
- * sig-0033, where a user-level SessionStart hook injected another project's prompts
- * into a verdict. A hermetic crewmate still works; it just ignores the project's
- * rules. Neither shows up as a failure anywhere.
+ * That gap mattered more than most, because a charged judge fails SILENTLY: it still
+ * returns verdicts — worse ones, shaped by whatever the repo under review told it.
+ * The measured cost of the leak was 140,682 input tokens / $0.84 for a one-word
+ * answer against ~11.4k hermetic, plus sig-0033, where a user-level SessionStart hook
+ * injected another project's prompts into a verdict.
+ *
+ * WHAT THIS FILE USED TO ALSO COVER, and no longer can. Rule 9 was a PAIR — judge
+ * hermetic, crewmate charged — and this file asserted both halves against one shared
+ * `ISOLATION_FLAGS` list, so neither could drift into its own idea of isolation.
+ * ADR-0014 deleted `shell/crewmate.ts`, and the three describes that exercised it
+ * went with it: that the crewmate carries NONE of the isolation flags, that it runs
+ * in its worktree while the judge runs in `tmpdir()`, and how it reports a `claude`
+ * that died mid-run. That behaviour is gone from the codebase rather than gone
+ * untested — a crewmate is now a session a human opens — but the asymmetry test is
+ * gone too, so nothing here fails if the judge ever loses a flag to a refactor aimed
+ * at something else. The PRESENT-on-the-judge half below is what still guards it.
  *
  * Everything here runs against a fake `claude` on PATH (`test/fake-bin.ts`), which
  * records the argv, cwd and stdin it was handed. No tokens are spent.
  */
 
 import { realpathSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { LensVerdictSchema } from "../src/core/gate/outcomes.js";
 import { createClaudeJudge } from "../src/shell/claude.js";
-import { createCrewmateAdapter } from "../src/shell/crewmate.js";
 import { emptyPath, installFakeBin, restorePath, type Invocation } from "./fake-bin.js";
 
 afterEach(() => restorePath());
 
 /**
  * The flags that make a call hermetic. Named once, then asserted PRESENT on the
- * judge and ABSENT on the crewmate — one list, so the two halves of rule 9 cannot
- * drift apart into two different ideas of what isolation means.
+ * judge. The ABSENT-on-the-crewmate half left with ADR-0014; the list stays named
+ * once so a refactor cannot quietly shorten it.
  */
 const ISOLATION_FLAGS = [
   "--strict-mcp-config",
@@ -60,14 +66,6 @@ const VERDICT_ENVELOPE = JSON.stringify({
   session_id: "sess-1",
 });
 
-const CREWMATE_ENVELOPE = JSON.stringify({
-  is_error: false,
-  result: "done",
-  total_cost_usd: 1.5,
-  duration_ms: 9000,
-  session_id: "sess-2",
-});
-
 async function judgeOnce(prompt = "Review this diff.\n\n@@ -1 +1 @@"): Promise<Invocation> {
   const fake = await installFakeBin("claude", { stdout: VERDICT_ENVELOPE });
   await createClaudeJudge().judge({
@@ -77,28 +75,6 @@ async function judgeOnce(prompt = "Review this diff.\n\n@@ -1 +1 @@"): Promise<I
     model: "sonnet",
     maxBudgetUsd: 0.5,
     timeoutMs: 30_000,
-  });
-  const [only] = await fake.invocations();
-  expect(only).toBeDefined();
-  return only as Invocation;
-}
-
-/**
- * A directory that is NOT the temp root the judge stands in. The distinction is
- * load-bearing: with the worktree set to `tmpdir()` itself, an adapter that had
- * been rewritten to stand in the temp root would satisfy `cwd === worktreePath`
- * by coincidence, and the crewmate half of rule 9 would assert nothing.
- */
-async function worktreeDir(): Promise<string> {
-  return realpathSync(await mkdtemp(join(tmpdir(), "wst-worktree-")));
-}
-
-async function dispatchOnce(worktreePath: string): Promise<Invocation> {
-  const fake = await installFakeBin("claude", { stdout: CREWMATE_ENVELOPE });
-  await createCrewmateAdapter().dispatch({
-    charter: "Do the work described in .wst/",
-    worktreePath,
-    model: "opus",
   });
   const [only] = await fake.invocations();
   expect(only).toBeDefined();
@@ -145,47 +121,6 @@ describe("the judge is hermetic", () => {
     const invocation = await judgeOnce(prompt);
     expect(invocation.stdin).toBe(prompt);
     expect(invocation.argv.join(" ")).not.toContain(prompt);
-  });
-});
-
-describe("the crewmate is charged", () => {
-  it("works inside the worktree, because that is where its charter lives", async () => {
-    const worktree = await worktreeDir();
-    expect((await dispatchOnce(worktree)).cwd).toBe(worktree);
-  });
-
-  it("loads none of the judge's isolation flags", async () => {
-    const { argv } = await dispatchOnce(await worktreeDir());
-    expect(ISOLATION_FLAGS.filter((flag) => argv.includes(flag))).toEqual([]);
-  });
-
-  it("defaults to the permission mode that lets it run its own tests", async () => {
-    // `auto`, not `acceptEdits`: the latter auto-approves file edits only, and a
-    // crewmate that cannot run its own tests cannot check its own work.
-    const { argv } = await dispatchOnce(await worktreeDir());
-    expect(valueOf(argv, "--permission-mode")).toBe("auto");
-  });
-
-  it("always carries a spend ceiling, even when the caller names none", async () => {
-    // A runaway crewmate is a billing incident, not a bug report.
-    const { argv } = await dispatchOnce(await worktreeDir());
-    expect(Number(valueOf(argv, "--max-budget-usd"))).toBeGreaterThan(0);
-  });
-});
-
-describe("the asymmetry between them", () => {
-  it("is exactly backwards from one adapter to the other", async () => {
-    // The single assertion this whole file exists for. Swapping the two `cwd`s, or
-    // copying the flag block from one file into the other, fails here and nowhere
-    // else in the suite.
-    const worktree = await worktreeDir();
-    const judge = await judgeOnce();
-    const crewmate = await dispatchOnce(worktree);
-
-    expect(ISOLATION_FLAGS.every((flag) => judge.argv.includes(flag))).toBe(true);
-    expect(ISOLATION_FLAGS.some((flag) => crewmate.argv.includes(flag))).toBe(false);
-    expect(crewmate.cwd).toBe(worktree);
-    expect(realpathSync(judge.cwd)).not.toBe(crewmate.cwd);
   });
 });
 
@@ -263,53 +198,3 @@ describe("what the judge meters", () => {
   });
 });
 
-describe("what the crewmate reports back", () => {
-  it("calls an is_error envelope a failure, and names the subtype", async () => {
-    // `wst run` keeps the worktree for inspection on `ok: false`. Reading an error
-    // envelope as success would discard the diff that is the only evidence of what
-    // the crewmate did before it died.
-    await installFakeBin("claude", {
-      stdout: JSON.stringify({
-        is_error: true,
-        subtype: "error_max_budget_usd",
-        result: "",
-        total_cost_usd: 5,
-      }),
-    });
-    const result = await createCrewmateAdapter().dispatch({
-      charter: "c",
-      worktreePath: tmpdir(),
-      timeoutMs: 30_000,
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.error).toBe("error_max_budget_usd");
-    expect(result.costUsd).toBe(5);
-  });
-
-  it("returns a failed result rather than throwing when claude is not installed", async () => {
-    // The dispatcher's caller keeps a worktree on a failed result. A throw would
-    // take the same path only by accident, through a catch written for something
-    // else, and `wst run` would report a crash instead of a crewmate that never ran.
-    emptyPath();
-    const result = await createCrewmateAdapter().dispatch({
-      charter: "c",
-      worktreePath: tmpdir(),
-      timeoutMs: 30_000,
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.error ?? "").not.toBe("");
-    expect(result.costUsd).toBe(0);
-  });
-
-  it("does not read unparseable output as a finished run", async () => {
-    await installFakeBin("claude", { stdout: "not json at all" });
-    const result = await createCrewmateAdapter().dispatch({
-      charter: "c",
-      worktreePath: tmpdir(),
-      timeoutMs: 30_000,
-    });
-    expect(result.ok).toBe(false);
-  });
-});

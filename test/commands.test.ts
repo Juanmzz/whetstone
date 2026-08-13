@@ -8,7 +8,7 @@
  *
  *  - `wst init` checks for collisions BEFORE the writer, because the writer is
  *    `mkdir -p` + `writeFile` and has no existence check of its own.
- *  - `--dry-run` on `run` and `retro` must spawn nothing. A dry run that costs
+ *  - `--dry-run` on `prepare` and `retro` must spawn nothing. A dry run that costs
  *    money is not a dry run, and nothing about the output would say so.
  *  - the checks a crewmate is told about, and the paths it is told are dangerous,
  *    are DERIVED from the project's own registry and rules (sig-0041).
@@ -27,7 +27,7 @@ import { runCheck } from "../src/commands/check.js";
 import { runGate } from "../src/commands/gate.js";
 import { runInit } from "../src/commands/init.js";
 import { runRetro } from "../src/commands/retro.js";
-import { runRun } from "../src/commands/run.js";
+import { runPrepare } from "../src/commands/prepare.js";
 import { runStatus } from "../src/commands/status.js";
 import { runTriage } from "../src/commands/triage.js";
 import { installFakeBin, restorePath, type FakeBin } from "./fake-bin.js";
@@ -210,7 +210,7 @@ describe("wst status", () => {
   it("warns that an UNTRACKED .wst/ is inert in every worktree cut from here", async () => {
     // sig-0044, and the reason it took a field report to find: `.wst/` is present
     // here and absent in every worktree, so the plugin's hooks silently do
-    // nothing in exactly the places `wst run` sends work. Nothing else reports it.
+    // nothing in exactly the places `wst prepare` sends work. Nothing else reports it.
     await withPlugin();
     const dir = await repo({ untrackedDefinition: true });
     await runStatus(dir);
@@ -236,9 +236,9 @@ describe("wst status", () => {
   });
 });
 
-// ── wst run --dry-run ────────────────────────────────────────────────────────
+// ── wst prepare --dry-run ────────────────────────────────────────────────────────
 
-describe("wst run --dry-run", () => {
+describe("wst prepare --dry-run", () => {
   it("spends nothing and leases nothing", async () => {
     // The flag exists so a charter can be read before any of it is real. A
     // dry run that leased a worktree or spawned an agent would cost money and
@@ -246,7 +246,7 @@ describe("wst run --dry-run", () => {
     const claude = await installFakeBin("claude", { stdout: "{}" });
     const treehouse = await installFakeBin("treehouse", { stdout: "/tmp/wt\n" });
 
-    expect(await runRun({ task: "add a health endpoint", dryRun: true }, await repo())).toBe(0);
+    expect(await runPrepare({ task: "add a health endpoint", dryRun: true }, await repo())).toBe(0);
     expect(await claude.invocations()).toEqual([]);
     expect(await treehouse.invocations()).toEqual([]);
   });
@@ -255,7 +255,7 @@ describe("wst run --dry-run", () => {
     // sig-0041: the charter hardcoded Whetstone's own three directories, so a
     // crewmate in another repo was warned about paths it would never touch and
     // told nothing about the ones that mattered.
-    await runRun({ task: "alter a table", dryRun: true }, await repo());
+    await runPrepare({ task: "alter a table", dryRun: true }, await repo());
 
     expect(stdout()).toContain("migrations/**");
     expect(stdout()).not.toContain("src/core/**");
@@ -264,7 +264,7 @@ describe("wst run --dry-run", () => {
   it("names the checks its work will be gated by", async () => {
     // A crewmate that does not know what will judge it cannot check its own work
     // before handing it over.
-    await runRun({ task: "add a health endpoint", dryRun: true }, await repo());
+    await runPrepare({ task: "add a health endpoint", dryRun: true }, await repo());
     expect(stdout()).toContain("green");
   });
 });

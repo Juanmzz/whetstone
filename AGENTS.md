@@ -32,13 +32,14 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst plan` | read a plan's declared `paths:` → predicted tier → which checks will judge it, split blocking/advisory, and which paths **nothing** covers. Reads, never authors; no LLM; **never blocks** (ADR-0013) |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
-| `wst run <task>` | dispatch a crewmate in an isolated worktree, then gate its work |
+| `wst prepare <task>` | lease a worktree, branch it, write the charter built from the live registry — then stop. Dispatches nothing, waits for nothing, and the lease is yours (ADR-0014) |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
 | `wst init` | interview a repo and generate its `.wst/` |
 
 Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
-record signals; for when you are testing the gate itself) · `run --dry-run` · `retro --dry-run` ·
+record signals; for when you are testing the gate itself) · `prepare --dry-run` (print the charter,
+lease nothing) · `retro --dry-run` ·
 `plan --json` (the full triage reason, untruncated). The plan format is in `.wst/architecture.md`.
 
 ## Where things live
@@ -50,7 +51,7 @@ record signals; for when you are testing the gate itself) · `run --dry-run` · 
 | `.wst/memory/` | ADRs, `signals.jsonl`, `retro-log.md`, `proposals/` |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
-| `src/shell/` | Thin adapters: git, fs, claude, crewmate, treehouse, github, sdd, signals |
+| `src/shell/` | Thin adapters: git, claude, treehouse, sdd, signals, events, receipts, plugin |
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
 | `docs/woz/` | Wizard-of-Oz reference specs. Not current procedure. |
@@ -73,10 +74,12 @@ record signals; for when you are testing the gate itself) · `run --dry-run` · 
    reference Whetstone's own files — it dangles there (ADR-0004). Enforced by a reference-closure
    check that refuses to emit a plan naming a path it does not create.
 8. **Ground API claims against the docs before writing code** — prefer Context7.
-9. **Judge = hermetic, crewmate = charged.** `shell/claude.ts` strips the target repo's MCP,
-   hooks and `AGENTS.md` so a repo cannot hijack its own reviewer. `shell/crewmate.ts` loads them
-   deliberately: `.wst/` IS the charter. Backwards in either direction is a serious bug. A
-   hermetic judge cannot resolve a path, so everything it must judge is inlined (delegation D7).
+9. **Judge = hermetic.** `shell/claude.ts` strips the target repo's MCP, hooks and `AGENTS.md` so
+   a repo cannot hijack its own reviewer. A charged judge — one the repo under review can tell
+   what to think of it — is a serious bug. A hermetic judge cannot resolve a path, so everything
+   it must judge is inlined (delegation D7). The other half of this pair, `shell/crewmate.ts`,
+   is gone (ADR-0014): a crewmate now runs in a session a human opens, charged by construction,
+   and the charter `wst prepare` leaves in the worktree is what orients it.
 10. **Isolate a negative control.** When you break something on purpose to prove a check catches
     it, that defect must be the ONLY uncommitted change, and use `--no-emit`. Twice now it has
     contaminated something else: real work (`sig-0025`) and the evidence log (`sig-0026`).
@@ -94,7 +97,9 @@ built under that waiver and removed by ADR-0009.
 
 - **The loop is closed and self-hosting.** `wst gate` verifies this repo's own changes and now
   writes its own signals; `wst run` dispatched a crewmate whose work was gated before a human saw
-  it; `wst retro` has run twice, producing six amendments across four skills, each carrying the
+  it — that command is now `wst prepare` and gates nothing (ADR-0014), so enforcement on a
+  crewmate's work is the push and CI; `wst retro` has run twice, producing six amendments across
+  four skills, each carrying the
   signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
 - **26 signals**, 13 with `resolved_by`. Two retros. Four skills amended: `tdd-discipline` v3,
