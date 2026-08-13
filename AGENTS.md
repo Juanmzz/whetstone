@@ -91,7 +91,14 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under `chytapay-workspace`.
 
-## Status — Steps 0–7 complete · branch `engine-skeleton` · 581 tests
+## Status — branch `main` · 884 tests · 16 ADRs · 46 signals
+
+<!-- Every number above is measurable. Before editing this block, run:
+     npx vitest run | grep Tests · ls .wst/memory/decisions/*.md | grep -v TEMPLATE | wc -l
+     grep -c . .wst/memory/signals.jsonl
+     A status block that is cheaper to guess than to measure is why this file has
+     gone stale five times. -->
+
 
 ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
 `init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
@@ -104,16 +111,18 @@ built under that waiver and removed by ADR-0009.
   four skills, each carrying the
   signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **26 signals**, 13 with `resolved_by`. Two retros. Four skills amended: `tdd-discipline` v3,
+- **46 signals**, 27 with `resolved_by`. Two retros. Four skills amended: `tdd-discipline` v3,
   `xreview` v3, `delegation` v3, `voice` v2.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
   re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
 
 ### Known weaknesses, stated plainly
 
-- **Every signal in the log is still hand-authored.** The emitter exists and is verified, but it
-  has recorded nothing real yet, so the evidence the retro reasons over remains an agent's diary
-  with good formatting. That improves only as the gate runs on real failures.
+- **45 of 46 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
+  the human about an incident that actually happened). **None carries `source: "gate"`.** The
+  emitter works — a CI run on 2026-08-13 emitted `sig-70ad13db` — but the runner is ephemeral and
+  nothing brings the signal back, so it evaporated. The gap is not "the gate never fails"; it is
+  that where the gate really runs, nothing persists what it observed.
 - **The lens is uncalibrated at v4**, so the differentiator is advisory.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
