@@ -27,6 +27,11 @@ import { readCursor, readSignals } from "../src/shell/retro.js";
 import { loadRegistry, loadTriageRules, resolveDefinitionRoot } from "../src/shell/sdd.js";
 import { createTreehouseAdapter } from "../src/shell/treehouse.js";
 import { emptyPath, installFakeBin, restorePath } from "./fake-bin.js";
+import { isolateFromInheritedGit } from "./git-env.js";
+
+// Before anything builds a repository. See `git-env.ts`: run from the pre-push
+// hook, every temp repo below otherwise inherits the pushing repo's GIT_DIR.
+isolateFromInheritedGit();
 
 const exec = promisify(execFile);
 const git = (cwd: string, ...args: string[]): Promise<unknown> => exec("git", args, { cwd });

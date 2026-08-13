@@ -31,6 +31,11 @@ import { runRun } from "../src/commands/run.js";
 import { runStatus } from "../src/commands/status.js";
 import { runTriage } from "../src/commands/triage.js";
 import { installFakeBin, restorePath, type FakeBin } from "./fake-bin.js";
+import { isolateFromInheritedGit } from "./git-env.js";
+
+// Before anything builds a repository. See `git-env.ts`: run from the pre-push
+// hook, every temp repo below otherwise inherits the pushing repo's GIT_DIR.
+isolateFromInheritedGit();
 
 const exec = promisify(execFile);
 const git = (cwd: string, ...args: string[]): Promise<unknown> => exec("git", args, { cwd });
