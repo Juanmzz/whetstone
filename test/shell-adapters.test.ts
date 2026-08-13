@@ -87,6 +87,27 @@ describe("the git adapter", () => {
     expect(await adapter.hashFile("a.txt")).not.toBe(before);
   });
 
+  it("throws on a range git rejected, instead of reporting an empty diff", async () => {
+    // A typo in `--range` produced the same bytes as a range with no changes: the
+    // adapter swallowed git's error and `?? ""` turned it into an empty diff. The
+    // damage lands hardest in `wst triage`, which answered `off — no files changed`
+    // and exit 0 for a range that does not exist. A confident wrong answer is worse
+    // than a failure, because only one of them tells you to look at the range.
+    //
+    // `repoRoot` and `currentBranch` keep swallowing, and that is not an
+    // inconsistency: their errors have a meaning ("not a repository", "detached"),
+    // and this one does not.
+    await expect(createGitAdapter(await seeded()).diffNameStatus("nope..alsonope")).rejects.toThrow(
+      /nope\.\.alsonope/,
+    );
+  });
+
+  it("still reports a genuinely empty diff as empty", async () => {
+    // The other side of the line. A clean tree is not an error, and turning it into
+    // one would make every gate run on an unchanged range fail.
+    expect(await createGitAdapter(await seeded()).diffNameStatus("HEAD")).toBe("");
+  });
+
   it("throws on a file it cannot hash rather than returning something plausible", async () => {
     // The gate catches this and mints NO receipt for the check — resolving
     // toward more verification. A fabricated hash would resolve the other way.
