@@ -44,6 +44,70 @@ describe("renderGateRun", () => {
     expect(text).toContain("2 tests failed");
   });
 
+  it("does not headline a run as passed when a blocking check never ran", () => {
+    // This file's own header names THREE outcomes and says they are kept apart on
+    // purpose: blocked, incomplete, and passed. The render had two — a blocking
+    // check that errored produced the headline `passed`, and the fact that nothing
+    // had verified it arrived several lines later as a footnote.
+    //
+    // The exit code was already right (2). That is what makes this worth fixing
+    // rather than shrugging at: a human reads the word, a script reads the code,
+    // and they were being told different things about the same run.
+    const text = renderGateRun(
+      gateRun([
+        result("typecheck", "block", { status: "pass" }),
+        result("test", "block", { status: "errored", detail: "spawn ENOENT" }),
+      ]),
+    );
+
+    expect(text).toMatch(/INCOMPLETE/);
+    expect(text).not.toMatch(/^\s*passed\s*$/m);
+    expect(text).not.toMatch(/BLOCKED/);
+  });
+
+  it("does not headline a pass when every check was skipped for not applying", () => {
+    // The residual half, and the one that bites in practice. `--no-lens` renders
+    // every lens as `skipped: disabled`, and that is what the pre-push hook runs.
+    // In a registry that is lens-only, the whole run is non-receipt skips: the
+    // exit code said 2 and the headline said `passed`, which is the same
+    // divergence the INCOMPLETE case above was added to kill — left alive because
+    // only half of the decision was shared.
+    const text = renderGateRun(
+      gateRun([result("correctness", "warn", { status: "skipped", reason: "disabled" })]),
+    );
+
+    expect(text).toMatch(/INCOMPLETE|nothing about this change was verified/);
+    expect(text).not.toMatch(/^\s*passed\s*$/m);
+  });
+
+  it("still headlines a pass when a blocking check was skipped by a RECEIPT", () => {
+    // The control. A receipt skip means this exact input passed already, and
+    // collapsing it into "nothing was verified" would make the cache look like a
+    // hole — the same distinction `exitCodeFor` has always drawn.
+    const text = renderGateRun(
+      gateRun([result("test", "block", { status: "skipped", reason: "receipt" })]),
+    );
+
+    expect(text).toMatch(/passed/);
+    expect(text).not.toMatch(/INCOMPLETE/);
+  });
+
+  it("still headlines a pass when only an ADVISORY check could not run", () => {
+    // The other side of the same line, and the reason this is not "any error means
+    // incomplete". An errored `warn` lens cost an annotation, not a verification —
+    // exactly the reasoning `exitCodeFor` already applies to the exit code. Failing
+    // the headline over a flaky advisory model is how a gate gets routed around.
+    const text = renderGateRun(
+      gateRun([
+        result("typecheck", "block", { status: "pass" }),
+        result("correctness", "warn", { status: "errored", detail: "budget exhausted" }),
+      ]),
+    );
+
+    expect(text).toMatch(/passed/);
+    expect(text).not.toMatch(/INCOMPLETE/);
+  });
+
   it("says pass when nothing blocked", () => {
     const text = renderGateRun(gateRun([result("typecheck", "block", { status: "pass" })]));
     expect(text).toMatch(/passed/i);
@@ -51,11 +115,16 @@ describe("renderGateRun", () => {
   });
 
   it("labels warnings as advisory and does NOT present them as blockers", () => {
+    // This used to also assert the headline said `passed`, and that assertion was
+    // pinning a divergence: with an advisory failure as the only result, nothing
+    // passed and no receipt covered anything, so `exitCodeFor` already returned 2.
+    // The render said `passed` over an exit code of 2 — the same bug as the
+    // `--no-lens` case, in a third place. What the test is actually about is that
+    // an advisory finding is never dressed up as a block, and that still holds.
     const text = renderGateRun(
       gateRun([result("correctness", "warn", { status: "fail", detail: "maybe an off-by-one" })]),
     );
 
-    expect(text).toMatch(/passed/i);
     expect(text).toMatch(/warn/i);
     expect(text).toContain("maybe an off-by-one");
     expect(text).not.toMatch(/BLOCKED/);

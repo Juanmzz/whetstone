@@ -22,35 +22,62 @@ export const EXIT_BLOCKED = 1;
 export const EXIT_INCOMPLETE = 2;
 
 /**
- * The exit code is a CI SIGNAL, not the verdict — which is why it can distinguish
- * cases the verdict deliberately cannot.
+ * A check that COULD have blocked did not run, so nothing it covers was verified.
  *
- * `EXIT_INCOMPLETE` fires only when a check whose severity is `block` errored. An
- * errored `warn`/`annotate` lens cost you an annotation, not a verification, and
- * failing CI over a flaky advisory model is precisely how a gate gets routed around.
+ * An errored `warn`/`annotate` lens is deliberately NOT this — it cost an
+ * annotation, not a verification, and failing over a flaky advisory model is
+ * precisely how a gate gets routed around.
  */
-export function exitCodeFor(verdict: GateVerdict): number {
-  if (verdict.verdict === "block") return EXIT_BLOCKED;
+function lostGating(verdict: GateVerdict): boolean {
+  return verdict.results.some((r) => r.outcome.status === "errored" && r.severity === "block");
+}
 
-  const lostGating = verdict.results.some(
-    (r) => r.outcome.status === "errored" && r.severity === "block",
-  );
-  if (lostGating) return EXIT_INCOMPLETE;
-
-  // A run that verified NOTHING is not a pass, and this file's header has always
-  // said so — in the render, one layer above the number anyone consumes. A crewmate
-  // told "run the checks yourself" ran the gate against an empty range, read
-  // "nothing about this change was verified", and got 0 back.
-  //
-  // A receipt skip counts as verified: it means this exact input passed already.
-  // "Nothing matched" and "nothing needed re-running" are different facts, and
-  // collapsing them would make the cache look like a hole.
-  const verifiedSomething = verdict.results.some(
+/**
+ * Something actually stood behind this change.
+ *
+ * A receipt skip counts: it means this exact input passed already. "Nothing matched"
+ * and "nothing needed re-running" are different facts, and collapsing them would
+ * make the cache look like a hole.
+ */
+function verifiedSomething(verdict: GateVerdict): boolean {
+  return verdict.results.some(
     (r) =>
       r.outcome.status === "pass" ||
       (r.outcome.status === "skipped" && r.outcome.reason === "receipt"),
   );
-  return verifiedSomething ? EXIT_PASS : EXIT_INCOMPLETE;
+}
+
+export type GateOutcome = "blocked" | "incomplete" | "passed";
+
+/**
+ * The ONE decision, made once and consumed by both the number and the prose.
+ *
+ * The three outcomes are named at the top of this file, and they used to be derived
+ * TWICE: `exitCodeFor` computed all three, and the renderer computed a different
+ * two. A crewmate told "run the checks yourself" read "nothing about this change was
+ * verified" and got `0` back — that was the first half. The second survived a fix
+ * that shared only `lostGating`: a run where every check was skipped without a
+ * receipt exited 2 under the headline `passed`, and that is precisely what
+ * `--no-lens` produces in a lens-only registry — the mode the pre-push hook runs.
+ *
+ * Sharing half a predicate is how a rule implemented twice survives being fixed.
+ */
+export function outcomeOf(verdict: GateVerdict): GateOutcome {
+  if (verdict.verdict === "block") return "blocked";
+  if (lostGating(verdict)) return "incomplete";
+  return verifiedSomething(verdict) ? "passed" : "incomplete";
+}
+
+/** The exit code is a CI SIGNAL, not the verdict — it is `outcomeOf`, as a number. */
+export function exitCodeFor(verdict: GateVerdict): number {
+  switch (outcomeOf(verdict)) {
+    case "blocked":
+      return EXIT_BLOCKED;
+    case "incomplete":
+      return EXIT_INCOMPLETE;
+    case "passed":
+      return EXIT_PASS;
+  }
 }
 
 function indent(detail: string): string {
@@ -94,18 +121,29 @@ export function renderGateRun(run: GateRun): string {
 
   lines.push("");
 
-  if (verdict.blocking.length > 0) {
-    lines.push(`  BLOCKED — ${verdict.blocking.length} check(s) failed:`);
-    for (const result of verdict.results) {
-      if (result.outcome.status === "fail" && verdict.blocking.includes(result.checkId)) {
-        lines.push(`    ${result.checkId}`, indent(result.outcome.detail));
+  switch (outcomeOf(verdict)) {
+    case "blocked":
+      lines.push(`  BLOCKED — ${verdict.blocking.length} check(s) failed:`);
+      for (const result of verdict.results) {
+        if (result.outcome.status === "fail" && verdict.blocking.includes(result.checkId)) {
+          lines.push(`    ${result.checkId}`, indent(result.outcome.detail));
+        }
       }
-    }
-  } else if (verdict.results.length === 0) {
-    // Do NOT say "verified". Nothing was.
-    lines.push("  passed — but no check applied, so nothing about this change was verified");
-  } else {
-    lines.push("  passed");
+      break;
+    case "incomplete":
+      // One headline for the whole outcome, with the reason appended rather than
+      // a different word per cause. "No check applied" and "a blocking check could
+      // not run" are both `incomplete`, and hard rule 3 forbids either of them
+      // sharing a sentence with `passed`.
+      lines.push(
+        verdict.results.length === 0
+          ? "  INCOMPLETE — no check applied, so nothing about this change was verified"
+          : "  INCOMPLETE — a check that can block never ran, so this change is unverified",
+      );
+      break;
+    case "passed":
+      lines.push("  passed");
+      break;
   }
 
   if (verdict.warnings.length > 0) {
