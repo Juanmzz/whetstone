@@ -4,6 +4,7 @@ import { detectStack, type RepoFacts } from "./detect.js";
 import { NO_RISK } from "./interview.js";
 import { buildTriageRules, renderTriageRulesMd } from "./triage.js";
 import {
+  payloadSkill,
   renderDecisionsMd,
   CLAUDE_MD,
   MEMORY_README,
@@ -260,5 +261,57 @@ describe("renderAgentsMd", () => {
     // `.wst/constitution.md` and false in `AGENTS.md`, which is generated and
     // overwritten. Referring by name is the only rendering that stays true.
     expect(agents.toLowerCase()).not.toMatch(/\bthis file\b/);
+  });
+});
+
+/**
+ * A skill's changelog is WHETSTONE's history of why that rule changed — it cites
+ * this repo's decisions and this repo's signals, none of which exist in a repo
+ * being bootstrapped. The rule travels; the argument that produced it does not.
+ */
+describe("payloadSkill — what a copied skill looks like in someone else's repo", () => {
+  const SKILL = [
+    "---",
+    "id: recording",
+    "version: 2",
+    "status: active",
+    "---",
+    "# Recording",
+    "",
+    "1. [RC1] Record a decision.",
+    "",
+    "## Changelog",
+    "",
+    "- v2 (2026-08-14, adr-0019): decisions live on one page.",
+    "- v1 (2026-07-11, init): generated from ChytaPay, per `adr-0001`.",
+    "",
+  ].join("\n");
+
+  it("keeps the rule", () => {
+    expect(payloadSkill(SKILL)).toContain("[RC1] Record a decision.");
+  });
+
+  it("drops the entries citing decisions and signals this repo never had", () => {
+    const out = payloadSkill(SKILL);
+
+    expect(out).not.toContain("adr-0019");
+    expect(out).not.toContain("adr-0001");
+  });
+
+  it("leaves a changelog to grow, seeded with where the rule came from", () => {
+    const out = payloadSkill(SKILL);
+
+    expect(out).toContain("## Changelog");
+    expect(out).toMatch(/- v2 .*init/);
+  });
+
+  it("keeps the frontmatter, so the version still means something", () => {
+    expect(payloadSkill(SKILL)).toContain("version: 2");
+  });
+
+  it("leaves a skill with no changelog alone", () => {
+    const bare = "---\nid: x\nversion: 1\nstatus: active\n---\n# X\n\nA rule.\n";
+
+    expect(payloadSkill(bare)).toBe(bare);
   });
 });

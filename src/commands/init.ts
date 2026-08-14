@@ -48,6 +48,7 @@ import {
   buildInterview,
   detectStack,
   planInit,
+  skillCopies,
   skipDir,
   walkDepth,
   type InitPlan,
@@ -289,7 +290,7 @@ function printPlan(plan: InitPlan, root: string): void {
     const mode = file.executable === true ? " (executable)" : "";
     console.log(`  + ${file.path.padEnd(42)} ${String(bytes).padStart(6)} bytes${mode}`);
   }
-  for (const copy of plan.copies) console.log(`  + ${copy.to.padEnd(42)}    copied verbatim`);
+  for (const copy of plan.copies) console.log(`  + ${copy.to.padEnd(42)}    copied from the payload`);
 
   if (plan.notes.length > 0) {
     console.log("\nnotes");
@@ -322,6 +323,28 @@ async function exists(path: string): Promise<boolean> {
  * package.json that declares this package, and never crosses a node_modules boundary.
  */
 const PACKAGE_NAME = "whetstone";
+
+/**
+ * Whetstone's own skills, keyed by their `from` path.
+ *
+ * Read here rather than at write time because `planInit` audits them: a skill is
+ * copied verbatim into a repo that has never heard of Whetstone, so a sentence in
+ * one naming `docs/woz/SPEC.md` dangles there. An empty map is a legitimate
+ * result — a published package without its payload — and produces "not audited",
+ * which is a violation, not a pass.
+ */
+async function readSkills(payloadRoot: string | null): Promise<ReadonlyMap<string, string>> {
+  const texts = new Map<string, string>();
+  if (payloadRoot === null) return texts;
+  for (const copy of skillCopies()) {
+    try {
+      texts.set(copy.from, await readFile(join(payloadRoot, copy.from), "utf-8"));
+    } catch {
+      /* absent here is the same as unreadable: reported, not passed */
+    }
+  }
+  return texts;
+}
 
 async function findPayloadRoot(): Promise<string | null> {
   let dir = import.meta.dirname;
@@ -431,7 +454,7 @@ async function proposeAnswers(
   return 0;
 }
 
-async function writePlan(plan: InitPlan, root: string, payloadRoot: string | null): Promise<void> {
+async function writePlan(plan: InitPlan, root: string): Promise<void> {
   for (const file of plan.files) {
     const target = join(root, file.path);
     await mkdir(dirname(target), { recursive: true });
@@ -444,12 +467,15 @@ async function writePlan(plan: InitPlan, root: string, payloadRoot: string | nul
     if (file.executable === true) await chmod(target, 0o755);
   }
 
-  if (payloadRoot === null) return;
+  // What was audited is what gets written. The copies used to be re-read from
+  // the payload directory here, which meant `planInit` verified one text and the
+  // repo received another — and since `payloadSkill` now strips the changelog,
+  // those two would have differed by every line the audit exists to catch.
   for (const copy of plan.copies) {
-    const source = join(payloadRoot, copy.from);
+    if (copy.contents === undefined) continue; // reported as unaudited by the plan
     const target = join(root, copy.to);
     await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, await readFile(source, "utf-8"), "utf-8");
+    await writeFile(target, copy.contents, "utf-8");
   }
 }
 
@@ -493,12 +519,19 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
+  // Resolved BEFORE the plan, not at write time: the reference-closure audit runs
+  // inside `planInit`, and it cannot audit the eight copied skills without their
+  // text. Missing text is reported as unaudited, never as clean.
+  const payloadRoot = await findPayloadRoot();
+  const skillTexts = await readSkills(payloadRoot);
+
   let plan: InitPlan;
   try {
     plan = planInit({
       facts,
       answers,
       clock: { now: () => new Date() },
+      skillTexts,
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
@@ -541,7 +574,6 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
-  const payloadRoot = await findPayloadRoot();
   if (payloadRoot === null) {
     console.error(
       "\ncould not locate Whetstone's own skills directory, so the skills were NOT copied.\n" +
@@ -551,7 +583,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   }
 
   try {
-    await writePlan(plan, root, payloadRoot);
+    await writePlan(plan, root);
   } catch (cause) {
     console.error(`\nwrite failed: ${(cause as Error).message}`);
     return 1;

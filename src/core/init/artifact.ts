@@ -26,6 +26,15 @@ export interface CopyRequest {
   readonly from: string;
   /** Repo-relative destination in the target repo. */
   readonly to: string;
+  /**
+   * The file's text, read by the shell before planning.
+   *
+   * Optional because the payload directory is resolvable only at write time and
+   * may not be there at all — a published package without its skills. Absent is
+   * NOT the same as clean: `auditSelfContained` reports an unread copy rather
+   * than passing it (hard rule 3).
+   */
+  readonly contents?: string;
 }
 
 /** YAML-safe scalar. JSON's quoting rules are a strict subset of YAML's. */

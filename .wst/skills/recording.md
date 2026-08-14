@@ -27,7 +27,7 @@ never a silent write.
    session end (the detail is gone by then). The one batched exception is the session summary.
 5. [RC5] Do **not** record what is re-derivable: code (it's in git), file trees, command output,
    anything a `grep` would reconstruct. Record the WHY and the non-obvious.
-6. [RC6] Corrections are **new entries, never edits.** Signals are append-only (SPEC §2.1); a
+6. [RC6] Corrections are **new entries, never edits.** The signal log is append-only; a
    fix to an earlier record is a new line with `supersedes`. A decision changes by moving its
    `status` — `proposed` → `accepted` → `superseded by adr-NNNN` — never by rewriting the prose
    above it, and later commentary goes in a NEW entry rather than into an old one's voice.
@@ -43,7 +43,8 @@ never a silent write.
 This skill governs the WRITE (what/when/gate). The backend governs STORAGE and RECALL. With the
 default `files` backend the write is an append/commit; with an adapter (e.g. engram) it's a `save`
 call and you get smart recall on top — but the triggers above are identical either way. Smart
-recall never replaces the trigger rules; it sits on top of them (ADR-0001).
+recall never replaces the trigger rules; it sits on top of them — the backend is an
+interface, and the discipline does not change when the backend does.
 
 ## Changelog
 

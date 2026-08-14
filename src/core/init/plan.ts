@@ -38,7 +38,7 @@ import {
   renderWstYaml,
   skillCopies,
 } from "./payload.js";
-import { auditSelfContained, formatViolations } from "./selfcontained.js";
+import { auditSelfContained, formatViolations, unauditedCopies } from "./selfcontained.js";
 import {
   buildTriageRules,
   renderTriageRulesMd,
@@ -63,6 +63,13 @@ export interface InitOptions {
 }
 
 export interface InitPlanInput {
+  /**
+   * Whetstone's own skill files, keyed by `from`, read by the shell before
+   * planning. Supplied so the reference-closure audit can read the eight files it
+   * ships verbatim — the ones written for THIS repo and most likely to name a
+   * path a bootstrapped repo does not have.
+   */
+  readonly skillTexts?: ReadonlyMap<string, string>;
   readonly facts: RepoFacts;
   readonly answers: InterviewAnswers;
   readonly clock: ClockPort;
@@ -110,7 +117,7 @@ export function planInit(input: InitPlanInput): InitPlan {
   });
 
   const skills = activeSkills();
-  const copies = skillCopies();
+  const copies = skillCopies(input.skillTexts);
 
   // Compiled BEFORE the prose, because the prose refers to it: `triage-rules.md`
   // may only name the hook in a repo where the hook actually exists.
@@ -216,7 +223,18 @@ export function planInit(input: InitPlanInput): InitPlan {
   }
 
   // ADR-0004, enforced. Free text from the interview flows into the constitution
-  // verbatim, so this catches the human's words as well as the generator's.
+  // verbatim, so this catches the human's words as well as the generator's — and
+  // the copied skills, which are prose written for Whetstone's own repo.
+  const unaudited = unauditedCopies(copies);
+  if (unaudited.length > 0) {
+    // A note, not a violation: the audit could not run on these, which is not the
+    // same as their being clean, and not the same as their being broken.
+    notes.push(
+      `${String(unaudited.length)} copied file(s) were NOT audited for self-containment — ` +
+        `their text could not be read: ${unaudited.join(", ")}`,
+    );
+  }
+
   const violations = auditSelfContained({ files, copies });
   if (violations.length > 0) {
     throw new Error(

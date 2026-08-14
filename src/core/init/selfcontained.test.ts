@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditSelfContained } from "./selfcontained.js";
+import { auditSelfContained, unauditedCopies } from "./selfcontained.js";
 
 const audit = (contents: string, extra: { files?: string[]; copies?: string[] } = {}) =>
   auditSelfContained({
@@ -7,7 +7,7 @@ const audit = (contents: string, extra: { files?: string[]; copies?: string[] } 
       { path: ".wst/constitution.md", contents },
       ...(extra.files ?? []).map((p) => ({ path: p, contents: "" })),
     ],
-    copies: (extra.copies ?? []).map((to) => ({ from: to.replace(".wst/", ""), to })),
+    copies: (extra.copies ?? []).map((to) => ({ from: to.replace(".wst/", ""), to, contents: "" })),
   });
 
 describe("auditSelfContained — Whetstone's own files may never be referenced", () => {
@@ -86,5 +86,102 @@ describe("auditSelfContained — every .wst/ path named must be a path that gets
 
   it("does not flag the target repo's own source paths", () => {
     expect(audit("`src/core/**` is strict here, and `src/shell/**` is not.")).toEqual([]);
+  });
+});
+
+/**
+ * The eight skills are COPIED verbatim, and until now they were the one thing
+ * this audit never read. `input.copies` only widened the set of paths that count
+ * as created; the loop was `for (const file of input.files)`. So the files most
+ * likely to cite a Whetstone-only path — prose written for THIS repo, shipped
+ * unchanged into someone else's — were the files nothing checked.
+ */
+describe("auditSelfContained — the copied skills are audited too", () => {
+  const withCopy = (contents: string) =>
+    auditSelfContained({
+      files: [{ path: ".wst/constitution.md", contents: "Nothing to see." }],
+      copies: [{ from: "skills/voice.md", to: ".wst/skills/voice.md", contents }],
+    });
+
+  it("catches a Whetstone-only reference inside a copied skill", () => {
+    const found = withCopy("The reasoning is in docs/woz/SPEC.md.");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.path).toBe(".wst/skills/voice.md");
+  });
+
+  it("catches a copied skill citing a path this init does not create", () => {
+    const found = withCopy("See `.wst/memory/decisions/0001-x.md`.");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.match).toBe(".wst/memory/decisions/0001-x.md");
+  });
+
+  it("passes a copied skill that only names what init writes", () => {
+    const found = auditSelfContained({
+      files: [
+        { path: ".wst/constitution.md", contents: "Nothing to see." },
+        { path: ".wst/memory/signals.jsonl", contents: "" },
+      ],
+      copies: [
+        { from: "skills/voice.md", to: ".wst/skills/voice.md", contents: "Append to `.wst/memory/signals.jsonl`." },
+      ],
+    });
+
+    expect(found).toEqual([]);
+  });
+
+  /**
+   * Hard rule 3, at the level of this audit: a copy whose text was never
+   * supplied is UNCHECKED, and unchecked may not render as clean. `init` resolves
+   * the payload directory at write time and can fail to find it at all.
+   */
+  it("names a copy it could not read, and does not call it a violation", () => {
+    const copies = [{ from: "skills/voice.md", to: ".wst/skills/voice.md" }];
+
+    const found = auditSelfContained({
+      files: [{ path: ".wst/constitution.md", contents: "Nothing to see." }],
+      copies,
+    });
+
+    expect(found).toEqual([]);
+    expect(unauditedCopies(copies)).toEqual([".wst/skills/voice.md"]);
+  });
+});
+
+/**
+ * Citations by ID are the newest way a payload file dangles, and the audit was
+ * blind to them: `adr-0001` is not a path, so reference closure never saw it, and
+ * a bootstrapped repo's decision record starts empty. Wiring the copied skills in
+ * surfaced ten of these on the first run — eight in changelogs, two in the body
+ * of `recording.md`.
+ */
+describe("auditSelfContained — a citation by id is a reference too", () => {
+  const copied = (contents: string) =>
+    auditSelfContained({
+      files: [{ path: ".wst/constitution.md", contents: "Nothing." }],
+      copies: [{ from: "skills/recording.md", to: ".wst/skills/recording.md", contents }],
+    });
+
+  it("catches a decision id, which resolves to nothing in a fresh repo", () => {
+    const found = copied("Made backend-agnostic per `adr-0001`.");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.match).toBe("adr-0001");
+  });
+
+  it("catches the uppercase spelling too, since both are used", () => {
+    expect(copied("Smart recall sits on top of them (ADR-0001).")).toHaveLength(1);
+  });
+
+  it("catches a SPEC section reference — SPEC is a Whetstone document", () => {
+    const found = copied("Signals are append-only (SPEC §2.1).");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.match).toContain("SPEC");
+  });
+
+  it("leaves a repo's own future ids alone — adr-0000 is the placeholder in a template", () => {
+    expect(copied("Number your first decision `adr-0000`.")).toEqual([]);
   });
 });
