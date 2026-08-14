@@ -1,7 +1,7 @@
 ---
 id: adr-0019
 ts: 2026-08-14
-status: proposed
+status: accepted
 supersedes: adr-0007
 rules_affected: ["skills/recording.md"]
 ---
