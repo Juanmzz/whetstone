@@ -277,7 +277,7 @@ it enforces against you is not a standard.
  * The fourth memory artifact (ADR-0012).
  *
  * `memory/` records what went wrong (`signals.jsonl`), what was decided
- * (`decisions/`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
+ * (`decisions.md`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
  * recorded what was deliberately REFUSED, and a refusal with no file gets
  * re-proposed every six months with the argument re-derived from scratch — by a
  * fresh agent that has no way to know the conversation already happened.

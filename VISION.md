@@ -117,7 +117,7 @@ The emitter compiles `.wst/` into per-vendor apparatus — hooks first (a projec
 `strict-path-guard`, derived from `triage-rules.md`), then commands, earned via the retro.
 
 **M3 — The retro loop (v0.3)** ✅ *(first pass)*
-Pattern detection over `signals.jsonl` + `decisions/`, apparatus recommendation, human approval,
+Pattern detection over `signals.jsonl` + `decisions.md`, apparatus recommendation, human approval,
 changelog with signal receipts. Validated in the wild — a real project's signals produced the first
 earned rule. Still N=1; repeatability is unproven.
 

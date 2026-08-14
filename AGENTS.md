@@ -108,12 +108,12 @@ built under that waiver and removed by ADR-0009.
 - **The loop is closed and self-hosting.** `wst gate` verifies this repo's own changes and now
   writes its own signals; `wst run` dispatched a crewmate whose work was gated before a human saw
   it — that command is now `wst prepare` and gates nothing (ADR-0014), so enforcement on a
-  crewmate's work is the push and CI; `wst retro` has run twice, producing six amendments across
-  four skills, each carrying the
-  signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
+  crewmate's work is the push and CI; `wst retro` has run three times, producing amendments
+  across seven of the eight skills, each carrying the signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **51 signals**, 27 with `resolved_by`. Three retros. Six skills amended: `tdd-discipline` v6,
-  `delegation` v4, `doc-locations` v3, `lazy` v2, `xreview` v3, `voice` v2.
+- **51 signals**, 27 with `resolved_by`. Three retros. Seven of eight skills amended:
+  `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
+  `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
   re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
 
