@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 3
+version: 4
 status: active
 ---
 # TDD discipline
@@ -52,6 +52,14 @@ strict TDD regardless of how small it looks.
      the mutation you introduced actually applied AND that the test went red for the reason you
      intended. A no-op patch produces a green run that looks exactly like a broken guard.
 
+8. [TD8] **A claim about the system is a hypothesis until a test would fail if it were false.**
+   "Hermetic", "enforced by the schema", "the payload is self-contained" — each is an
+   assertion about behaviour, and prose asserting it is not evidence. Probe it: a test
+   that inverts the property and goes red is the only thing that separates a guarantee
+   from an intention. The same applies to a stub justified as "does not exist yet", a
+   boolean modelling something with three states, and a config value inherited from
+   another tool.
+
 ## Defining a strict path (worked example)
 
 The constitution's risk profile names the domains where correctness is non-negotiable; the
@@ -76,6 +84,12 @@ CI or pre-release — they are NOT part of the per-change TDD loop.
 
 ## Changelog
 
+- v4 (2026-08-14, retro-0049): added [TD8] — a claim about system behaviour is a
+  hypothesis until a test probes it and would fail if the claim were false. From
+  `sig-4b3339fb` (`wst status` asserted "pre-push NOT active" while the hook was
+  firing — a string comparison nothing tested), and from the hard-rule-9 asymmetry
+  (judge hermetic / crewmate charged) which both files documented at length and no
+  test checked until 2026-08-13.
 - v3 (2026-08-08, retro-0016): added [TD7] — a guard must be proven in BOTH directions
   (a paired false-positive test), thresholds must be measured rather than inferred from a
   handful of observations, and a negative test must confirm its mutation actually landed

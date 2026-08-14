@@ -24,6 +24,7 @@
     "test:watch": "vitest",
     "check:adrs": "tsx scripts/check-adrs.ts",
     "check:docs": "tsx scripts/check-docs-fresh.ts",
+    "check:skills": "tsx scripts/check-skills.ts",
     "untested": "tsx scripts/untested.ts",
     "calibrate": "tsx scripts/calibrate.ts",
     "mutate": "tsx scripts/mutate.ts"
