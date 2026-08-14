@@ -41,7 +41,7 @@ import {
 import type { JudgeResult, LlmJudge } from "../core/ports.js";
 import { classify, route } from "../core/triage/index.js";
 import { createClaudeJudge } from "../shell/claude.js";
-import { createGitAdapter } from "../shell/git.js";
+import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { readReceipt, writeReceipt } from "../shell/receipts.js";
 import {
   loadRegistry,
@@ -151,7 +151,10 @@ function unifiedDiff(range: string, paths: readonly string[], cwd: string): Prom
     execFile(
       "git",
       ["diff", range, "--", ...paths],
-      { cwd, maxBuffer: MAX_BUFFER },
+      // Same stripped environment as `shell/git.ts`. This is the lens payload: an
+      // inherited `GIT_DIR` would send a diff of ANOTHER repository to a paid
+      // model and file its verdict against this change.
+      { cwd, env: gitEnv(), maxBuffer: MAX_BUFFER },
       (error, stdout) => (error === null ? resolve(stdout) : reject(error)),
     );
   });

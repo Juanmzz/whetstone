@@ -32,7 +32,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { banner } from "../banner.js";
-import { createGitAdapter } from "../shell/git.js";
+import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import {
@@ -147,7 +147,7 @@ async function readPackageJson(root: string): Promise<PackageJson | null> {
 
 async function git(args: string[], cwd: string): Promise<string | null> {
   try {
-    const { stdout } = await run("git", args, { cwd, maxBuffer: 8 * 1024 * 1024 });
+    const { stdout } = await run("git", args, { cwd, env: gitEnv(), maxBuffer: 8 * 1024 * 1024 });
     return stdout.trim();
   } catch {
     return null;
