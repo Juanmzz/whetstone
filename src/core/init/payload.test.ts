@@ -4,7 +4,7 @@ import { detectStack, type RepoFacts } from "./detect.js";
 import { NO_RISK } from "./interview.js";
 import { buildTriageRules, renderTriageRulesMd } from "./triage.js";
 import {
-  ADR_TEMPLATE,
+  DECISIONS_MD,
   CLAUDE_MD,
   MEMORY_README,
   SKILL_FILES,
@@ -167,11 +167,21 @@ describe("the memory schema travels with the payload", () => {
     expect(parsed["branch"]).toBeTypeOf("string");
   });
 
-  it("ships an ADR template that is a fill-in, not a blank page", () => {
-    expect(ADR_TEMPLATE).toContain("## Context");
-    expect(ADR_TEMPLATE).toContain("## Decision");
-    expect(ADR_TEMPLATE).toContain("## Consequences");
-    expect(ADR_TEMPLATE).toMatch(/^---\n/);
+  it("seeds a decision page shaped like the one it will grow into", () => {
+    // The `recording.md` this same payload copies tells the reader to add an
+    // entry to `memory/decisions.md`. Seeding a directory of files instead
+    // hands a target repo a shape its own rules do not describe.
+    expect(DECISIONS_MD).toMatch(/^---\n/);
+    expect(DECISIONS_MD).toContain("### adr-NNNN");
+    expect(DECISIONS_MD).toContain("`accepted` · YYYY-MM-DD");
+  });
+
+  it("says what an entry keeps, since that is the whole reason to write one", () => {
+    expect(DECISIONS_MD).toMatch(/rejected/i);
+  });
+
+  it("holds no entry of its own — a seeded decision is a decision nobody made", () => {
+    expect(DECISIONS_MD).not.toMatch(/^### adr-\d{4}/m);
   });
 });
 

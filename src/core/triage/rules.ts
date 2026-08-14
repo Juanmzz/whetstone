@@ -174,7 +174,7 @@ rules:
       Commander wiring only, zero logic, so that the CLI surface stays
       swappable without touching the engine.
 
-  - glob: "${DEFINITION_DIR}/memory/decisions/**"
+  - glob: "${DEFINITION_DIR}/memory/decisions.md"
     tier: light
     reason: >-
       ADR bodies. Accepted text is never rewritten (ADR-0007) — it is superseded

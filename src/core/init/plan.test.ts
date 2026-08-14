@@ -62,7 +62,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
         ".wst/checks/typecheck.md",
         ".wst/constitution.md",
         ".wst/memory/README.md",
-        ".wst/memory/decisions/_TEMPLATE.md",
+        ".wst/memory/decisions.md",
         ".wst/memory/out-of-scope/README.md",
         ".wst/memory/patterns.md",
         ".wst/memory/retro-log.md",

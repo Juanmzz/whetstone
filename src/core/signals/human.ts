@@ -66,7 +66,7 @@ const isSeverity = (value: string): value is SignalSeverity =>
 
 /**
  * A `.wst`-relative path to a markdown rule file: `skills/recording.md`,
- * `triage-rules.md`, `memory/decisions/0007-adr-process.md`. Kebab-case segments,
+ * `triage-rules.md`, `memory/decisions.md`. Kebab-case segments,
  * no `.` or `..`, because the string is written into a permanent record and read
  * back as a path by the retro (`commands/retro.ts` reads `.wst/<rule>`).
  */

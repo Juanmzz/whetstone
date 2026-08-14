@@ -38,7 +38,7 @@ export {
   type StrictPath,
 } from "./interview.js";
 export {
-  ADR_TEMPLATE,
+  DECISIONS_MD,
   CLAUDE_MD,
   MEMORY_README,
   SKILL_FILES,

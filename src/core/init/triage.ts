@@ -93,7 +93,7 @@ export function buildTriageRules(answers: InterviewAnswers): readonly TriageRule
       "source and regenerate rather than patching them here.",
   });
   push({
-    glob: `${DEFINITION_DIR}/memory/decisions/**`,
+    glob: `${DEFINITION_DIR}/memory/decisions.md`,
     tier: "light",
     reason:
       "ADR bodies. Accepted text is superseded rather than rewritten, so the risk lives in " +

@@ -52,7 +52,7 @@ const STAKES: readonly (readonly [RegExp, string])[] = [
     "replaced wholesale with a file containing only Whetstone's hook. Existing permissions, env, statusLine and other hooks are NOT merged",
   ],
   [/^\.claude\/hooks\//, "an existing hook of the same name is replaced"],
-  [under("memory/decisions/"), "an architecture decision record. This is the record of WHY, and nothing else holds it"],
+  [under("memory/decisions.md"), "the decision record. This is the record of WHY, and nothing else holds it"],
   [under("memory/"), "recorded memory: signals, retro history, patterns"],
   [under("checks/"), "a check definition this project already relies on"],
   [under("skills/"), "a skill this project may have amended since it was installed"],
