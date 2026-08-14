@@ -543,15 +543,18 @@ describe("createCheckRunner", () => {
 // ── what a bad range looks like ──────────────────────────────────────────────
 
 describe("a range git cannot resolve", () => {
-  it("reports that nothing was verified rather than exiting clean", async () => {
-    // `GitPort.diffNameStatus` swallows git's error and returns "", so a typo'd
-    // range is indistinguishable from an empty diff at this layer. What saves it
-    // is the honesty rule one level up: a run that verified nothing is not a
-    // pass. Pinned here because that is the ONLY thing standing between a
-    // mistyped range and a green gate.
+  it("names the range it could not read, rather than reporting an empty diff", async () => {
+    // This used to be saved by the honesty rule one layer up: the adapter returned
+    // "" for a range git rejected, the gate found no files, and "a run that
+    // verified nothing is not a pass" turned that into exit 2. Correct number,
+    // useless sentence — it said the change had no checks, when the truth was that
+    // there was no such change to check.
+    //
+    // `diffNameStatus` now throws, so the message names the range. The exit code
+    // is unchanged, which is the point: this was never about the number.
     const dir = await repo();
     expect(await runGate({ range: "no-such-ref..HEAD", noLens: true }, dir)).toBe(2);
-    expect(stdout()).toMatch(/nothing about this change was verified/);
+    expect(stderr()).toMatch(/could not read the diff for no-such-ref\.\.HEAD/);
   });
 });
 
