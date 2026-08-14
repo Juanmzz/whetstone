@@ -401,9 +401,32 @@ template nobody reads, and it cannot be amended from evidence.
   code that will not tolerate a synonym.
 - **Rejected: leaving `init` unusable without a judge.** This is adr-0016's *first* objection,
   and it is the one this answers rather than dismisses. Without a judge, `init` degrades to a
-  minimum — `triage.yaml`, `wst.yaml`, the memory schemas, and a `constitution.md` carrying the
-  seven non-negotiables and blanks where judgment goes. Enough for `wst gate` to run. A blank a
-  human fills beats a template's confident wrong answer, which is adr-0016's own accepted cost.
+  minimum, and `docs/field-report-chytapay-2026-08.md` — a run against a real foreign repo —
+  says what belongs in it:
+
+  **`triage.yaml` and `wst.yaml`.** The report's own "what worked" section credits triage with
+  classifying the real diff correctly. Everything else hangs off it.
+
+  **One or two deterministic checks, seeded at `warn` with the note saying why.** §C is the
+  evidence: two of the three checks seeded there were actively wrong. `lint` ran
+  `eslint --fix`, a check that rewrites the tree while judging it, and `test` blocked on a
+  suite that opens a real Postgres — red on every machine that has not started a database.
+  A blocking check that is red everywhere is a check people route around, and a routed check
+  stops catching the real findings too. **The presence of a script is not evidence the suite
+  passes.**
+
+  **`memory/signals.jsonl` and `memory/decisions.md`, genuinely empty** — a format with no
+  content. An empty file says "this is where what you earn goes". A seeded example says
+  "you already earned this", and that is false.
+
+  **Not the eight skills.** §B: under `--definitions-only` they are structurally unreachable,
+  and a repo that already has calibrated ones gets two sources of truth with no way to tell
+  which is inert. Not `patterns.md`, `retro-log.md` or `out-of-scope/README.md` either — they
+  are containers for knowledge a new repo does not have, and reading them empty teaches the
+  form without the reason, which is adr-0005's named trap.
+
+  A blank a human fills beats a template's confident wrong answer, which is adr-0016's own
+  accepted cost — and §C is that cost arriving.
 - **Rejected: keeping both paths — templates when there is no judge, the judge otherwise.** Two
   ways to produce one artifact, drifting, which is the defect class this repo has found six
   times. The minimum is deliberately NOT a smaller template: it is blanks.
