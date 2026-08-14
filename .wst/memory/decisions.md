@@ -371,3 +371,49 @@ and everybody paid for it.
 Reversal: if a compacted entry turns out to have dropped the thing someone needed, and git
 history was not consulted because nobody thought to, then this page is a summary rather than a
 record, and the full files should come back.
+
+### adr-0020 — the judge authors the payload's judgment; the engine refuses what does not hold together
+`proposed` · 2026-08-14 · signals: sig-0041
+
+*Not in force. `init` still renders every file it writes.*
+
+**The measurement first, because it reverses the reason this was raised.** `init` was asked to
+shrink by moving generation to the model. Split by who can legitimately author each file, only
+248 lines are judgment — the constitution's prose, `AGENTS.md`, the *reasons* on each triage
+rule, and the seed checks' prose. The other 301 are contract: the signal schema, the decision
+page's format, `triage.yaml`, `wst.yaml`. A paraphrased schema is the same defect adr-0016
+named about a paraphrased test command, so those cannot move. Keeping skeletons for the
+no-judge path costs ~40 of the 248 back, and a payload proposal needs a schema, a prompt and
+validation — about 100 lines, on `propose.ts`'s existing shape. **Net: roughly 108 lines.**
+
+So this is not a size decision, and arguing it as one is how it gets accepted for the wrong
+reason and reversed on the first inconvenience. It is a decision about **who authors
+judgment**: a template that says "a bug here is expensive" the same way in every repo is a
+template nobody reads, and it cannot be amended from evidence.
+
+- **Rejected: cutting the renderers for the line count.** The measurement above. 108 lines is
+  not worth a dependency on a model, and the honest response to "make `init` smaller" is that
+  `init` is not carrying much dead code — two unused exports and a barrel.
+- **Rejected: letting the judge write everything, contract files included.** This is
+  adr-0016's second objection and it still stands, unchanged: an agent asked for the test
+  command may paraphrase it, and a paraphrased command is a check that runs the wrong thing.
+  The same argument covers the signal schema and the decision page's format, which are read by
+  code that will not tolerate a synonym.
+- **Rejected: leaving `init` unusable without a judge.** This is adr-0016's *first* objection,
+  and it is the one this answers rather than dismisses. Without a judge, `init` degrades to a
+  minimum — `triage.yaml`, `wst.yaml`, the memory schemas, and a `constitution.md` carrying the
+  seven non-negotiables and blanks where judgment goes. Enough for `wst gate` to run. A blank a
+  human fills beats a template's confident wrong answer, which is adr-0016's own accepted cost.
+- **Rejected: keeping both paths — templates when there is no judge, the judge otherwise.** Two
+  ways to produce one artifact, drifting, which is the defect class this repo has found six
+  times. The minimum is deliberately NOT a smaller template: it is blanks.
+- **Rejected: the judge writes the payload and `init` trusts it.** The engine keeps the
+  manifest (what must exist), reference closure, the collision check, and the loaders — and
+  refuses a draft that fails any of them. That refusal is the whole reason this is safe, and it
+  is why it had to wait until `selfcontained` audited the copied files rather than skipping them.
+
+Cost accepted: `init` gains a second mode, and the two produce different-quality payloads from
+the same repo. Stated plainly rather than hidden behind a flag name.
+
+Reversal: if the drafted payload needs as much human editing as the blanks did, the judge was
+adding a step and not judgment — delete the mode and keep the minimum.
