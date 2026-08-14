@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 5
+version: 6
 status: active
 ---
 # TDD discipline
@@ -66,6 +66,13 @@ strict TDD regardless of how small it looks.
    boolean modelling something with three states, and a config value inherited from
    another tool.
 
+9. [TD9] **Arrange / Act / Assert, visibly separated.** Three blocks with a blank line
+   between them, and ONE act per test — a second thing to exercise is a second test. When
+   setup, exercise and assertions run together as one undivided block, a reader cannot tell
+   which line is the behaviour under test and which lines only prepare it, so an assertion
+   aimed at the wrong subject reads as fine. This is a shape rule, checkable by eye in a
+   diff: no linter can say which line is the act, and none should be written to guess.
+
 ## Defining a strict path (worked example)
 
 The constitution's risk profile names the domains where correctness is non-negotiable; the
@@ -90,6 +97,10 @@ CI or pre-release — they are NOT part of the per-change TDD loop.
 
 ## Changelog
 
+- v6 (2026-08-14, owner decision): added [TD9] — Arrange / Act / Assert, visibly separated,
+  one act per test. Judgment, not machine-checkable: the shape is legible by eye in a diff
+  and no linter can identify which line is the act. It lives here rather than in a new file
+  because it is a rule about how a test is written, which is what this skill is.
 - v5 (2026-08-14, `sig-e8dfefd0`): [TD1]/[TD2] no longer ask for a commit per phase. They
   said "Commit at RED" / "Commit at GREEN"; the repo owner said three times that separate
   RED and GREEN commits are unwanted, a review agent read their absence as a hard-rule-4
