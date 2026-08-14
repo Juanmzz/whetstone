@@ -4,6 +4,7 @@
  */
 
 import { execFile } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { promisify } from "node:util";
 import type { GitPort } from "../core/ports.js";
 
@@ -36,7 +37,7 @@ const run = promisify(execFile);
  * would silently not reach `git`. Cloning fifty entries is not a cost worth a
  * staleness bug.
  */
-function cleanEnv(): NodeJS.ProcessEnv {
+export function gitEnv(): NodeJS.ProcessEnv {
   return Object.fromEntries(
     Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
   );
@@ -46,7 +47,7 @@ async function git(args: string[], cwd: string): Promise<string | null> {
   try {
     const { stdout } = await run("git", args, {
       cwd,
-      env: cleanEnv(),
+      env: gitEnv(),
       maxBuffer: 64 * 1024 * 1024,
     });
     return stdout.trim();
@@ -86,4 +87,36 @@ export function createGitAdapter(cwd: string = process.cwd()): GitPort {
       return hash;
     },
   };
+}
+
+/**
+ * Refuse to touch a directory that is not the worktree it claims to be.
+ *
+ * `cwd` is not a guarantee. `GIT_DIR` overrides it, and `gitEnv()` above removes the
+ * inherited block for every call that goes through this file — but `wst prepare`
+ * runs `git reset --hard`, `git switch -C` and `ln -sfn` on a leased worktree, and
+ * a destructive command should not depend on nobody having reintroduced a variable,
+ * on treehouse returning the path it promised, or on a caller passing the right
+ * string. It should ask.
+ *
+ * So it asks: resolve the repository root from inside the directory, and compare it
+ * to the directory. `realpath` on both, because a leased worktree reached through a
+ * symlink is the ordinary case and is not a mismatch.
+ *
+ * `sig-82dec46b` is the incident. The environment leak wrote the MAIN repository's
+ * index twice, from commands that believed they were somewhere else. Removing the
+ * leak fixes the cause that was found; this survives the next one.
+ */
+export async function assertWorktreeAt(path: string): Promise<void> {
+  const root = await git(["rev-parse", "--show-toplevel"], path);
+  if (root === null) {
+    throw new Error(`refusing to operate on ${path}: it is not a git worktree`);
+  }
+  const [here, there] = [realpathSync(path), realpathSync(root)];
+  if (here !== there) {
+    throw new Error(
+      `refusing to operate on ${path}: git resolves it to ${there}, not ${here} — ` +
+        `the target is not what it claims to be`,
+    );
+  }
 }

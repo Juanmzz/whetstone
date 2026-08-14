@@ -39,6 +39,7 @@ import {
 } from "../core/dispatch/charter.js";
 import { loadRegistry, loadTriageRules, resolveDefinitionRoot } from "../shell/sdd.js";
 import { createGitAdapter } from "../shell/git.js";
+import { assertWorktreeAt, gitEnv } from "../shell/git.js";
 import { createTreehouseAdapter } from "../shell/treehouse.js";
 
 const exec = promisify(execFile);
@@ -132,13 +133,27 @@ export async function runPrepare(
   try {
     // Branch from the ORCHESTRATOR's current commit, not from whatever the pooled
     // worktree happens to sit at — a fresh pool hands you the default branch.
-    const { stdout: baseOut } = await exec("git", ["rev-parse", "HEAD"], { cwd: repoRoot });
+    const { stdout: baseOut } = await exec("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      env: gitEnv(),
+    });
     const base = baseOut.trim();
-    await exec("git", ["fetch", "--no-tags", repoRoot, base], { cwd: worktree.path }).catch(
+
+    // ASK BEFORE DESTROYING. Everything below this line resets a tree, moves a
+    // branch or overwrites a symlink, and every one of them trusts `cwd` — which
+    // `GIT_DIR` overrides. `sig-82dec46b` is what that costs: the main repository's
+    // index written twice by commands that believed they were elsewhere. Stripping
+    // the environment removes the cause that was found; this refuses to act on a
+    // target that cannot prove it is the target.
+    await assertWorktreeAt(worktree.path);
+    await exec("git", ["fetch", "--no-tags", repoRoot, base], {
+      cwd: worktree.path,
+      env: gitEnv(),
+    }).catch(
       () => undefined,
     );
-    await exec("git", ["reset", "--hard", base], { cwd: worktree.path });
-    await exec("git", ["switch", "-C", branch], { cwd: worktree.path });
+    await exec("git", ["reset", "--hard", base], { cwd: worktree.path, env: gitEnv() });
+    await exec("git", ["switch", "-C", branch], { cwd: worktree.path, env: gitEnv() });
 
     // node_modules is not in the tree, so a fresh worktree cannot run its own
     // checks. Found by the first crewmate, which reported having to install.

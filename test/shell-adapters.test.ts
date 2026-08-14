@@ -20,7 +20,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { recordCalibration } from "../src/core/calibration/receipt.js";
 import { recordPass } from "../src/core/receipts/receipt.js";
 import { hashFixtureDir } from "../src/shell/calibration.js";
-import { createGitAdapter } from "../src/shell/git.js";
+import { assertWorktreeAt, createGitAdapter } from "../src/shell/git.js";
 import { describePlugin } from "../src/shell/plugin.js";
 import { readReceipt, receiptPath, writeReceipt } from "../src/shell/receipts.js";
 import { readCursor, readSignals } from "../src/shell/retro.js";
@@ -114,6 +114,33 @@ describe("the git adapter", () => {
     await expect(createGitAdapter(await seeded()).hashFile("gone.txt")).rejects.toThrow(
       /could not hash/,
     );
+  });
+
+  describe("refusing a target that is not what it claims", () => {
+    /**
+     * `wst prepare` runs `git reset --hard`, `git switch -C` and `ln -sfn` against
+     * a leased worktree. Stripping `GIT_*` fixes the leak that was FOUND; this is
+     * what survives the next one, a treehouse bug, or a caller passing the wrong
+     * string. A destructive command should ask where it is standing.
+     */
+    it("accepts a directory that really is the root of the repository it resolves to", async () => {
+      const dir = await seeded();
+      await expect(assertWorktreeAt(dir)).resolves.toBeUndefined();
+    });
+
+    it("refuses a directory git resolves somewhere else", async () => {
+      // A subdirectory: git answers with the repo root, not with the path given.
+      // Same shape as an inherited GIT_DIR pointing at another repository.
+      const dir = await seeded();
+      await mkdir(join(dir, "sub"), { recursive: true });
+      await expect(assertWorktreeAt(join(dir, "sub"))).rejects.toThrow(/not what it claims/);
+    });
+
+    it("refuses a directory that is no repository at all", async () => {
+      await expect(assertWorktreeAt(await temp("wst-none-"))).rejects.toThrow(
+        /not a git worktree/,
+      );
+    });
   });
 
   describe("an inherited git environment", () => {

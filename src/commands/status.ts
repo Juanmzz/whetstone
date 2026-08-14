@@ -7,7 +7,7 @@ import { execFile } from "node:child_process";
 import { access } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join } from "node:path";
-import { createGitAdapter } from "../shell/git.js";
+import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { definitionRoot } from "../shell/sdd.js";
 import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../core/paths.js";
 import { createClaudeJudge } from "../shell/claude.js";
@@ -36,7 +36,7 @@ async function exists(path: string): Promise<boolean> {
  */
 async function hooksPath(cwd: string): Promise<string | null> {
   try {
-    const { stdout } = await promisify(execFile)("git", ["config", "--get", "core.hooksPath"], { cwd });
+    const { stdout } = await promisify(execFile)("git", ["config", "--get", "core.hooksPath"], { cwd, env: gitEnv() });
     const value = stdout.trim();
     return value === "" ? null : value;
   } catch {
@@ -53,7 +53,7 @@ async function hooksPath(cwd: string): Promise<string | null> {
  */
 async function definitionTracked(cwd: string): Promise<boolean> {
   try {
-    const { stdout } = await promisify(execFile)("git", ["ls-files", "--", DEFINITION_DIR], { cwd });
+    const { stdout } = await promisify(execFile)("git", ["ls-files", "--", DEFINITION_DIR], { cwd, env: gitEnv() });
     return stdout.trim() !== "";
   } catch {
     return false;
