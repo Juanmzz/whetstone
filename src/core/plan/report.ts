@@ -6,12 +6,11 @@
  * gate reports on work that is done; this reports on work that has not started, to a
  * human who is about to decide whether the plan is ready to dispatch. So the
  * dangerous output is not a wrong word, it is an OMISSION: a path nothing will
- * verify, left off the list, reads as a path that is fine. ADR-0013 says it in the
- * fourth question — "what is *not* covered, stated as a gap rather than as silence".
+ * verify, left off the list, reads as a path that is fine. So a gap is printed as a
+ * gap, never left as silence.
  *
- * There is no exit code to render into. `wst plan` does not block: "the name says
- * gate and the gate is the human, in the same sense `wst signal` is for the human to
- * type. The command emits; the person decides."
+ * There is no exit code to render into: `wst plan` does not block (adr-0013). The
+ * command emits; the person decides.
  */
 
 import type { PathCoverage, PlanPreview, PlannedCheck } from "./preview.js";

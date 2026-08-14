@@ -5,12 +5,10 @@
  * walking and reading. That is what makes "a repo with no tests seeds no test
  * check" a unit test instead of a fixture directory.
  *
- * ## What this module is allowed to know (ADR-0016)
+ * ## What this module is allowed to know
  *
- * It reads what a repo DECLARES about itself and nothing else. `package.json`
- * states its scripts; a lockfile states its package manager; a test file is a
- * test file. Reading those is cheap, deterministic, auditable, and it produces
- * the one thing a check cannot do without — a `command` to run.
+ * It reads what a repo DECLARES about itself and nothing else — scripts, lockfile,
+ * whether a test file exists. Why declared beats inferred: adr-0016.
  *
  * WHAT USED TO LIVE HERE, and why it is gone: a file-extension table that decided
  * `language`, a list of fashionable directory names that decided `sourceGlobs`, a
@@ -174,9 +172,7 @@ function detectCommands(
   note: (what: string, from: string) => void,
 ): DetectedCommands {
   // Toolchains where the command ships with the toolchain itself, so its
-  // existence is guaranteed by the manifest we already saw. `go.mod` is a
-  // declaration, not a file-extension count — reading it is the same act as
-  // reading `package.json` for its scripts.
+  // existence is guaranteed by the manifest we already saw.
   if (has("go.mod")) {
     note("commands: go toolchain", "go.mod");
     return { test: "go test ./...", typecheck: "go build ./...", lint: "go vet ./..." };

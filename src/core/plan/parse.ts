@@ -2,11 +2,9 @@
  * Reading a plan. PURE — the shell fetches the text, this turns it into a
  * declaration.
  *
- * ADR-0013 draws the boundary this file sits on: **`wst plan` reads a plan; it does
- * not write one.** "Authoring the plan is a crewmate's job or a person's; the
- * engine's job is to answer what will judge it." So there is no inference here — no
- * guessing paths from a task description, no model. A path is in the plan because
- * somebody wrote it down.
+ * **`wst plan` reads a plan; it does not write one** (adr-0013). So there is no
+ * inference here — no guessing paths from a task description, no model. A path is in
+ * the plan because somebody wrote it down.
  *
  * The format is markdown with YAML frontmatter, which is what every other
  * human-written artifact in this repo already uses (ADRs, check files, the skills).
@@ -16,9 +14,8 @@
  * FAILS CLOSED, like `diff/parse.ts` and for the same reason turned around. There, a
  * dropped line leaves a file ungated. Here, a path this parser accepts but the glob
  * engine can never match is worse than a rejection: the tier still gets computed, the
- * report still prints, and the answer is confidently wrong. ADR-0013 says a
- * prediction nobody trusts should be deleted rather than tuned — so anything that
- * would quietly degrade the prediction is an error, not a warning.
+ * report still prints, and the answer is confidently wrong. Anything that would
+ * quietly degrade the prediction is therefore an error, not a warning.
  */
 
 import { parse as parseYaml } from "yaml";

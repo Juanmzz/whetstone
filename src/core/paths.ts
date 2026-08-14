@@ -4,13 +4,11 @@
  * PURE, and deliberately the smallest module in the core: everything imports it,
  * so anything else living here would be imported everywhere too.
  *
- * **This is a single source of truth, NOT a configuration option.** ADR-0012
- * rejects configurability twice over: `wst.yaml` lives inside the directory it
- * would name, and a user-settable value would have to be interpolated into the
- * ~108 sites of generated prose, which is a rewrite of the emitter to buy
- * flexibility nobody asked for. The value is fixed in code. What the constant buys
- * is that changing it is a one-line change instead of a 225-site find-and-replace
- * that drifts the first time someone touches one of them.
+ * **A single source of truth, NOT a configuration option** — why configurability was
+ * rejected: adr-0012 (a settable value would have to be interpolated into the ~108
+ * sites of generated prose). What the constant buys is that changing the name is a
+ * one-line change instead of a 225-site find-and-replace that drifts the first time
+ * someone touches one of them.
  *
  * It is used for TWO things, and the second is the one that is easy to forget:
  *
@@ -29,11 +27,9 @@ export const DEFINITION_DIR = ".wst";
  * What the directory used to be called (ADR-0012).
  *
  * Kept for exactly ONE purpose: saying the word in an error message. Nothing is
- * read from it, and nothing may be — the ADR rejected supporting both paths
- * because two possible directories means five commands must decide which wins,
- * and a repo holding both has no source of truth. This constant is diagnosis, and
- * the moment anything joins a path onto it, that decision has been reversed by
- * accident.
+ * read from it, and nothing may be — adr-0012 rejected supporting both paths. This
+ * constant is diagnosis, and the moment anything joins a path onto it, that
+ * decision has been reversed by accident.
  */
 export const LEGACY_DEFINITION_DIR = ".sdd";
 

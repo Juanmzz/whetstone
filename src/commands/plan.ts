@@ -4,9 +4,8 @@
  * tier, the check split and every coverage gap are computed in `src/core/plan/`,
  * where the tests can reach them.
  *
- * ADR-0013, on what this command is: the front door, not a step inside anything,
- * and not gated on criticality — "the moment a plan is worth checking is *before*
- * anyone knows how critical the change is."
+ * The front door: not a step inside anything, and not gated on criticality. Why:
+ * adr-0013.
  *
  * It writes nothing. No signal, no event, no receipt: reading a plan is not a run,
  * and a command that logs would give the retro a stream of activity that never

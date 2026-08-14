@@ -33,10 +33,9 @@ export interface OrientationDoc {
  * produced a charter ordering an agent to read two files that were not there
  * (sig-0041).
  *
- * The notes are deliberately generic. The old one explained `architecture.md` as
- * "FCIS: `core/` is pure and must never import from `shell/`" — true here, asserted
- * about someone else's repo, and the charter is a MAP, not a summary: the file says
- * what it is, the crewmate is being told where to look.
+ * The notes stay generic for the same reason. The old one explained
+ * `architecture.md` as "FCIS: `core/` is pure and must never import from
+ * `shell/`" — true here, asserted about someone else's repo.
  */
 export const ORIENTATION_DOCS: readonly OrientationDoc[] = [
   { path: "AGENTS.md", note: "orientation, and the hard rules" },

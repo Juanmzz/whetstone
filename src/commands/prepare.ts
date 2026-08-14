@@ -3,13 +3,12 @@
  *
  *   lease a worktree -> branch it -> build the charter -> write it in -> print the path
  *
- * ADR-0014 split `wst run` here and deleted the other half: dispatch a crewmate, wait
- * out a 30-minute timeout, gate what came back, release the worktree. Worktree dispatch
- * is commoditised (ADR-0011) and that was the half with the expiry date. The charter is
- * not: it renders *"what will gate your work"* from the registry and triage rules AS
- * THEY ARE RIGHT NOW, so it cannot go stale the way a hand-written prompt does — the
- * hardcoded version sent a crewmate in a foreign repo to two files that were not there
- * (sig-0041).
+ * adr-0014 split `wst run` here and deleted the other half: dispatch a crewmate, wait
+ * out a 30-minute timeout, gate what came back, release the worktree. The charter is
+ * what survived: it renders *"what will gate your work"* from the registry and triage
+ * rules AS THEY ARE RIGHT NOW, so it cannot go stale the way a hand-written prompt
+ * does — the hardcoded version sent a crewmate in a foreign repo to two files that
+ * were not there (sig-0041).
  *
  * NOTHING HERE RELEASES THE WORKTREE, on purpose. The lease is the human's from minute
  * zero; `treehouse return` belongs to whoever knows whether the work is finished, and
