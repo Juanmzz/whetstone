@@ -1,6 +1,6 @@
 ---
 id: lazy
-version: 1
+version: 2
 status: active
 ---
 # Lazy = efficient, not careless
@@ -41,6 +41,21 @@ the right one — *once you actually understand what the change has to touch.*
   upgrade path — this IS the "comment the why" discipline, NOT a traceability tag (no
   prefixes): `// global lock for now; per-account locks if throughput matters`.
 
+- [L12] **Reuse before adding: find the first implementation before writing the second.**
+  [L2] is the rung; this is the obligation that makes it real. Before adding a helper, a
+  constant, a check or a rule, go looking for the one that already exists and either call it
+  or extend it. Five entries in this repo's own log are one rule implemented twice and then
+  drifting: `sig-0002` (the emitter wrote `CLAUDE.md` and `AGENTS.md` byte-identical),
+  `sig-0012` (`calibrate.ts` kept its own copy of the review lens, so a receipt certified a
+  prompt that never ran), `sig-0028` (the receipt hash computed in two places until
+  `identityOf` made it one), `sig-0030` (`hooksPath === '.githooks'` decided inside a
+  command instead of core — the same note records a duplicated check runner as the finding
+  before it), `sig-4b3339fb` (that `.githooks` literal spelled a second time, drifting from
+  the absolute path git had actually stored). When a second copy is genuinely unavoidable,
+  one side owns the fact and the other derives from it — "must stay in sync" is a wish.
+  **Not machine-checkable:** a script finds duplicated text, and none of those five looked
+  like the original.
+
 ## When NOT to be lazy (worked example)
 
 The constitution's risk profile names the domains where correctness is non-negotiable; never
@@ -59,6 +74,12 @@ complexity smuggled back in.
 
 ## Changelog
 
+- v2 (2026-08-14, owner decision): added [L12] — search for the first implementation before
+  writing a second, and when a copy is unavoidable give one side ownership. Homed here
+  because [L2] already says "reuse what is in this codebase" and a rule that repeats an
+  existing one in a new file would be the very failure it describes. Earned by five signals
+  that are all the same shape: `sig-0002`, `sig-0012`, `sig-0028`, `sig-0030`,
+  `sig-4b3339fb`. Not machine-checkable, and the rule says so.
 - v1 (2026-07-13, init): generated from the ChytaPay `chyta-lazy` skill (adapted from
   ponytail, github.com/DietrichGebert/ponytail, MIT). Stripped the payment-system
   NON-NEGOTIABLE exceptions (money/cents, multi-tenant, PCI, auth) as hard-coded rules,
