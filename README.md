@@ -7,13 +7,14 @@ checks that matter — as plain files in git, then enforces it with a determinis
 an LLM only where judgment is irreducible. Routine changes run autonomously; the ones your project
 calls critical keep a human in the loop. The gate's exit code is the whole enforcement surface: it
 runs in a pre-push hook and in CI, so it does not depend on an agent choosing to cooperate. And
-because it records the friction it hits, the checks a project needs grow
-and tighten over time — each carrying a receipt for why it exists.
+because it records the friction it hits, the checks a project needs grow and tighten over time —
+each carrying a receipt for why it exists.
 
-> Status: alpha (v0.4.0). The gate has landed and runs on this repo's own changes, in a pre-push
-> hook and in CI. What is not done is the judgment tier: the lens is `uncalibrated` at v4, so it may
-> only warn. The retro loop has produced its first earned rule from a real project. Read
-> [VISION.md](./VISION.md) first.
+> **Status: alpha (v0.4.0).** The gate runs on this repo's own changes, in a pre-push hook and in
+> CI. The judgment tier is not done — the review lens is uncalibrated, so it may only warn.
+> [AGENTS.md](./AGENTS.md) carries the current numbers and
+> [what is still weak](./AGENTS.md#known-weaknesses-stated-plainly), stated plainly and checked by
+> a gate check. This file does not repeat them, because the copy is what goes stale.
 
 ## Why
 
@@ -26,53 +27,37 @@ The consequence is frugality in *verification*. Tools that review everything wit
 expensive and slow; a `CLAUDE.md` full of rules is merely advisory. Whetstone is neither — it is the
 layer that makes a non-negotiable actually non-negotiable.
 
-## How it works
+## The shape of it
 
 ```
-wst init   → interview the project, generate .wst/
-wst plan   → read a plan's declared paths → tier → which checks will judge it, and what nothing covers
+wst init    → interview the project, generate .wst/
+wst plan    → a plan's declared paths → tier → what will judge it, and what nothing covers
 wst prepare → lease a worktree → branch → write the charter the live registry generates → stop
-wst gate   → select checks → skip what receipts prove unchanged → run → pass or block
-wst events → read the log back: what a run did, which check took how long, how it ended
-wst retro  → cluster signals → propose checks → human approves → amend with a receipt
+wst gate    → select checks → skip what receipts prove unchanged → run → pass or block
+wst events  → read the log back: what a run did, which check took how long, how it ended
+wst retro   → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-*Shipped today: all ten commands — `status`, `check`, `triage`, `plan`, `gate`, `events`, `prepare`,
-`retro`, `signal`, `init` — as a TypeScript engine (ADR-0008). Two removals point the same way: `wst
-pr` went by ADR-0009, because the gate's exit code is the whole enforcement surface and a second
-channel that only advised was one more thing to keep honest; `wst run`'s dispatcher went by
-ADR-0014, because running agents in worktrees is commoditised and the gate is not. What survived the
-second is `wst prepare`. The Wizard-of-Oz procedures under [`docs/woz/`](./docs/woz/) are reference
-specs, not current procedure.*
+**[`.wst/architecture.md`](./.wst/architecture.md) is the full picture** — the three parts, the loop
+as a diagram, the layers, the check registry, the plan format, and the measured `claude -p`
+invocation. It is written in the present tense and it is the authority; anything here that
+disagrees with it is drift.
 
-The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst prepare` briefs a
-crewmate from the registry as it stands right now, and `wst retro` has produced amendments across
-seven of the eight skills, each carrying the signals that earned it. **`wst prepare` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
-for worktree isolation, and agent-lens checks need the `claude` CLI; neither is bundled.** What is
-still weak is stated in [AGENTS.md](./AGENTS.md#known-weaknesses-stated-plainly) — chiefly that the
-lens is uncalibrated at v4, so the judgment tier is advisory.
-
-1. **`.wst/` is data.** Constitution, triage rules, and a registry of checks — one file per check,
-   each declaring what it triggers on, whether it is deterministic or judgment, and whether it may
-   block or only warn.
-2. **The engine is code.** It classifies changes by glob, selects checks, hashes inputs so unchanged
-   code is never re-reviewed, runs what remains, and enforces the result.
-3. **The LLM is judgment only.** One boundary, one port, swappable adapters. A judgment check must
-   prove it is correct and stable over fixtures before it is allowed to block anything — otherwise
-   it is capped at `warn`. A flaky gate gets routed around, and then it is worth less than nothing.
-4. **The loop closes.** Signals accumulate as you work; the retro proposes new or amended checks;
-   you approve; the change lands with a changelog linking back to the evidence.
+**What is not bundled:** `wst prepare` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
+for worktree isolation, and judgment checks need the `claude` CLI.
 
 ## Non-goals
 
 Not a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers). Not a memory server
 (memory is an interface; files are the default backend). Not a fleet manager — it delegates
 worktrees, GitHub and execution to tools that already do those well. See
-[VISION.md](./VISION.md#what-whetstone-is-not).
+[VISION.md](./VISION.md#what-whetstone-is-not), and
+[`.wst/memory/decisions.md`](./.wst/memory/decisions.md) for what each of those refusals ruled out
+and why.
 
 ## Roadmap
 
-- **M1 — Bootstrap** ✅ — the init procedure, `.wst/` schema, eight-skill set, signal logging.
+- **M1 — Bootstrap** ✅ — the init procedure, `.wst/` schema, the skill set, signal logging.
 - **M2 — Code tier** ✅ — the emitter compiles `.wst/` into per-vendor apparatus, hooks first.
 - **M3 — The retro loop** ✅ *(first pass)* — pattern detection + apparatus recommendation, validated
   in the wild. Still N=1; repeatability unproven.
