@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 4
+version: 5
 status: active
 ---
 # TDD discipline
@@ -22,8 +22,14 @@ strict TDD regardless of how small it looks.
 ## Rules
 
 1. [TD1] **RED** — failing test BEFORE implementation. Must fail for the right reason (a
-   logical assertion, not a compile error). Commit at RED.
-2. [TD2] **GREEN** — minimum code to pass. No extras, no cleanup. Commit at GREEN.
+   logical assertion, not a compile error). Keep the red output: it is the evidence the
+   commit will carry.
+2. [TD2] **GREEN** — minimum code to pass. No extras, no cleanup. **One commit per coherent
+   change, not one per phase** — RED and GREEN land together, with the red output quoted in
+   the commit body. Splitting them writes a commit whose suite is red by construction, which
+   cannot be bisected across or reverted as a unit, and it proves nothing the quoted output
+   does not: the discipline is that the test was written first and failed for the right
+   reason, not that the failure got its own SHA.
 3. [TD3] **TRIANGULATE** *(strict only)* — a second test with semantically different data
    (boundary, edge case, alternate path) to kill hardcoded implementations. If it fails,
    return to GREEN.
@@ -84,6 +90,13 @@ CI or pre-release — they are NOT part of the per-change TDD loop.
 
 ## Changelog
 
+- v5 (2026-08-14, `sig-e8dfefd0`): [TD1]/[TD2] no longer ask for a commit per phase. They
+  said "Commit at RED" / "Commit at GREEN"; the repo owner said three times that separate
+  RED and GREEN commits are unwanted, a review agent read their absence as a hard-rule-4
+  violation, and an assistant put them back. The rule as written was producing the
+  recurrence, so the ceremony changes and the discipline does not: RED first, failing for
+  the right reason, with the red output quoted in the body of ONE commit per coherent
+  change. `AGENTS.md` hard rule 4 says the same thing in the same change.
 - v4 (2026-08-14, retro-0049): added [TD8] — a claim about system behaviour is a
   hypothesis until a test probes it and would fail if the claim were false. From
   `sig-4b3339fb` (`wst status` asserted "pre-push NOT active" while the hook was
