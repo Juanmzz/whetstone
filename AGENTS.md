@@ -90,7 +90,7 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under `chytapay-workspace`.
 
-## Status — branch `main` · 16 ADRs · 46 signals · 10 commands
+## Status — branch `main` · 16 ADRs · 49 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -105,14 +105,14 @@ built under that waiver and removed by ADR-0009.
   four skills, each carrying the
   signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **46 signals**, 27 with `resolved_by`. Two retros. Four skills amended: `tdd-discipline` v3,
+- **49 signals**, 27 with `resolved_by`. Two retros. Four skills amended: `tdd-discipline` v3,
   `xreview` v3, `delegation` v3, `voice` v2.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
   re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
 
 ### Known weaknesses, stated plainly
 
-- **45 of 46 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
+- **46 of 49 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
   the human about an incident that actually happened). **None carries `source: "gate"`.** The
   emitter works — a CI run on 2026-08-13 emitted `sig-70ad13db` — but the runner is ephemeral and
   nothing brings the signal back, so it evaporated. The gap is not "the gate never fails"; it is
