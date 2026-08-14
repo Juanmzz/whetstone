@@ -1,6 +1,6 @@
 ---
 id: doc-locations
-version: 2
+version: 3
 status: active
 ---
 # Documentation locations
@@ -72,8 +72,25 @@ Defaults when the project says nothing:
      decision, and never re-argues one.** The argument belongs in the ADR, where it is
      versioned and signed; repeating it beside the code is one rule living in two places.
 
+8. [DL8] **The code explains itself; comment only what it cannot.** The first move when a
+   line needs explaining is to remove the need — name the thing, split the function, delete
+   the branch. A comment that restates what the code does is a second copy of it that no
+   test keeps honest, and it drifts silently the first time the code changes. What survives
+   that test is what the code genuinely cannot carry: why this and not the obvious
+   alternative, which measurement chose a constant, which external contract forces the
+   shape. [DL7] governs what such a comment may then contain — evidence, or a pointer at a
+   decision, never a re-argued one; this rule is the step before it. Judgment, not a check:
+   a script can count comment lines (`sig-672d598d` counted 4,391) and cannot tell a
+   necessary one from a restatement.
+
 ## Changelog
 
+- v3 (2026-08-14, owner decision): added [DL8] — make the comment unnecessary before
+  writing it; comment only what the code cannot carry. It complements [DL7] rather than
+  repeating it: DL7 constrains what a comment may say, DL8 asks first whether it should
+  exist. Homed here because retro-0049 already moved the comment discipline into this file
+  (`voice.md` governs reply text and says so), and one more rule beside DL7 is cheaper to
+  read than a ninth skill file. Judgment, not machine-checkable.
 - v2 (2026-08-14, retro-0049): added [DL7] — prose describing the tool's own behaviour is
   part of the change that alters it, and a comment names evidence or points at a decision
   rather than re-arguing one. From `sig-672d598d` (4,391 comment lines against 12,448 of

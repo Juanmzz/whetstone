@@ -83,18 +83,6 @@ export function signalsFromGate(verdict: GateVerdict, range: string): EmittableS
 }
 
 /**
- * Drop anything the log already carries unresolved.
- *
- * Without this, running the gate five times while fixing one failure appends five
- * identical signals. The retro clusters on RECURRENCE, so that would turn "how many
- * times someone re-ran the gate" into evidence, and a rule would be proposed on the
- * strength of an impatient loop. It is a poisoning vector the anti-poisoning gate
- * cannot see, because every one of those signals is genuine.
- *
- * A signal whose earlier twin was RESOLVED is re-emitted: the receipt proves it was
- * closed, so its return is a regression, and regressions are real news.
- */
-/**
  * A signal's id, derived from the fingerprint it already carries.
  *
  * `shell/signals.ts` allocated `sig-NNNN` as `max(existing) + 1`, read from the log.
@@ -117,6 +105,18 @@ export function signalId(fingerprint: string): string {
   return `sig-${createHash("sha256").update(fingerprint, "utf8").digest("hex").slice(0, 8)}`;
 }
 
+/**
+ * Drop anything the log already carries unresolved.
+ *
+ * Without this, running the gate five times while fixing one failure appends five
+ * identical signals. The retro clusters on RECURRENCE, so that would turn "how many
+ * times someone re-ran the gate" into evidence, and a rule would be proposed on the
+ * strength of an impatient loop. It is a poisoning vector the anti-poisoning gate
+ * cannot see, because every one of those signals is genuine.
+ *
+ * A signal whose earlier twin was RESOLVED is re-emitted: the receipt proves it was
+ * closed, so its return is a regression, and regressions are real news.
+ */
 export function dedupe(
   candidates: readonly EmittableSignal[],
   existing: readonly ExistingSignal[],

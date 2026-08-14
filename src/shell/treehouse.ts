@@ -1,8 +1,8 @@
 /**
  * treehouse adapter — isolated git worktrees for parallel crewmates.
  *
- * Whetstone does not build worktree management; it delegates it (ADR: "adopt
- * treehouse"). This is a thin wrapper over the CLI, nothing more.
+ * Whetstone does not build worktree management; it delegates it to treehouse
+ * (adr-0008). This is a thin wrapper over the CLI, nothing more.
  */
 
 import { execFile } from "node:child_process";

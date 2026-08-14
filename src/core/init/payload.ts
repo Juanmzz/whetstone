@@ -203,10 +203,7 @@ ${conventions}
 `;
 }
 
-/**
- * The memory schema, restated in full so the target repo never has to reach back
- * to the tool that generated it. This is the concrete discharge of ADR-0004.
- */
+/** The memory schema, restated in full — the first of the two consequences above. */
 export const MEMORY_README = `# Memory — how to log
 
 This directory is the project's memory. It is plain text in git, it is append-only,
@@ -284,9 +281,8 @@ it enforces against you is not a standard.
  * re-proposed every six months with the argument re-derived from scratch — by a
  * fresh agent that has no way to know the conversation already happened.
  *
- * The attribution is INLINE rather than a pointer, per the payload rule: this file
- * lands in a repo that has never heard of Whetstone, so a reference to a LICENSE
- * that lives here would dangle there.
+ * The attribution is INLINE rather than a pointer to Whetstone's LICENSE, per the
+ * payload rule in the header.
  */
 export const OUT_OF_SCOPE_README = `# Out of scope
 

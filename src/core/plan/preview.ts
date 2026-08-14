@@ -1,19 +1,16 @@
 /**
- * What will judge this plan. PURE, and deterministic end to end — no model, by
- * ADR-0013's most important rejection: having the engine reason about a plan "puts
- * an LLM in the engine for something that is not irreducible judgment".
+ * What will judge this plan. PURE, and deterministic end to end — no model. Why an
+ * LLM was rejected here: adr-0013.
  *
  * Nothing here classifies anything. `classify`, `route` and `selectChecks` are the
- * gate's own functions, called unchanged, which is most of why the ADR says this was
- * worth building now: "a new entry point onto machinery that is already tested". A
- * second implementation of "which checks match which paths" would be a front door
- * answering a question about a gate that does not exist — the same divergence
- * `commands/gate.ts` records having already cost this project three bugs.
+ * gate's own functions, called unchanged. A second implementation of "which checks
+ * match which paths" would be a front door answering a question about a gate that
+ * does not exist — the same divergence `commands/gate.ts` records having already
+ * cost this project three bugs.
  *
  * The one thing this module adds is the view the gate never needs: coverage read
- * PER PATH rather than per check. That inversion is where ADR-0013's third and
- * fourth questions live — "which of those a human still has to verify by hand" and
- * "what is *not* covered, stated as a gap rather than as silence".
+ * PER PATH rather than per check, so an uncovered path is stated as a gap rather
+ * than left as silence.
  */
 
 import type { Check, Tier } from "../checks/schema.js";

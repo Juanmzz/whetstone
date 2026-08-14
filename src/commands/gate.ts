@@ -191,8 +191,7 @@ export function createDistrustfulReceiptStore(): ReceiptStore {
 /**
  * One runner over both kinds of check. It only dispatches and reports; every
  * fail-versus-errored decision is made by `core/gate/outcomes.ts`.
- */
-/**
+ *
  * Exported so any second caller uses THIS runner instead of keeping a copy.
  *
  * `wst pr` kept one, and the copy silently missed the chunking and the total budget
@@ -362,10 +361,9 @@ export async function runGate(
     );
   }
 
-  // The same two calls `wst pr` makes, deliberately. The gate is the enforcement
-  // channel; if it routed from anything other than `.wst/triage.yaml`, the project's
-  // triage rules would be decorative exactly where they matter, and the annotation
-  // would describe a tier the gate never used.
+  // Routed from `.wst/triage.yaml`, never from anything else. The gate is the
+  // enforcement channel, so a gate routing from built-in defaults would make the
+  // project's own triage rules decorative exactly where they matter.
   const triage = classify(files, rules.rules, rules.origin);
   const routing = route(opts.tier ?? triage.tier, registry.active);
   emit({
@@ -395,10 +393,8 @@ export async function runGate(
     },
   );
 
-  // Record what the gate OBSERVED, before printing. Deduped against the log so
-  // re-running while fixing a failure does not append the same signal five times:
-  // the retro clusters on recurrence, and that would make "how often someone
-  // re-ran the gate" look like evidence.
+  // Record what the gate OBSERVED, before printing. Deduped against the log —
+  // `core/signals/emit.ts` has the why.
   //
   // Never let this fail the run. The gate's verdict is the product; the signal is
   // bookkeeping, and bookkeeping that can break a gate is worse than no bookkeeping.

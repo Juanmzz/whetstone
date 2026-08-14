@@ -68,11 +68,6 @@ export function sha256Hex(input: string): string {
 }
 
 /**
- * The exact bytes that get hashed. Exported because the guarantees live here, and a
- * test that asserts on two opaque digests proves much less than one that can read
- * the input.
- */
-/**
  * Length-prefixed, so no value can forge a field boundary and no two distinct
  * inputs can serialize alike. `-` is ABSENT and is distinct from `0:`, the empty
  * string: a check that declares no command is not a check whose command is "".
@@ -81,6 +76,11 @@ function field(tag: string, value: string | undefined): string {
   return value === undefined ? `${tag}:-` : `${tag}:${String(value.length)}${FIELD}${value}`;
 }
 
+/**
+ * The exact bytes that get hashed. Exported because the guarantees live here, and a
+ * test that asserts on two opaque digests proves much less than one that can read
+ * the input.
+ */
 export function canonicalInput(files: readonly HashedFile[], check: CheckIdentity): string {
   if (!Number.isInteger(check.version) || check.version < 1) {
     throw new Error(

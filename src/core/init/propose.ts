@@ -4,24 +4,17 @@
  *
  * ## Why the judge proposes and never decides
  *
- * ADR-0003: the human gate is the moat, not a limitation. `wst retro` already
- * established the shape — cluster the evidence, propose a change, never apply it.
- * `init` was the one command that did not follow it, so a project's definition was
- * either typed by a tired human or not written at all.
- *
- * The distinction that makes this safe is between DECIDING and ARGUING. "Where is a
- * bug expensive here?" is not a fact about the code, it is a declaration of what the
- * owner is willing to lose, and everything downstream (what blocks, what earns TDD)
- * hangs off it. A model may put evidence on the table. It may not sign.
+ * Why a model may argue but not sign: adr-0003. The distinction that makes it safe is
+ * between DECIDING and ARGUING — "where is a bug expensive here?" is not a fact about
+ * the code, it is a declaration of what the owner is willing to lose, and everything
+ * downstream hangs off it. `init` was the last command not following that shape.
  *
  * ## Evidence over assertion, enforced by the type
  *
  * A risk flag arrives with the paths that justify it, and a flag citing nothing is
- * DROPPED — not trusted, not warned about and kept. That is the same rule the rest
- * of the tool runs on: a receipt is a positive claim bound to its input, a lens may
- * not block without a calibration receipt, and a check that could not run is never a
- * pass. A confident `money: true` with no path behind it is exactly the assertion
- * this project refuses everywhere else, and it would arrive dressed as a finding.
+ * DROPPED — not trusted, not kept with a caveat. It IS reported, as
+ * `DISCARDED for lack of evidence`, which is harsher than a warning and is the point:
+ * a confident `money: true` with no path behind it would arrive dressed as a finding.
  *
  * ## The hermetic constraint (hard rule 9)
  *
