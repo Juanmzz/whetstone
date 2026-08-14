@@ -23,23 +23,56 @@
  *   the current name, and (once there is an old one) never the old one.
  */
 
-import { readdir, readFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { realpathSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, stat, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../src/core/paths.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const SRC = join(ROOT, "src");
 
+/**
+ * One directory, split into what can be recursed into and what can be READ.
+ *
+ * The whole point is `stat` rather than the Dirent. `readdir` reports a symlink as
+ * a symlink, so `isDirectory()` is false for one — and `wst prepare` leases a
+ * treehouse worktree whose `node_modules` is a symlink back to the main checkout.
+ * Every enumeration below handed that symlink to `readFile`, which died with
+ * EISDIR, so THIS FILE FAILED IN EVERY WORKTREE THE TOOL PREPARES. `test` is a
+ * blocking check, so every crewmate's gate failed before the crewmate wrote a line.
+ *
+ * Named once and shared by all three enumerations, because the first fix only
+ * repaired the root scan and left the same defect in `walkAll` one directory
+ * deeper — where it still crashed on a symlink under `src/` or `scripts/`.
+ * Resolving the link and asking what it points AT is also what keeps this honest:
+ * filtering on `e.isFile()` would fix the crash by silently dropping symlinked
+ * FILES, which is the allowlist mistake this file's own comments warn about.
+ *
+ * A broken link points at nothing and drops out of both lists. This test guards a
+ * rename, not the filesystem.
+ */
+export async function split(dir: string): Promise<{ dirs: string[]; files: string[] }> {
+  const dirs: string[] = [];
+  const files: string[] = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    try {
+      const info = await stat(full);
+      if (info.isDirectory()) dirs.push(full);
+      else if (info.isFile()) files.push(full);
+    } catch {
+      // Broken symlink, or something that vanished mid-scan. Nothing to read.
+    }
+  }
+  return { dirs, files };
+}
+
 async function walk(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files = await Promise.all(
-    entries.map(async (e) => {
-      const full = join(dir, e.name);
-      return e.isDirectory() ? walk(full) : [full];
-    }),
-  );
-  return files.flat().filter((f) => f.endsWith(".ts"));
+  const { dirs, files } = await split(dir);
+  const nested = await Promise.all(dirs.map(walk));
+  return [...files, ...nested.flat()].filter((f) => f.endsWith(".ts"));
 }
 
 /**
@@ -136,6 +169,51 @@ function codeLinesNaming(text: string, needle: string): { line: number; text: st
     .map((line, index) => ({ line: index + 1, text: line }))
     .filter((l) => asDirectory.test(l.text));
 }
+
+/**
+ * The enumeration is load-bearing in the same way the scanner below is, and it had
+ * no guard at all: CI runs `npm ci`, so `node_modules` is a real directory there
+ * and `isDirectory()` answered correctly. The bug only appeared in a worktree
+ * `wst prepare` leased — which is to say, only where a crewmate works. Reverting
+ * the fix left CI green.
+ *
+ * These run against a temp directory rather than the repo, so they fail on the
+ * defect and not on whatever happens to be lying around the checkout.
+ */
+describe("splitting a directory into what can be read", () => {
+  const temp = async (): Promise<string> =>
+    realpathSync(await mkdtemp(join(tmpdir(), "wst-split-")));
+
+  it("treats a symlinked directory as a directory, not as a file to read", async () => {
+    // The exact shape treehouse produces: `node_modules` linked to another tree.
+    const dir = await temp();
+    await mkdir(join(dir, "real"), { recursive: true });
+    await symlink(join(dir, "real"), join(dir, "linked"));
+
+    const { dirs, files } = await split(dir);
+    expect(files).toEqual([]);
+    expect(dirs.map((d) => basename(d)).sort()).toEqual(["linked", "real"]);
+  });
+
+  it("still reads a symlinked FILE, which `isFile()` on the Dirent would have dropped", async () => {
+    // The other direction, and why this resolves the link instead of filtering on
+    // the Dirent. A config file symlinked into place is still a config file.
+    const dir = await temp();
+    await writeFile(join(dir, "real.md"), "x\n", "utf-8");
+    await symlink(join(dir, "real.md"), join(dir, "linked.md"));
+
+    const { files } = await split(dir);
+    expect(files.map((f) => basename(f)).sort()).toEqual(["linked.md", "real.md"]);
+  });
+
+  it("drops a broken symlink instead of throwing mid-scan", async () => {
+    const dir = await temp();
+    await symlink(join(dir, "gone"), join(dir, "dangling"));
+
+    const { dirs, files } = await split(dir);
+    expect([...dirs, ...files]).toEqual([]);
+  });
+});
 
 /**
  * The scanner is load-bearing: if it mis-parsed every file into one big comment,
@@ -260,14 +338,9 @@ describe("the old directory name is gone (ADR-0012)", () => {
   ];
 
   async function walkAll(dir: string): Promise<string[]> {
-    const entries = await readdir(dir, { withFileTypes: true });
-    const files = await Promise.all(
-      entries.map(async (e) => {
-        const full = join(dir, e.name);
-        return e.isDirectory() ? walkAll(full) : [full];
-      }),
-    );
-    return files.flat();
+    const { dirs, files } = await split(dir);
+    const nested = await Promise.all(dirs.map(walkAll));
+    return [...files, ...nested.flat()];
   }
 
   it("appears nowhere that is still live", async () => {
@@ -288,9 +361,7 @@ describe("the old directory name is gone (ADR-0012)", () => {
     // Naming the files to scan means a guard that only catches the drift someone
     // already thought of. Enumerating the root instead means the next config file
     // added there is covered on the day it lands, by nobody's decision.
-    for (const e of await readdir(ROOT, { withFileTypes: true })) {
-      if (!e.isDirectory()) files.add(join(ROOT, e.name));
-    }
+    for (const f of (await split(ROOT)).files) files.add(f);
     files.add(join(ROOT, "docs/PARALLEL.md"));
 
     const survivors: string[] = [];
