@@ -1,17 +1,28 @@
 /**
  * `wst triage` — composition root. Reads the diff and the rules, hands both to
  * the pure core, prints the answer. No classification decisions are made here.
+ *
+ * The rules come from `shell/sdd.ts`, the SAME loader `wst gate` uses, and that is
+ * load-bearing rather than tidy. This file used to carry its own, and the two agreed
+ * on the sentence in the comment and disagreed in the code: both fell back to the
+ * built-in defaults for a MISSING file, but this one also fell back for a file it
+ * could not READ. An unreadable `triage.yaml` therefore made `wst triage` report a
+ * tier derived from rules nobody wrote, while `wst gate` on the same repository
+ * exited 2 and said so.
+ *
+ * Two commands that disagree about a tier disagree about which checks apply, which
+ * makes the project's own rules decorative exactly where they matter.
  */
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
-import { loadRegistry, resolveDefinitionRoot } from "../shell/sdd.js";
+import {
+  loadRegistry,
+  loadTriageRules,
+  resolveDefinitionRoot,
+  type LoadedTriageRules,
+} from "../shell/sdd.js";
 import { parseNameStatus } from "../core/diff/parse.js";
-import { classify, DEFAULT_RULES, parseTriageRules, route } from "../core/triage/index.js";
-import type { TriageRule } from "../core/contracts.js";
-
-export const TRIAGE_RULES_FILE = "triage.yaml";
+import { classify, route } from "../core/triage/index.js";
 
 export interface TriageOptions {
   /** `git diff --name-status <range>`. Defaults to the working tree vs HEAD. */
@@ -19,30 +30,6 @@ export interface TriageOptions {
   readonly json?: boolean;
   /** Print the rule reason for every file, not just the one that set the tier. */
   readonly why?: boolean;
-}
-
-interface RuleSource {
-  readonly rules: readonly TriageRule[];
-  readonly origin: string;
-}
-
-/**
- * A missing `.wst/triage.yaml` is NOT an error: the built-in defaults are the
- * same ruleset, and a project that has not written one yet should still be
- * triaged rather than crash. A malformed one IS an error — falling back there
- * would silently ignore rules someone deliberately wrote.
- */
-async function loadRules(definitionRoot: string): Promise<RuleSource> {
-  const path = join(definitionRoot, TRIAGE_RULES_FILE);
-
-  let text: string;
-  try {
-    text = await readFile(path, "utf-8");
-  } catch {
-    return { rules: DEFAULT_RULES, origin: "built-in defaults" };
-  }
-
-  return { rules: parseTriageRules(text, path), origin: path };
 }
 
 /**
@@ -61,11 +48,11 @@ export async function runTriage(
   const repoRoot = (await git.repoRoot()) ?? cwd;
   const range = opts.range ?? "HEAD";
 
-  let source: RuleSource;
+  let source: LoadedTriageRules;
   let registry;
   try {
     const root = await resolveDefinitionRoot(repoRoot);
-    [source, registry] = await Promise.all([loadRules(root), loadRegistry(root)]);
+    [source, registry] = await Promise.all([loadTriageRules(root), loadRegistry(root)]);
   } catch (cause) {
     // Same posture as `wst check`: unloadable configuration means an unclassified
     // change, and the whole point is that this cannot happen quietly.

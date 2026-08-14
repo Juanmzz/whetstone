@@ -175,11 +175,28 @@ describe("wst triage", () => {
     expect(String(json()["rules"])).toContain("triage.yaml");
   });
 
+  it("fails loudly on rules that exist and cannot be READ, not just cannot be parsed", async () => {
+    // The narrower half of the same rule, and the half that diverged. A missing
+    // file is a legitimate fallback — the defaults are the same ruleset and a
+    // project that has not written one should still be triaged. An UNREADABLE one
+    // is not: the rules exist, somebody wrote them, and answering from the
+    // defaults reports a tier from a ruleset nobody chose.
+    //
+    // A directory where the file belongs, because `readFile` fails with EISDIR on
+    // every platform and for every user. A `chmod 000` file is readable by root,
+    // so the fixture would pass in a container and prove nothing.
+    const dir = await repo({ triage: null });
+    await mkdir(join(dir, ".wst/triage.yaml"), { recursive: true });
+
+    expect(await runTriage({ range: "HEAD" }, dir)).toBe(1);
+    expect(stderr()).toMatch(/triage configuration failed to load/);
+  });
+
   it("agrees with the gate about the tier of the same change", async () => {
-    // The two commands load the rules through DIFFERENT code paths —
-    // `commands/triage.ts` has its own loader, `commands/gate.ts` goes through
-    // `shell/sdd.ts`. `sdd.ts`'s header says they must route identically: two
-    // commands that disagree about a tier disagree about which checks apply.
+    // Both commands now load through `shell/sdd.ts`. They used to take different
+    // paths — `commands/triage.ts` had its own loader — and that is exactly how
+    // the EISDIR case above came to answer `light` here and exit 2 in the gate.
+    // Two commands that disagree about a tier disagree about which checks apply.
     //
     // The diff touches `migrations/`, which the project calls strict and the
     // built-in defaults do not mention — so a command that quietly fell back to
