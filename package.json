@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:adrs": "tsx scripts/check-adrs.ts",
+    "check:adr-refs": "tsx scripts/check-adr-refs.ts",
     "check:docs": "tsx scripts/check-docs-fresh.ts",
     "check:skills": "tsx scripts/check-skills.ts",
     "untested": "tsx scripts/untested.ts",

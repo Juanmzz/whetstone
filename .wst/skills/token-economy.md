@@ -44,8 +44,8 @@ same outcome.
   ChytaPay-specifics (engram/`mem_get_observation`, `skill_resolution` fallbacks, the chyta
   orchestrator/delegation-harness skill names, plugin-overlay stitching, haiku/sonnet/opus
   tiers). Kept rules T1–T10 and their IDs. Generalized: engram → "memory substrate"
-  ([[0001-memory-is-an-interface]]), overlay stitching → emitter
-  ([[0002-config-emission-is-a-pluggable-renderer]]), delegation-harness → the [[delegation]]
+  (`adr-0001`), overlay stitching → emitter
+  (`adr-0002`), delegation-harness → the [[delegation]]
   skill. No signal receipts yet. Reformatted to SPEC §3.3: consolidated T1–T10 from
   individual H2 headings into a single `## Rules` numbered list. Removed the leaked
   "overlay" mechanic from T1 ("config/overlay file" → "config file"). Shortened T2, which

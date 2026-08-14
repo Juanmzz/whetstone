@@ -77,11 +77,12 @@ rules:
       Commander wiring only, zero logic, so that the CLI surface stays
       swappable without touching the engine.
 
-  - glob: ".wst/memory/decisions/**"
+  - glob: ".wst/memory/decisions.md"
     tier: light
     reason: >-
-      ADR bodies. Accepted text is never rewritten (ADR-0007) — it is superseded
-      — so the risk lives in the decision itself, not in the prose.
+      The decision record. Accepted text is never rewritten (ADR-0019) — it is
+      superseded, or compacted by selection — so the risk lives in the decision
+      itself, not in the prose.
 
   - glob: "{README,VISION,AGENTS,CLAUDE}.md"
     tier: light

@@ -326,7 +326,9 @@ describe("the old directory name is gone (ADR-0012)", () => {
 
   const EXEMPT = [
     // Accepted prose and append-only evidence. See the block comment above.
-    `${DEFINITION_DIR}/memory/decisions/`,
+    // adr-0012's entry has to name the old directory: the decision IS the rename,
+    // and an entry that talks around it records nothing.
+    `${DEFINITION_DIR}/memory/decisions.md`,
     `${DEFINITION_DIR}/memory/proposals/`,
     `${DEFINITION_DIR}/memory/signals.jsonl`,
     `${DEFINITION_DIR}/memory/retro-log.md`,

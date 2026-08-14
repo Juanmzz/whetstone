@@ -37,7 +37,7 @@ Cross-checked an external research digest against Whetstone's design. Outcome:
   + human review on critical paths (payments/auth)"; `delegation` ↔ "isolate context +
   Result Contracts + atomic-inline vs orchestrator-for-multi-file"; `doc-locations` ↔
   hierarchical `AGENTS.md`/`CLAUDE.md` config in VCS. The four skills are the right four.
-- **Reinforced [[0003-positioning-human-gated-not-autonomous]].** The digest documents teams
+- **Reinforced `adr-0003`.** The digest documents teams
   letting agents AUTONOMOUSLY write learned rules to persistent memory (Reflexion/Engram
   style), and in the same breath names the failure mode (`memory-poisoning`) and the open
   gap ("validating self-critiques"). That gap is exactly what Whetstone's human gate closes

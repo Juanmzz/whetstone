@@ -1,6 +1,6 @@
 ---
 id: recording
-version: 1
+version: 2
 status: active
 ---
 # Recording
@@ -11,9 +11,11 @@ never a silent write.
 
 ## Rules
 
-1. [RC1] Record a **decision** (an ADR in `memory/decisions/`) when a choice with real tradeoffs
-   is resolved: architecture, data model, API contract, tooling, or any design fork where the
-   losing option was plausible. Propose it; the human confirms.
+1. [RC1] Record a **decision** (an entry in `memory/decisions.md`) when a choice with real
+   tradeoffs is resolved AND the losing option was plausible enough that someone would propose
+   it again in three months. Write down **what was rejected and why** — that is the part git
+   cannot reconstruct, since a rejected option has no commit. No rejected alternative means no
+   decision: it is a commit message. Propose it; the human confirms.
 2. [RC2] Record an **signal** (a line in `memory/signals.jsonl`) when something went wrong or
    nearly did: a correction from the human, a bug's root cause, a triage miss, a slip
    (wrong cwd, scope creep, a test skipped on a strict path).
@@ -26,8 +28,11 @@ never a silent write.
 5. [RC5] Do **not** record what is re-derivable: code (it's in git), file trees, command output,
    anything a `grep` would reconstruct. Record the WHY and the non-obvious.
 6. [RC6] Corrections are **new entries, never edits.** Signals are append-only (SPEC §2.1); a
-   fix to an earlier record is a new line with `supersedes`. Decisions supersede by status, not by
-   overwrite.
+   fix to an earlier record is a new line with `supersedes`. A decision changes by moving its
+   `status` — `proposed` → `accepted` → `superseded by adr-NNNN` — never by rewriting the prose
+   above it, and later commentary goes in a NEW entry rather than into an old one's voice.
+   **Compacting an entry is selecting, not editing:** dropping a paragraph is allowed, rewording
+   one into something the decision did not say is not.
 7. [RC7] Tag each signal with `rule_affected` when you can — that is the signal the retro groups
    on. Empty is allowed (the retro will attempt to classify it).
 8. [RC8] **Session close:** before declaring work done, write a session summary (decisions made,
@@ -42,11 +47,16 @@ recall never replaces the trigger rules; it sits on top of them (ADR-0001).
 
 ## Changelog
 
+- v2 (2026-08-14, adr-0017 + adr-0019): [RC1] gains the bar — a decision needs a plausible
+  rejected alternative, and what it rejected is what gets written down; decisions live as
+  entries on `memory/decisions.md`, not as files in a directory. [RC6] states the status
+  transitions and the compaction rule: selecting is allowed, rewording is not, and later
+  commentary is a new entry.
 - v1 (2026-07-11, init): generated from the ChytaPay Engram save protocol ("When to Save" +
   session-summary gate). Stripped ChytaPay-specifics (engram tool names, the `chytapay-workspace`
   project anchor, topic-key scheme, sensitivity tags). Kept the proactive-save triggers and the
   session-close summary. ADDED the explicit human gate on every write — the `memory-poisoning`
-  guard (per [[0003-positioning-human-gated-not-autonomous]], and the two questions it leaves open:
+  guard (per `adr-0003`, and the two questions it leaves open:
   what validates a signal BEFORE it may amend a rule, and what stops a hallucinated signal becoming
-  a rule diff a human rubber-stamps). Made backend-agnostic per [[0001-memory-is-an-interface]].
+  a rule diff a human rubber-stamps). Made backend-agnostic per `adr-0001`.
   No signal receipts yet.
