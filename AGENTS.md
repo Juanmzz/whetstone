@@ -90,7 +90,7 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under `chytapay-workspace`.
 
-## Status — branch `main` · 16 ADRs · 49 signals · 10 commands
+## Status — branch `main` · 17 ADRs · 50 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -112,11 +112,12 @@ built under that waiver and removed by ADR-0009.
 
 ### Known weaknesses, stated plainly
 
-- **46 of 49 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
-  the human about an incident that actually happened). **None carries `source: "gate"`.** The
-  emitter works — a CI run on 2026-08-13 emitted `sig-70ad13db` — but the runner is ephemeral and
-  nothing brings the signal back, so it evaporated. The gap is not "the gate never fails"; it is
-  that where the gate really runs, nothing persists what it observed.
+- **46 of 50 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
+  the human about an incident that actually happened). **`sig-a9ff00c4` is the first to carry `source: "gate"`** — written on
+  2026-08-14 when `docs-fresh` blocked a change that added an ADR without updating this line.
+  Before it, CI emitted `sig-70ad13db` on an ephemeral runner and it evaporated. The gap was
+  never "the gate does not fail"; it was that where the gate really runs, nothing persisted
+  what it observed.
 - **The lens is uncalibrated at v4**, so the differentiator is advisory.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
