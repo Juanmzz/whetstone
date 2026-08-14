@@ -321,11 +321,16 @@ The form of this directory is borrowed from \`mattpocock/skills\` (MIT licensed)
 whose \`.out-of-scope/\` is the same idea.
 `;
 
-export const DECISIONS_MD = `---
+export interface DecisionsMdInput {
+  /** ISO date, from the clock. The page is written, not filled in. */
+  readonly date: string;
+}
+
+export function renderDecisionsMd(input: DecisionsMdInput): string {
+  return `---
 id: decisions
-ts: YYYY-MM-DD
+generated: ${input.date}
 status: active
-origin: []
 ---
 # Decisions
 
@@ -351,6 +356,7 @@ in a new entry, not into an old one's voice.
 **The bar for writing one at all:** would someone propose the losing option again in
 three months? If not, the commit message is enough.
 `;
+}
 
 export const CLAUDE_MD = `@AGENTS.md
 `;

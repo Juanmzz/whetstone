@@ -177,8 +177,9 @@ rules:
   - glob: "${DEFINITION_DIR}/memory/decisions.md"
     tier: light
     reason: >-
-      ADR bodies. Accepted text is never rewritten (ADR-0007) — it is superseded
-      — so the risk lives in the decision itself, not in the prose.
+      The decision record. Accepted text is never rewritten (ADR-0019) — it is
+      superseded, or compacted by selection — so the risk lives in the decision
+      itself, not in the prose.
 
   - glob: "{README,VISION,AGENTS,CLAUDE}.md"
     tier: light

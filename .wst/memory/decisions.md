@@ -58,12 +58,17 @@ server (no time axis, so `since` cannot be expressed).
 ### adr-0002 — the definition directory is the source; vendor files are rendered from it
 `accepted` · 2026-07-06
 
-Ruled out: deriving `.wst/` FROM a vendor file, and the mono-vendor emitter Whetstone
-generalises (ChytaPay's `bootstrap.mjs` writes `CLAUDE.md` only). Vendor files are always
-outputs, never inputs.
+Ruled out: deriving `.wst/` FROM a vendor file. Vendor files are always outputs, never
+inputs. Ruled out with it: staying mono-vendor — ChytaPay's `bootstrap.mjs` writes
+`CLAUDE.md` only, and Whetstone generalises it behind pluggable emitters rather than
+adopting it.
 
-*By adr-0017's bar this would be a commit message today: no alternative was seriously weighed,
-because nobody proposed the other direction. It is kept because five other decisions cite it.*
+Settled here and nowhere else: the V0 emitter writes **both `CLAUDE.md` and `AGENTS.md`**,
+which covers most agents for the least surface. Additional emitters (`.cursor/rules`, …)
+sit behind the same seam.
+
+*By adr-0017's bar the first paragraph would be a commit message today: nobody proposed the
+other direction. It is kept because five other decisions cite it.*
 
 ### adr-0003 — human-gated auditable evolution, not autonomous optimization
 `accepted` · 2026-07-06
@@ -94,7 +99,11 @@ adr-0008 narrowed the ordering rule's scope, not its reasoning: discharged for `
 Rejected: building Whetstone *as* a Claude Code plugin. It would vendor-lock the tool itself,
 which is the thesis inverted; a plugin may be a distribution wrapper, never the identity.
 Rejected: spraying code-tier artifacts at init, which copies a mature workspace's shape
-without the knowledge that earned it.
+without the knowledge that earned it. Rejected implicitly, and worth stating: parity across
+vendors. Cross-vendor is FULL at the markdown tier and PARTIAL at the code tier — each vendor
+gets the richest apparatus it can natively express and the emitter degrades where a tool has
+no equivalent (Cursor gets no hooks). Claude Code is the first code-tier target because its
+apparatus is the richest.
 
 The 2026-07-14 amendment rules out the over-reading of that second rejection: a *foundational*
 hook compiled from triage rules the human authored minutes ago is not a guess, so it may ship
