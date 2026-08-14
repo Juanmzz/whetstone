@@ -1,7 +1,7 @@
 ---
 id: adr-0007
 ts: 2026-07-14
-status: accepted
+status: superseded
 supersedes: null
 rules_affected: ["retro.md"]
 ---
