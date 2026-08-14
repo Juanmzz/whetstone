@@ -7,6 +7,7 @@
  * check-registry schema into the skeleton before that schema is decided.
  */
 
+import { resolve } from "node:path";
 import { DEFINITION_DIR, legacyDirectoryMessage } from "../paths.js";
 
 /** The `claude` build the adapter's flag set was measured against. */
@@ -90,9 +91,24 @@ export interface HookFacts {
   readonly whetstoneHooksPresent: boolean;
 }
 
-/** Whether the pre-push gate is actually in the path. */
-export const hooksArmed = (hooks: HookFacts): boolean =>
-  hooks.configuredPath === WHETSTONE_HOOKS_PATH;
+/**
+ * Whether the pre-push gate is actually in the path.
+ *
+ * RESOLVED, not compared as a string. `git config core.hooksPath .githooks` and
+ * `core.hooksPath /repo/.githooks` arm the identical hook, and the string form
+ * reported the second as unarmed while it was demonstrably firing (`sig-4b3339fb`).
+ * The lie compounds: the warning below then tells the reader that arming Whetstone
+ * would disable whatever owns the path, when the thing that owns it IS Whetstone.
+ *
+ * `resolve` and not `realpath`: this file is pure, and the reported failure is
+ * absolute-versus-relative. A hooks directory reached through a symlink would still
+ * read as unarmed — narrower than the bug, and honest about it.
+ */
+export const hooksArmed = (hooks: HookFacts, repoRoot: string | null): boolean => {
+  if (hooks.configuredPath === null) return false;
+  const from = repoRoot ?? ".";
+  return resolve(from, hooks.configuredPath) === resolve(from, WHETSTONE_HOOKS_PATH);
+};
 
 export interface StatusReport {
   readonly facts: StatusFacts;
@@ -126,7 +142,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   // A gate that only runs when invoked is a gate that will be forgotten. Always a
   // warning, never a problem: a fresh clone is not broken, it is just unarmed — and
   // a repo that deliberately uses husky is not broken either.
-  if (!hooksArmed(facts.hooks)) {
+  if (!hooksArmed(facts.hooks, facts.repoRoot)) {
     const { configuredPath, whetstoneHooksPresent } = facts.hooks;
 
     if (configuredPath !== null) {
@@ -234,7 +250,7 @@ export function renderStatusReport(
     // Names the owner when it is not us. "NOT active" alone reads as "nothing is
     // guarding this repo", which is the opposite of the truth on a husky repo.
     `  pre-push  ${
-      hooksArmed(facts.hooks)
+      hooksArmed(facts.hooks, facts.repoRoot)
         ? "active"
         : facts.hooks.configuredPath !== null
           ? `NOT active (\`${facts.hooks.configuredPath}\` owns core.hooksPath)`
