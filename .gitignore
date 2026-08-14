@@ -18,6 +18,11 @@ _design/
 # same trap as trusting a version string for identity.
 .wst/checks/_index.json
 
+# Agent worktrees created by the harness. Embedded git repositories, so a `git add -A`
+# sweeps them into a commit as gitlinks — which is what happened on 2026-08-12 before
+# someone caught it. `git worktree remove` is how they go, not `rm`.
+.claude/worktrees/
+
 # Per-worktree lane marker, read by .claude/hooks/lane-guard.mjs. Belongs to the
 # worktree, not to the branch — committing it would scope every clone to one lane.
 .wst-lane
