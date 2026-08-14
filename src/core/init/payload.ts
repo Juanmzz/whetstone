@@ -50,11 +50,45 @@ const SKILL_BLURBS: Readonly<Record<string, string>> = {
   "xreview.md": "adversarial fresh-context review on high-stakes changes",
 };
 
-export function skillCopies(): readonly CopyRequest[] {
-  return SKILL_FILES.map((name) => ({
-    from: `skills/${name}`,
-    to: `${DEFINITION_DIR}/skills/${name}`,
-  }));
+/**
+ * @param texts what the shell read off Whetstone's own `skills/`, keyed by `from`.
+ *   Absent entries leave `contents` unset, which `auditSelfContained` reports as
+ *   unaudited rather than clean.
+ */
+/**
+ * A skill as it should land in someone else's repo.
+ *
+ * The rule travels; the argument that produced it does not. A changelog entry
+ * says "v4 (adr-0014, sig-0041)" — a decision and a signal that exist in
+ * Whetstone's record and in no bootstrapped repo, so every line of it is a
+ * dangling reference under ADR-0004. It is replaced by one line naming where the
+ * rule came from, and the target repo's own retro grows the log from there.
+ *
+ * The frontmatter stays: `version:` is what an update compares against.
+ */
+export function payloadSkill(text: string): string {
+  const at = text.indexOf("\n## Changelog");
+  if (at === -1) return text;
+
+  const version = /^version:\s*(\d+)/m.exec(text)?.[1] ?? "1";
+  return (
+    `${text.slice(0, at)}\n## Changelog\n\n` +
+    `- v${version} (init): copied from the Whetstone payload. Entries below this one are ` +
+    `this project's own — what changed, and the signals that earned it.\n`
+  );
+}
+
+export function skillCopies(texts?: ReadonlyMap<string, string>): readonly CopyRequest[] {
+  return SKILL_FILES.map((name) => {
+    const from = `skills/${name}`;
+    const raw = texts?.get(from);
+    const contents = raw === undefined ? undefined : payloadSkill(raw);
+    return {
+      from,
+      to: `${DEFINITION_DIR}/skills/${name}`,
+      ...(contents === undefined ? {} : { contents }),
+    };
+  });
 }
 
 /**

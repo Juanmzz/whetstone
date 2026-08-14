@@ -58,6 +58,23 @@ const DENY: readonly DenyRule[] = [
     why: "Whetstone's lane brief for its own contributors",
   },
   {
+    // `adr-0000` is deliberately absent: it is the id a target repo's first
+    // decision takes, so a payload naming it is teaching, not citing.
+    pattern: /\b[Aa][Dd][Rr]-(?!0000\b)\d{4}\b/g,
+    why:
+      "a decision id from WHETSTONE's record. A bootstrapped repo's decision page starts " +
+      "empty, so the citation resolves to nothing — state the rule instead of pointing at it",
+  },
+  {
+    pattern: /\bSPEC\s*§\s*[\d.]+/g,
+    why: "a section of Whetstone's own SPEC, which does not travel",
+  },
+  // DELIBERATELY ABSENT: `sig-NNNN`. A signal id in the payload is never a
+  // pointer a reader is expected to follow — it appears as a label beside its
+  // own description ("`sig-0002` (the emitter wrote both files byte-identical)"),
+  // so the sentence still carries its meaning where the id resolves to nothing.
+  // A decision id is the opposite: "per `adr-0001`" is only the pointer.
+  {
     pattern: /\blanes\.yaml\b/g,
     why: "Whetstone's own lane ownership file",
   },
@@ -107,7 +124,17 @@ export function auditSelfContained(input: AuditInput): readonly SelfContainmentV
 
   const violations: SelfContainmentViolation[] = [];
 
-  for (const file of input.files) {
+  // Generated files, then the copies. A copied skill is prose written for THIS
+  // repo and shipped unchanged into another one, which makes it the likeliest
+  // place for a dangling reference — and it was the one place this never read.
+  const audited: readonly GeneratedFile[] = [
+    ...input.files,
+    ...input.copies.flatMap((copy) =>
+      copy.contents === undefined ? [] : [{ path: copy.to, contents: copy.contents }],
+    ),
+  ];
+
+  for (const file of audited) {
     const lines = file.contents.split("\n");
     lines.forEach((text, index) => {
       const line = index + 1;
@@ -141,6 +168,19 @@ export function auditSelfContained(input: AuditInput): readonly SelfContainmentV
   }
 
   return violations;
+}
+
+/**
+ * Copies whose text never arrived, so nothing about them was verified.
+ *
+ * Deliberately NOT a violation. A dangling reference is a defect in the payload;
+ * an unread file is the audit failing to run, and merging the two would either
+ * block a legitimate init (a published package without its skills) or let
+ * "nothing was examined" render as "nothing was wrong" — hard rule 3, at the
+ * level of one audit.
+ */
+export function unauditedCopies(copies: readonly CopyRequest[]): readonly string[] {
+  return copies.filter((c) => c.contents === undefined).map((c) => c.to);
 }
 
 /** One readable block, for a thrown error or a CLI report. */
