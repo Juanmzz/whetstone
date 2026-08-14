@@ -404,8 +404,13 @@ template nobody reads, and it cannot be amended from evidence.
   minimum, and `docs/field-report-chytapay-2026-08.md` — a run against a real foreign repo —
   says what belongs in it:
 
-  **`triage.yaml` and `wst.yaml`.** The report's own "what worked" section credits triage with
-  classifying the real diff correctly. Everything else hangs off it.
+  **`triage.yaml`, and `wst.yaml` only once something reads it.** The report's "what worked"
+  section credits triage with classifying the real diff correctly; everything else hangs off it.
+  `wst.yaml` was in this list until it was checked: it is written by `plan.ts:141` and **read by
+  nothing** — not a command, not an adapter, not a hook. Its only other readers are two asserts
+  in its own test. So the file that declares which skills are active is consumed by nothing, in
+  every mode, which is a stronger version of the field report's §B and independent of it. It
+  belongs in the minimum when it has a consumer, and is an example of the problem until then.
 
   **One or two deterministic checks, seeded at `warn` with the note saying why.** §C is the
   evidence: two of the three checks seeded there were actively wrong. `lint` ran

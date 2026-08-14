@@ -22,8 +22,11 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 4. **`.wst/memory/decisions.md`** — every decision by anchor id, carrying what it ruled out.
    Open it when you are about to change one, not to learn how the system works.
 5. **`docs/field-report-chytapay-2026-08.md`** — the only run against a real foreign repo.
-   Read it BEFORE changing what `init` writes; it is the evidence, and it sat unused for two
-   days while `init` was being redesigned around guesses.
+   Read it BEFORE changing what `init` writes. Checked against `agilpay-backend` on
+   2026-08-14: five of seven verifiable claims hold verbatim, two do not and carry an inline
+   **Correction** block. Both failures are the same shape — the report citing outside evidence
+   that flattered its own argument — so read a `>` block as the fact and the prose around it as
+   the claim.
 6. **`docs/PARALLEL.md`** + **`.wst/lanes.yaml`** — if you are a crewmate in a lane.
 
 ## The commands
