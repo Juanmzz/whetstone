@@ -4,16 +4,17 @@
  *
  * ## Why the judge proposes and never decides
  *
- * Why a model may argue but not sign: adr-0003. `init` was the last command not
- * following that shape, so a project's definition was either typed by a tired human
- * or not written at all.
+ * Why a model may argue but not sign: adr-0003. The distinction that makes it safe is
+ * between DECIDING and ARGUING — "where is a bug expensive here?" is not a fact about
+ * the code, it is a declaration of what the owner is willing to lose, and everything
+ * downstream hangs off it. `init` was the last command not following that shape.
  *
  * ## Evidence over assertion, enforced by the type
  *
  * A risk flag arrives with the paths that justify it, and a flag citing nothing is
- * DROPPED — not trusted, not warned about and kept. Dropping it silently looks
- * harsher than warning, and is the point: a confident `money: true` with no path
- * behind it would arrive dressed as a finding.
+ * DROPPED — not trusted, not kept with a caveat. It IS reported, as
+ * `DISCARDED for lack of evidence`, which is harsher than a warning and is the point:
+ * a confident `money: true` with no path behind it would arrive dressed as a finding.
  *
  * ## The hermetic constraint (hard rule 9)
  *

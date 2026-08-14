@@ -33,7 +33,12 @@
  * measurement"* — addressed to someone who has to remember it. A hash does not need
  * to be remembered.
  *
- * Why a re-derivable receipt rather than a report: adr-0011.
+ * ## Portability is the product
+ *
+ * Comparable tools (Stet, RepoGauge) measure agents well and emit a REPORT. A report
+ * is an assertion: you believe it because you believe whoever ran it. A receipt is
+ * re-derivable — hand it over with the fixture set and the other side recomputes the
+ * hashes. That is the difference worth having, not "we measure agents".
  */
 
 import { createHash } from "node:crypto";
