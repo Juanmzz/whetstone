@@ -67,7 +67,9 @@ format is in `.wst/architecture.md`.
    auth, invalid output) is the gate being broken, not a verdict. Never merge the two, and never
    let "no checks ran" share a message with "all checks passed".
 4. **Strict tier = full TDD, RED first** — `src/core/**` and anything propagating to
-   bootstrapped projects.
+   bootstrapped projects. RED first is the discipline; **separate RED and GREEN commits are
+   not.** One commit per coherent change, with the red output quoted in the commit body as
+   the evidence the test came first ([TD1]/[TD2]).
 5. **Lane boundaries are enforced, not requested.** `lane-guard.mjs` DENIES out-of-lane writes.
    If it blocks you, the split is wrong — say so rather than working around it.
 6. **Decisions change by ADR** (ADR-0007). Accepted prose is never rewritten.
@@ -90,7 +92,7 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under `chytapay-workspace`.
 
-## Status — branch `main` · 17 ADRs · 50 signals · 10 commands
+## Status — branch `main` · 17 ADRs · 51 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -105,14 +107,14 @@ built under that waiver and removed by ADR-0009.
   four skills, each carrying the
   signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **49 signals**, 27 with `resolved_by`. Two retros. Four skills amended: `tdd-discipline` v3,
-  `xreview` v3, `delegation` v3, `voice` v2.
+- **51 signals**, 27 with `resolved_by`. Three retros. Six skills amended: `tdd-discipline` v6,
+  `delegation` v4, `doc-locations` v3, `lazy` v2, `xreview` v3, `voice` v2.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
   re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
 
 ### Known weaknesses, stated plainly
 
-- **46 of 50 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
+- **47 of 51 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
   the human about an incident that actually happened). **`sig-a9ff00c4` is the first to carry `source: "gate"`** — written on
   2026-08-14 when `docs-fresh` blocked a change that added an ADR without updating this line.
   Before it, CI emitted `sig-70ad13db` on an ephemeral runner and it evaporated. The gap was
