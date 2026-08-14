@@ -15,11 +15,12 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 ## Read first
 
-1. **`.wst/architecture.md`** — `.wst`=data / engine=code / LLM=judgment, FCIS, the 7 layers,
-   the verdict contract, the measured `claude -p` invocation.
+1. **`.wst/architecture.md`** — the single statement of what is true now: the three parts, the
+   loop, the layers, FCIS, the check registry, the measured `claude -p` invocation.
 2. **`.wst/constitution.md`** — governance and the seven non-negotiables.
 3. **`.wst/triage-rules.md`** — which discipline a change earns. Read BEFORE editing.
-4. **`.wst/memory/decisions/`** — ADRs 0001–0008. Read the file, not a summary.
+4. **`.wst/memory/decisions.md`** — every decision by anchor id, carrying what it ruled out.
+   Open it when you are about to change one, not to learn how the system works.
 5. **`docs/PARALLEL.md`** + **`.wst/lanes.yaml`** — if you are a crewmate in a lane.
 
 ## The commands
@@ -49,7 +50,7 @@ format is in `.wst/architecture.md`.
 |---|---|
 | `.wst/` | The definition layer. Source of truth. |
 | `.wst/checks/` · `lanes.yaml` · `triage.yaml` | Registry, lane ownership, triage rules |
-| `.wst/memory/` | ADRs, `signals.jsonl`, `retro-log.md`, `proposals/` |
+| `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`, `proposals/` |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
 | `src/shell/` | Thin adapters: git, claude, treehouse, sdd, signals, events, receipts, plugin |
@@ -72,7 +73,11 @@ format is in `.wst/architecture.md`.
    the evidence the test came first ([TD1]/[TD2]).
 5. **Lane boundaries are enforced, not requested.** `lane-guard.mjs` DENIES out-of-lane writes.
    If it blocks you, the split is wrong — say so rather than working around it.
-6. **Decisions change by ADR** (ADR-0007). Accepted prose is never rewritten.
+6. **Decisions change by status, never by rewrite** (ADR-0007, as ADR-0019 inherits it), and live
+   as anchors in `.wst/memory/decisions.md` — one entry, carrying what it ruled out, its status
+   and its date. A change with no seriously weighed alternative is a commit message, not a
+   decision (ADR-0017). Compacting an entry is selecting, not editing (ADR-0019); the full text
+   is in git (`git log --diff-filter=D -- .wst/memory/decisions/`).
 7. **The payload must be self-contained.** Anything `init` writes into a target repo may not
    reference Whetstone's own files — it dangles there (ADR-0004). Enforced by a reference-closure
    check that refuses to emit a plan naming a path it does not create.
@@ -103,12 +108,12 @@ built under that waiver and removed by ADR-0009.
 - **The loop is closed and self-hosting.** `wst gate` verifies this repo's own changes and now
   writes its own signals; `wst run` dispatched a crewmate whose work was gated before a human saw
   it — that command is now `wst prepare` and gates nothing (ADR-0014), so enforcement on a
-  crewmate's work is the push and CI; `wst retro` has run twice, producing six amendments across
-  four skills, each carrying the
-  signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
+  crewmate's work is the push and CI; `wst retro` has run three times, producing amendments
+  across seven of the eight skills, each carrying the signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **51 signals**, 27 with `resolved_by`. Three retros. Six skills amended: `tdd-discipline` v6,
-  `delegation` v4, `doc-locations` v3, `lazy` v2, `xreview` v3, `voice` v2.
+- **51 signals**, 27 with `resolved_by`. Three retros. Seven of eight skills amended:
+  `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
+  `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
   re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
 

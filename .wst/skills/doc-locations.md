@@ -105,6 +105,6 @@ Defaults when the project says nothing:
   decision-table shape, and the promotion/ambiguity/override rules plus anti-patterns.
   Generalized: artifact language is set by the project's constitution — this file no longer
   hard-codes Spanish/English — and Engram rows became "memory substrate"
-  ([[0001-memory-is-an-interface]]). No signal receipts yet. Reformatted to SPEC §3.3:
+  (`adr-0001`). No signal receipts yet. Reformatted to SPEC §3.3:
   consolidated DL1–DL5 into a single `## Rules` list; restored a generalized version of the
   dropped ChytaPay rule against reorganizing personal-doc subfolders without asking (DL6).

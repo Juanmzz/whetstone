@@ -104,7 +104,7 @@ summarize(scope)    -> markdown      # scope: {since?, rule?, type?}          [c
 
 `save` and `search` are adapter-owned. `summarize` is **core-owned**: the core provides a
 default `render(search(scope))` over a markdown template, because no surveyed backend exposes
-prose synthesis as a first-class call (see [[0001-memory-is-an-interface]] amendment). An
+prose synthesis as a first-class call (see `adr-0001` amendment). An
 adapter overrides `summarize` only if it owns native synthesis. Adapters may add capabilities
 (semantic search) but the call-site only depends on these three. **The core must be fully
 functional with the file backend alone.**

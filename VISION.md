@@ -62,7 +62,7 @@ The loop: **use → record → distill → amend.** That is the moat.
   triage-rules.md          # risk classification for changes
   checks/                  # the check registry — one file per check
   memory/
-    decisions/             # ADRs: one markdown file per decision
+    decisions.md           # every decision, by anchor id — what it ruled out, and why
     signals.jsonl          # append-only structured signal log
   skills/                  # versioned workflow rules, each with a changelog
 ```
@@ -83,7 +83,7 @@ The loop: **use → record → distill → amend.** That is the moat.
   it, and the LLM boundary is one port with swappable adapters. Claude Code gets first-class
   support (hooks, commands).
 
-> **Changed 2026-08-07 ([ADR-0008](./.wst/memory/decisions/0008-engine-supersedes-woz.md)).** This
+> **Changed 2026-08-07 ([ADR-0008](./.wst/memory/decisions.md#adr-0008)).** This
 > section previously read *"it owns the feedback loop, not the forward workflow"* and disclaimed
 > orchestration outright. Whetstone now conducts the task end to end (`init → run → gate → PR →
 > retro`), because a gate that cannot dispatch or annotate is only half a verification layer. The
@@ -117,7 +117,7 @@ The emitter compiles `.wst/` into per-vendor apparatus — hooks first (a projec
 `strict-path-guard`, derived from `triage-rules.md`), then commands, earned via the retro.
 
 **M3 — The retro loop (v0.3)** ✅ *(first pass)*
-Pattern detection over `signals.jsonl` + `decisions/`, apparatus recommendation, human approval,
+Pattern detection over `signals.jsonl` + `decisions.md`, apparatus recommendation, human approval,
 changelog with signal receipts. Validated in the wild — a real project's signals produced the first
 earned rule. Still N=1; repeatability is unproven.
 

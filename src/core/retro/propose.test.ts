@@ -68,7 +68,7 @@ describe("validateRecommendation — the anti-poisoning gate", () => {
 
   it("allows an ADR flip, since ADR-0007 makes decisions retro-amendable", () => {
     const r = validateRecommendation(
-      rec({ kind: "flip-adr", target: ".wst/memory/decisions/0004-x.md" }),
+      rec({ kind: "flip-adr", target: ".wst/memory/decisions.md" }),
       log,
     );
     expect(r.ok).toBe(true);

@@ -239,15 +239,16 @@ Example:
 {"id":"sig-0001","ts":"2026-01-15T14:30:00Z","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at the repo root instead of the package directory.","branch":"feat/import-csv","rule_affected":["skills/delegation.md"]}
 \`\`\`
 
-## \`decisions/\` — one ADR per file (\`0001-slug.md\`)
+## \`decisions.md\` — one anchored entry per decision
 
-Front-matter: \`id\`, \`ts\`, \`status\` (\`proposed\` | \`accepted\` | \`superseded\`),
-\`supersedes\`, \`rules_affected\`. Body: Context, Decision, Consequences. Start from
-\`_TEMPLATE.md\`.
+\`### adr-NNNN — the decision\`, then a meta line carrying status, date and any signals
+that earned it, then **what was rejected and why**. That last part is the reason the
+record exists: a rejected option leaves no commit, so git cannot reconstruct it. The
+page itself says the rest.
 
-**Accepted text is never rewritten.** A decision that turned out wrong is superseded by
-a new ADR that says so. The value of the record is that it shows what was believed at
-the time, and editing it destroys exactly that.
+**Accepted text is never rewritten.** A decision that turned out wrong is superseded —
+its status moves, its prose stays. The value of the record is that it shows what was
+believed at the time, and editing it destroys exactly that.
 
 ## \`out-of-scope/\` — what was deliberately refused
 
@@ -276,7 +277,7 @@ it enforces against you is not a standard.
  * The fourth memory artifact (ADR-0012).
  *
  * `memory/` records what went wrong (`signals.jsonl`), what was decided
- * (`decisions/`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
+ * (`decisions.md`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
  * recorded what was deliberately REFUSED, and a refusal with no file gets
  * re-proposed every six months with the argument re-derived from scratch — by a
  * fresh agent that has no way to know the conversation already happened.
@@ -320,31 +321,42 @@ The form of this directory is borrowed from \`mattpocock/skills\` (MIT licensed)
 whose \`.out-of-scope/\` is the same idea.
 `;
 
-export const ADR_TEMPLATE = `---
-id: adr-0000
-ts: YYYY-MM-DD
-status: proposed        # proposed | accepted | superseded
-supersedes: null
-rules_affected: []
+export interface DecisionsMdInput {
+  /** ISO date, from the clock. The page is written, not filled in. */
+  readonly date: string;
+}
+
+export function renderDecisionsMd(input: DecisionsMdInput): string {
+  return `---
+id: decisions
+generated: ${input.date}
+status: active
 ---
-# <Decision, stated as a sentence in the present tense>
+# Decisions
 
-## Context
+One entry per decision, in the order they were taken. Each carries **only what was ruled
+out and why** — that is the part git cannot reconstruct, because a rejected option has no
+commit. What the decision made easier, and how it was implemented, are in the history.
 
-What forced this decision. The constraint, the conflict, or the thing that broke.
-Written so a reader in a year understands the pressure without having been there.
+Every entry opens with a meta line: status, the date it was taken, and any signals that
+earned it.
 
-## Decision
+\`\`\`
+### adr-NNNN — the decision, as a sentence in the present tense
+\`accepted\` · YYYY-MM-DD · signals: sig-0001
 
-What was decided. Not a discussion — the outcome, plus the specific alternative that
-was rejected and why. An ADR that lists no rejected option recorded a preference, not
-a decision.
+Rejected: the option that lost, and the reason it lost. An entry that names no
+rejected option recorded a preference, not a decision.
+\`\`\`
 
-## Consequences
+**Status is how a decision is amended.** It moves \`proposed\` → \`accepted\` →
+\`superseded by adr-NNNN\`. The prose above it is never rewritten; later commentary goes
+in a new entry, not into an old one's voice.
 
-What this costs and what it forecloses. Include the part you are uneasy about; that is
-the part a future reader most needs.
+**The bar for writing one at all:** would someone propose the losing option again in
+three months? If not, the commit message is enough.
 `;
+}
 
 export const CLAUDE_MD = `@AGENTS.md
 `;
@@ -417,8 +429,8 @@ This is the part that makes the rest improve rather than rot.
 - **Something goes wrong** — the agent takes a wrong turn and gets corrected, or nearly
   does — append a line to \`${DEFINITION_DIR}/memory/signals.jsonl\`. The schema is in
   \`${DEFINITION_DIR}/memory/README.md\`. Log the small ones; they are the ones that reveal patterns.
-- **A decision gets made** — add an ADR under \`${DEFINITION_DIR}/memory/decisions/\`, starting from
-  \`_TEMPLATE.md\`.
+- **A decision gets made** — add an entry to \`${DEFINITION_DIR}/memory/decisions.md\`, following
+  the shape that page describes.
 - **Periodically** — run a retro: read the signals logged since the last one, cluster
   them, and decide what each cluster earns (amend a triage rule, add or retire a check,
   sharpen a skill). Record the outcome in \`${DEFINITION_DIR}/memory/retro-log.md\`.

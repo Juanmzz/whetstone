@@ -4,7 +4,7 @@ import { detectStack, type RepoFacts } from "./detect.js";
 import { NO_RISK } from "./interview.js";
 import { buildTriageRules, renderTriageRulesMd } from "./triage.js";
 import {
-  ADR_TEMPLATE,
+  renderDecisionsMd,
   CLAUDE_MD,
   MEMORY_README,
   SKILL_FILES,
@@ -167,11 +167,30 @@ describe("the memory schema travels with the payload", () => {
     expect(parsed["branch"]).toBeTypeOf("string");
   });
 
-  it("ships an ADR template that is a fill-in, not a blank page", () => {
-    expect(ADR_TEMPLATE).toContain("## Context");
-    expect(ADR_TEMPLATE).toContain("## Decision");
-    expect(ADR_TEMPLATE).toContain("## Consequences");
-    expect(ADR_TEMPLATE).toMatch(/^---\n/);
+  it("dates the seeded page from the clock, not with a placeholder to fill in", () => {
+    // The only generated file that ever carried `YYYY-MM-DD`. A template is a
+    // fill-in; this page is a file init writes, and it knows what day it is.
+    const page = renderDecisionsMd({ date: "2026-08-14" });
+
+    expect(page).toContain("generated: 2026-08-14");
+    expect(page).not.toContain("ts: YYYY-MM-DD");
+  });
+
+  it("seeds a decision page shaped like the one it will grow into", () => {
+    // The `recording.md` this same payload copies tells the reader to add an
+    // entry to `memory/decisions.md`. Seeding a directory of files instead
+    // hands a target repo a shape its own rules do not describe.
+    expect(renderDecisionsMd({ date: "2026-08-14" })).toMatch(/^---\n/);
+    expect(renderDecisionsMd({ date: "2026-08-14" })).toContain("### adr-NNNN");
+    expect(renderDecisionsMd({ date: "2026-08-14" })).toContain("`accepted` · YYYY-MM-DD");
+  });
+
+  it("says what an entry keeps, since that is the whole reason to write one", () => {
+    expect(renderDecisionsMd({ date: "2026-08-14" })).toMatch(/rejected/i);
+  });
+
+  it("holds no entry of its own — a seeded decision is a decision nobody made", () => {
+    expect(renderDecisionsMd({ date: "2026-08-14" })).not.toMatch(/^### adr-\d{4}/m);
   });
 });
 

@@ -63,7 +63,7 @@ describe("auditSelfContained — every .wst/ path named must be a path that gets
   });
 
   it("accepts a directory reference", () => {
-    expect(audit("Add an ADR under `.wst/memory/decisions/`.")).toEqual([]);
+    expect(audit("Log a signal under `.wst/memory/receipts/`.")).toEqual([]);
   });
 
   it("accepts a placeholder or a glob", () => {

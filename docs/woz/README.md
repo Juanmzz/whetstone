@@ -1,6 +1,6 @@
 # Wizard-of-Oz era — reference specs
 
-> **The definition directory is `.wst/` now, not `.sdd/` ([ADR-0012](../../.wst/memory/decisions/0012-do-not-claim-generic-vocabulary-rename-sdd-to-wst.md)).**
+> **The definition directory is `.wst/` now, not `.sdd/` ([ADR-0012](../../.wst/memory/decisions.md#adr-0012)).**
 > The files below still say `.sdd/` because that is what they specified at the time, and
 > rewriting a superseded document to look current is how it gets mistaken for current.
 > Read the name, not the procedure.
@@ -8,7 +8,7 @@
 These files ran Whetstone before it had code. `init.md` and `retro.md` were executed **by an agent**,
 by hand, against real repos — that is what "Wizard of Oz" means here: fake the machine until you know
 it is worth building. `retro.md` produced TD6 on a real project, which is the validation
-[ADR-0008](../../.wst/memory/decisions/0008-engine-supersedes-woz.md) rests on.
+[ADR-0008](../../.wst/memory/decisions.md#adr-0008) rests on.
 
 They are kept **tracked**, not archived, because they are the working specification for the code that
 replaces them:

@@ -7,7 +7,11 @@
  * ADRs. A warning about staleness is not a defence against it. A check is.
  *
  * WHAT IS COUNTED, and why these three. Each is a cheap file operation with one
- * right answer: ADRs on disk, lines in the signal log, commands the CLI registers.
+ * right answer: decision anchors on the page, lines in the signal log, commands the
+ * CLI registers. The ADR count used to be files in a directory; adr-0019 folded them
+ * into `decisions.md`, so the same claim is now a count of entries — read with
+ * `core/decisions/anchors.ts`, the same parser `check-adr-refs.ts` uses to resolve
+ * citations. Two regexes over one page is how the two counts drift apart.
  * The TEST COUNT is deliberately absent from the block — verifying it means running
  * the suite a second time inside a gate that already runs it, and it is the number
  * that changes most and informs least.
@@ -16,12 +20,13 @@
  * so the block stays the first kind.
  */
 
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parseDecisions } from "../src/core/decisions/anchors.js";
 import { DEFINITION_DIR } from "../src/core/paths.js";
 
 const AGENTS = "AGENTS.md";
-const DECISIONS = join(DEFINITION_DIR, "memory", "decisions");
+const DECISIONS = join(DEFINITION_DIR, "memory", "decisions.md");
 const SIGNALS = join(DEFINITION_DIR, "memory", "signals.jsonl");
 const CLI = join("src", "cli.ts");
 
@@ -47,9 +52,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const adrs = (await readdir(DECISIONS)).filter(
-    (n) => n.endsWith(".md") && !n.startsWith("_"),
-  ).length;
+  const adrs = parseDecisions(await readFile(DECISIONS, "utf-8")).entries.length;
 
   // Blank lines are not signals. The log tolerates them; a count must not.
   const signals = (await readFile(SIGNALS, "utf-8"))

@@ -62,7 +62,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
         ".wst/checks/typecheck.md",
         ".wst/constitution.md",
         ".wst/memory/README.md",
-        ".wst/memory/decisions/_TEMPLATE.md",
+        ".wst/memory/decisions.md",
         ".wst/memory/out-of-scope/README.md",
         ".wst/memory/patterns.md",
         ".wst/memory/retro-log.md",
@@ -89,7 +89,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
    * ADR-0012 part 3: `memory/out-of-scope/` is the fourth memory artifact.
    *
    * `memory/` already records what went wrong (`signals.jsonl`), what was decided
-   * (`decisions/`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
+   * (`decisions.md`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
    * recorded what was deliberately REFUSED, and a refusal without a file gets
    * re-proposed every six months with the argument re-derived from scratch.
    */

@@ -3,7 +3,7 @@
  *
  * The check's own body states the rule: "the check has to fire on the change that
  * made the claim false, not on the change that admits it." Its `include` did not
- * hold to it — `AGENTS.md`, `src/cli.ts` and the ADR directory were listed, the
+ * hold to it — `AGENTS.md`, `src/cli.ts` and the decision record were listed, the
  * signal log was not — so appending a signal falsified the status block silently
  * and it only turned red on whatever unrelated change came next. That happened
  * twice on 2026-08-14, once from the gate's own emitter (`sig-a9ff00c4`).
@@ -29,15 +29,13 @@ const SIGNAL_LOG = changed(join(DEFINITION_DIR, "memory", "signals.jsonl"));
 
 /**
  * Every source `scripts/check-docs-fresh.ts` reads to decide pass or fail: the
- * file carrying the claim, and the three the numbers are counted from. The ADR
- * name is deliberately one that does not exist — the glob has to cover the ADR
- * added tomorrow, since adding one is what makes the block stale.
+ * file carrying the claim, and the three the numbers are counted from.
  */
 const COUNTED: readonly ChangedFile[] = [
   changed("AGENTS.md"),
   changed(join("src", "cli.ts")),
   SIGNAL_LOG,
-  changed(join(DEFINITION_DIR, "memory", "decisions", "0099-a-decision-added-tomorrow.md")),
+  changed(join(DEFINITION_DIR, "memory", "decisions.md")),
 ];
 
 async function docsFresh(): Promise<LoadedCheck> {

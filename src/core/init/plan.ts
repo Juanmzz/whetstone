@@ -28,7 +28,7 @@ import { seedChecks } from "./checks.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {
-  ADR_TEMPLATE,
+  renderDecisionsMd,
   CLAUDE_MD,
   MEMORY_README,
   OUT_OF_SCOPE_README,
@@ -156,7 +156,7 @@ export function planInit(input: InitPlanInput): InitPlan {
         "# Retro log\n\nOne entry per retro: which signals it read, what it changed, and what" +
         "\nit deliberately did not change. The next retro starts where the last one stopped.\n",
     },
-    { path: `${DEFINITION_DIR}/memory/decisions/_TEMPLATE.md`, contents: ADR_TEMPLATE },
+    { path: `${DEFINITION_DIR}/memory/decisions.md`, contents: renderDecisionsMd({ date }) },
     // No entries, only the home. A seeded refusal would be a decision nobody made,
     // and it would be read as one — the same reason `signals.jsonl` ships empty.
     { path: `${DEFINITION_DIR}/memory/out-of-scope/README.md`, contents: OUT_OF_SCOPE_README },

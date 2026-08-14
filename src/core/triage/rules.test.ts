@@ -176,7 +176,7 @@ describe("the default ruleset", () => {
     expect(tierOf("VISION.md")).toBe("light");
     expect(tierOf("AGENTS.md")).toBe("light");
     expect(tierOf("docs/woz/OPEN_QUESTIONS.md")).toBe("light");
-    expect(tierOf(".wst/memory/decisions/adr-0008-engine.md")).toBe("light");
+    expect(tierOf(".wst/memory/decisions.md")).toBe("light");
   });
 
   it("rates the retro log off", () => {

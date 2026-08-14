@@ -47,7 +47,7 @@ specs, not current procedure.*
 
 The loop is self-hosting: `wst gate` verifies this repo's own changes, `wst prepare` briefs a
 crewmate from the registry as it stands right now, and `wst retro` has produced amendments across
-four skills, each carrying the signals that earned it. **`wst prepare` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
+seven of the eight skills, each carrying the signals that earned it. **`wst prepare` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
 for worktree isolation, and agent-lens checks need the `claude` CLI; neither is bundled.** What is
 still weak is stated in [AGENTS.md](./AGENTS.md#known-weaknesses-stated-plainly) — chiefly that the
 lens is uncalibrated at v4, so the judgment tier is advisory.
