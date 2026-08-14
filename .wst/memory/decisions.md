@@ -427,6 +427,33 @@ template nobody reads, and it cannot be amended from evidence.
 
   A blank a human fills beats a template's confident wrong answer, which is adr-0016's own
   accepted cost — and §C is that cost arriving.
+- **Rejected: shipping the rules as always-on payload — and this one was RUN, not reasoned.**
+  ChytaPay, the workspace Whetstone generalises, spent five weeks with a stitched `CLAUDE.md`:
+  807 lines always in context, a 40-line base plus eight overlays. It reversed. Today it is 161
+  lines in three files, injected by a SessionStart hook — **80% less** — and everything else is
+  loaded by trigger. The commit that made the big cut names its criterion, and the criterion is
+  the transferable part: *"migrar overlays **conditionally-relevant** a SKILL.md"*. Not
+  importance — **conditionality.** What always applies stays injected; what sometimes applies
+  is loaded when it applies. An emitter can apply that rule with no model at all, which is
+  exactly the constraint here.
+
+  So `init` writing eight skills into a target repo is Whetstone paying the cost of ChytaPay's
+  peak, and — per the field report's §B, where nothing reaches them under `--definitions-only`
+  — without the benefit that peak at least had.
+
+- **Rejected: treating the origin payload as transferable.** Two measurements, from the same
+  clone, and together they are the concrete form of adr-0005's warning:
+
+  `chyta-xreview` **is not in ChytaPay's `main`.** It exists only on an unmerged branch. Whetstone
+  ships `xreview` among its eight and has amended it twice by retro — it adopted, and then grew
+  rules on top of, a skill the origin repo never accepted.
+
+  ChytaPay's `tdd-discipline` says *"Implementation lands in commits SEPARATE from the test
+  commit"* (`SKILL.md:34`), written to stop an agent weakening tests to reach green. Whetstone's
+  hard rule 4 forbids exactly that: one commit per coherent change, with the red output quoted in
+  the body. **Same concern, opposite mechanisms**, each earned in its own repo. A payload is not
+  a thing you copy; it is a thing a project earns.
+
 - **Rejected: keeping both paths — templates when there is no judge, the judge otherwise.** Two
   ways to produce one artifact, drifting, which is the defect class this repo has found six
   times. The minimum is deliberately NOT a smaller template: it is blanks.
