@@ -6,25 +6,15 @@
  * ask (a coding agent asking a human in chat, flags on the CLI, a JSON file), and
  * the engine stays testable and non-interactive.
  *
- * Six questions, and two of them are new (ADR-0016). `source-paths` and `stack`
- * used to be answered by a directory-name list and a file-extension table inside
- * `detect.ts`; both are gone, because a table is confidently wrong on the stack
- * nobody enumerated and a blank a human fills is worth more than that.
+ * Six questions, each carrying the `why` it is asked at all. `source-paths` and
+ * `stack` are new: they used to be inferred by a directory-name list and a
+ * file-extension table inside `detect.ts`, both removed by adr-0016.
  *
- * | question             | why it is here                                          |
- * |----------------------|---------------------------------------------------------|
- * | purpose              | prose intent is not on disk                             |
- * | risk profile         | the one thing no file states                            |
- * | source paths         | a directory called `src` is a convention, not a claim   |
- * | strict paths         | which code is dangerous is a judgement, not a layout    |
- * | stack                | a repo declares its scripts, never what it is built with |
- * | conventions          | a commit history is a pattern, not a promise            |
- * | working relationship | not asked — `skills/voice.md` ships calibrated defaults |
- * | backend              | not asked — `files` is the default AND the recommendation |
- *
- * The last two are recorded deviations, not oversights: neither answer changes a
- * single byte of what init generates, so asking would spend the human's attention
- * on nothing. A backend other than `files` is a flag on the composition root.
+ * Deliberately NOT asked, and these are recorded deviations rather than oversights:
+ * `working relationship` (`skills/voice.md` ships calibrated defaults) and `backend`
+ * (`files` is the default AND the recommendation). Neither answer changes a single
+ * byte of what init generates, so asking would spend the human's attention on
+ * nothing. A backend other than `files` is a flag on the composition root.
  *
  * The ceiling still matters. Every question spent on something the repo already
  * answered is a question the human stops answering carefully — which is why

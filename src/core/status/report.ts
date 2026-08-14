@@ -209,11 +209,8 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
 
 /**
  * The plugin row. Says which of the four install states holds, and — when the plugin
- * IS loaded — whether it would do anything from where you are standing.
- *
- * "loaded" alone would repeat the mistake the pre-push row already fixed once: a
- * loaded-and-inert plugin and a loaded-and-working one produced identical output, and
- * the whole point of the row is that they must not.
+ * IS loaded — whether it would do anything from where you are standing. "loaded"
+ * alone would repeat the mistake the pre-push row already fixed once.
  */
 function pluginRow(plugin: PluginFacts): string {
   switch (plugin.install) {

@@ -214,8 +214,7 @@ describe("renderGateRun", () => {
  * rule 1 hold while still refusing to pretend an unrun gate verified anything:
  * `verdict` stays `pass` and `blocking` stays empty, and the incompleteness is
  * reported through a DIFFERENT channel with a different number.
- */
-/**
+ *
  * FOUND BY A CREWMATE, not by a test. Dispatched with "run the checks yourself", it
  * ran `wst gate --no-lens --no-emit`, got the default `--range HEAD` against a clean
  * tree, and was told:
