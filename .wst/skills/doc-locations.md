@@ -1,6 +1,6 @@
 ---
 id: doc-locations
-version: 1
+version: 2
 status: active
 ---
 # Documentation locations
@@ -63,7 +63,24 @@ Defaults when the project says nothing:
 - Saving session context as a `.md` instead of a session summary in the memory substrate.
 - Reorganizing a personal-doc folder structure without asking first.
 
+7. [DL7] **Prose that describes the tool's own behaviour is part of the change that alters
+   it.** Deleting a subsystem, renaming a command, or switching a mode is not finished until
+   the documents describing it are updated in the same change — and prose calibrated for one
+   mode is never reused for another. A doc that survives the thing it describes is a false
+   claim with a long half-life.
+   - **Comments follow the same rule, and one more: a comment names evidence or points at a
+     decision, and never re-argues one.** The argument belongs in the ADR, where it is
+     versioned and signed; repeating it beside the code is one rule living in two places.
+
 ## Changelog
+
+- v2 (2026-08-14, retro-0049): added [DL7] — prose describing the tool's own behaviour is
+  part of the change that alters it, and a comment names evidence or points at a decision
+  rather than re-arguing one. From `sig-672d598d` (4,391 comment lines against 12,448 of
+  code, 37 blocks over 15 lines) and from `README.md` describing a plan gate that did not
+  exist for four days after the command that would have carried it was removed.
+  **Retro-0049 proposed this against `voice.md` and the human moved it here**: `voice.md`
+  governs reply text only and says so, which the retro itself noticed while drafting.
 
 - v1 (2026-07-09, init): generated from the ChytaPay `doc-locations` skill. Stripped
   ChytaPay-specifics (hard-coded workspace/plans paths, agilpay repo names, Engram topic-key

@@ -95,3 +95,35 @@ whose lessons are partly captured by the amendments above, plus `spec-itself-vio
 (`sig-0021`, `0024`, `0025`, and arguably `0018`) are mistakes made while VERIFYING work, not
 defects in the work itself. The engine's own output has been more reliable than the process used
 to check it. That is the cluster to watch next time.
+
+## retro-0049
+
+cursor: sig-cb978aef · 24 signals · 9 clusters, 7 actionable · $0.7283
+
+**Applied, 3 of 7.**
+
+- `tdd-discipline` v4 — [TD8]: a claim about system behaviour is a hypothesis until a
+  test would fail if it were false. Earned by `sig-4b3339fb` and by hard rule 9's
+  asymmetry, documented at length in two files and untested until 2026-08-13.
+- `delegation` v4 — [D8] extended: the exit code carries the same honesty obligation as
+  the message, and both derive from one decision. [D9] added: a gate sharing a worktree
+  with the worker uses a non-persisting receipt store.
+- `doc-locations` v2 — [DL7]: prose describing the tool's own behaviour is part of the
+  change that alters it, and a comment names evidence or points at a decision rather
+  than re-arguing one.
+
+**Rejected, and why it matters.** Proposal 6 targeted `voice.md`. The retro drafted the
+amendment and then argued against its own draft: `voice.md`'s scope line says it governs
+reply text only and excludes code comments, so neither `sig-0032` nor `sig-672d598d`
+belongs to it. It was right. The content moved to `doc-locations` as [DL7]; the human
+tagged `sig-672d598d` with the wrong rule when recording it.
+
+**Discarded.** Proposal 7 proposed an ADR pinning the `hooksArmed` path fix. Already
+fixed in PR #28, open at the time of this retro. The retro reads the signal log and
+cannot see open pull requests — not an error, but the reason a single-signal proposal
+about a live bug should be checked against the branch state before it is applied.
+
+**Deferred, not rejected.** Proposals 1 (`xreview` — probe the judge's isolation rather
+than configuring it) and 4 (`recording` — an ADR removing a subsystem must enumerate the
+prose describing it) are both sound and both wanted evidence a reader could check in one
+sitting. They stay for the next window rather than being applied unread.

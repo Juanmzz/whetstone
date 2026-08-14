@@ -1,6 +1,6 @@
 ---
 id: delegation
-version: 3
+version: 4
 status: active
 ---
 # Delegation
@@ -43,6 +43,11 @@ Does this inflate the agent's context without need? If yes → delegate. If no �
    - **"No checks ran" must never share a message with "all checks passed."** They are
      different outcomes and only one of them is evidence. Collapsing them is how unverified
      work gets reported as verified.
+   - **The EXIT CODE carries the same obligation as the message.** A run whose prose says
+     "nothing was verified" and whose number says 0 is lying to whichever reader consumes
+     the number — and a hook, a CI step and an agent all consume the number. Derive both
+     from one decision, or they will drift: this project fixed that divergence twice in the
+     same file, because the first fix shared half the predicate.
 
 ## Inline vs delegate — quick table
 
@@ -77,8 +82,20 @@ reads. Fresh means fresh.
 - Parallel writers only with isolated worktrees + explicit approval; otherwise a single
   writer thread.
 
+9. [D9] **A gate must not honour a receipt the party under judgment could have written.**
+   Receipts are content-addressed caches, and validating their SHAPE is not validating
+   their PROVENANCE. When the gate and the worker share a worktree, hand the gate a
+   receipt store that reads nothing and writes nothing. A worker that can mint the
+   receipts its own gate honours is one step from a worker that can merge its own work.
+
 ## Changelog
 
+- v4 (2026-08-14, retro-0049): extended [D8] — the exit code carries the same honesty
+  obligation as the message, and both must derive from one decision. Added [D9] — a gate
+  sharing a worktree with the worker must use a non-persisting receipt store. From
+  `sig-0044` and the 2026-08-13 gate work: `renderGateRun` headlined `passed` while
+  `exitCodeFor` returned 2, in three separate cases, the last two surviving a fix that
+  shared only half the predicate.
 - v3 (2026-08-08, retro-0025): [D7] gains the hermetic-delegate case. D7 said to pass
   artifact references as paths rather than content, because the sub-agent fetches them
   itself. That silently assumes the delegate HAS tools. A hermetic delegate — no
