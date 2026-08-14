@@ -107,8 +107,8 @@ built under that waiver and removed by ADR-0009.
   four skills, each carrying the
   signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **51 signals**, 27 with `resolved_by`. Two retros. Four skills amended: `tdd-discipline` v3,
-  `xreview` v3, `delegation` v3, `voice` v2.
+- **51 signals**, 27 with `resolved_by`. Three retros. Six skills amended: `tdd-discipline` v6,
+  `delegation` v4, `doc-locations` v3, `lazy` v2, `xreview` v3, `voice` v2.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
   re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
 
