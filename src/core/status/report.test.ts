@@ -213,6 +213,30 @@ describe("the pre-push gate", () => {
   const withHooks = (over: Partial<StatusFacts["hooks"]>) =>
     buildStatusReport({ ...base, hooks: { ...base.hooks, ...over } });
 
+  it("is armed when core.hooksPath holds the ABSOLUTE path to the same directory", () => {
+    // `git config core.hooksPath .githooks` and `git config core.hooksPath
+    // /repo/.githooks` arm the identical hook. This compared strings, so the second
+    // reported `pre-push NOT active` while the hook was demonstrably firing — it
+    // refused a push on 2026-08-13. `sig-4b3339fb`.
+    //
+    // The lie compounds: the warning then tells the reader that arming Whetstone
+    // would disable whatever owns `core.hooksPath`, when the thing that owns it IS
+    // Whetstone. A status command that reports a wrong answer confidently is worse
+    // than one that reports nothing.
+    const report = withHooks({ configuredPath: "/repo/.githooks" });
+    expect(report.warnings.join("\n")).not.toMatch(/pre-push gate is not active/);
+  });
+
+  it("is NOT armed when another tool owns the path, absolute or relative", () => {
+    // The control. Resolving paths must not turn "husky owns this" into "we are
+    // armed" — following the advice that produces would disarm husky.
+    for (const configuredPath of [".husky", "/repo/.husky"]) {
+      expect(withHooks({ configuredPath }).warnings.join("\n")).toMatch(
+        /pre-push gate is not active/,
+      );
+    }
+  });
+
   // A gate that only runs when someone remembers to type it will be forgotten.
   // Reporting an unarmed clone as drift is the difference between a gate that is
   // available and one that is actually in the path.
