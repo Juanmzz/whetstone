@@ -97,7 +97,7 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under `chytapay-workspace`.
 
-## Status — branch `main` · 19 ADRs · 51 signals · 10 commands
+## Status — branch `main` · 20 ADRs · 51 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
