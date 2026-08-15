@@ -401,9 +401,64 @@ template nobody reads, and it cannot be amended from evidence.
   code that will not tolerate a synonym.
 - **Rejected: leaving `init` unusable without a judge.** This is adr-0016's *first* objection,
   and it is the one this answers rather than dismisses. Without a judge, `init` degrades to a
-  minimum — `triage.yaml`, `wst.yaml`, the memory schemas, and a `constitution.md` carrying the
-  seven non-negotiables and blanks where judgment goes. Enough for `wst gate` to run. A blank a
-  human fills beats a template's confident wrong answer, which is adr-0016's own accepted cost.
+  minimum, and `docs/field-report-chytapay-2026-08.md` — a run against a real foreign repo —
+  says what belongs in it:
+
+  **`triage.yaml`, and `wst.yaml` only once something reads it.** The report's "what worked"
+  section credits triage with classifying the real diff correctly; everything else hangs off it.
+  `wst.yaml` was in this list until it was checked: it is written by `plan.ts:141` and **read by
+  nothing** — not a command, not an adapter, not a hook. Its only other readers are two asserts
+  in its own test. So the file that declares which skills are active is consumed by nothing, in
+  every mode, which is a stronger version of the field report's §B and independent of it. It
+  belongs in the minimum when it has a consumer, and is an example of the problem until then.
+
+  **One or two deterministic checks, seeded at `warn` with the note saying why.** §C is the
+  evidence: two of the three checks seeded there were actively wrong. `lint` ran
+  `eslint --fix`, a check that rewrites the tree while judging it, and `test` blocked on a
+  suite that opens a real Postgres — red on every machine that has not started a database.
+  A blocking check that is red everywhere is a check people route around, and a routed check
+  stops catching the real findings too. **The presence of a script is not evidence the suite
+  passes.**
+
+  **`memory/signals.jsonl` and `memory/decisions.md`, genuinely empty** — a format with no
+  content. An empty file says "this is where what you earn goes". A seeded example says
+  "you already earned this", and that is false.
+
+  **Not the eight skills.** §B: under `--definitions-only` they are structurally unreachable,
+  and a repo that already has calibrated ones gets two sources of truth with no way to tell
+  which is inert. Not `patterns.md`, `retro-log.md` or `out-of-scope/README.md` either — they
+  are containers for knowledge a new repo does not have, and reading them empty teaches the
+  form without the reason, which is adr-0005's named trap.
+
+  A blank a human fills beats a template's confident wrong answer, which is adr-0016's own
+  accepted cost — and §C is that cost arriving.
+- **Rejected: shipping the rules as always-on payload — and this one was RUN, not reasoned.**
+  ChytaPay, the workspace Whetstone generalises, spent five weeks with a stitched `CLAUDE.md`:
+  807 lines always in context, a 40-line base plus eight overlays. It reversed. Today it is 161
+  lines in three files, injected by a SessionStart hook — **80% less** — and everything else is
+  loaded by trigger. The commit that made the big cut names its criterion, and the criterion is
+  the transferable part: *"migrar overlays **conditionally-relevant** a SKILL.md"*. Not
+  importance — **conditionality.** What always applies stays injected; what sometimes applies
+  is loaded when it applies. An emitter can apply that rule with no model at all, which is
+  exactly the constraint here.
+
+  So `init` writing eight skills into a target repo is Whetstone paying the cost of ChytaPay's
+  peak, and — per the field report's §B, where nothing reaches them under `--definitions-only`
+  — without the benefit that peak at least had.
+
+- **Rejected: treating the origin payload as transferable.** Two measurements, from the same
+  clone, and together they are the concrete form of adr-0005's warning:
+
+  `chyta-xreview` **is not in ChytaPay's `main`.** It exists only on an unmerged branch. Whetstone
+  ships `xreview` among its eight and has amended it twice by retro — it adopted, and then grew
+  rules on top of, a skill the origin repo never accepted.
+
+  ChytaPay's `tdd-discipline` says *"Implementation lands in commits SEPARATE from the test
+  commit"* (`SKILL.md:34`), written to stop an agent weakening tests to reach green. Whetstone's
+  hard rule 4 forbids exactly that: one commit per coherent change, with the red output quoted in
+  the body. **Same concern, opposite mechanisms**, each earned in its own repo. A payload is not
+  a thing you copy; it is a thing a project earns.
+
 - **Rejected: keeping both paths — templates when there is no judge, the judge otherwise.** Two
   ways to produce one artifact, drifting, which is the defect class this repo has found six
   times. The minimum is deliberately NOT a smaller template: it is blanks.

@@ -64,6 +64,18 @@ data-boundary gate that keeps proprietary payment code away from third-party mod
 vendors. The generic copies say neither. Two sources of truth, one of them inert, and no
 way for a reader to tell which is which.
 
+> **Correction, 2026-08-14.** `agilpay-backend` has no plugin: no `.claude/`, no `SKILL.md`,
+> no `plugin.json` anywhere in the tree. The plugin arrives by marketplace from
+> `chytapay-workspace`, and there `chyta-xreview` exists ONLY on an unmerged branch (PR #23).
+> So the `chyta-xreview` half of the sentence above is not supported. The
+> `chyta-tdd-discipline` half is: its integer-cents money rules are in the workspace's
+> `SKILL.md`.
+>
+> The section's argument does not rest on that example, and it got stronger elsewhere: `wst.yaml`
+> — the file naming which skills are active — is written by `plan.ts:141` and **read by nothing
+> in Whetstone**, in any mode. The copied skills are inert generally, not only under
+> `--definitions-only`.
+
 **Suggested fix:** in `--definitions-only`, either skip the copy, or write them with a
 header stating they are inert until something emits a config that references them.
 
@@ -91,6 +103,17 @@ does not measure anything: it reports on a file that no longer exists in the for
 author wrote it, and it hides the finding it was meant to surface. The host's own
 `CLAUDE.md` already warned about this in prose; `init` could not see the warning, but it
 could see the `--fix`.
+
+> **Correction, 2026-08-14, verified against `agilpay-backend` at `1abd2649`.** The host's
+> `CLAUDE.md` does not warn about the mutating lint. It has four mentions of lint and none is a
+> warning: line 26 describes it neutrally (`# Lint and fix`), and lines 313, 323 and 337
+> prescribe `npm run lint` as a *verification* step — line 323, under "Post-task Automation",
+> says "Fix automatically if it fails". The host makes the same error `init` made, by hand.
+>
+> The suggested fix below survives and matters more, since no text in the target repo
+> compensates. The argument that survives is simpler: **a check seeded from `package.json`
+> inherits the repo's judgment, and the repo can be wrong — `--fix` is visible in the script
+> text, and that is enough to decide on.**
 
 **Suggested fix:** detect `--fix`, `--write`, `-w` and similar in a seeded command.
 Either strip the flag, or seed the check disabled with a note saying why.
