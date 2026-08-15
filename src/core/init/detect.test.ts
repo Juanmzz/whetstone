@@ -175,3 +175,51 @@ describe("detectStack — tests and evidence", () => {
     }
   });
 });
+
+/**
+ * A seeded command inherits the repo's judgment, and the repo can be wrong.
+ *
+ * One real install's `lint` script was `eslint --fix <glob>`. Seeded verbatim,
+ * that is a check that rewrites the tree while judging it: it reports on a file
+ * that no longer exists in the form the author wrote it, and it hides the finding
+ * it was meant to surface. That repo's own instructions did not warn about it —
+ * they prescribed the lint script as a verification step — so nothing there
+ * compensates. The flag is visible in the script text, and that is enough.
+ */
+describe("detectStack — commands that rewrite the tree", () => {
+  const withScripts = (scripts: Record<string, string>) =>
+    detectStack(
+      facts({
+        files: ["package.json", "package-lock.json", "src/a.ts", "src/a.test.ts"],
+        packageJson: { scripts },
+      }),
+    );
+
+  it("names a lint script that carries --fix", () => {
+    const facts = withScripts({ lint: "eslint --fix './src/**/*.ts'" });
+
+    expect(facts.mutating).toContain("lint");
+  });
+
+  it("names a test script that rewrites snapshots", () => {
+    // `jest -u` overwrites the snapshots it is comparing against, so it cannot fail.
+    expect(withScripts({ test: "jest -u" }).mutating).toContain("test");
+  });
+
+  it("names --write, and -w, which means write in some tools and watch in others", () => {
+    expect(withScripts({ lint: "prettier --write ." }).mutating).toContain("lint");
+    expect(withScripts({ lint: "prettier -w ." }).mutating).toContain("lint");
+  });
+
+  it("leaves a read-only command alone", () => {
+    const facts = withScripts({ lint: "eslint .", test: "vitest run", typecheck: "tsc --noEmit" });
+
+    expect(facts.mutating).toEqual([]);
+  });
+
+  it("does not mistake --fix-dry-run or --check for a write", () => {
+    const facts = withScripts({ lint: "eslint --fix-dry-run .", test: "prettier --check ." });
+
+    expect(facts.mutating).toEqual([]);
+  });
+});

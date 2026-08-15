@@ -21,6 +21,7 @@ const stack: StackFacts = {
   packageManager: "npm",
   commands: { test: "npm run test", typecheck: null, lint: "npm run lint" },
   hasTests: true,
+  mutating: [],
   evidence: ["package manager: npm (from package-lock.json)"],
 };
 

@@ -47,6 +47,8 @@ interface Draft {
   readonly include: readonly string[];
   readonly exclude?: readonly string[];
   readonly command?: string;
+  /** Omitted means enabled. Written only to turn a check OFF, with the reason in the body. */
+  readonly enabled?: false;
   readonly reviewLens?: string;
   readonly calibrationDate?: string;
   readonly body: string;
@@ -66,6 +68,7 @@ function render(draft: Draft): GeneratedFile {
     lines.push(`exclude: ${yamlList(draft.exclude)}`);
   }
   if (draft.command !== undefined) lines.push(`command: ${yamlString(draft.command)}`);
+  if (draft.enabled === false) lines.push("enabled: false");
   if (draft.reviewLens !== undefined) {
     lines.push(`review_lens: ${yamlBlock(draft.reviewLens)}`);
   }
@@ -120,24 +123,29 @@ export function seedChecks(
   }
 
   if (stack.commands.test !== null) {
-    // A blocking test check in a repo with no tests blocks nothing today and
-    // ambushes whoever writes the first one. Warn until tests actually exist,
-    // and say in the file what promotes it.
-    const severity: Check["severity"] = stack.hasTests ? "block" : "warn";
+    // `init` has never seen this suite run, so it may not block on it. Seeding
+    // `block` on the evidence that test FILES exist is what put a real repo's
+    // gate permanently red: large parts of its suite opened a database nobody had
+    // started, so dozens of tests failed for reasons unrelated to any diff. A
+    // check that is red on every machine gets routed around, and a routed check
+    // stops catching the real findings too.
     drafts.push({
       id: "test",
       description: "The test suite passes.",
       kind: "deterministic",
-      severity,
+      severity: "warn",
       tiers: ["strict", "light"],
       include,
       command: stack.commands.test,
       body:
         "Seeded by \`wst init\` from the test script this repo already declares.\n\n" +
         (stack.hasTests
-          ? "This repo has tests, so the check blocks. A red suite is not a judgement call.\n\n"
+          ? "Held at `warn` because **`init` has not seen this suite pass.** Test files exist, " +
+            "which is not the same thing: a suite can need a database, a fixture server or an " +
+            "env var that nobody has here. **Promote it to `block` after the first green " +
+            "gate** — that run is the evidence this seeding cannot have.\n\n"
           : "Held at `warn` because no test files were found at init. **Promote it to " +
-            "`block` the day the first real test lands** — a blocking check over an empty " +
+            "`block` after the first green gate** — a blocking check over an empty " +
             "suite proves nothing and trains everyone to ignore it.\n\n") +
         "**When it fails:** read the failure before touching the test. Deleting, skipping " +
         "or loosening an assertion to get green is the one move this check exists to make " +
@@ -146,6 +154,12 @@ export function seedChecks(
   }
 
   if (stack.commands.lint !== null) {
+    // A command carrying `--fix` REWRITES the tree while judging it: it reports on
+    // a file that no longer exists in the form the author wrote it, and it hides
+    // the finding it was meant to surface. The flag lives inside the repo's own
+    // script, so it cannot be stripped from here — the check ships off, with the
+    // reason, and a human decides.
+    const mutates = stack.mutating.includes("lint");
     drafts.push({
       id: "lint",
       description: "The linter reports no errors.",
@@ -154,8 +168,18 @@ export function seedChecks(
       tiers: ["strict", "light"],
       include,
       command: stack.commands.lint,
+      ...(mutates ? { enabled: false as const } : {}),
       body:
         "Seeded by \`wst init\` from the lint script this repo already declares.\n\n" +
+        (mutates
+          ? "**Seeded OFF: this command rewrites the tree it is judging.** The script " +
+            "carries a write flag (`--fix`, `--write`, `-w`), so running it inside the gate " +
+            "reports on a file that no longer matches what the author wrote, and hides the " +
+            "finding it was meant to surface. `init` cannot strip the flag — it lives in " +
+            "this repo's own script.\n\n" +
+            "**To turn it on:** point `command:` at a read-only invocation (`eslint .` " +
+            "rather than `eslint --fix .`), then delete `enabled: false`.\n\n"
+          : "") +
         "Held at `warn` deliberately. Lint rules encode taste as well as correctness, and a " +
         "gate that blocks a merge over a formatting preference gets routed around — after " +
         "which it stops catching the real findings too. Promote it once the ruleset is one " +

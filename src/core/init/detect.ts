@@ -61,11 +61,16 @@ export interface DetectedCommands {
   readonly lint: string | null;
 }
 
-/** Everything the repo states about itself. Four fields, all of them read. */
+/** Everything the repo states about itself. Five fields, all of them read. */
 export interface StackFacts {
   readonly packageManager: string | null;
   readonly commands: DetectedCommands;
   readonly hasTests: boolean;
+  /**
+   * Which detected commands REWRITE the tree. Read off the script body, not the
+   * invocation: `npm run lint` says nothing, `eslint --fix` says everything.
+   */
+  readonly mutating: readonly (keyof DetectedCommands)[];
   /** What was read and from which file. A plan a human cannot audit is a guess. */
   readonly evidence: readonly string[];
 }
@@ -76,6 +81,20 @@ export interface StackFacts {
  * gets a gate uninstalled on day one.
  */
 const NPM_PLACEHOLDER_TEST = /^\s*echo\s+["']?Error: no test specified/i;
+
+/**
+ * Flags that make a command rewrite what it is judging.
+ *
+ * A check running one of these does not measure anything: it reports on a file
+ * that no longer exists in the form the author wrote it, and it hides the finding
+ * it was meant to surface. `-w` is included because it means `--write` in some
+ * tools and `--watch` in others, and a watcher inside a gate never returns —
+ * both are wrong here, so neither needs telling apart.
+ *
+ * The negative lookahead matters: `--fix-dry-run` reports without writing, and
+ * `--check` is the read-only half of `--write`.
+ */
+const MUTATING_FLAG = /(?:^|\s)(?:--fix(?!-dry-run)|--write|-w|-u|--updateSnapshot)(?=\s|$)/;
 
 const LOCKFILES: readonly (readonly [string, string])[] = [
   ["pnpm-lock.yaml", "pnpm"],
@@ -162,7 +181,41 @@ export function detectStack(facts: RepoFacts): StackFacts {
   );
   if (hasTests) note("tests: present", "test file paths");
 
-  return { packageManager, commands, hasTests, evidence };
+  const mutating = mutatingCommands(facts.packageJson, note);
+
+  return { packageManager, commands, hasTests, mutating, evidence };
+}
+
+/**
+ * Which detected commands rewrite the tree, read off the SCRIPT BODY.
+ *
+ * `commands` holds the invocation (`npm run lint`), which says nothing about
+ * what runs. The body is where `--fix` is visible, and seeing it is the whole
+ * fix: a repo's own script can be wrong about what belongs in a gate, and
+ * nothing in the target repo necessarily warns about it — in the one real run
+ * this came from, the host's `CLAUDE.md` prescribed the mutating lint as a
+ * verification step rather than warning about it.
+ */
+function mutatingCommands(
+  pkg: PackageJson | null,
+  note: (what: string, from: string) => void,
+): readonly (keyof DetectedCommands)[] {
+  const scripts = pkg?.scripts ?? {};
+  const found: (keyof DetectedCommands)[] = [];
+  for (const [key, names] of [
+    ["test", ["test"]],
+    ["typecheck", ["typecheck", "type-check", "tsc"]],
+    ["lint", ["lint"]],
+  ] as const) {
+    for (const name of names) {
+      const body = str(scripts[name]);
+      if (body === null || !MUTATING_FLAG.test(body)) continue;
+      found.push(key);
+      note(`${key}: rewrites the tree (${body.trim()})`, "package.json scripts");
+      break;
+    }
+  }
+  return found;
 }
 
 function detectCommands(
