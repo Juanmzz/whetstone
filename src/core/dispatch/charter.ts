@@ -58,7 +58,7 @@ const VENDOR_ALIASES: readonly string[] = ["AGENTS.md", "CLAUDE.md"];
 /**
  * The strict-tier globs a project's OWN triage rules declare.
  *
- * `wst run` used to pass Whetstone's three as a literal. In `agilpay-backend` that
+ * `wst run` used to pass Whetstone's three as a literal. In a payments API that
  * told a crewmate three directories it would never touch were the dangerous ones, and
  * told it nothing about `migrations/`. The rules are already loaded for `gatingChecks`
  * one line earlier; this is the file that exists to answer the question.

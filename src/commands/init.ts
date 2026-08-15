@@ -83,7 +83,7 @@ export interface InitOptions {
   /**
    * Write `.wst/` and nothing else.
    *
-   * For a repo that already has a harness. ChytaPay has its own `CLAUDE.md`, its own
+   * For a repo that already has a harness. One such repo had its own `CLAUDE.md`, its own
    * `AGENTS.md` and a plugin that owns `.claude/`; the collision guard stops `init`
    * destroying them, but stopping is not the same as coexisting. This is the mode
    * that lets Whetstone be the verifier for a workspace somebody else runs.

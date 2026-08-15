@@ -93,7 +93,7 @@ describe("buildCharter", () => {
 
 /**
  * OBSERVED IN THE FIELD (sig-0041). The first install into a repo Whetstone did not
- * grow up in — `agilpay-backend`, a payments API installed with `--definitions-only`
+ * grow up in — a payments API installed with `--definitions-only`
  * because its own harness already owns `AGENTS.md`.
  *
  * The charter it would have produced was authoritative and wrong in both halves: it

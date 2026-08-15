@@ -133,8 +133,8 @@ CI or pre-release — they are NOT part of the per-change TDD loop.
   meta-pattern — external to this repo's own log, cited via the contribution direction, not
   seeded here). The loop's contribution direction working: a real project's signals amended the
   canonical skill.
-- v1 (2026-07-09, init): generated from the ChytaPay `tdd-discipline` skill. Stripped
-  ChytaPay-specifics (sdd-triage/apply/init machinery, `strict_tdd` forwarding, repo paths,
+- v1 (2026-07-09, init): generated from a mature workspace's tdd-discipline skill. Stripped
+  its host-specifics (that project's triage/apply/init machinery, `strict_tdd` forwarding, repo paths,
   ARS/USD). Kept the strict/light/off levels, the RED→GREEN→TRIANGULATE→REFACTOR cycle, and
   behavior-first naming. KEY transform: money/cents demoted from a hard-coded core rule to a
   WORKED EXAMPLE of a `strict` path that the project's constitution defines. No signal

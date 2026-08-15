@@ -111,7 +111,7 @@ reads. Fresh means fresh.
   checked the working tree against HEAD, but the delegate had committed, so the diff was empty
   — the gate honestly reported that nothing was verified while the run printed PASSED above it.
   **Contribution candidate.**
-- v1 (2026-07-08, init): generated from the ChytaPay `delegation-harness` skill. Stripped
-  ChytaPay-specifics (engram tool names, the SDD-orchestrator model-routing table,
+- v1 (2026-07-08, init): generated from a mature workspace's delegation-harness skill. Stripped
+  its host-specifics (memory-backend tool names, an orchestrator model-routing table,
   topic-key fetch); kept the generic delegation triggers, decision table, and
   fresh-context rules. No signal receipts yet — those accrue as the retro loop runs.

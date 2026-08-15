@@ -94,9 +94,9 @@ per-phase review during implementation rather than pre-merge judgment.
   no-op'd), and sig-0016 (a confident diagnosis drawn from a worktree that the cleanup step
   being audited had already reset). XR5 already covered the judge's verdict; these show the
   same gap one level up, in the reviewer's own process. **Contribution candidate.**
-- v1 (2026-07-13, init): generated from the ChytaPay `chyta-xreview` skill. Stripped the
+- v1 (2026-07-13, init): generated from a mature workspace's cross-review skill. Stripped the
   hard-coded vendor CLIs (Gemini/Codex), the vendor probe/registry machinery, and the
-  ChytaPay data-boundary/plugin specifics. Kept the core discipline: independent judge,
+  host data-boundary/plugin specifics. Kept the core discipline: independent judge,
   fresh context, refute-not-confirm framing, grounding every verdict, majority-refute
   kills a finding. Generalized the judge mechanism to fresh-context sub-agent (default) or
   external model (optional, project-configured) and moved escalation triggers to the

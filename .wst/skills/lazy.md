@@ -80,10 +80,10 @@ complexity smuggled back in.
   existing one in a new file would be the very failure it describes. Earned by five signals
   that are all the same shape: `sig-0002`, `sig-0012`, `sig-0028`, `sig-0030`,
   `sig-4b3339fb`. Not machine-checkable, and the rule says so.
-- v1 (2026-07-13, init): generated from the ChytaPay `chyta-lazy` skill (adapted from
+- v1 (2026-07-13, init): generated from a mature workspace's lazy skill (adapted from
   ponytail, github.com/DietrichGebert/ponytail, MIT). Stripped the payment-system
   NON-NEGOTIABLE exceptions (money/cents, multi-tenant, PCI, auth) as hard-coded rules,
-  along with repo names and chyta plugin machinery. Kept the YAGNI ladder (L1–L7), the
+  along with repo names and host plugin machinery. Kept the YAGNI ladder (L1–L7), the
   proactive "does this need to exist?" discipline, and the no-abstractions /
   deletion-over-addition / root-cause / why-comment rules (L8–L11). Generalized the
   exceptions section into a worked example: non-negotiable domains are named by the

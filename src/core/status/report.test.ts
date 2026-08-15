@@ -109,7 +109,7 @@ describe("renderStatusReport", () => {
  * every failure to RUN, and that is correct: a hook that complains about its own
  * absence on every stop is a hook people remove.
  *
- * The cost is that nothing anywhere says it is happening. In the ChytaPay install both
+ * The cost is that nothing anywhere says it is happening. In one real install both
  * hooks were inert for the whole session, for two different reasons, and the only
  * evidence was the absence of output — which is exactly what a passing gate looks like.
  *
@@ -151,13 +151,13 @@ describe("the plugin row", () => {
 
   /**
    * Reason 1 from the field: the orchestrating session's `CLAUDE_PROJECT_DIR` was the
-   * ChytaPay umbrella folder, which is not a repo and has no `.wst/`. Both hooks were
+   * session's umbrella folder, which is not a repo and has no `.wst/`. Both hooks were
    * inert all session and nothing said so.
    */
   it("names the directory the hooks would run in when it is not a git repository", () => {
-    const r = withPlugin({ hookRoot: "/Users/x/ChytaPay", hookRootIsRepo: false });
-    expect(row({ hookRoot: "/Users/x/ChytaPay", hookRootIsRepo: false })).toMatch(/inert/i);
-    expect(r.warnings.join(" ")).toContain("/Users/x/ChytaPay");
+    const r = withPlugin({ hookRoot: "/Users/x/umbrella", hookRootIsRepo: false });
+    expect(row({ hookRoot: "/Users/x/umbrella", hookRootIsRepo: false })).toMatch(/inert/i);
+    expect(r.warnings.join(" ")).toContain("/Users/x/umbrella");
     expect(r.warnings.join(" ")).toMatch(/git repository/i);
   });
 

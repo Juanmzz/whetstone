@@ -99,12 +99,12 @@ Defaults when the project says nothing:
   **Retro-0049 proposed this against `voice.md` and the human moved it here**: `voice.md`
   governs reply text only and says so, which the retro itself noticed while drafting.
 
-- v1 (2026-07-09, init): generated from the ChytaPay `doc-locations` skill. Stripped
-  ChytaPay-specifics (hard-coded workspace/plans paths, agilpay repo names, Engram topic-key
+- v1 (2026-07-09, init): generated from a mature workspace's doc-locations skill. Stripped
+  its host-specifics (hard-coded workspace/plans paths, repo names, memory topic-key
   rows, the Spanish-product language mapping). Kept the team-vs-personal split, the
   decision-table shape, and the promotion/ambiguity/override rules plus anti-patterns.
   Generalized: artifact language is set by the project's constitution — this file no longer
   hard-codes Spanish/English — and Engram rows became "memory substrate"
   (`adr-0001`). No signal receipts yet. Reformatted to SPEC §3.3:
   consolidated DL1–DL5 into a single `## Rules` list; restored a generalized version of the
-  dropped ChytaPay rule against reorganizing personal-doc subfolders without asking (DL6).
+  dropped its rule against reorganizing personal-doc subfolders without asking (DL6).
