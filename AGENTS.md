@@ -50,13 +50,12 @@ format is in `.wst/architecture.md`.
 |---|---|
 | `.wst/` | The definition layer. Source of truth. |
 | `.wst/checks/` · `lanes.yaml` · `triage.yaml` | Registry, lane ownership, triage rules |
-| `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`, `proposals/` |
+| `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`; `proposals/` holds a retro's draft until the log records it |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
 | `src/shell/` | Thin adapters: git, claude, treehouse, sdd, signals, events, receipts, plugin |
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
-| `docs/woz/` | Wizard-of-Oz reference specs. Not current procedure. |
 | `.claude/hooks/` | Emitter output compiled from `.wst/`. Hand-edits are drift. |
 
 ## Hard rules

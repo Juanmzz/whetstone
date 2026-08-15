@@ -89,7 +89,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
    * ADR-0012 part 3: `memory/out-of-scope/` is the fourth memory artifact.
    *
    * `memory/` already records what went wrong (`signals.jsonl`), what was decided
-   * (`decisions.md`) and what was proposed (`proposals/`, `retro-log.md`). Nothing
+   * (`decisions.md`) and what a retro concluded (`retro-log.md`). Nothing
    * recorded what was deliberately REFUSED, and a refusal without a file gets
    * re-proposed every six months with the argument re-derived from scratch.
    */
@@ -202,10 +202,10 @@ describe("planInit — refuses to produce a broken payload", () => {
 
   it("throws when the human's own words smuggle in a dangling reference", () => {
     // Free text flows into the constitution verbatim. An agent running the
-    // interview will happily paste "as described in docs/woz/SPEC.md" — and that
+    // interview will happily paste "as described in docs/PARALLEL.md" — and that
     // path does not exist in the repo being bootstrapped.
     expect(() =>
-      plan({ answers: answers({ purpose: "A billing service, as specced in docs/woz/SPEC.md." }) }),
+      plan({ answers: answers({ purpose: "A billing service, as specced in docs/PARALLELSPEC.md." }) }),
     ).toThrow(/self-contained/i);
   });
 });

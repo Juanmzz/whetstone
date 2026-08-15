@@ -1,5 +1,5 @@
 version: 0
-backend: files            # files | engram | ...  (see docs/woz/SPEC.md §2.3)
+backend: files            # files | engram | ...  (see .wst/memory/README.md)
 memory:
   # Pins the namespace for any memory adapter (ADR-0001's save/search/summarize port).
   # Without this it is inferred from the git remote — this repo has none, and the ambient

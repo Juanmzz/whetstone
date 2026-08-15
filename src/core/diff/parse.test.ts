@@ -18,8 +18,8 @@ describe("parseNameStatus", () => {
 
   it("reads a rename as the NEW path, keeping the old one", () => {
     // Triage classifies what the change becomes, so `path` must be the new path.
-    expect(parseNameStatus("R100\tSPEC.md\tdocs/woz/SPEC.md")).toEqual([
-      { path: "docs/woz/SPEC.md", status: "renamed", oldPath: "SPEC.md" },
+    expect(parseNameStatus("R100\tGUIDE.md\tdocs/PARALLEL.md")).toEqual([
+      { path: "docs/PARALLEL.md", status: "renamed", oldPath: "GUIDE.md" },
     ]);
   });
 
