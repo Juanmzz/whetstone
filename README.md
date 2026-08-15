@@ -58,14 +58,19 @@ and why.
 ## Roadmap
 
 - **M1 — Bootstrap** ✅ — the init procedure, `.wst/` schema, the skill set, signal logging.
-- **M2 — Code tier** ✅ — the emitter compiles `.wst/` into per-vendor apparatus, hooks first.
-- **M3 — The retro loop** ✅ *(first pass)* — pattern detection + apparatus recommendation, validated
-  in the wild. Still N=1; repeatability unproven.
+- **M2 — Code tier** ❌ *withdrawn* — the plan was an emitter compiling `.wst/` into per-vendor
+  apparatus. There is no emitter, and `init` writes no `.claude/` at all: adr-0010 moved the
+  editor hook to a plugin that reads `.wst/triage.yaml` at run time instead of baking paths in.
+  That decision is still `proposed`, so the code tier is shipped by neither half today.
+- **M3 — The retro loop** ✅ — pattern detection, apparatus recommendation, human gate. Three retros
+  have run against real signals, amending seven of the eight skills. Repeatability past this repo
+  is still unproven.
 - **M4 — The engine** ← *current* — `wst` CLI, deterministic core, calibrated LLM boundary, check
-  registry, lean gate with receipts.
-- **M5 — Update model** — keep bootstrapped projects current via 3-way merge; contribute upstream.
-- **Distribution** — `npx wst` / optional plugin. Deliberately last: the payload is the value, the
-  installer is a wrapper.
+  registry, lean gate with receipts. The gate has landed; the judgment tier has not.
+- **M5 — Update model** — keep bootstrapped projects current via 3-way merge (adr-0006). Listed,
+  unscheduled, and nobody is working on it.
+- **Distribution** — `npx wst` / optional plugin (adr-0010). Deliberately last: the payload is the
+  value, the installer is a wrapper.
 
 ## Development
 
