@@ -10,11 +10,7 @@
   "engines": {
     "node": ">=22"
   },
-  "files": [
-    "dist",
-    ".wst/skills",
-    "plugin"
-  ],
+  "files": ["dist", ".wst/skills", "plugin", ".claude-plugin"],
   "scripts": {
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",

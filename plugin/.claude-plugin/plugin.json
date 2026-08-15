@@ -1,7 +1,9 @@
 {
   "name": "whetstone",
   "description": "Gates AI-written changes against a project's own definition of correct, and proves the verdict.",
-  "version": "0.1.0",
-  "author": { "name": "Juan Ignacio Munoz" },
+  "version": "0.4.0",
+  "author": {
+    "name": "Juan Ignacio Munoz"
+  },
   "repository": "https://github.com/Juanmzz/whetstone"
 }

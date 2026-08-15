@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "whetstone",
+  "description": "The session-side half of Whetstone: the gate runs when an agent stops, and a strict path warns at the moment of the edit.",
+  "owner": {
+    "name": "Juan Ignacio Munoz"
+  },
+  "plugins": [
+    {
+      "name": "whetstone",
+      "description": "Gates AI-written changes against a project's own definition of correct, and proves the verdict. Runs `wst gate` on Stop, warns before an edit to a strict path, and carries the init conversation as a skill.",
+      "author": { "name": "Juan Ignacio Munoz" },
+      "category": "development",
+      "source": "./plugin"
+    }
+  ]
+}
