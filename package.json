@@ -12,7 +12,8 @@
   },
   "files": [
     "dist",
-    ".wst/skills"
+    ".wst/skills",
+    "plugin"
   ],
   "scripts": {
     "dev": "tsx src/cli.ts",
