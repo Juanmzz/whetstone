@@ -135,5 +135,5 @@ built under that waiver and removed by ADR-0009.
 - **The lens is uncalibrated at v4**, so the differentiator is advisory.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
-- **Unowned:** ADR-0006's updater is M5 on the roadmap and unscheduled; no skill owns subprocess-exit-code
+- **Unowned:** ADR-0006's updater is decided and unbuilt, with nobody on it; no skill owns subprocess-exit-code
   conventions (a retro proposal was declined for want of a home).

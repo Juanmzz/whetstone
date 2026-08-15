@@ -46,6 +46,11 @@ disagrees with it is drift.
 **What is not bundled:** `wst prepare` needs [`treehouse`](https://github.com/kunchenguid/treehouse)
 for worktree isolation, and judgment checks need the `claude` CLI.
 
+**What is not built, and what was refused,** live in
+[`.wst/memory/decisions.md`](./.wst/memory/decisions.md) — one entry per decision, each carrying
+what it ruled out. There is no roadmap here: this project has changed shape twice by decision,
+and a list of milestones is the thing that keeps claiming the old shape.
+
 ## Non-goals
 
 Not a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers). Not a memory server
@@ -54,23 +59,6 @@ worktrees, GitHub and execution to tools that already do those well. See
 [VISION.md](./VISION.md#what-whetstone-is-not), and
 [`.wst/memory/decisions.md`](./.wst/memory/decisions.md) for what each of those refusals ruled out
 and why.
-
-## Roadmap
-
-- **M1 — Bootstrap** ✅ — the init procedure, `.wst/` schema, the skill set, signal logging.
-- **M2 — Code tier** ❌ *withdrawn* — the plan was an emitter compiling `.wst/` into per-vendor
-  apparatus. There is no emitter, and `init` writes no `.claude/` at all: adr-0010 moved the
-  editor hook to a plugin that reads `.wst/triage.yaml` at run time instead of baking paths in.
-  That decision is still `proposed`, so the code tier is shipped by neither half today.
-- **M3 — The retro loop** ✅ — pattern detection, apparatus recommendation, human gate. Three retros
-  have run against real signals, amending seven of the eight skills. Repeatability past this repo
-  is still unproven.
-- **M4 — The engine** ← *current* — `wst` CLI, deterministic core, calibrated LLM boundary, check
-  registry, lean gate with receipts. The gate has landed; the judgment tier has not.
-- **M5 — Update model** — keep bootstrapped projects current via 3-way merge (adr-0006). Listed,
-  unscheduled, and nobody is working on it.
-- **Distribution** — `npx wst` / optional plugin (adr-0010). Deliberately last: the payload is the
-  value, the installer is a wrapper.
 
 ## Development
 
