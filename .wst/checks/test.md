@@ -4,11 +4,17 @@ description: The test suite passes, with no network calls and no token cost.
 kind: deterministic
 severity: block
 tiers: [strict, light]
-include: ["src/**/*.ts", "test/**/*.ts"]
+include: ["src/**/*.ts", "test/**/*.ts", "package.json", "vitest.config.ts"]
 command: npm test
 origin: [adr-0008, sig-0005, sig-0006]
-version: 1
+version: 2
 ---
+
+**`package.json` is in `include`** because it decides what the command runs and what
+ships: `scripts`, `files`, `bin` and `engines` all change the answer without touching a
+single `.ts`. Editing it used to match no check at all, so the gate reported INCOMPLETE
+and refused the push — correctly, since nothing had been verified. Version bumped 1 → 2
+so receipts minted against the narrower `include` are re-earned.
 
 The default suite must stay free and offline. Live LLM tests are gated behind
 `WST_LIVE_LLM=1` — a suite that costs money per run is a suite people stop running.
