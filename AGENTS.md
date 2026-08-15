@@ -21,13 +21,7 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 3. **`.wst/triage-rules.md`** — which discipline a change earns. Read BEFORE editing.
 4. **`.wst/memory/decisions.md`** — every decision by anchor id, carrying what it ruled out.
    Open it when you are about to change one, not to learn how the system works.
-5. **`docs/field-report-chytapay-2026-08.md`** — the only run against a real foreign repo.
-   Read it BEFORE changing what `init` writes. Checked against `agilpay-backend` on
-   2026-08-14: five of seven verifiable claims hold verbatim, two do not and carry an inline
-   **Correction** block. Both failures are the same shape — the report citing outside evidence
-   that flattered its own argument — so read a `>` block as the fact and the prose around it as
-   the claim.
-6. **`docs/PARALLEL.md`** + **`.wst/lanes.yaml`** — if you are a crewmate in a lane.
+5. **`docs/PARALLEL.md`** + **`.wst/lanes.yaml`** — if you are a crewmate in a lane.
 
 ## The commands
 
@@ -63,7 +57,6 @@ format is in `.wst/architecture.md`.
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
 | `docs/woz/` | Wizard-of-Oz reference specs. Not current procedure. |
-| `docs/field-report-*.md` | What happened when the tool met a repo it did not own. Evidence, not design. |
 | `.claude/hooks/` | Emitter output compiled from `.wst/`. Hand-edits are drift. |
 
 ## Hard rules
@@ -102,7 +95,7 @@ format is in `.wst/architecture.md`.
 ## Memory
 
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
-`whetstone`.** Never save Whetstone work under `chytapay-workspace`.
+`whetstone`.** Never save Whetstone work under another project's namespace.
 
 ## Status — branch `main` · 20 ADRs · 51 signals · 10 commands
 

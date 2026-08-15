@@ -283,7 +283,7 @@ describe("payloadSkill — what a copied skill looks like in someone else's repo
     "## Changelog",
     "",
     "- v2 (2026-08-14, adr-0019): decisions live on one page.",
-    "- v1 (2026-07-11, init): generated from ChytaPay, per `adr-0001`.",
+    "- v1 (2026-07-11, init): generated elsewhere, per `adr-0001`.",
     "",
   ].join("\n");
 

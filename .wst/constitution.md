@@ -56,7 +56,7 @@ Rules 6 and 7 originate in ADR-0008; rules 1–5 predate it and are unchanged.
   credential helper hands out whichever one is active — so with the wrong one selected, `git fetch`,
   `git push` and `gh pr` all fail with `remote: Repository not found`. That is a 404 from token
   scope, not a missing repo, and it reads like the remote is gone. `gh auth status` shows the active
-  account; `gh auth switch --user <name>` changes it. The sibling ChytaPay repos live under a
+  account; `gh auth switch --user <name>` changes it. Sibling work repos may live under a
   different account, so moving between the two workspaces means switching. Whetstone itself has no
   GitHub surface to break (ADR-0009 deleted the only one), so this is purely about git plumbing.
 

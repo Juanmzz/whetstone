@@ -40,8 +40,8 @@ same outcome.
 
 ## Changelog
 
-- v1 (2026-07-09, init): generated from the ChytaPay `token-economy` skill. Stripped
-  ChytaPay-specifics (engram/`mem_get_observation`, `skill_resolution` fallbacks, the chyta
+- v1 (2026-07-09, init): generated from a mature workspace's token-economy skill. Stripped
+  its host-specifics (its memory-observation calls, `skill_resolution` fallbacks, the host
   orchestrator/delegation-harness skill names, plugin-overlay stitching, haiku/sonnet/opus
   tiers). Kept rules T1–T10 and their IDs. Generalized: engram → "memory substrate"
   (`adr-0001`), overlay stitching → emitter

@@ -94,7 +94,7 @@ export async function runPrepare(
   }));
 
   // Derived, never literal. Hardcoding Whetstone's own three told a crewmate in
-  // `agilpay-backend` that three directories it would never touch were the dangerous
+  // a payments API that three directories it would never touch were the dangerous
   // ones, and said nothing about `migrations/` (sig-0041).
   const strictPaths = strictPathsFrom(triage.rules);
 

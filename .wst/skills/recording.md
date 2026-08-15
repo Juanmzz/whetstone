@@ -53,8 +53,8 @@ interface, and the discipline does not change when the backend does.
   entries on `memory/decisions.md`, not as files in a directory. [RC6] states the status
   transitions and the compaction rule: selecting is allowed, rewording is not, and later
   commentary is a new entry.
-- v1 (2026-07-11, init): generated from the ChytaPay Engram save protocol ("When to Save" +
-  session-summary gate). Stripped ChytaPay-specifics (engram tool names, the `chytapay-workspace`
+- v1 (2026-07-11, init): generated from a mature workspace's memory save protocol ("When to Save" +
+  session-summary gate). Stripped its host-specifics (backend tool names, that project's
   project anchor, topic-key scheme, sensitivity tags). Kept the proactive-save triggers and the
   session-close summary. ADDED the explicit human gate on every write — the `memory-poisoning`
   guard (per `adr-0003`, and the two questions it leaves open:

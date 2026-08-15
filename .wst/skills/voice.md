@@ -49,8 +49,8 @@ default. A low-stakes solo take-home still wants V1–V6
   said V2 applies to sub-agent output, which the rule text did not say), sig-0004, sig-0009 (a
   fix verified over 2 runs on a one-line input and recorded as general), and sig-0016 (a
   conclusion announced before stating which state it came from). **Contribution candidate.**
-- v1 (2026-07-11, init): generated from the ChytaPay `01-persona` overlay + the Gentleman
-  output-style. Stripped ChytaPay-specifics (Rioplatense voseo vocabulary, payment-domain
+- v1 (2026-07-11, init): generated from a mature workspace's persona overlay + the Gentleman
+  output-style. Stripped its host-specifics (regional vocabulary, domain-
   framing, the fixed Spanish/English artifact split — that lives in [[doc-locations]]). Kept
   the anti-pleaser stance, verify-before-agree, pushback-at-forks, severity-honesty, own-errors,
   and concepts-before-code as generic behavioral rules. No signal receipts yet.
