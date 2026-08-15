@@ -17,10 +17,10 @@ describe("auditSelfContained — Whetstone's own files may never be referenced",
     })).toEqual([]);
   });
 
-  it("catches a reference to Whetstone's Wizard-of-Oz docs", () => {
-    const found = audit("The schema is defined in docs/woz/SPEC.md.");
+  it("catches a reference to a file under Whetstone's own docs/", () => {
+    const found = audit("The schema is defined in docs/PARALLEL.md.");
     expect(found).toHaveLength(1);
-    expect(found[0]?.match).toContain("docs/woz");
+    expect(found[0]?.match).toContain("docs/");
   });
 
   it("catches the exact bug that already happened here — a skill citing OPEN_QUESTIONS.md", () => {
@@ -38,7 +38,7 @@ describe("auditSelfContained — Whetstone's own files may never be referenced",
   });
 
   it("reports the file and line, so the violation is fixable without a search", () => {
-    const found = audit("line one\nline two\nsee docs/woz/init.md\n");
+    const found = audit("line one\nline two\nsee docs/PARALLEL.md\n");
     expect(found[0]?.path).toBe(".wst/constitution.md");
     expect(found[0]?.line).toBe(3);
     expect(found[0]?.why.length).toBeGreaterThan(0);
@@ -104,7 +104,7 @@ describe("auditSelfContained — the copied skills are audited too", () => {
     });
 
   it("catches a Whetstone-only reference inside a copied skill", () => {
-    const found = withCopy("The reasoning is in docs/woz/SPEC.md.");
+    const found = withCopy("The reasoning is in docs/PARALLEL.md.");
 
     expect(found).toHaveLength(1);
     expect(found[0]?.path).toBe(".wst/skills/voice.md");

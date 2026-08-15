@@ -208,7 +208,7 @@ The prompt goes on **stdin** — diffs exceed argv limits.
 |---|---|
 | `.wst/memory/decisions.md` | Every decision, by anchor id. What was ruled out, and why |
 | `.wst/memory/signals.jsonl` | Append-only observations. The retro's input |
-| `.wst/memory/retro-log.md` · `proposals/` | What a retro concluded, and what it proposed |
+| `.wst/memory/retro-log.md` | What a retro concluded. A proposal under `proposals/` is transient — deleted once the log records the decision (adr-0017) |
 | `.wst/memory/out-of-scope/` | What was deliberately refused, so it is not re-proposed |
 | `.wst/checks/*.calibration.json` | The receipt that grants a lens blocking authority |
 | `.wst/lanes.yaml` | Lane ownership. `.claude/hooks/lane-guard.mjs` is compiled from it |

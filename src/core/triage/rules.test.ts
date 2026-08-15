@@ -143,7 +143,7 @@ describe("the default ruleset", () => {
    * of leak `core/init/selfcontained.ts` exists to stop, in the one file it does
    * not audit.
    *
-   * It shipped: `docs/woz/SPEC.md` sat here at `strict`, and the test above
+   * It shipped: a `docs/` file sat here at `strict`, and the test above
    * asserted it, calling a Whetstone-only document "payload that propagates".
    */
   it("names no path that exists only in Whetstone", () => {
@@ -175,7 +175,7 @@ describe("the default ruleset", () => {
     expect(tierOf("README.md")).toBe("light");
     expect(tierOf("VISION.md")).toBe("light");
     expect(tierOf("AGENTS.md")).toBe("light");
-    expect(tierOf("docs/woz/OPEN_QUESTIONS.md")).toBe("light");
+    expect(tierOf("docs/PARALLEL.md")).toBe("light");
     expect(tierOf(".wst/memory/decisions.md")).toBe("light");
   });
 

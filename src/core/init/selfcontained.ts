@@ -2,7 +2,7 @@
  * ADR-0004, enforced instead of remembered.
  *
  * Everything `init` writes travels into someone else's repository. A generated
- * sentence that says "see `docs/woz/SPEC.md`" or "copy the skills from
+ * sentence that says "see `docs/PARALLEL.md`" or "copy the skills from
  * Whetstone's `.wst/skills/`" produces a reference to a file that does not exist
  * there. The reader — usually an agent — then either invents the missing content
  * or drops the rule, and both failures are silent.
@@ -46,15 +46,18 @@ interface DenyRule {
  */
 const DENY: readonly DenyRule[] = [
   {
-    pattern: /docs\/woz\/[A-Za-z0-9_.-]*/g,
-    why: "Whetstone's Wizard-of-Oz reference docs — they do not exist in a bootstrapped repo",
+    pattern: /docs\/[A-Za-z0-9_.-]+\.md/g,
+    why: "a file under Whetstone's own `docs/` — it does not exist in a bootstrapped repo",
   },
   {
     pattern: /\bOPEN_QUESTIONS\.md\b/g,
     why: "a Whetstone working document; the exact reference that dangled once already",
   },
   {
-    pattern: /\bPARALLEL\.md\b/g,
+    // Bare, without the directory. The `docs/` rule above catches the qualified
+    // form; this catches "see PARALLEL.md", which is the way prose usually cites
+    // it. Kept apart so a qualified mention is reported once, not twice.
+    pattern: /(?<!\/)\bPARALLEL\.md\b/g,
     why: "Whetstone's lane brief for its own contributors",
   },
   {

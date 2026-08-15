@@ -8,8 +8,8 @@ describe("matchesPathGlob", () => {
   });
 
   it("matches an exact path", () => {
-    expect(matchesPathGlob("docs/woz/SPEC.md", "docs/woz/SPEC.md")).toBe(true);
-    expect(matchesPathGlob("docs/woz/OTHER.md", "docs/woz/SPEC.md")).toBe(false);
+    expect(matchesPathGlob("docs/PARALLEL.md", "docs/PARALLEL.md")).toBe(true);
+    expect(matchesPathGlob("docs/OTHER.md", "docs/PARALLEL.md")).toBe(false);
   });
 
   it("normalises a leading ./ so a relative diff path still matches", () => {

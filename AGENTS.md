@@ -50,13 +50,12 @@ format is in `.wst/architecture.md`.
 |---|---|
 | `.wst/` | The definition layer. Source of truth. |
 | `.wst/checks/` · `lanes.yaml` · `triage.yaml` | Registry, lane ownership, triage rules |
-| `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`, `proposals/` |
+| `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`; `proposals/` holds a retro's draft until the log records it |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
 | `src/shell/` | Thin adapters: git, claude, treehouse, sdd, signals, events, receipts, plugin |
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
-| `docs/woz/` | Wizard-of-Oz reference specs. Not current procedure. |
 | `.claude/hooks/` | Emitter output compiled from `.wst/`. Hand-edits are drift. |
 
 ## Hard rules
@@ -97,7 +96,7 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 20 ADRs · 51 signals · 10 commands
+## Status — branch `main` · 20 ADRs · 53 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -111,7 +110,7 @@ built under that waiver and removed by ADR-0009.
   crewmate's work is the push and CI; `wst retro` has run three times, producing amendments
   across seven of the eight skills, each carrying the signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **51 signals**, 27 with `resolved_by`. Three retros. Seven of eight skills amended:
+- **53 signals**, 27 with `resolved_by`. Three retros. Seven of eight skills amended:
   `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
@@ -119,9 +118,13 @@ built under that waiver and removed by ADR-0009.
 
 ### Known weaknesses, stated plainly
 
-- **47 of 51 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
-  the human about an incident that actually happened). **`sig-a9ff00c4` is the first to carry `source: "gate"`** — written on
-  2026-08-14 when `docs-fresh` blocked a change that added an ADR without updating this line.
+- **47 of 53 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
+  the human about an incident that actually happened). **`sig-a9ff00c4` was the first to carry
+  `source: "gate"`** — written on 2026-08-14 when `docs-fresh` blocked a change that added an ADR
+  without updating this line. Two more followed on 2026-08-15 (`sig-6f2d2b95`, `sig-5c2d6751`),
+  and they are the first the gate wrote about a failure nobody staged: the test suite could not
+  write to `/tmp`, and the count those signals invalidated was caught by `docs-fresh` on the
+  next push.
   Before it, CI emitted `sig-70ad13db` on an ephemeral runner and it evaporated. The gap was
   never "the gate does not fail"; it was that where the gate really runs, nothing persisted
   what it observed.

@@ -2,7 +2,7 @@
  * The event log adapter. THIN — it stamps, serialises and appends.
  *
  * Lives at `.wst/events.jsonl`, NOT under `.wst/memory/`. `memory/` is the
- * human-gated layer: ADRs, `signals.jsonl`, `proposals/` — things a person writes,
+ * human-gated layer: decisions, `signals.jsonl`, retro proposals — things a person writes,
  * reads and edits. This file is machine-written, never edited, and feeds no
  * decision. Filing it there would make "everything in `memory/` is human-gated"
  * false, which is a load-bearing sentence in the constitution.

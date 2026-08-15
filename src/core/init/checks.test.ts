@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildRegistry, parseCheckFile } from "../checks/registry.js";
-import { detectStack, type RepoFacts } from "./detect.js";
+import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { seedChecks } from "./checks.js";
 
 const facts = (over: Partial<RepoFacts> = {}): RepoFacts => ({
@@ -104,9 +104,13 @@ describe("seedChecks — never seed a check that cannot run", () => {
     expect(test?.severity).toBe("warn");
   });
 
-  it("lets the test check block once the repo actually has tests", () => {
+  it("still holds the test check at warn when tests exist, having never seen them pass", () => {
+    // Reversed on 2026-08-15. This used to assert `block`, on the reasoning that
+    // test files existing is evidence enough. A real install proved otherwise: a quarter of
+    // that suite opened a database nobody had started, so the gate was red on
+    // every machine. Test files exist is not the suite passes.
     const test = load(seedChecks(tsRepo, seeded)).find((c) => c.id === "test");
-    expect(test?.severity).toBe("block");
+    expect(test?.severity).toBe("warn");
   });
 });
 
@@ -165,5 +169,48 @@ describe("seedChecks — check bodies", () => {
       seedChecks(tsRepo, { date: "2026-08-08", include: ["apps/*/src/**"] }),
     );
     for (const check of checks) expect(check.include).toEqual(["apps/*/src/**"]);
+  });
+});
+
+/**
+ * Two defects from one install into a repo Whetstone did not grow up in, both from
+ * `init` trusting what `package.json` declared without reading it (`sig-0043`).
+ */
+describe("seedChecks — what init may not assume about a repo's own scripts", () => {
+  const facts = (over: Partial<StackFacts> = {}): StackFacts => ({
+    packageManager: "npm",
+    commands: { test: "npm run test", typecheck: null, lint: "npm run lint" },
+    hasTests: true,
+    mutating: [],
+    evidence: [],
+    ...over,
+  });
+  const fileFor = (id: string, over: Partial<StackFacts> = {}) =>
+    seedChecks(facts(over), seeded).find((f) => f.path.endsWith(`${id}.md`));
+
+  it("never seeds `test` at block, because it has not seen the suite pass", () => {
+    // Seeded at `block` on the evidence that test FILES exist. In that repo a
+    // quarter of the suite opened a database nobody had started, so the gate was
+    // red on every machine — and a check that is red everywhere gets routed
+    // around, after which it stops catching the real findings too.
+    expect(fileFor("test")?.contents).toContain("severity: warn");
+  });
+
+  it("says what promotes `test`, so warn is a step and not a resting place", () => {
+    expect(fileFor("test")?.contents).toMatch(/first green gate/i);
+  });
+
+  it("seeds a mutating command disabled rather than letting it rewrite the tree", () => {
+    const lint = fileFor("lint", { mutating: ["lint"] })?.contents ?? "";
+
+    expect(lint).toContain("enabled: false");
+    expect(lint).toMatch(/rewrites the tree/i);
+  });
+
+  it("leaves a read-only lint enabled and at warn", () => {
+    const lint = fileFor("lint")?.contents ?? "";
+
+    expect(lint).not.toContain("enabled: false");
+    expect(lint).toContain("severity: warn");
   });
 });

@@ -2,7 +2,7 @@
  * Retro steps 3-4: the recommendation, and the anti-poisoning gate that must pass
  * BEFORE a human ever sees it. PURE.
  *
- * Why this exists (OWASP ASI06, and `docs/woz/retro.md` §4): the retro's proposal is
+ * Why this exists (OWASP ASI06): the retro's proposal is
  * AGENT-GENERATED. A human gate alone is not enough — a plausible proposal citing a
  * signal that never happened is exactly the thing a tired reviewer rubber-stamps. So
  * the machine checks the machine's own evidence first, deterministically, and a

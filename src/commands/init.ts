@@ -329,7 +329,7 @@ const PACKAGE_NAME = "whetstone";
  *
  * Read here rather than at write time because `planInit` audits them: a skill is
  * copied verbatim into a repo that has never heard of Whetstone, so a sentence in
- * one naming `docs/woz/SPEC.md` dangles there. An empty map is a legitimate
+ * one naming `docs/PARALLEL.md` dangles there. An empty map is a legitimate
  * result — a published package without its payload — and produces "not audited",
  * which is a violation, not a pass.
  */
