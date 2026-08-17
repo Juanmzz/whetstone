@@ -97,6 +97,14 @@ export interface CharterInput {
   readonly branch: string;
   /** Lane id when the crewmate is boundary-scoped, else null. */
   readonly lane: string | null;
+  /**
+   * Whether anything actually denies an out-of-lane write here. The guard is
+   * emitted per repo with its globs compiled in, so it exists in Whetstone and
+   * not in a repo Whetstone bootstrapped. A charter that promises a barrier that
+   * is not there reads as authoritative and is wrong, which costs more than
+   * saying nothing.
+   */
+  readonly laneGuard?: boolean;
   /** What will judge this work — the crewmate is told BEFORE it starts. */
   readonly gatingChecks: readonly GatingCheck[];
   /** Path prefixes where full TDD is mandatory. */
@@ -192,9 +200,14 @@ export function buildCharter(input: CharterInput): string {
     lines.push(
       `## Your lane: \`${input.lane}\``,
       ``,
-      `A hook DENIES writes outside your lane, including to shared contracts. If it`,
-      `blocks you and the work genuinely needs that file, STOP and report it — the lane`,
-      `split being wrong is useful information; working around it is not.`,
+      ...(input.laneGuard === true
+        ? [`A hook DENIES writes outside your lane, including to shared contracts. If it`,
+           `blocks you and the work genuinely needs that file, STOP and report it — the lane`,
+           `split being wrong is useful information; working around it is not.`]
+        : [`Stay inside it. **No hook enforces this — nothing here stops you**, so the`,
+           `boundary is only as real as you make it. If the work genuinely needs a file`,
+           `outside the lane, STOP and report it: the split being wrong is useful`,
+           `information, and quietly widening it is how the information is lost.`]),
       ``,
     );
   }
