@@ -331,6 +331,12 @@ describe("activeSkills — what AGENTS.md lists", () => {
     expect(found).toEqual(["skills/lazy.md", "skills/dispatch.md"]);
   });
 
+  it("lists nothing when the directory was read and is empty", () => {
+    // Not the same as not having read it. Eight names for a directory with no
+    // files is the same defect this function was fixed for, reversed.
+    expect(activeSkills([])).toEqual([]);
+  });
+
   it("falls back to the shipped set when nothing was read", () => {
     // `init` writing a fresh repo has no directory to read yet.
     expect(activeSkills()).toContain("skills/lazy.md");

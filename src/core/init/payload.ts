@@ -113,9 +113,11 @@ export function activeSkills(present?: readonly string[]): readonly string[] {
   //
   // The fallback is for `init` writing a fresh repo, where there is no directory
   // to read yet.
-  return present !== undefined && present.length > 0
-    ? present
-    : SKILL_FILES.map((name) => `skills/${name}`);
+  // `undefined` means the shell did not read a directory — a fresh repo, where the
+  // shipped set is the right answer. An EMPTY array means it read one and found
+  // nothing, which is a different repo entirely: listing eight files that are not
+  // there is the failure this function was fixed for, pointed the other way.
+  return present ?? SKILL_FILES.map((name) => `skills/${name}`);
 }
 
 export interface WstYamlInput {
