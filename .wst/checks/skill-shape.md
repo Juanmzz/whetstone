@@ -6,7 +6,7 @@ severity: block
 tiers: [strict, light]
 include: [".wst/skills/**/*.md"]
 command: npm run check:skills
-origin: [adr-0007]
+origin: [adr-0017, adr-0019]
 version: 1
 ---
 
