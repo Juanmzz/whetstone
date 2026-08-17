@@ -64,6 +64,11 @@ export interface InitOptions {
 
 export interface InitPlanInput {
   /**
+   * Skills already on disk in the TARGET repo, repo-relative (`skills/x.md`).
+   * Read by the shell. Absent on a fresh repo, where the shipped set is right.
+   */
+  readonly presentSkills?: readonly string[];
+  /**
    * Whetstone's own skill files, keyed by `from`, read by the shell before
    * planning. Supplied so the reference-closure audit can read the eight files it
    * ships verbatim — the ones written for THIS repo and most likely to name a
@@ -116,7 +121,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     ...(options.seedAgentLens === true ? { agentLens: true } : {}),
   });
 
-  const skills = activeSkills();
+  const skills = activeSkills(input.presentSkills);
   const copies = skillCopies(input.skillTexts);
 
   // Compiled BEFORE the prose, because the prose refers to it: `triage-rules.md`
@@ -235,7 +240,11 @@ export function planInit(input: InitPlanInput): InitPlan {
     );
   }
 
-  const violations = auditSelfContained({ files, copies });
+  const violations = auditSelfContained({
+    files,
+    copies,
+    existing: (input.presentSkills ?? []).map((p) => `${DEFINITION_DIR}/${p}`),
+  });
   if (violations.length > 0) {
     throw new Error(
       `the generated payload is NOT self-contained. Everything init writes travels into ` +

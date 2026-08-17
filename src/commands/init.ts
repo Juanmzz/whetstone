@@ -525,6 +525,14 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   const payloadRoot = await findPayloadRoot();
   const skillTexts = await readSkills(payloadRoot);
 
+  // What the TARGET repo already has, which is not the same as what Whetstone
+  // ships. Only `--force` re-renders AGENTS.md, and until now that re-render
+  // listed the eight shipped names — so a skill written by hand after init was
+  // invisible to every agent that read the file.
+  const presentSkills = await readdir(join(root, DEFINITION_DIR, "skills"))
+    .then((names) => names.filter((n) => n.endsWith(".md")).sort().map((n) => `skills/${n}`))
+    .catch(() => [] as string[]);
+
   let plan: InitPlan;
   try {
     plan = planInit({
@@ -532,6 +540,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       answers,
       clock: { now: () => new Date() },
       skillTexts,
+      presentSkills,
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),

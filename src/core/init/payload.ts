@@ -105,8 +105,17 @@ export function skillCopies(texts?: ReadonlyMap<string, string>): readonly CopyR
  * and "on" is the answer the old code already gave whenever the count was
  * unknown: absence of evidence was never evidence of solo work.
  */
-export function activeSkills(): readonly string[] {
-  return SKILL_FILES.map((name) => `skills/${name}`);
+export function activeSkills(present?: readonly string[]): readonly string[] {
+  // `present` is what the shell read off `.wst/skills/`. Without it this returned
+  // the eight shipped names regardless of what was on disk, and `AGENTS.md` is
+  // rendered from it — so a skill somebody wrote by hand after `init` never
+  // appeared in the list an agent reads, and was invisible in practice.
+  //
+  // The fallback is for `init` writing a fresh repo, where there is no directory
+  // to read yet.
+  return present !== undefined && present.length > 0
+    ? present
+    : SKILL_FILES.map((name) => `skills/${name}`);
 }
 
 export interface WstYamlInput {
