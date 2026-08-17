@@ -70,3 +70,45 @@ describe("the stake attached to each collision", () => {
     expect(found?.stake.trim()).not.toBe("");
   });
 });
+
+/**
+ * `--force` may replace a generated file. It may not destroy evidence.
+ *
+ * `init` writes `signals.jsonl` empty, and `--force` overwrote it like anything
+ * else — truncating a repo's append-only record to zero bytes. That was a
+ * defensible call when the log was always empty at init; it stopped being one the
+ * first time a real project had a day of signals in it. Constitution
+ * non-negotiable 4: corrections are appended, never overwritten.
+ *
+ * Reported from a day of real use, alongside the workaround someone had to invent:
+ * back up signals.jsonl, run `init --force`, restore it.
+ */
+describe("collisionsIn — what --force may never take", () => {
+  const plan = {
+    files: [
+      { path: ".wst/memory/signals.jsonl", contents: "" },
+      { path: ".wst/memory/events.jsonl", contents: "" },
+      { path: ".wst/constitution.md", contents: "x" },
+    ],
+    copies: [],
+  };
+
+  it("marks the append-only logs as unforceable", () => {
+    const found = collisionsIn(plan, [".wst/memory/signals.jsonl", ".wst/memory/events.jsonl"]);
+
+    expect(found.map((c) => c.path)).toHaveLength(2);
+    for (const c of found) expect(c.forceable).toBe(false);
+  });
+
+  it("leaves a generated file forceable, which is what --force is for", () => {
+    const [found] = collisionsIn(plan, [".wst/constitution.md"]);
+
+    expect(found?.forceable).toBe(true);
+  });
+
+  it("says what the log holds, not just that it collides", () => {
+    const [found] = collisionsIn(plan, [".wst/memory/signals.jsonl"]);
+
+    expect(found?.stake).toMatch(/append-only|never overwritten/i);
+  });
+});

@@ -96,7 +96,7 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 20 ADRs · 53 signals · 10 commands
+## Status — branch `main` · 20 ADRs · 54 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -110,7 +110,7 @@ built under that waiver and removed by ADR-0009.
   crewmate's work is the push and CI; `wst retro` has run three times, producing amendments
   across seven of the eight skills, each carrying the signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
   full gate on every PR.
-- **53 signals**, 27 with `resolved_by`. Three retros. Seven of eight skills amended:
+- **54 signals**, 27 with `resolved_by`. Three retros. Seven of eight skills amended:
   `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until

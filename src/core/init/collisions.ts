@@ -27,7 +27,18 @@ export interface Collision {
   readonly path: string;
   /** What losing this file costs, in the human's terms. Never empty. */
   readonly stake: string;
+  /**
+   * Whether `--force` may replace it.
+   *
+   * False for the append-only logs. `--force` exists to say "replace the
+   * generated files, I know what that costs"; it was never a licence to truncate
+   * a project's evidence, and constitution non-negotiable 4 says corrections are
+   * appended and never overwritten. A repo that has run for a day has signals in
+   * that file, and `init` writing it empty would take all of them.
+   */
+  readonly forceable: boolean;
 }
+
 
 /**
  * Why each known path matters, in the words someone deciding whether to pass
@@ -37,6 +48,12 @@ export interface Collision {
 /** Anchored at a subpath of the definition directory. Most specific first. */
 const under = (subpath: string): RegExp =>
   new RegExp(`^${DEFINITION_DIR_PATTERN}/${subpath}`);
+
+/** Append-only records. `init` seeds them empty and must never re-empty them. */
+const APPEND_ONLY: readonly RegExp[] = [
+  under("memory/signals.jsonl"),
+  under("memory/events.jsonl"),
+];
 
 const STAKES: readonly (readonly [RegExp, string])[] = [
   [
@@ -52,6 +69,10 @@ const STAKES: readonly (readonly [RegExp, string])[] = [
     "replaced wholesale with a file containing only Whetstone's hook. Existing permissions, env, statusLine and other hooks are NOT merged",
   ],
   [/^\.claude\/hooks\//, "an existing hook of the same name is replaced"],
+  [
+    under("memory/(signals|events)\\.jsonl"),
+    "an append-only log. `init` seeds it empty, so writing it would take every line already there — and a correction is appended, never overwritten",
+  ],
   [under("memory/decisions.md"), "the decision record. This is the record of WHY, and nothing else holds it"],
   [under("memory/"), "recorded memory: signals, retro history, patterns"],
   [under("checks/"), "a check definition this project already relies on"],
@@ -90,7 +111,11 @@ export function collisionsIn(
   return [...planned]
     .filter((path) => onDisk.has(path))
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
-    .map((path) => ({ path, stake: stakeFor(path) }));
+    .map((path) => ({
+      path,
+      stake: stakeFor(path),
+      forceable: !APPEND_ONLY.some((r) => r.test(path)),
+    }));
 }
 
 /**
