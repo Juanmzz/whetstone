@@ -6,8 +6,11 @@ import { buildTriageRules, renderTriageRulesMd } from "./triage.js";
 import {
   payloadSkill,
   renderDecisionsMd,
+  renderRootGitignoreStanza,
+  renderWstGitignore,
   CLAUDE_MD,
   MEMORY_README,
+  ROOT_GITIGNORE_ENTRIES,
   SKILL_FILES,
   activeSkills,
   renderAgentsMd,
@@ -192,6 +195,49 @@ describe("the memory schema travels with the payload", () => {
 
   it("holds no entry of its own — a seeded decision is a decision nobody made", () => {
     expect(renderDecisionsMd({ date: "2026-08-14" })).not.toMatch(/^### adr-\d{4}/m);
+  });
+
+  it("uses no em-dash — this page lands in a repo that may forbid them by convention", () => {
+    expect(renderDecisionsMd({ date: "2026-08-14" })).not.toContain("—");
+  });
+});
+
+describe("runtime state the target repo must never commit", () => {
+  describe("renderWstGitignore — .wst/.gitignore", () => {
+    const gitignore = renderWstGitignore();
+
+    it("ignores the compiled check index, the event log and the receipts cache", () => {
+      expect(gitignore.split("\n").map((l) => l.trim())).toEqual(
+        expect.arrayContaining(["checks/_index.json", "events.jsonl", "receipts/"]),
+      );
+    });
+
+    it("does not ignore signals.jsonl — that page is committed on purpose", () => {
+      expect(gitignore).not.toMatch(/signals\.jsonl/);
+    });
+
+    it("uses no em-dash, same as every other page init writes into a target repo", () => {
+      expect(gitignore).not.toContain("—");
+    });
+  });
+
+  describe("renderRootGitignoreStanza — .wst-charter.md and .wst-lane", () => {
+    it("ignores both files `wst prepare` writes into a leased worktree", () => {
+      expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-charter.md", ".wst-lane"]);
+      const stanza = renderRootGitignoreStanza();
+      expect(stanza).toContain(".wst-charter.md");
+      expect(stanza).toContain(".wst-lane");
+    });
+
+    it("can render only the entries missing from a .gitignore that already exists", () => {
+      const stanza = renderRootGitignoreStanza([".wst-lane"]);
+      expect(stanza).toContain(".wst-lane");
+      expect(stanza).not.toContain(".wst-charter.md");
+    });
+
+    it("uses no em-dash", () => {
+      expect(renderRootGitignoreStanza()).not.toContain("—");
+    });
   });
 });
 

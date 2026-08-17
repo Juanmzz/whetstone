@@ -57,6 +57,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
     // `.wst/` are the ones that collide.
     expect(p.files.map((f) => f.path).sort()).toEqual(
       [
+        ".wst/.gitignore",
         ".wst/checks/lint.md",
         ".wst/checks/test.md",
         ".wst/checks/typecheck.md",
