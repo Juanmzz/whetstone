@@ -74,23 +74,57 @@ are files somebody wrote by hand. Either use `--definitions-only`, or stop and a
 The gate is the only part that does not depend on an agent cooperating, so it is the
 part worth getting right.
 
-With husky already present:
+**`wst gate` with no `--range` compares the working tree to HEAD.** At pre-push time the
+tree is clean, so it finds zero files, reports INCOMPLETE and exits 2 — blocking every
+push regardless of content. The hook has to derive the range from what git is pushing.
 
-```bash
-echo 'wst gate --no-lens || exit 1' >> .husky/pre-push
+Write this file. With husky, put it in `.husky/pre-push`; with no hook manager, put it in
+`.githooks/pre-push`, `chmod +x` it, and then — **only if nothing else owns the setting** —
+`git config core.hooksPath .githooks`. If `.husky/` exists, git allows one value and
+setting it disarms husky.
+
+```sh
+#!/bin/sh
+# Whetstone gate. Deterministic checks only: a hook that costs money and fifty
+# seconds on every push gets bypassed with --no-verify, and a routed-around gate
+# is worth less than no gate. The review lens belongs in CI.
+ZERO="0000000000000000000000000000000000000000"
+command -v wst >/dev/null 2>&1 || exit 0   # not installed here: never block on that
+
+# git feeds one line per ref: <local ref> <local sha> <remote ref> <remote sha>
+while read -r _lref lsha _rref rsha; do
+  [ "$lsha" = "$ZERO" ] && continue        # branch deletion, nothing to gate
+
+  if [ "$rsha" = "$ZERO" ]; then
+    # New branch: the remote has no history for it. Gating against the all-zero
+    # sha would diff the whole repository and time out on a branch's first push.
+    base="$(git merge-base "$lsha" refs/remotes/origin/HEAD 2>/dev/null \
+         || git merge-base "$lsha" origin/main 2>/dev/null || echo "")"
+    [ -z "$base" ] && exit 0
+    range="$base..$lsha"
+  else
+    range="$rsha..$lsha"
+  fi
+
+  code=0
+  wst gate --no-lens --range "$range" || code=$?
+  if [ "$code" -ne 0 ]; then
+    if [ "$code" -eq 2 ]; then
+      echo "whetstone: a required check could not run, so this was NOT verified." >&2
+    else
+      echo "whetstone: a required check failed. Fix it, or push with --no-verify." >&2
+    fi
+    exit 1
+  fi
+done
+exit 0
 ```
 
-With no hook manager at all:
-
-```bash
-mkdir -p .githooks
-printf '#!/bin/sh\nwst gate --no-lens || exit 1\n' > .githooks/pre-push
-chmod +x .githooks/pre-push
-git config core.hooksPath .githooks
-```
-
-`--no-lens` deliberately: a hook that costs money and fifty seconds on every push gets
-bypassed with `--no-verify`, and a routed-around gate has negative value.
+Three things in there are not decoration. `|| code=$?` keeps the real exit code — `if !
+cmd` would reset it to 0 and make the branch below unreachable. Exit 2 gets its own
+sentence because "the gate broke" and "your change is bad" may never share a message.
+And `command -v wst` means a teammate who has not installed it is not blocked by a tool
+they do not have.
 
 ## 6. Show them it works
 
