@@ -92,6 +92,38 @@ git config core.hooksPath .githooks
 `--no-lens` deliberately: a hook that costs money and fifty seconds on every push gets
 bypassed with `--no-verify`, and a routed-around gate has negative value.
 
+## 5b. If they have end-to-end tests, wire the ports
+
+An e2e check that starts a dev server is the one kind that can pass **against the wrong
+code**. Playwright's `reuseExistingServer: true` attaches to whatever is already
+listening, and a port does not know which checkout started it — so a gate run in one
+worktree can verify another's tree and report green. That is worse than a broken check,
+because it is indistinguishable from a working one.
+
+The gate hands every check two variables. Use them in their config:
+
+```js
+// playwright.config.ts
+const gated = process.env.WST_GATE_CWD !== undefined;
+const port = 3000 + Number(process.env.WST_GATE_PORT_OFFSET ?? 0);
+
+export default defineConfig({
+  use: { baseURL: `http://localhost:${port}` },
+  webServer: {
+    command: `npm run dev -- --port ${port}`,
+    port,
+    // Never under the gate: a reused server may belong to another checkout.
+    reuseExistingServer: !gated,
+  },
+});
+```
+
+`WST_GATE_CWD` is the checkout being verified. `WST_GATE_PORT_OFFSET` is a number in
+[0, 1000) derived from that path — stable per checkout, different between them.
+
+Say this out loud when you seed an e2e check. A repo that skips it gets a check that
+sometimes lies, and nothing will tell them.
+
 ## 6. Show them it works
 
 ```bash
