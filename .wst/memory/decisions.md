@@ -471,7 +471,7 @@ Reversal: if the drafted payload needs as much human editing as the blanks did, 
 adding a step and not judgment — delete the mode and keep the minimum.
 
 ### adr-0021 — "nothing covers this" is not "the gate broke", and must not block
-`proposed` · 2026-08-17 · signals: sig-7be649c1
+`proposed` · 2026-08-17
 
 *Not in force. `outcomeOf` still returns `incomplete` for both.*
 
@@ -480,8 +480,10 @@ auth, invalid output. **"No check matched these paths" is not on that list** —
 nothing was attempted. `outcomeOf` collapses the two into `incomplete` anyway, so both exit 2,
 and a pre-push hook blocks on both.
 
-The consequence, measured in a real repo: a change touching only markdown has **no legitimate
-way through the gate.** The seeded checks watch `src/**`; a README edit matches none of them,
+The consequence, reported from a day of use in a repo Whetstone does not own: a change touching
+only markdown has **no legitimate way through the gate.** That report's own signals live in that
+repo's log, not this one, so there is no local id to cite — the evidence is the behaviour, which
+reproduces here on any clean tree. The seeded checks watch `src/**`; a README edit matches none of them,
 so the gate reports the gate is broken and refuses a push that nothing was ever going to
 verify. There is no edit the author can make to fix it.
 
