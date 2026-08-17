@@ -489,7 +489,10 @@ verify. There is no edit the author can make to fix it.
 
 - **Rejected: leave it.** It is the exact pressure this project names everywhere else — a gate
   that blocks what nobody can fix teaches `--no-verify`, and a routed-around gate stops
-  catching the real findings too. Whetstone deleted `wst pr` for producing output nobody could
+  catching the real findings too. Recorded because it is no longer hypothetical: on
+  2026-08-17 an amend that changed **only a commit message** produced an empty range, and the
+  author of this entry ran `--no-verify` on Whetstone's own hook rather than fight it. Third
+  time that day the same conflation blocked a change nothing was going to verify. Whetstone deleted `wst pr` for producing output nobody could
   act on; this produces a refusal nobody can act on.
 - **Rejected: make the hook special-case exit 2.** It only sees an exit code, and the two
   situations it would have to tell apart are exactly the two this conflates. Pushing the
