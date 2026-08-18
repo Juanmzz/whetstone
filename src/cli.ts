@@ -35,8 +35,12 @@ program
   .command("status")
   .description(`show repo, ${DEFINITION_DIR}/ and judge-adapter health`)
   .option("--quiet", "print only the final ready / NOT ready line")
-  .action(async (opts: { quiet?: boolean }) => {
-    process.exitCode = await runStatus(process.cwd(), { quiet: opts.quiet ?? false });
+  .option("--json", "the same answer as data, for an agent rather than a reader")
+  .action(async (opts: { quiet?: boolean; json?: boolean }) => {
+    process.exitCode = await runStatus(process.cwd(), {
+      quiet: opts.quiet ?? false,
+      json: opts.json ?? false,
+    });
   });
 
 program
