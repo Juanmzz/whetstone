@@ -20,6 +20,7 @@ import type { CheckOutcome, Routing } from "../core/contracts.js";
 import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
 import { EXIT_INCOMPLETE, exitCodeFor, renderGateRun } from "../core/gate/report.js";
+import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
 import { NULL_SINK } from "../core/events/record.js";
 import { DEFINITION_DIR } from "../core/paths.js";
@@ -297,6 +298,30 @@ export function createCheckRunner(deps: {
 
 // ── the command ──────────────────────────────────────────────────────────────
 
+
+/**
+ * Prints each check as it starts and again as it finishes.
+ *
+ * Written to STDERR so it never mixes with `--json` on stdout, and so a caller
+ * piping the verdict still sees the run is alive. `--json` silences it anyway:
+ * a machine reading the envelope has no use for progress.
+ */
+function withProgress(runner: CheckRunner, target: ProgressTarget): CheckRunner {
+  return async (check, files) => {
+    for (const line of progressLines({ phase: "started", checkId: check.id }, target)) {
+      process.stderr.write(`${line}\n`);
+    }
+    const began = Date.now();
+    const outcome = await runner(check, files);
+    const lines = progressLines(
+      { phase: "finished", checkId: check.id, status: outcome.outcome.status, ms: Date.now() - began },
+      target,
+    );
+    for (const line of lines) process.stderr.write(`${line}\n`);
+    return outcome;
+  };
+}
+
 export async function runGate(
   opts: GateOptions = {},
   cwd: string = process.cwd(),
@@ -390,7 +415,10 @@ export async function runGate(
       events: emit,
       receipts:
         opts.noReceipts === true ? createDistrustfulReceiptStore() : createReceiptStore(definitionRoot),
-      run: createCheckRunner({
+      // Wrapped, not plumbed through `GatePorts`: `check-started` is deliberately
+      // absent from the event schema, and that reasoning still holds — the need is
+      // the reader's, not the log's. This channel is in-process and reaches no file.
+      run: withProgress(createCheckRunner({
         cwd: repoRoot,
         range,
         judge: createClaudeJudge(),
@@ -399,7 +427,7 @@ export async function runGate(
         maxLensTotalUsd: opts.maxLensTotalUsd ?? DEFAULT_MAX_LENS_TOTAL_USD,
         noLens: opts.noLens ?? false,
         timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      }),
+      }), opts.json === true ? { quiet: true } : {}),
     },
   );
 
