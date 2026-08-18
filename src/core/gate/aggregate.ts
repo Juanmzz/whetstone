@@ -73,6 +73,21 @@ export function aggregate(results: readonly CheckResult[]): GateVerdict {
       case "skipped":
         skipped.push(result.checkId);
         break;
+
+      case "declared":
+        // A method (adr-0018) is prose for an agent to follow, not a verdict. It
+        // belongs in no bucket: it cannot block, warn, error, or be skipped. That
+        // was already true by omission — this states it, and the `never` below
+        // makes the next outcome anyone adds decide what it means here.
+        break;
+
+      default: {
+        const unhandled: never = result.outcome;
+        throw new Error(
+          `unhandled check outcome ${JSON.stringify(unhandled)} — a new outcome must ` +
+            `say what it means for the verdict rather than falling through it`,
+        );
+      }
     }
   }
 

@@ -238,4 +238,18 @@ describe("cost", () => {
   it("is zero when nothing cost anything", () => {
     expect(aggregate([result("typecheck", "block", PASS)]).totalCostUsd).toBe(0);
   });
+
+  it("puts a declared method in no bucket, and never in the verdict", () => {
+    // adr-0018: a method is prose an agent follows. It cannot block, warn, error
+    // or count as skipped. This held by omission before the case existed.
+    const verdict = aggregate([
+      { checkId: "ui-states", checkVersion: 1, severity: "annotate", outcome: { status: "declared" }, durationMs: 0 },
+    ]);
+
+    expect(verdict.verdict).toBe("pass");
+    expect(verdict.blocking).toEqual([]);
+    expect(verdict.warnings).toEqual([]);
+    expect(verdict.errored).toEqual([]);
+    expect(verdict.skipped).toEqual([]);
+  });
 });

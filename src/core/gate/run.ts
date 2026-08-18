@@ -201,6 +201,16 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   // ── the receipt skip ──────────────────────────────────────────────────────
   const toRun: Prepared[] = [];
   for (const item of prepared) {
+    // A method is not verification, so it has nothing to cache. Nothing mints a
+    // receipt for one (they never pass), but a receipt is plain JSON that whoever
+    // produced the diff could write — and honouring it would report the method as
+    // `skipped: receipt`, which counts as something having been verified and would
+    // headline the run `passed` without the method ever appearing.
+    if (item.check.kind === "method") {
+      toRun.push(item);
+      continue;
+    }
+
     if (item.hash === null) {
       toRun.push(item);
       continue;
@@ -294,9 +304,10 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   // does not run and must not drop. The first version filtered for the two kinds
   // it knew and let a selected method vanish between them, which is worse than
   // not supporting it: the run said `passed` and never mentioned it.
-  const methods = toRun.filter(
-    (item) => item.check.kind !== "deterministic" && item.check.kind !== "agent-lens",
-  );
+  // Selected by NAME. Written as "everything that is not the other two", a fourth
+  // kind would silently land here and be reported `declared` — the same vanishing
+  // this loop exists to prevent, one kind further along.
+  const methods = toRun.filter((item) => item.check.kind === "method");
 
   for (const item of methods) {
     results.set(item.check.id, {
