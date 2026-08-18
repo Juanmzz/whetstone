@@ -179,13 +179,6 @@ function cell(text: string): string {
 
 export interface TriageRulesMdMeta {
   readonly date: string;
-  /**
-   * Whether the code-tier hook was actually written. The closing paragraph names
-   * the hook file, and naming a file that was not generated is a dangling
-   * reference in the target repo — the precise failure ADR-0004 exists to stop.
-   * Caught by `auditSelfContained` rather than by review, which is the point.
-   */
-  readonly codeTierHook?: boolean;
 }
 
 export function renderTriageRulesMd(
@@ -231,73 +224,9 @@ change \`strict\`. Size only escalates, never de-escalates.
 \`${DEFINITION_DIR}/triage-rules.md\` **is** amendable by the retro: a change that was mis-classified is
 the primary evidence for editing the table.
 
-\`${DEFINITION_DIR}/triage.yaml\` is COMPILED from this table${
-    meta.codeTierHook === true ? ", and so is the editor hook under\n\`.claude/hooks/\`" : ""
-  }. Change the table first, then regenerate — never
-the reverse.
+\`${DEFINITION_DIR}/triage.yaml\` is COMPILED from this table. Change the table first, then
+regenerate — never the reverse.
 `;
-}
-
-// ── `.claude/hooks/strict-path-guard.mjs` ────────────────────────────────────
-
-interface CompiledStrictPath {
-  /** What the hook matches on: a `dir/` prefix, or an exact file path. */
-  readonly match: string;
-  readonly kind: "prefix" | "exact";
-  /** The glob it came from, so a human can see what was widened. */
-  readonly source: string;
-  readonly reason: string;
-  readonly widened: boolean;
-}
-
-/**
- * The generated hook's own import lines, assembled rather than written out.
- *
- * `test/architecture.test.ts` greps `src/core/**` for an import specifier naming
- * a filesystem module and fails the build on a hit — correctly, since the core
- * may not touch the filesystem. The text below is not an import, it is a STRING
- * that will become
- * one in someone else's repo, but a regex cannot tell those apart and it should
- * not try: a guard that has to distinguish real imports from strings is a guard
- * that can be talked out of firing. Building the line keeps the guard blunt.
- */
-function hookImports(): string {
-  const line = (binding: string, mod: string): string =>
-    `${"im" + "port"} ${binding} from ${JSON.stringify(`node:${mod}`)};`;
-  return `${line("fs", "fs")}\n${line("path", "path")}`;
-}
-
-/** Everything before the first wildcard, truncated to a path segment boundary. */
-function literalPrefix(glob: string): string {
-  const wildcard = glob.search(/[*?[{]/);
-  const head = wildcard === -1 ? glob : glob.slice(0, wildcard);
-  const cut = head.lastIndexOf("/");
-  return cut === -1 ? "" : head.slice(0, cut + 1);
-}
-
-function compileStrictPath(rule: TriageRule): CompiledStrictPath | null {
-  const glob = rule.glob.trim();
-
-  if (glob.endsWith("/**")) {
-    return {
-      match: `${glob.slice(0, -2)}`,
-      kind: "prefix",
-      source: glob,
-      reason: rule.reason,
-      widened: false,
-    };
-  }
-  if (!/[*?[{]/.test(glob)) {
-    return { match: glob, kind: "exact", source: glob, reason: rule.reason, widened: false };
-  }
-
-  // Anything else (`src/**​/*.money.ts`) cannot be reduced to a prefix without
-  // losing information, so widen to the literal head and SAY SO in the file. The
-  // hook only warns, so over-matching costs a little noise; under-matching would
-  // cost a silent hole, which is the failure mode that matters.
-  const prefix = literalPrefix(glob);
-  if (prefix.length === 0) return null;
-  return { match: prefix, kind: "prefix", source: glob, reason: rule.reason, widened: true };
 }
 
 /**
