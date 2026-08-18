@@ -1,21 +1,31 @@
 ---
 id: red-first
-description: In tier strict, a test commit precedes the implementation it covers.
+description: In tier strict, a module never arrives without a test.
 kind: deterministic
 severity: warn
 tiers: [strict]
 include: ["src/core/**/*.ts"]
 exclude: ["src/core/**/*.test.ts"]
 command: npm run red-first
-origin: []
-version: 1
+origin: [sig-e8dfefd0]
+version: 2
 ---
 
-Hard rule 4 makes RED-first mandatory on `src/core/**`, and until now nothing measured
-it. Measured over all 138 commits of this repo: **42 findings — 35 where the test and
-the implementation landed in the same commit, 7 where a module arrived with no test at
-all.** Ten commits carry a RED label. A rule enforced only by intention is a rule that
-holds while somebody is paying attention.
+Hard rule 4 makes RED-first mandatory on `src/core/**`, and nothing measured it.
+
+**v2 narrows what it claims, because the rule moved under it.** Written on 2026-08-12,
+this checked that a test commit PRECEDED the implementation — hard rule 4 then read
+"RED first, in its own commit". On 2026-08-14 the retro amended [TD1]/[TD2] against
+`sig-e8dfefd0`: the repo owner had said three times that separate RED and GREEN commits
+are unwanted, and the rule as written was producing the thing it existed to prevent.
+
+Run unchanged over 74 commits afterwards it reported **9 findings, every one a correct
+commit** under the amended rule and none of them a defect. So `same-commit` stopped
+being a violation. What remains is the one thing git can still speak about and the rule
+still forbids: **a module that ARRIVES with no test**, in its commit or any before it.
+
+On the same 74 commits it now reports zero. That is not proof the check is inert — its
+unit tests drive the `no-test` path directly — it is the discipline holding.
 
 ## Why this warns instead of blocking
 

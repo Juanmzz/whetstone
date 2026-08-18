@@ -147,12 +147,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`red-first: ${violations.length} of ${scanned} landed implementation before a test.\n`);
+  console.log(`red-first: ${violations.length} of ${scanned} arrived with no test.\n`);
   for (const v of violations) {
-    const why =
-      v.kind === "same-commit"
-        ? "test landed in the same commit, so it never failed first"
-        : "no commit has touched this module's test";
+    const why = "no commit has touched this module's test";
     console.log(`  ${v.sha.slice(0, 8)}  ${v.file}`);
     console.log(`            ${why}`);
     console.log(`            ${v.subject}`);

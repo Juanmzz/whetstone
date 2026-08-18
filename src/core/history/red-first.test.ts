@@ -53,20 +53,7 @@ describe("RED first, measured over a sequence of commits", () => {
     });
   });
 
-  it("flags implementation that arrives in the same commit as its own test", () => {
-    const found = violations([
-      commit(
-        "bbb",
-        "feat: a thing, tested",
-        f("src/core/gate/run.ts", "added"),
-        f("src/core/gate/run.test.ts", "added"),
-      ),
-    ]);
-
-    expect(found).toHaveLength(1);
-    expect(found[0]).toMatchObject({ sha: "bbb", kind: "same-commit" });
-  });
-
+  
   /**
    * The GREEN direction, and the one [TD7] says a guard is not trusted without:
    * proving what it rejects says nothing about what it lets through.
@@ -133,20 +120,7 @@ describe("RED first, measured over a sequence of commits", () => {
     expect(found[0]).toMatchObject({ kind: "no-test" });
   });
 
-  it("flags a modified module whose first test arrives alongside it", () => {
-    const found = violations([
-      commit(
-        "aaa",
-        "feat: behaviour plus its test",
-        f("src/core/gate/run.ts", "modified"),
-        f("src/core/gate/run.test.ts", "added"),
-      ),
-    ]);
-
-    expect(found).toHaveLength(1);
-    expect(found[0]).toMatchObject({ kind: "same-commit" });
-  });
-
+  
   it("ignores a commit that only deletes implementation", () => {
     expect(
       violations([commit("aaa", "refactor: drop dead code", f("src/core/gate/old.ts", "deleted"))]),
@@ -170,5 +144,49 @@ describe("RED first, measured over a sequence of commits", () => {
     ]);
 
     expect(found.map((v) => v.module)).toEqual(["src/core/gate/run", "src/core/gate/select"]);
+  });
+});
+
+/**
+ * The rule this measures changed under it.
+ *
+ * When this was written, hard rule 4 read "RED first, in its own commit", so a
+ * test landing WITH its implementation was a discipline miss. On 2026-08-14 the
+ * retro amended [TD1]/[TD2] against `sig-e8dfefd0` — the repo owner had said three
+ * times that separate RED and GREEN commits are unwanted, and the rule as written
+ * was producing the thing it existed to prevent. One commit per coherent change,
+ * with the red output quoted in the body, is now the discipline.
+ *
+ * So `same-commit` stopped being a violation and became the expected shape. Run
+ * unchanged over 74 real commits it reported 9 findings, every one of them a
+ * correct commit and none of them a defect: a check red on the right answer.
+ */
+describe("findRedFirstViolations — after the rule stopped asking for two commits", () => {
+  const strict = (path: string) => path.startsWith("src/core/") && path.endsWith(".ts");
+
+  it("says nothing when the test lands with its implementation", () => {
+    const history = [
+      {
+        sha: "a1",
+        subject: "feat(x): a coherent change",
+        files: [
+          { path: "src/core/x/thing.ts", status: "added" as const },
+          { path: "src/core/x/thing.test.ts", status: "added" as const },
+        ],
+      },
+    ];
+
+    expect(findRedFirstViolations(history, { inScope: strict, testedAtBase: [] })).toEqual([]);
+  });
+
+  it("still reports implementation that arrives with no test at all", () => {
+    const history = [
+      { sha: "a1", subject: "feat(x): no test", files: [{ path: "src/core/x/thing.ts", status: "added" as const }] },
+    ];
+
+    const found = findRedFirstViolations(history, { inScope: strict, testedAtBase: [] });
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.kind).toBe("no-test");
   });
 });

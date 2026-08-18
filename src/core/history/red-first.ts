@@ -14,10 +14,18 @@
  * chosen" failure `[TD7]` warns about, and the first false positive is what
  * teaches people to route around it.
  *
- * The two violations are kept apart because they call for different things.
- * `same-commit` is a discipline miss: the test exists, it just did not go RED on
- * its own. `no-test` is a coverage hole. Collapsing them would report the
- * project's most common finding and its most serious one as the same event.
+ * **`same-commit` was a violation and is not any more.** When this was written,
+ * hard rule 4 read "RED first, in its own commit", so a test landing WITH its
+ * implementation had never failed on its own. On 2026-08-14 the retro amended
+ * [TD1]/[TD2] against `sig-e8dfefd0`: the repo owner had said three times that
+ * separate RED and GREEN commits are unwanted, and the rule as written was
+ * producing the thing it existed to prevent. One commit per coherent change,
+ * with the red output quoted in the body, is the discipline now.
+ *
+ * Run unchanged over 74 real commits it reported 9 findings, every one of them a
+ * correct commit under the current rule and none of them a defect. A check that
+ * is red on the right answer gets routed around, and then it stops catching the
+ * one thing it can still speak about: implementation that ARRIVES with no test.
  */
 
 import type { ChangedFile } from "../diff/parse.js";
@@ -45,10 +53,12 @@ export interface RedFirstOptions {
 }
 
 /**
- * `same-commit` — the test landed WITH the implementation, so it never failed.
- * `no-test` — no commit in or before the range touched the module's test at all.
+ * `no-test` — a module arrived with no test, in its commit or any before it.
+ *
+ * One kind, deliberately. `same-commit` used to be the other and is now the
+ * expected shape; see the header.
  */
-export type ViolationKind = "same-commit" | "no-test";
+export type ViolationKind = "no-test";
 
 export interface RedFirstViolation {
   readonly sha: string;
@@ -121,10 +131,8 @@ export function findRedFirstViolations(
       const key = moduleKey(file.path);
       if (tested.has(key)) continue;
 
-      if (testsHere.has(key)) {
-        violations.push({ ...where(commit, file, key), kind: "same-commit" });
-        continue;
-      }
+      // A test arriving in this same commit is the discipline, not a miss.
+      if (testsHere.has(key)) continue;
 
       // `no-test` is reported only where the module ARRIVES. Editing a module
       // that never had a test is a coverage hole, not a statement about the
