@@ -1,0 +1,176 @@
+{
+  "format": 1,
+  "checkId": "correctness",
+  "lensHash": "0d4092717758f7d292c6269ee695696b07b2ba308d78d0b251f8c58c41ea25ab",
+  "fixturesHash": "3a3c1f3272c3da77ddcdc3c5de2202ca3c54b6bee35d5a4af8df0eb28aa35a8c",
+  "model": "sonnet",
+  "runtime": {
+    "name": "claude",
+    "version": "2.1.234"
+  },
+  "runs": 10,
+  "results": [
+    {
+      "fixture": "boundary-bad.diff",
+      "expected": "fail",
+      "got": [
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail"
+      ]
+    },
+    {
+      "fixture": "boundary-good.diff",
+      "expected": "pass",
+      "got": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ]
+    },
+    {
+      "fixture": "known-bad.diff",
+      "expected": "fail",
+      "got": [
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail"
+      ]
+    },
+    {
+      "fixture": "known-good.diff",
+      "expected": "pass",
+      "got": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ]
+    },
+    {
+      "fixture": "nullish-bad.diff",
+      "expected": "fail",
+      "got": [
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail"
+      ]
+    },
+    {
+      "fixture": "nullish-good.diff",
+      "expected": "pass",
+      "got": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ]
+    },
+    {
+      "fixture": "race-bad.diff",
+      "expected": "fail",
+      "got": [
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail"
+      ]
+    },
+    {
+      "fixture": "race-good.diff",
+      "expected": "pass",
+      "got": [
+        "pass",
+        "pass",
+        "errored",
+        "pass",
+        "fail",
+        "pass",
+        "pass",
+        "fail",
+        "pass",
+        "fail"
+      ]
+    },
+    {
+      "fixture": "swallow-bad.diff",
+      "expected": "fail",
+      "got": [
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail",
+        "fail"
+      ]
+    },
+    {
+      "fixture": "swallow-good.diff",
+      "expected": "pass",
+      "got": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ]
+    }
+  ],
+  "verdict": "failed",
+  "measuredAt": "2026-08-18T13:47:48.154Z"
+}
