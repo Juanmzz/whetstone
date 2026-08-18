@@ -30,6 +30,7 @@ import { z } from "zod";
 import { createClaudeJudge } from "../src/shell/claude.js";
 import { definitionRoot, loadRegistry } from "../src/shell/sdd.js";
 import { DEFINITION_DIR } from "../src/core/paths.js";
+import { renderSlices, slicesOf } from "../src/core/calibration/slice.js";
 import { hashFixtureDir, receiptName } from "../src/shell/calibration.js";
 import { recordCalibration, type FixtureFile } from "../src/core/calibration/receipt.js";
 
@@ -243,6 +244,24 @@ async function main() {
   const totalErrors = outcomes.reduce((n, o) => n + o.errors, 0);
 
   console.log(`\n  clean    ${outcomes.length - failed.length}/${outcomes.length} fixtures  (${breakdown})`);
+
+  // By DEFECT SHAPE, not only by difficulty. The v4 run printed
+  // `hard 5/6` — true, and it took reading the fixture NAME to learn that the
+  // single miss was `race-good`, i.e. that the lens invents races in correct
+  // concurrent code. That is the difference between one fixture's phrasing and a
+  // systematic blind spot, and it decides whether the prompt or the approach is
+  // what needs changing.
+  const slices = slicesOf(
+    outcomes.map((o) => ({
+      file: o.fixture.file,
+      expected: o.fixture.expect,
+      clean: o.correct === RUNS,
+    })),
+  );
+  if (slices.length > 1) {
+    console.log("\n  by defect, worst first:");
+    for (const line of renderSlices(slices)) console.log(`  ${line}`);
+  }
   console.log(
     `  judgment ${flips.length} fixture(s) flipped` +
       (flips.length > 0 ? `: ${flips.map((o) => o.fixture.file).join(", ")}` : ""),
