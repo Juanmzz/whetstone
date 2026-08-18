@@ -3,6 +3,7 @@ import { prepareEnvelope } from "./machine.js";
 
 const base = {
   task: "add the thing",
+  leased: true,
   worktreePath: "/repos/acme/.worktrees/add-the-thing",
   branch: "run/add-the-thing",
   charterPath: "/repos/acme/.worktrees/add-the-thing/.wst-charter.md",
@@ -46,5 +47,33 @@ describe("prepareEnvelope — what an orchestrator needs back", () => {
     // adr-0014: prepare leases and stops. A caller that assumed otherwise would
     // wait forever for a process that was never started.
     expect(prepareEnvelope(base).dispatched).toBe(false);
+  });
+  it("has no worktree and no charter path under a dry run, because nothing was leased", () => {
+    // The paths do not exist yet. Emitting a placeholder string where a consumer
+    // expects a path is how it ends up calling open() on "<leased when you run
+    // this for real>".
+    const env = prepareEnvelope({ ...base, leased: false, charterText: "# charter" });
+
+    expect(env.leased).toBe(false);
+    expect(env.worktree).toBeNull();
+    expect(env.charter).toBeNull();
+  });
+
+  it("carries the dry run charter as text under its own key, never as `charter`", () => {
+    // `charter` meant the PATH in one mode and the TEXT in the other — one key,
+    // two types, one command. A consumer cannot branch on a type it must guess.
+    const env = prepareEnvelope({ ...base, leased: false, charterText: "# charter" });
+
+    expect(env.charterPreview).toBe("# charter");
+  });
+
+  it("leaves the preview null once something was actually leased", () => {
+    // There is a file to read by then, and two copies of a charter that can drift
+    // is the defect this envelope exists to avoid.
+    const env = prepareEnvelope({ ...base, leased: true });
+
+    expect(env.leased).toBe(true);
+    expect(env.charterPreview).toBeNull();
+    expect(env.charter).toBe("/repos/acme/.worktrees/add-the-thing/.wst-charter.md");
   });
 });

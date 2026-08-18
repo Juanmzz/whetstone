@@ -115,21 +115,41 @@ export async function runPrepare(
     .catch(() => false);
 
   if (opts.dryRun === true) {
+    // Built once. Each output mode had grown its own call, with identical
+    // arguments, which is two charters that can drift for no reason.
+    const charter = buildCharter({
+      task: opts.task,
+      worktreePath: "<leased when you run this for real>",
+      branch,
+      lane: opts.lane ?? null,
+      laneGuard,
+      gatingChecks,
+      strictPaths,
+      // No worktree has been leased, so this is the orchestrator's own tree. It
+      // over-reports anything untracked; the real path below stats the leased one.
+      presentDocs: await presentDocsIn(repoRoot),
+    });
+
     if (opts.json === true) {
       // Both flags together. Silently printing prose because one of them won
       // is how a caller ends up parsing a charter it asked for as data.
+      //
+      // The SAME envelope the real run emits. This branch used to hand-roll a
+      // second shape whose `charter` held the charter text where the other held
+      // its path — one key, two types, one command.
       console.log(
         JSON.stringify(
-          { dryRun: true, leased: false, branch, lane: opts.lane ?? null, charter: buildCharter({
+          prepareEnvelope({
             task: opts.task,
-            worktreePath: "<leased when you run this for real>",
+            leased: false,
+            worktreePath: "",
             branch,
+            charterPath: "",
+            charterText: charter,
             lane: opts.lane ?? null,
             laneGuard,
-            gatingChecks,
-            strictPaths,
-            presentDocs: await presentDocsIn(repoRoot),
-          }) },
+            gaps: [],
+          }),
           null,
           2,
         ),
@@ -137,20 +157,7 @@ export async function runPrepare(
       return 0;
     }
 
-    console.log(
-      buildCharter({
-        task: opts.task,
-        worktreePath: "<leased when you run this for real>",
-        branch,
-        lane: opts.lane ?? null,
-        laneGuard,
-        gatingChecks,
-        strictPaths,
-        // No worktree has been leased, so this is the orchestrator's own tree. It
-        // over-reports anything untracked; the real path below stats the leased one.
-        presentDocs: await presentDocsIn(repoRoot),
-      }),
-    );
+    console.log(charter);
     return 0;
   }
 
@@ -244,6 +251,7 @@ export async function runPrepare(
         JSON.stringify(
           prepareEnvelope({
             task: opts.task,
+            leased: true,
             worktreePath: worktree.path,
             branch,
             charterPath,
