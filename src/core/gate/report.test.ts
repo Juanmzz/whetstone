@@ -7,12 +7,15 @@ import {
   EXIT_PASS,
   exitCodeFor,
   outcomeOf,
+  type Coverage,
   renderGateRun,
 } from "./report.js";
 import type { GateRun } from "./run.js";
 import type { Selection } from "./select.js";
 
-const EMPTY_SELECTION: Selection = { selected: [], excluded: [], unknown: [], unmatched: [] };
+const coverage = (over: Partial<Coverage> = {}): Coverage => ({ declined: [], ...over });
+
+const EMPTY_SELECTION: Selection = { selected: [], excluded: [], unknown: [], unmatched: [], declined: [] };
 
 function result(
   checkId: string,
@@ -244,7 +247,7 @@ describe("a run that verified nothing says so, and no longer blocks", () => {
    * still says nothing about this change was verified.
    */
   it("is UNCOVERED when no check applied at all", () => {
-    expect(exitCodeFor(aggregate([]))).toBe(EXIT_PASS);
+    expect(exitCodeFor(aggregate([]), coverage())).toBe(EXIT_PASS);
   });
 
   it("is UNCOVERED when every check was skipped for not applying", () => {
@@ -252,7 +255,7 @@ describe("a run that verified nothing says so, and no longer blocks", () => {
       result("test", "block", { status: "skipped", reason: "not-in-tier" }),
       result("lint", "warn", { status: "skipped", reason: "not-in-tier" }),
     ];
-    expect(exitCodeFor(aggregate(skipped))).toBe(EXIT_PASS);
+    expect(exitCodeFor(aggregate(skipped), coverage())).toBe(EXIT_PASS);
   });
 
   it("PASSES when every check was skipped by a RECEIPT — that input did pass", () => {
@@ -260,7 +263,7 @@ describe("a run that verified nothing says so, and no longer blocks", () => {
       result("test", "block", { status: "skipped", reason: "receipt" }),
       result("typecheck", "block", { status: "skipped", reason: "receipt" }),
     ];
-    expect(exitCodeFor(aggregate(cached))).toBe(EXIT_PASS);
+    expect(exitCodeFor(aggregate(cached), coverage())).toBe(EXIT_PASS);
   });
 
   it("PASSES when at least one check actually ran and passed", () => {
@@ -268,13 +271,13 @@ describe("a run that verified nothing says so, and no longer blocks", () => {
       result("test", "block", { status: "pass" }),
       result("lint", "warn", { status: "skipped", reason: "not-in-tier" }),
     ];
-    expect(exitCodeFor(aggregate(mixed))).toBe(EXIT_PASS);
+    expect(exitCodeFor(aggregate(mixed), coverage())).toBe(EXIT_PASS);
   });
 
   it("still reports BLOCKED ahead of incomplete when something failed", () => {
     // A real failure is the more urgent fact, and 1 is what a hook keys on.
     const failed = [result("test", "block", { status: "fail", detail: "nope" })];
-    expect(exitCodeFor(aggregate(failed))).toBe(EXIT_BLOCKED);
+    expect(exitCodeFor(aggregate(failed), coverage())).toBe(EXIT_BLOCKED);
   });
 });
 
@@ -282,13 +285,13 @@ describe("exitCodeFor", () => {
   const ERRORED: CheckOutcome = { status: "errored", detail: "budget exhausted" };
 
   it("is 0 on a clean pass", () => {
-    expect(exitCodeFor(aggregate([result("test", "block", { status: "pass" })]))).toBe(EXIT_PASS);
+    expect(exitCodeFor(aggregate([result("test", "block", { status: "pass" })]), coverage())).toBe(EXIT_PASS);
     // The "no checks at all" case used to assert 0 here. See the describe above:
     // that was the bug, and a run that verified nothing is now INCOMPLETE.
   });
 
   it("is 1 when — and only when — a real check failure blocked", () => {
-    expect(exitCodeFor(aggregate([result("test", "block", { status: "fail", detail: "x" })]))).toBe(
+    expect(exitCodeFor(aggregate([result("test", "block", { status: "fail", detail: "x" })]), coverage())).toBe(
       EXIT_BLOCKED,
     );
   });
@@ -298,14 +301,14 @@ describe("exitCodeFor", () => {
     // bad" when the truth is "we do not know" — exactly the conflation rule 1 bans.
     // Reusing exit 0 would let a permanently broken judge silently disable the gate,
     // which is the failure the constitution calls worse than having no gate.
-    expect(exitCodeFor(aggregate([result("test", "block", ERRORED)]))).toBe(EXIT_INCOMPLETE);
+    expect(exitCodeFor(aggregate([result("test", "block", ERRORED)]), coverage())).toBe(EXIT_INCOMPLETE);
   });
 
   it("is 0 when an ADVISORY check errored beside work that DID get verified", () => {
     // A `warn` lens that times out costs you an annotation, not a verification.
     // Failing CI for it is how a gate gets routed around.
     const withPass = (advisory: CheckResult) =>
-      exitCodeFor(aggregate([result("test", "block", { status: "pass" }), advisory]));
+      exitCodeFor(aggregate([result("test", "block", { status: "pass" }), advisory]), coverage());
     expect(withPass(result("correctness", "warn", ERRORED))).toBe(EXIT_PASS);
     expect(withPass(result("style", "annotate", ERRORED))).toBe(EXIT_PASS);
   });
@@ -323,20 +326,24 @@ describe("exitCodeFor", () => {
    * ambiguity in this engine resolves toward more verification, not less.
    */
   it("is INCOMPLETE when the errored advisory was the ONLY thing that ran", () => {
-    expect(exitCodeFor(aggregate([result("correctness", "warn", ERRORED)]))).toBe(EXIT_INCOMPLETE);
+    expect(exitCodeFor(aggregate([result("correctness", "warn", ERRORED)]), coverage())).toBe(EXIT_INCOMPLETE);
   });
 
   it("prefers the block code when a real failure and an error happen together", () => {
     expect(
       exitCodeFor(
         aggregate([result("test", "block", { status: "fail", detail: "x" }), result("c", "block", ERRORED)]),
+        coverage(),
       ),
     ).toBe(EXIT_BLOCKED);
   });
 
   it("is 0 for a skip — a receipt is proof the check already passed", () => {
     expect(
-      exitCodeFor(aggregate([result("test", "block", { status: "skipped", reason: "receipt" })])),
+      exitCodeFor(
+        aggregate([result("test", "block", { status: "skipped", reason: "receipt" })]),
+        coverage(),
+      ),
     ).toBe(EXIT_PASS);
   });
 });
@@ -354,14 +361,36 @@ describe("exitCodeFor", () => {
  */
 describe("outcomeOf — uncovered is its own outcome", () => {
   it("names it uncovered when nothing matched, not incomplete", () => {
-    expect(outcomeOf(aggregate([]))).toBe("uncovered");
+    expect(outcomeOf(aggregate([]), coverage())).toBe("uncovered");
   });
 
   it("stays incomplete when a blocking check could not RUN", () => {
     const errored = [result("test", "block", { status: "errored", detail: "spawn" })];
 
-    expect(outcomeOf(aggregate(errored))).toBe("incomplete");
-    expect(exitCodeFor(aggregate(errored))).toBe(EXIT_INCOMPLETE);
+    expect(outcomeOf(aggregate(errored), coverage())).toBe("incomplete");
+    expect(exitCodeFor(aggregate(errored), coverage())).toBe(EXIT_INCOMPLETE);
+  });
+
+  it("is NOT uncovered when a check that covers these paths was switched off", () => {
+    // The distinction adr-0021 rests on: `uncovered` exits 0 because no edit could
+    // make it pass, so blocking would only teach `--no-verify`. A check that WOULD
+    // have matched and was disabled has a remedy — re-enable it — so it is the gate
+    // being declined, not the change being uncoverable.
+    //
+    // This was unreachable before. `route()` drops disabled checks before selection
+    // ever runs, so they produced no result, and "no results" fell through to
+    // `uncovered` and exit 0. Deleting the guard that was meant to catch it left
+    // `src/core/gate/**` fully green.
+    const verdict = aggregate([]);
+
+    expect(outcomeOf(verdict, coverage({ declined: ["typecheck"] }))).toBe("incomplete");
+    expect(exitCodeFor(verdict, coverage({ declined: ["typecheck"] }))).toBe(EXIT_INCOMPLETE);
+  });
+
+  it("ignores a disabled check that would not have matched these paths anyway", () => {
+    // Only coverage that APPLIED counts as declined. A retired check for another
+    // corner of the repo must not make every unrelated run incomplete.
+    expect(outcomeOf(aggregate([]), coverage({ declined: [] }))).toBe("uncovered");
   });
 });
 

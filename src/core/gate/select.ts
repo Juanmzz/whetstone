@@ -57,6 +57,19 @@ export interface Selection {
    * running.
    */
   readonly unmatched: readonly string[];
+  /**
+   * Checks that WOULD have covered these paths, and are switched off.
+   *
+   * Read from the registry, not from `routing.checks` — `route()` drops disabled
+   * checks before selection ever sees them, which is why nothing could tell "no
+   * check covers this change" apart from "the check that covers it is off". The
+   * first has no remedy and exits 0 (adr-0021); the second has an obvious one and
+   * must not.
+   *
+   * The glob match is the point: a retired check for another corner of the repo is
+   * not declined coverage for a change it would never have looked at.
+   */
+  readonly declined: readonly string[];
 }
 
 function assertUsableGlob(pattern: string, checkId: string, field: "include" | "exclude"): void {
@@ -142,5 +155,13 @@ export function selectChecks(
     selected.push({ check, files: matched });
   }
 
-  return { selected, excluded, unknown, unmatched };
+  const declined: string[] = [];
+  for (const check of registry.byId.values()) {
+    if (check.enabled) continue;
+    if (!check.tiers.includes(routing.tier)) continue;
+    if (matchFiles(check, files).length === 0) continue;
+    declined.push(check.id);
+  }
+
+  return { selected, excluded, unknown, unmatched, declined };
 }

@@ -77,29 +77,46 @@ export type GateOutcome =
  *
  * Sharing half a predicate is how a rule implemented twice survives being fixed.
  */
-export function outcomeOf(verdict: GateVerdict): GateOutcome {
+export interface Coverage {
+  /**
+   * Checks that would have matched these paths and are switched off.
+   *
+   * Comes from `Selection`, which reads the registry rather than the routing
+   * table. It cannot be derived from the results: a disabled check produces no
+   * result at all, which is exactly how it used to be indistinguishable from
+   * genuine absence of coverage.
+   */
+  readonly declined: readonly string[];
+}
+
+export function outcomeOf(verdict: GateVerdict, coverage: Coverage): GateOutcome {
   if (verdict.verdict === "block") return "blocked";
   if (lostGating(verdict)) return "incomplete";
   if (verifiedSomething(verdict)) return "passed";
 
   // Everything below is "nothing was verified". `uncovered` is the narrow case
-  // where that is nobody's doing and nothing can be done about it.
+  // where that is nobody's doing and nothing can be done about it — and it is
+  // narrow, because it exits 0. Every way of arriving here that HAS a remedy has
+  // to be named above it, or the remedy never gets applied.
   //
   // An errored check of ANY severity tried and broke — the gate, not the
   // coverage, even when the check was only advisory.
   if (verdict.results.some((r) => r.outcome.status === "errored")) return "incomplete";
-  // A check switched off — by `enabled: false` or by `--no-lens` — means the
-  // change HAD coverage and someone declined it. There is a remedy, so this is
-  // not the case adr-0021 unblocks: exiting 0 here would tell a hook that a
-  // change nobody looked at is fine.
+  // A check switched off means the change HAD coverage and someone declined it.
+  // Two ways in, and they arrive differently: `--no-lens` produces a `skipped`
+  // RESULT, while `enabled: false` is dropped by `route()` before selection and
+  // produces nothing at all. The second was unreachable through the results, so
+  // it fell to `uncovered` and exit 0 — a change nobody looked at, reported as
+  // fine. `coverage.declined` is how the second one gets here.
   if (verdict.results.some((r) => r.outcome.status === "skipped" && r.outcome.reason === "disabled"))
     return "incomplete";
+  if (coverage.declined.length > 0) return "incomplete";
   return "uncovered";
 }
 
 /** The exit code is a CI SIGNAL, not the verdict — it is `outcomeOf`, as a number. */
-export function exitCodeFor(verdict: GateVerdict): number {
-  switch (outcomeOf(verdict)) {
+export function exitCodeFor(verdict: GateVerdict, coverage: Coverage): number {
+  switch (outcomeOf(verdict, coverage)) {
     case "blocked":
       return EXIT_BLOCKED;
     case "incomplete":
@@ -158,7 +175,7 @@ export function renderGateRun(run: GateRun): string {
 
   lines.push("");
 
-  switch (outcomeOf(verdict)) {
+  switch (outcomeOf(verdict, selection)) {
     case "blocked":
       lines.push(`  BLOCKED — ${verdict.blocking.length} check(s) failed:`);
       for (const result of verdict.results) {

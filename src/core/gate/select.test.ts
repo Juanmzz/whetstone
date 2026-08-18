@@ -161,4 +161,38 @@ describe("selectChecks", () => {
     expect(selection.selected).toEqual([]);
     expect(selection.unmatched).toEqual(["typecheck"]);
   });
+
+  // ── declined coverage ──────────────────────────────────────────────────────
+  //
+  // `route()` drops disabled checks before selection is ever called, so they reach
+  // no result and used to be indistinguishable from a change nothing covers. That
+  // is the difference between exit 2 and exit 0, so it is read from the registry.
+
+  it("names a disabled check that would have matched as declined coverage", () => {
+    const registry = buildRegistry([check({ enabled: false })]);
+
+    // Routing already dropped it, exactly as `route()` does in the gate.
+    const selection = selectChecks(routing({ checks: [] }), registry, FILES);
+
+    expect(selection.declined).toEqual(["typecheck"]);
+  });
+
+  it("does not call a disabled check declined when it matched no changed file", () => {
+    // A retired check for another corner of the repo is not coverage anyone
+    // declined for a change it would never have looked at. Reporting it would
+    // make every unrelated run incomplete.
+    const registry = buildRegistry([check({ enabled: false, include: ["docs/**/*.md"] })]);
+
+    expect(selectChecks(routing({ checks: [] }), registry, FILES).declined).toEqual([]);
+  });
+
+  it("does not call a disabled check declined when it disclaims the tier", () => {
+    const registry = buildRegistry([check({ enabled: false, tiers: ["light"] })]);
+
+    expect(selectChecks(routing({ tier: "strict", checks: [] }), registry, FILES).declined).toEqual([]);
+  });
+
+  it("leaves declined empty when every check is enabled", () => {
+    expect(selectChecks(routing(), buildRegistry([check()]), FILES).declined).toEqual([]);
+  });
 });

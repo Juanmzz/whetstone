@@ -469,7 +469,7 @@ export async function runGate(
   // A repo with an EMPTY registry is not an uncovered change — it is a gate that
   // could not run, and adr-0021 unblocks the first case only. `wst init` is the
   // remedy, and it is a remedy, which is the test that separates the two.
-  const exit = registry.byId.size === 0 ? EXIT_INCOMPLETE : exitCodeFor(run.verdict);
+  const exit = registry.byId.size === 0 ? EXIT_INCOMPLETE : exitCodeFor(run.verdict, run.selection);
   emit({
     kind: "run-finished",
     // The verdict, plus what it was made of. A `block` line that does not name the

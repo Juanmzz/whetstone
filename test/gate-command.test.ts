@@ -369,6 +369,33 @@ describe("--no-lens", () => {
   });
 });
 
+describe("a check switched off in its own file", () => {
+  it("is incomplete, not uncovered — someone declined coverage that exists", async () => {
+    // `enabled: false` reached NO result: `route()` drops it before selection, so
+    // the run had zero results and fell through to `uncovered`, which adr-0021
+    // exits 0. Same tree, same failing blocking check, green.
+    //
+    // `uncovered` is for a change nothing covers, where no edit could make the
+    // gate pass. Re-enabling a check is an edit, so this is not that.
+    const off = deterministicCheck("always-fails", "exit 1").replace(
+      "version: 1",
+      "enabled: false\nversion: 1",
+    );
+    const dir = await repo({ checks: { "always-fails.md": off } });
+
+    expect(await runGate({ range: "HEAD" }, dir)).toBe(2);
+    expect(stdout()).not.toMatch(/UNCOVERED/);
+  });
+
+  it("blocks when the same check is left on, which is the control", async () => {
+    const dir = await repo({
+      checks: { "always-fails.md": deterministicCheck("always-fails", "exit 1") },
+    });
+
+    expect(await runGate({ range: "HEAD" }, dir)).toBe(1);
+  });
+});
+
 // ── receipts, and the gate that must not trust them ──────────────────────────
 
 describe("receipts", () => {
