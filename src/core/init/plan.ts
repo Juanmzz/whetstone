@@ -29,6 +29,7 @@ import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {
   renderDecisionsMd,
+  renderWstGitignore,
   CLAUDE_MD,
   MEMORY_README,
   OUT_OF_SCOPE_README,
@@ -145,6 +146,10 @@ export function planInit(input: InitPlanInput): InitPlan {
         namespace: input.facts.repoName,
       }),
     },
+    // Per-machine runtime state (the compiled check index, the event log, the
+    // receipts cache) must never be committed. `memory/signals.jsonl` below is
+    // NOT covered here on purpose: it is committed, deliberately.
+    { path: `${DEFINITION_DIR}/.gitignore`, contents: renderWstGitignore() },
     ...checkFiles,
     { path: `${DEFINITION_DIR}/memory/README.md`, contents: MEMORY_README },
     // Empty on purpose. A seeded example would be the first line of the log, and

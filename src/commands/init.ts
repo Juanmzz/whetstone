@@ -45,9 +45,11 @@ import { createClaudeJudge } from "../shell/claude.js";
 import {
   MAX_FILES,
   NO_RISK,
+  ROOT_GITIGNORE_ENTRIES,
   buildInterview,
   detectStack,
   planInit,
+  renderRootGitignoreStanza,
   skillCopies,
   skipDir,
   walkDepth,
@@ -479,6 +481,42 @@ async function writePlan(plan: InitPlan, root: string): Promise<void> {
   }
 }
 
+/**
+ * `.wst-charter.md` and `.wst-lane` are written later, by `wst prepare`, into a
+ * worktree this command never sees — so they cannot be a plan `file` guarded by
+ * `collisionsIn`. What CAN be done now is make sure the target repo's own
+ * `.gitignore` already excludes them, so the very first leased worktree is not
+ * born dirty.
+ *
+ * Read-modify-write rather than `writePlan`'s all-or-nothing collision guard:
+ * almost every repo already has a `.gitignore`, and treating it as a collision
+ * would make `init` refuse on the majority of real repos to fix a problem that
+ * has nothing to do with the rest of that file's content. Only the entries
+ * actually missing are appended, so a second `wst init` does not duplicate a
+ * line a first run (or the repo's own history) already added.
+ */
+async function ensureRootGitignored(root: string): Promise<void> {
+  const target = join(root, ".gitignore");
+  let current: string | null;
+  try {
+    current = await readFile(target, "utf-8");
+  } catch {
+    current = null;
+  }
+
+  const present = new Set((current ?? "").split("\n").map((line) => line.trim()));
+  const missing = ROOT_GITIGNORE_ENTRIES.filter((entry) => !present.has(entry));
+  if (missing.length === 0) return;
+
+  const stanza = renderRootGitignoreStanza(missing);
+  if (current === null) {
+    await writeFile(target, stanza, "utf-8");
+    return;
+  }
+  const sep = current.length === 0 || current.endsWith("\n") ? "" : "\n";
+  await writeFile(target, `${current}${sep}\n${stanza}`, "utf-8");
+}
+
 // ── the command ──────────────────────────────────────────────────────────────
 
 export async function runInit(opts: InitOptions, cwd: string = process.cwd()): Promise<number> {
@@ -584,6 +622,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
 
   try {
     await writePlan(plan, root);
+    await ensureRootGitignored(root);
   } catch (cause) {
     console.error(`\nwrite failed: ${(cause as Error).message}`);
     return 1;

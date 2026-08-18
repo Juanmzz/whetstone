@@ -39,8 +39,11 @@ export {
 } from "./interview.js";
 export {
   renderDecisionsMd,
+  renderRootGitignoreStanza,
+  renderWstGitignore,
   CLAUDE_MD,
   MEMORY_README,
+  ROOT_GITIGNORE_ENTRIES,
   SKILL_FILES,
   activeSkills,
   renderAgentsMd,

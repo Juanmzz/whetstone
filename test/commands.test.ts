@@ -386,4 +386,59 @@ describe("wst init", () => {
     expect(await runInit({ purpose: PURPOSE, strict: ["src/core/**"] }, dir)).toBe(1);
     expect(stderr()).toMatch(/has no reason/);
   });
+
+  describe("runtime state is gitignored, not just written", () => {
+    it("writes .wst/.gitignore covering the compiled index, the event log and receipts", async () => {
+      const dir = await bare();
+      await runInit({ purpose: PURPOSE }, dir);
+
+      const gitignore = await readFile(join(dir, ".wst/.gitignore"), "utf-8");
+      const lines = gitignore.split("\n").map((l) => l.trim());
+      expect(lines).toEqual(
+        expect.arrayContaining(["checks/_index.json", "events.jsonl", "receipts/"]),
+      );
+      // signals.jsonl is committed on purpose — an ignore rule here would hide it.
+      expect(gitignore).not.toMatch(/signals\.jsonl/);
+    });
+
+    it("creates a root .gitignore excluding .wst-charter.md and .wst-lane when none exists", async () => {
+      const dir = await bare();
+      await runInit({ purpose: PURPOSE }, dir);
+
+      const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
+      expect(gitignore).toContain(".wst-charter.md");
+      expect(gitignore).toContain(".wst-lane");
+    });
+
+    it("appends to an existing root .gitignore rather than overwriting it", async () => {
+      const dir = await bare();
+      await writeFile(join(dir, ".gitignore"), "node_modules/\ndist/\n", "utf-8");
+
+      await runInit({ purpose: PURPOSE }, dir);
+
+      const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
+      expect(gitignore).toContain("node_modules/");
+      expect(gitignore).toContain("dist/");
+      expect(gitignore).toContain(".wst-charter.md");
+      expect(gitignore).toContain(".wst-lane");
+    });
+
+    it("does not duplicate entries a .gitignore already has", async () => {
+      const dir = await bare();
+      await writeFile(join(dir, ".gitignore"), ".wst-lane\n", "utf-8");
+
+      await runInit({ purpose: PURPOSE }, dir);
+
+      const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
+      const occurrences = gitignore.split("\n").filter((l) => l.trim() === ".wst-lane").length;
+      expect(occurrences).toBe(1);
+      expect(gitignore).toContain(".wst-charter.md");
+    });
+
+    it("leaves the root .gitignore untouched under --dry-run", async () => {
+      const dir = await bare();
+      expect(await runInit({ purpose: PURPOSE, dryRun: true }, dir)).toBe(0);
+      await expect(readFile(join(dir, ".gitignore"), "utf-8")).rejects.toThrow();
+    });
+  });
 });

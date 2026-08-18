@@ -369,14 +369,14 @@ status: active
 # Decisions
 
 One entry per decision, in the order they were taken. Each carries **only what was ruled
-out and why** — that is the part git cannot reconstruct, because a rejected option has no
+out and why**: that is the part git cannot reconstruct, because a rejected option has no
 commit. What the decision made easier, and how it was implemented, are in the history.
 
 Every entry opens with a meta line: status, the date it was taken, and any signals that
 earned it.
 
 \`\`\`
-### adr-NNNN — the decision, as a sentence in the present tense
+### adr-NNNN: the decision, as a sentence in the present tense
 \`accepted\` · YYYY-MM-DD · signals: sig-0001
 
 Rejected: the option that lost, and the reason it lost. An entry that names no
@@ -394,6 +394,69 @@ three months? If not, the commit message is enough.
 
 export const CLAUDE_MD = `@AGENTS.md
 `;
+
+/**
+ * `.wst/.gitignore` — per-machine runtime state `init` writes but that a clone
+ * must never inherit committed. The reasoning is Whetstone's own (its top-level
+ * `.gitignore` explains each of these three at length); restated here rather than
+ * cited, per ADR-0004: a target repo has never heard of Whetstone's tree.
+ *
+ * `memory/signals.jsonl` is deliberately absent: that page is committed on
+ * purpose, and an init-written gitignore that swallowed it would silently stop a
+ * team from sharing the one thing this whole layer exists to accumulate.
+ */
+export function renderWstGitignore(): string {
+  return `# Whetstone runtime state. Regenerated on every run, never commit it.
+
+# Compiled check index: regenerable from ${DEFINITION_DIR}/checks/*.md via \`wst check --compile\`.
+# A compiled artifact that can silently go stale is the same trap as trusting a
+# version string for identity.
+checks/_index.json
+
+# The execution log: what a gate run did, minute by minute. Per-machine state,
+# not a judgment a team shares, and committing it leaves the tree dirty right
+# after every push, since the pre-push hook runs the gate and the gate writes
+# this file.
+events.jsonl
+
+# Receipts are a derived cache: "check X passed on this exact input". Regenerable,
+# and a stale one would claim a pass that never happened for the current code.
+# Worse than stale if committed: a receipt authorises skipping a check, so every
+# clone would inherit skips it never earned, one of them possibly a paid judge
+# call.
+receipts/
+`;
+}
+
+/** The two files `wst prepare` writes into a leased worktree, never the branch. */
+export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([
+  ".wst-charter.md",
+  ".wst-lane",
+]);
+
+/**
+ * The stanza `init` ensures is present in the target repo's OWN `.gitignore`.
+ *
+ * Unlike \`.wst/.gitignore\` this cannot be a plain generated file: \`.wst-charter.md\`
+ * and \`.wst-lane\` live at the repo root, and almost every repo already has a root
+ * \`.gitignore\` with content worth keeping. The shell reads it and appends only
+ * what is missing (source: \`src/commands/init.ts\`) rather than treating a
+ * pre-existing \`.gitignore\` as a collision.
+ *
+ * @param entries defaults to all of them; pass only the ones missing from a
+ *   \`.gitignore\` that already has some of this stanza, so a re-run does not
+ *   duplicate a line.
+ */
+export function renderRootGitignoreStanza(
+  entries: readonly string[] = ROOT_GITIGNORE_ENTRIES,
+): string {
+  return `# Per-worktree state \`wst prepare\` writes into a leased worktree: the charter
+# and the lane marker. Both belong to the worktree, not the branch, so a
+# committed one would scope every clone to a single task, and a formatter's
+# --check step would fail on a file nobody meant to check in.
+${entries.join("\n")}
+`;
+}
 
 export interface AgentsMdInput {
   readonly repoName: string;
