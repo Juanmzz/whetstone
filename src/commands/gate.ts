@@ -25,6 +25,7 @@ import { NULL_SINK } from "../core/events/record.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { appendSignals, readSignalLog } from "../shell/signals.js";
 import { createEventLog, EVENTS_PATH, type EventLog } from "../shell/events.js";
+import { checkEnv } from "../core/gate/env.js";
 import {
   runGate as executeGate,
   type CheckRunner,
@@ -120,7 +121,16 @@ function runShellCommand(
   return new Promise((resolve) => {
     exec(
       command,
-      { cwd, timeout: timeoutMs, maxBuffer: MAX_BUFFER, killSignal: "SIGKILL" },
+      {
+        cwd,
+        // A check that binds a port must be able to tell one checkout from
+        // another, or a server left running by one worktree gets reused by the
+        // next and the gate passes against code it never read.
+        env: checkEnv(process.env, cwd),
+        timeout: timeoutMs,
+        maxBuffer: MAX_BUFFER,
+        killSignal: "SIGKILL",
+      },
       (error, stdout, stderr) => {
         if (error === null) {
           resolve({ exitCode: 0, signal: null, stdout, stderr });
