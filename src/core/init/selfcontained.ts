@@ -117,12 +117,22 @@ function trimTrailing(token: string): string {
 export interface AuditInput {
   readonly files: readonly GeneratedFile[];
   readonly copies: readonly CopyRequest[];
+  /**
+   * Paths already in the target repo that this run leaves alone, repo-relative.
+   *
+   * Reference closure asks whether a named path will EXIST there, and "this run
+   * wrote it" was standing in for that. The two came apart the first time
+   * `AGENTS.md` listed a skill somebody had written by hand: the file is there,
+   * init does not create it, and the audit called a live reference dangling.
+   */
+  readonly existing?: readonly string[];
 }
 
 export function auditSelfContained(input: AuditInput): readonly SelfContainmentViolation[] {
   const created = new Set<string>([
     ...input.files.map((f) => f.path),
     ...input.copies.map((c) => c.to),
+    ...(input.existing ?? []),
   ]);
 
   const violations: SelfContainmentViolation[] = [];

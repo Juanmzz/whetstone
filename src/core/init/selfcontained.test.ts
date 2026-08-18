@@ -185,3 +185,40 @@ describe("auditSelfContained — a citation by id is a reference too", () => {
     expect(copied("Number your first decision `adr-0000`.")).toEqual([]);
   });
 });
+
+/**
+ * Reference closure asks whether a named path will EXIST in the target repo.
+ * "This run wrote it" was standing in for that, and the two came apart the first
+ * time the payload referred to something the repo already had — a skill written
+ * by hand, which AGENTS.md then listed and the audit called dangling.
+ *
+ * Written after review found the fix had no unit test: removing the one line
+ * that merges `existing` left all 212 tests in this directory green.
+ */
+describe("auditSelfContained — a path that is already there", () => {
+  const audit = (contents: string, existing?: readonly string[]) =>
+    auditSelfContained({
+      files: [{ path: ".wst/AGENTS-ish.md", contents }],
+      copies: [],
+      ...(existing === undefined ? {} : { existing }),
+    });
+
+  it("accepts a reference to a file this run did not write but the repo has", () => {
+    expect(audit("See `.wst/skills/dispatch.md`.", [".wst/skills/dispatch.md"])).toEqual([]);
+  });
+
+  it("still rejects it when nothing says the file is there", () => {
+    const found = audit("See `.wst/skills/dispatch.md`.");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.match).toBe(".wst/skills/dispatch.md");
+  });
+
+  it("does not let `existing` wave through a different path", () => {
+    // The hole worth guarding: a payload naming something that will NOT exist,
+    // excused because a neighbouring file does.
+    const found = audit("See `.wst/skills/absent.md`.", [".wst/skills/dispatch.md"]);
+
+    expect(found).toHaveLength(1);
+  });
+});

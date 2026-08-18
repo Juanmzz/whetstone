@@ -361,3 +361,44 @@ describe("payloadSkill — what a copied skill looks like in someone else's repo
     expect(payloadSkill(bare)).toBe(bare);
   });
 });
+
+/**
+ * A skill written by hand after `init` is invisible to every agent.
+ *
+ * `activeSkills()` returned the eight `SKILL_FILES` regardless of what is on
+ * disk, and `AGENTS.md` is rendered from it — so a `.wst/skills/dispatch.md`
+ * somebody wrote never appeared in the list an agent reads. Reported from real
+ * use, where exactly that happened.
+ */
+describe("activeSkills — what AGENTS.md lists", () => {
+  it("lists what is actually there when the shell says", () => {
+    const found = activeSkills(["skills/lazy.md", "skills/dispatch.md"]);
+
+    expect(found).toEqual(["skills/lazy.md", "skills/dispatch.md"]);
+  });
+
+  it("lists nothing when the directory was read and is empty", () => {
+    // Not the same as not having read it. Eight names for a directory with no
+    // files is the same defect this function was fixed for, reversed.
+    expect(activeSkills([])).toEqual([]);
+  });
+
+  it("falls back to the shipped set when nothing was read", () => {
+    // `init` writing a fresh repo has no directory to read yet.
+    expect(activeSkills()).toContain("skills/lazy.md");
+    expect(activeSkills()).toHaveLength(8);
+  });
+
+  it("keeps a hand-written skill's blurb absent rather than inventing one", () => {
+    const rendered = renderAgentsMd({
+      repoName: "acme",
+      constitution: "---\nid: c\n---\n# c\n\nBody.",
+      triageRulesMd: "---\nid: t\n---\n# t\n\nTable.",
+      activeSkills: ["skills/dispatch.md"],
+      checkIds: ["test"],
+    });
+
+    expect(rendered).toContain("skills/dispatch.md");
+    expect(rendered).not.toMatch(/dispatch\.md` — \w/);
+  });
+});

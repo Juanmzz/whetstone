@@ -105,8 +105,19 @@ export function skillCopies(texts?: ReadonlyMap<string, string>): readonly CopyR
  * and "on" is the answer the old code already gave whenever the count was
  * unknown: absence of evidence was never evidence of solo work.
  */
-export function activeSkills(): readonly string[] {
-  return SKILL_FILES.map((name) => `skills/${name}`);
+export function activeSkills(present?: readonly string[]): readonly string[] {
+  // `present` is what the shell read off `.wst/skills/`. Without it this returned
+  // the eight shipped names regardless of what was on disk, and `AGENTS.md` is
+  // rendered from it — so a skill somebody wrote by hand after `init` never
+  // appeared in the list an agent reads, and was invisible in practice.
+  //
+  // The fallback is for `init` writing a fresh repo, where there is no directory
+  // to read yet.
+  // `undefined` means the shell did not read a directory — a fresh repo, where the
+  // shipped set is the right answer. An EMPTY array means it read one and found
+  // nothing, which is a different repo entirely: listing eight files that are not
+  // there is the failure this function was fixed for, pointed the other way.
+  return present ?? SKILL_FILES.map((name) => `skills/${name}`);
 }
 
 export interface WstYamlInput {
