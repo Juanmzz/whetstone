@@ -94,6 +94,7 @@ command -v wst >/dev/null 2>&1 || exit 0   # not installed here: never block on 
 # git feeds one line per ref: <local ref> <local sha> <remote ref> <remote sha>
 while read -r _lref lsha _rref rsha; do
   [ "$lsha" = "$ZERO" ] && continue        # branch deletion, nothing to gate
+  case "$_lref" in refs/tags/*) continue;; esac   # a tag has no diff to gate
 
   if [ "$rsha" = "$ZERO" ]; then
     # New branch: the remote has no history for it. Gating against the all-zero

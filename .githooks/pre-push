@@ -24,6 +24,9 @@ fi
 # git feeds pre-push one line per ref: <local ref> <local sha> <remote ref> <remote sha>
 while read -r _local_ref local_sha _remote_ref remote_sha; do
   [ "$local_sha" = "$ZERO" ] && continue   # branch deletion, nothing to gate
+  # A tag points at a commit already gated when its branch was pushed. Gating it
+  # again finds no changed files, which reports INCOMPLETE and blocks the tag.
+  case "$_local_ref" in refs/tags/*) continue;; esac
 
   if [ "$remote_sha" = "$ZERO" ]; then
     # New branch: the remote has no history for it, so gate everything since the
