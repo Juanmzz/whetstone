@@ -387,6 +387,25 @@ describe("a check switched off in its own file", () => {
     expect(stdout()).not.toMatch(/UNCOVERED/);
   });
 
+  it("archives an uncovered run as uncovered, so `wst events` cannot call it passed", async () => {
+    // The console said "UNCOVERED — nothing about this change was verified" while
+    // the log recorded `status: "pass"` and `detail: "passed — 0 check(s)"`, so
+    // the reader replayed it as a pass. The event log is this project's evidence
+    // about itself, which is what makes the mismatch worse than cosmetic.
+    const dir = await repo({
+      checks: { "elsewhere.md": deterministicCheck("elsewhere", "exit 0").replace(
+        'include: ["src/**"]',
+        'include: ["docs/**"]',
+      ) },
+    });
+
+    expect(await runGate({ range: "HEAD" }, dir)).toBe(0);
+    const finished = (await events(dir)).find((e) => e.kind === "run-finished");
+
+    expect(finished?.status).toBe("uncovered");
+    expect(finished?.detail).not.toContain("passed");
+  });
+
   it("blocks when the same check is left on, which is the control", async () => {
     const dir = await repo({
       checks: { "always-fails.md": deterministicCheck("always-fails", "exit 1") },

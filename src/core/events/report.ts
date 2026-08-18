@@ -41,7 +41,23 @@ const EXIT_MEANINGS = { pass: EXIT_PASS, blocked: EXIT_BLOCKED, incomplete: EXIT
  * `exit: 2` and left to work it out will conclude the run passed — the same wrong
  * conclusion this file exists to prevent, in a machine-readable form.
  */
-export type Reading = "passed" | "blocked" | "incomplete" | "failed" | "unreadable" | "unterminated";
+export type Reading =
+  | "passed"
+  | "blocked"
+  | "incomplete"
+  /**
+   * Nothing applied, so nothing was verified. Exits 0 alongside `passed`
+   * (adr-0021) and must never be spelled as one.
+   *
+   * This is why the exit code alone is not enough. Importing the constants was
+   * supposed to stop this reader drifting from the gate, and it did not: the
+   * CONSTANT never changed, its MEANING did, when adr-0021 put a second outcome
+   * behind exit 0. The word the gate decided is on the line; read that.
+   */
+  | "uncovered"
+  | "failed"
+  | "unreadable"
+  | "unterminated";
 
 export function runReading(ending: RunEnding): Reading {
   if (ending.kind === "unterminated") return "unterminated";
@@ -49,7 +65,11 @@ export function runReading(ending: RunEnding): Reading {
   // `status` decides only when there is no exit code to ask. A verdict of `block`
   // always reads as blocked; a verdict of `pass` never, on its own, reads as passed.
   if (ending.exit === null) return ending.status === "block" ? "blocked" : "unreadable";
-  if (ending.exit === EXIT_MEANINGS.pass) return "passed";
+  // Two outcomes share exit 0, so the code cannot separate them and `status`
+  // carries the gate's own word for which one it was.
+  if (ending.exit === EXIT_MEANINGS.pass) {
+    return ending.status === "uncovered" ? "uncovered" : "passed";
+  }
   if (ending.exit === EXIT_MEANINGS.blocked) return "blocked";
   if (ending.exit === EXIT_MEANINGS.incomplete) return "incomplete";
   return "unreadable";
@@ -68,6 +88,10 @@ function readingLabel(reading: Reading): string {
       return "BLOCKED";
     case "incomplete":
       return "INCOMPLETE";
+    case "uncovered":
+      // Capitalised with the rest of the not-a-clean-pass readings. It exits 0,
+      // so the WORD is the whole of the honesty.
+      return "UNCOVERED";
     case "failed":
       return "FAILED";
     case "unreadable":
@@ -152,12 +176,20 @@ function endingSentence(summary: RunSummary): string {
     case "blocked":
       return `BLOCKED${code}${took} — ${summary.ending.kind === "unterminated" ? "" : summary.ending.detail}`;
     case "incomplete":
-      // Deliberately not "passed with warnings". Exit 2 is `EXIT_INCOMPLETE`: either
-      // a blocking check errored, or nothing applied at all. Both mean the change
-      // was not verified, and the gate's own report says so in words.
+      // Deliberately not "passed with warnings". Exit 2 is `EXIT_INCOMPLETE`: a
+      // check that can block did not run. "Nothing applied at all" used to be here
+      // too and adr-0021 moved it to exit 0, where it reads as `uncovered` below.
       return (
-        `INCOMPLETE${code}${took} — the gate did not verify this change: either a check ` +
-        `that can block never ran, or nothing applied to it`
+        `INCOMPLETE${code}${took} — the gate did not verify this change: a check that ` +
+        `can block never ran`
+      );
+    case "uncovered":
+      // Exit 0, so the words carry all of it. It must not read as a pass, and it
+      // must name an absence rather than a failure: nothing failed here, and no
+      // edit to the change would alter the outcome (adr-0021).
+      return (
+        `UNCOVERED${code}${took} — no check applied, so nothing about this change ` +
+        `was verified`
       );
     case "failed":
       return (
