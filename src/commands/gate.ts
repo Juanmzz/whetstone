@@ -19,7 +19,7 @@ import type { Tier } from "../core/checks/schema.js";
 import type { CheckOutcome, Routing } from "../core/contracts.js";
 import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
-import { EXIT_INCOMPLETE, exitCodeFor, renderGateRun } from "../core/gate/report.js";
+import { EXIT_INCOMPLETE, exitCodeFor, outcomeOf, renderGateRun } from "../core/gate/report.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
 import { NULL_SINK } from "../core/events/record.js";
@@ -161,9 +161,12 @@ function unifiedDiff(range: string, paths: readonly string[], cwd: string): Prom
   return new Promise((resolve, reject) => {
     execFile(
       "git",
-      ["diff", range, "--", ...paths],
-      // Same stripped environment as `shell/git.ts`. This is the lens payload: an
-      // inherited `GIT_DIR` would send a diff of ANOTHER repository to a paid
+      ["-c", "core.quotePath=false", "diff", range, "--", ...paths],
+      // Same stripped environment as `shell/git.ts`, and the same `quotePath`: the
+      // paths arrive unquoted from `diffNameStatus`, so git must be told not to
+      // re-quote them in the `diff --git` headers the lens reads.
+      //
+      // An inherited `GIT_DIR` would send a diff of ANOTHER repository to a paid
       // model and file its verdict against this change.
       { cwd, env: gitEnv(), maxBuffer: MAX_BUFFER },
       (error, stdout) => (error === null ? resolve(stdout) : reject(error)),
@@ -466,16 +469,29 @@ export async function runGate(
   // A repo with an EMPTY registry is not an uncovered change — it is a gate that
   // could not run, and adr-0021 unblocks the first case only. `wst init` is the
   // remedy, and it is a remedy, which is the test that separates the two.
-  const exit = registry.byId.size === 0 ? EXIT_INCOMPLETE : exitCodeFor(run.verdict);
+  const exit = registry.byId.size === 0 ? EXIT_INCOMPLETE : exitCodeFor(run.verdict, run.selection);
+
+  // The OUTCOME, not the verdict.
+  //
+  // `verdict.verdict` has two values, and this line used to carry it: every
+  // non-block run was logged `status: "pass"` under the detail "passed — N
+  // check(s)". So an UNCOVERED run — the console saying in as many words that
+  // nothing about the change was verified — was archived as a pass, and `wst
+  // events` replayed it as one. The event log is what this project uses as
+  // evidence about itself, which is what makes that worse than a cosmetic bug.
+  //
+  // `outcomeOf` is the single decision `core/gate/report.ts` exists to make once.
+  // Deriving it a third time here was how the third copy got it wrong.
+  const outcome = outcomeOf(run.verdict, run.selection);
   emit({
     kind: "run-finished",
-    // The verdict, plus what it was made of. A `block` line that does not name the
+    // The outcome, plus what it was made of. A `block` line that does not name the
     // check that blocked sends the reader back to a console the run already lost.
     detail:
-      run.verdict.verdict === "block"
+      outcome === "blocked"
         ? `blocked by ${run.verdict.blocking.join(", ")}`
-        : `passed — ${run.verdict.results.length} check(s), ${run.verdict.errored.length} errored`,
-    status: run.verdict.verdict,
+        : `${outcome} — ${run.verdict.results.length} check(s), ${run.verdict.errored.length} errored`,
+    status: outcome,
     exit,
     ms: Math.max(0, Date.now() - startedAt.getTime()),
   });

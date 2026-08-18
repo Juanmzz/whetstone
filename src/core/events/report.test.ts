@@ -242,6 +242,18 @@ describe("runReading", () => {
     expect(reading([ev(0, "run-failed", { detail: "broke", exit: 2 })])).toBe("failed");
     expect(reading([ev(0, "run-started")])).toBe("unterminated");
   });
+
+  it("does not replay an uncovered run as passed", () => {
+    // adr-0021 gave "no check applied" exit 0, which this reader already spelled
+    // `passed`. So `wst events` told the retro that a run which verified nothing
+    // had passed — and the event log is what this project uses as evidence about
+    // itself. Importing the exit constants did not save it: the CONSTANT did not
+    // change, its meaning did.
+    const [summary] = summariseRuns([ev(0, "run-finished", { status: "uncovered", exit: 0 })]);
+    if (summary === undefined) throw new Error("the fixture produced no run");
+
+    expect(runReading(summary.ending)).toBe("uncovered");
+  });
 });
 
 describe("noRunsMessage", () => {

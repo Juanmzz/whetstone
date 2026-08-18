@@ -369,6 +369,52 @@ describe("--no-lens", () => {
   });
 });
 
+describe("a check switched off in its own file", () => {
+  it("is incomplete, not uncovered — someone declined coverage that exists", async () => {
+    // `enabled: false` reached NO result: `route()` drops it before selection, so
+    // the run had zero results and fell through to `uncovered`, which adr-0021
+    // exits 0. Same tree, same failing blocking check, green.
+    //
+    // `uncovered` is for a change nothing covers, where no edit could make the
+    // gate pass. Re-enabling a check is an edit, so this is not that.
+    const off = deterministicCheck("always-fails", "exit 1").replace(
+      "version: 1",
+      "enabled: false\nversion: 1",
+    );
+    const dir = await repo({ checks: { "always-fails.md": off } });
+
+    expect(await runGate({ range: "HEAD" }, dir)).toBe(2);
+    expect(stdout()).not.toMatch(/UNCOVERED/);
+  });
+
+  it("archives an uncovered run as uncovered, so `wst events` cannot call it passed", async () => {
+    // The console said "UNCOVERED — nothing about this change was verified" while
+    // the log recorded `status: "pass"` and `detail: "passed — 0 check(s)"`, so
+    // the reader replayed it as a pass. The event log is this project's evidence
+    // about itself, which is what makes the mismatch worse than cosmetic.
+    const dir = await repo({
+      checks: { "elsewhere.md": deterministicCheck("elsewhere", "exit 0").replace(
+        'include: ["src/**"]',
+        'include: ["docs/**"]',
+      ) },
+    });
+
+    expect(await runGate({ range: "HEAD" }, dir)).toBe(0);
+    const finished = (await events(dir)).find((e) => e.kind === "run-finished");
+
+    expect(finished?.status).toBe("uncovered");
+    expect(finished?.detail).not.toContain("passed");
+  });
+
+  it("blocks when the same check is left on, which is the control", async () => {
+    const dir = await repo({
+      checks: { "always-fails.md": deterministicCheck("always-fails", "exit 1") },
+    });
+
+    expect(await runGate({ range: "HEAD" }, dir)).toBe(1);
+  });
+});
+
 // ── receipts, and the gate that must not trust them ──────────────────────────
 
 describe("receipts", () => {

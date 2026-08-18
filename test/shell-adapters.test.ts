@@ -75,6 +75,23 @@ describe("the git adapter", () => {
     expect(await createGitAdapter(await temp("wst-git-none-")).repoRoot()).toBeNull();
   });
 
+  it("reports a non-ASCII path as itself, not as git's quoted escape", async () => {
+    // `core.quotePath` defaults on, so `git diff --name-status` prints
+    // "src/se\303\261al.ts" for `src/señal.ts`. Nothing downstream unquotes it,
+    // so the path matched no `include` glob, the check never selected it, and the
+    // gate reported that nothing applied to the change — for a file that was
+    // plainly in `src/`. A blocking check failure exited 0 through this hole.
+    const dir = await seeded();
+    await writeFile(join(dir, "señal.txt"), "hola\n", "utf-8");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "add a non-ascii path");
+
+    const out = await createGitAdapter(dir).diffNameStatus("HEAD~1..HEAD");
+
+    expect(out).toContain("señal.txt");
+    expect(out).not.toContain("\\303");
+  });
+
   it("hashes content, so an edited file cannot reuse its receipt", async () => {
     // The receipt mechanism is this hash. If it were a path hash, or stable
     // across edits, every check would be skipped forever after its first pass.

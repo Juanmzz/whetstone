@@ -43,9 +43,24 @@ export function gitEnv(): NodeJS.ProcessEnv {
   );
 }
 
+/**
+ * `core.quotePath=false` on EVERY call, not just the diff.
+ *
+ * git's default quotes any path byte outside ASCII: `src/señal.ts` comes back as
+ * the literal `"src/se\303\261al.ts"`, quotes included. Nothing downstream
+ * unquotes it, so that string matched no `include` glob, no check selected the
+ * file, and the gate reported that nothing applied to a change plainly inside
+ * `src/`. A real blocking failure exited 0 through this hole.
+ *
+ * Set here rather than at the one call that showed the bug: `ls-files` and
+ * `hash-object` quote by the same rule, and a second call learning it separately
+ * is how this comes back.
+ */
+const QUOTE_PATH_OFF = ["-c", "core.quotePath=false"];
+
 async function git(args: string[], cwd: string): Promise<string | null> {
   try {
-    const { stdout } = await run("git", args, {
+    const { stdout } = await run("git", [...QUOTE_PATH_OFF, ...args], {
       cwd,
       env: gitEnv(),
       maxBuffer: 64 * 1024 * 1024,
