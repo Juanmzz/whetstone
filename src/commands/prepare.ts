@@ -26,9 +26,10 @@
  */
 
 import { execFile } from "node:child_process";
-import { access, writeFile } from "node:fs/promises";
+import { access, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { laneReport } from "../core/dispatch/lane.js";
 import {
   buildCharter,
   branchNameFor,
@@ -103,6 +104,12 @@ export async function runPrepare(
   const branch = branchNameFor(opts.task);
   const treehouse = createTreehouseAdapter(repoRoot);
 
+  // Emitted per repo with its lane globs compiled in, so it is here and not in a
+  // repo Whetstone bootstrapped. The charter must not promise it where it is absent.
+  const laneGuard = await stat(join(repoRoot, ".claude", "hooks", "lane-guard.mjs"))
+    .then(() => true)
+    .catch(() => false);
+
   if (opts.dryRun === true) {
     console.log(
       buildCharter({
@@ -110,6 +117,7 @@ export async function runPrepare(
         worktreePath: "<leased when you run this for real>",
         branch,
         lane: opts.lane ?? null,
+        laneGuard,
         gatingChecks,
         strictPaths,
         // No worktree has been leased, so this is the orchestrator's own tree. It
@@ -162,7 +170,10 @@ export async function runPrepare(
     console.log(`  branch    ${branch}`);
     if (opts.lane !== undefined) {
       await exec("sh", ["-c", `printf '%s\\n' '${opts.lane}' > .wst-lane`], { cwd: worktree.path });
-      console.log(`  lane      ${opts.lane} (boundary enforced by hook)`);
+      // Only claim the boundary where something reads `.wst-lane`. The guard is
+      // emitted per repo with its lane globs compiled in, so it exists here and
+      // not in a repo Whetstone bootstrapped.
+      console.log(`  lane      ${laneReport(opts.lane, laneGuard) ?? opts.lane}`);
     }
 
     const charterPath = join(worktree.path, ".wst-charter.md");
@@ -173,6 +184,7 @@ export async function runPrepare(
         worktreePath: worktree.path,
         branch,
         lane: opts.lane ?? null,
+        laneGuard,
         gatingChecks,
         strictPaths,
         presentDocs: await presentDocsIn(worktree.path),

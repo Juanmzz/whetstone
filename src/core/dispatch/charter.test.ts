@@ -299,3 +299,31 @@ describe("branchNameFor", () => {
     }
   });
 });
+
+/**
+ * The charter may not promise a barrier that is not there.
+ *
+ * Observed twice: a worker edited outside its lane on purpose, saw nothing stop
+ * it, reverted, and stopped to ask. It obeyed the text — which is the good
+ * outcome and not the one promised. The lane guard is emitted per repo with its
+ * globs compiled in, so it exists in Whetstone and in no repo it bootstrapped.
+ */
+describe("buildCharter — the lane says what is true about it", () => {
+  const withLane = (guard: boolean) =>
+    buildCharter({ ...base, lane: "api", laneGuard: guard });
+
+  it("says a hook denies the writes only where one does", () => {
+    expect(withLane(true)).toMatch(/hook DENIES/);
+  });
+
+  it("asks rather than claims when nothing enforces it", () => {
+    const charter = withLane(false);
+
+    expect(charter).not.toMatch(/hook DENIES/);
+    expect(charter).toMatch(/nothing here stops you|no hook/i);
+  });
+
+  it("still tells the worker to report a wrong split either way", () => {
+    for (const guard of [true, false]) expect(withLane(guard)).toMatch(/STOP and report/);
+  });
+});

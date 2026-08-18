@@ -1,0 +1,29 @@
+/**
+ * What `prepare` may honestly say about a lane.
+ *
+ * PURE.
+ *
+ * It printed `boundary enforced by hook` unconditionally. The hook that enforces
+ * it — `lane-guard.mjs` — is EMITTED into Whetstone's own `.claude/hooks/` with
+ * the lane globs compiled in, and the plugin does not carry it. So in this repo
+ * the claim is true and in every repo Whetstone bootstraps it is not.
+ *
+ * Observed twice in real use: a worker edited outside its lane on purpose, saw
+ * nothing stop it, reverted, and stopped to ask. It obeyed the charter's text.
+ * That is the good outcome and it is not the one that was promised — and a
+ * charter naming a barrier that does not exist is the failure this project
+ * already names about paths: it reads as authoritative, so being wrong costs
+ * more than saying nothing.
+ *
+ * The fix here is only the sentence. Making the promise true means a lane guard
+ * that reads `lanes.yaml` at run time instead of baking it in, shipped in the
+ * plugin — which is adr-0010's shape and adr-0010 is not accepted.
+ */
+
+/** @returns the line to print, or null when no lane was requested. */
+export function laneReport(lane: string | null, guardPresent: boolean): string | null {
+  if (lane === null) return null;
+  return guardPresent
+    ? `${lane} (enforced by the lane guard)`
+    : `${lane} (NOT enforced here — the charter asks, nothing stops you)`;
+}
