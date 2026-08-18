@@ -7,6 +7,29 @@ const entry = (id: string, title: string, meta: string, body = "Rejected: someth
 const page = (...entries: string[]) => `# Decisions\n\nPreamble.\n\n---\n\n${entries.join("\n")}`;
 
 describe("parseDecisions", () => {
+  /**
+   * The separator is a delimiter, not prose. Requiring one specific character
+   * made the payload unshippable to a project that forbids em-dashes: `init`'s
+   * own seeded example was rewritten with a colon, and every repo bootstrapped
+   * from it would have carried an anchor its own parser rejects.
+   */
+  it.each([
+    ["em dash", "### adr-0001 — memory is an interface"],
+    ["en dash", "### adr-0001 – memory is an interface"],
+    ["colon", "### adr-0001: memory is an interface"],
+  ])("accepts %s as the separator", (_name, heading) => {
+    const { entries, problems } = parseDecisions(`${heading}\n\`accepted\` · 2026-07-02\n\nRejected: x.\n`);
+
+    expect(problems).toEqual([]);
+    expect(entries[0]).toMatchObject({ id: "adr-0001", title: "memory is an interface" });
+  });
+
+  it("still rejects a heading with no separator at all", () => {
+    const { problems } = parseDecisions("### adr-0001 memory is an interface\n`accepted` · 2026-07-02\n");
+
+    expect(problems[0]?.why).toContain("### adr-NNNN");
+  });
+
   it("reads id, title, status and date off each entry", () => {
     const text = page(
       entry("adr-0001", "memory is an interface", "`accepted` · 2026-07-02"),

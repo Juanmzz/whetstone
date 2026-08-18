@@ -15,8 +15,17 @@
  * status is a fact.
  */
 
-/** `### adr-0011 — build the event log` */
-const ANCHOR = /^### (adr-(\d{4}))\s+—\s+(\S.*)$/;
+/**
+ * `### adr-0011 — build the event log`
+ *
+ * The separator may be an em dash, an en dash or a colon. It is a delimiter, not
+ * prose, and requiring one character made the payload unshippable to a project
+ * whose conventions forbid it — `init`'s seeded example was rewritten with a
+ * colon, and every repo bootstrapped from it would have carried an anchor its own
+ * parser rejects. What is NOT optional is having a separator: without one there
+ * is no boundary between the id and the title.
+ */
+const ANCHOR = /^### (adr-(\d{4}))\s*(?:[—–]|:)\s+(\S.*)$/;
 
 /**
  * The line under an anchor: status, then the date the decision was taken, then
