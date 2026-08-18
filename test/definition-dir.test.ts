@@ -23,10 +23,9 @@
  *   the current name, and (once there is an old one) never the old one.
  */
 
-import { realpathSync } from "node:fs";
-import { mkdir, mkdtemp, readdir, readFile, stat, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readdir, readFile, stat, symlink, writeFile } from "node:fs/promises";
 import { basename, join, relative } from "node:path";
+import { tempDir } from "./tmp.js";
 import { describe, expect, it } from "vitest";
 import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../src/core/paths.js";
 
@@ -182,7 +181,7 @@ function codeLinesNaming(text: string, needle: string): { line: number; text: st
  */
 describe("splitting a directory into what can be read", () => {
   const temp = async (): Promise<string> =>
-    realpathSync(await mkdtemp(join(tmpdir(), "wst-split-")));
+    await tempDir("wst-split-", true);
 
   it("treats a symlinked directory as a directory, not as a file to read", async () => {
     // The exact shape treehouse produces: `node_modules` linked to another tree.

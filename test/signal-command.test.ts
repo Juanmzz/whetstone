@@ -6,12 +6,12 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runSignal } from "../src/commands/signal.js";
+import { tempDir } from "./tmp.js";
 
 const run = promisify(execFile);
 
@@ -33,7 +33,7 @@ beforeEach(() => {
 afterEach(() => void vi.restoreAllMocks());
 
 async function repo(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "wst-signal-cmd-"));
+  const dir = await tempDir("wst-signal-cmd-");
   await run("git", ["init", "-q"], { cwd: dir });
   return dir;
 }

@@ -8,9 +8,9 @@
  * refused to load it.
  */
 
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { tempDir } from "./tmp.js";
 import { describe, expect, it } from "vitest";
 import type { EmittableSignal } from "../src/core/signals/emit.js";
 import { parseSignalLog, type SignalRecord } from "../src/core/signals/parse.js";
@@ -28,7 +28,7 @@ const signal: EmittableSignal = {
 const NOW = new Date("2026-08-10T12:00:00.000Z");
 
 async function emitInto(branch: string | null): Promise<Record<string, unknown>> {
-  const root = await mkdtemp(join(tmpdir(), "wst-signals-"));
+  const root = await tempDir("wst-signals-");
   await appendSignals(root, [signal], NOW, branch);
   const text = await readFile(join(root, SIGNALS_PATH), "utf-8");
   // Through the real parser, not JSON.parse: a line the parser rejects is a line
@@ -67,7 +67,7 @@ const human: SignalRecord = {
  * of the file, not an exotic one.
  */
 async function seedUnterminated(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "wst-signals-"));
+  const root = await tempDir("wst-signals-");
   const path = join(root, SIGNALS_PATH);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify({ ...human, id: "sig-00000001" })}`, "utf-8");
@@ -97,7 +97,7 @@ describe("appending to a log with no trailing newline", () => {
   it("adds no blank line to a log that is already terminated", async () => {
     // The guard must be conditional. An unconditional newline grows a blank line
     // per append, and while the parser skips those, the file stops being readable.
-    const root = await mkdtemp(join(tmpdir(), "wst-signals-"));
+    const root = await tempDir("wst-signals-");
     await appendSignalRecord(root, human);
     await appendSignalRecord(root, { ...human, id: "sig-00000002" });
     const text = await readFile(join(root, SIGNALS_PATH), "utf-8");

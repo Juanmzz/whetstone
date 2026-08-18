@@ -22,9 +22,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { realpathSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,6 +34,7 @@ import type { LoadedCheck } from "../src/core/checks/registry.js";
 import type { Routing } from "../src/core/contracts.js";
 import type { LlmJudge } from "../src/core/ports.js";
 import { isolateFromInheritedGit } from "./git-env.js";
+import { tempDir } from "./tmp.js";
 
 // Before anything builds a repository. See `git-env.ts`: run from the pre-push
 // hook, every temp repo below otherwise inherits the pushing repo's GIT_DIR.
@@ -116,7 +115,7 @@ interface RepoOptions {
  * gate.
  */
 async function repo(options: RepoOptions = {}): Promise<string> {
-  const dir = realpathSync(await mkdtemp(join(tmpdir(), "wst-gate-")));
+  const dir = await tempDir("wst-gate-", true);
   await git(dir, "init", "-q", "-b", "main");
   await git(dir, "config", "user.email", "fixture@example.com");
   await git(dir, "config", "user.name", "fixture");
@@ -297,7 +296,7 @@ describe("a repository still holding the pre-ADR-0012 directory", () => {
     // The one failure that CANNOT be recorded: the log lives under the directory
     // that could not be resolved. Reported on stderr only, and it must still be
     // an exit code, not a stack trace.
-    const dir = realpathSync(await mkdtemp(join(tmpdir(), "wst-gate-legacy-")));
+    const dir = await tempDir("wst-gate-legacy-", true);
     await git(dir, "init", "-q", "-b", "main");
     await mkdir(join(dir, ".sdd"), { recursive: true });
 
@@ -310,7 +309,7 @@ describe("a repository still holding the pre-ADR-0012 directory", () => {
 
 describe("outside a repository", () => {
   it("says the gate needs one instead of reporting an empty diff as clean", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "wst-gate-norepo-"));
+    const dir = await tempDir("wst-gate-norepo-");
     expect(await runGate({ range: "HEAD", noLens: true }, dir)).toBe(2);
     expect(stderr()).toMatch(/not inside a git repository/);
   });
@@ -562,7 +561,7 @@ describe("a range git cannot resolve", () => {
 
 describe("a repository with no .wst/ at all", () => {
   it("runs, registers no checks, and does not call that a verified pass", async () => {
-    const dir = realpathSync(await mkdtemp(join(tmpdir(), "wst-gate-bare-")));
+    const dir = await tempDir("wst-gate-bare-", true);
     await git(dir, "init", "-q", "-b", "main");
     await mkdir(join(dir, "src"), { recursive: true });
     await writeFile(join(dir, "src/app.ts"), "export const a = 1;\n", "utf-8");

@@ -3,23 +3,14 @@
  * `src/core/events/`; what only a real disk can show is here.
  */
 
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parseEventLog } from "../src/core/events/parse.js";
 import { createEventLog, EVENTS_PATH, readEventLog } from "../src/shell/events.js";
+import { tempDir } from "./tmp.js";
 
-const roots: string[] = [];
-const root = async (): Promise<string> => {
-  const dir = await mkdtemp(join(tmpdir(), "wst-events-"));
-  roots.push(dir);
-  return dir;
-};
-
-afterEach(() => {
-  roots.length = 0;
-});
+const root = (): Promise<string> => tempDir("wst-events-");
 
 const at = (ms: number) => (): Date => new Date(Date.parse("2026-08-12T14:00:00Z") + ms);
 
