@@ -469,3 +469,48 @@ the same repo. Stated plainly rather than hidden behind a flag name.
 
 Reversal: if the drafted payload needs as much human editing as the blanks did, the judge was
 adding a step and not judgment — delete the mode and keep the minimum.
+
+### adr-0021 — "nothing covers this" is not "the gate broke", and must not block
+`proposed` · 2026-08-17
+
+*Not in force. `outcomeOf` still returns `incomplete` for both.*
+
+Hard rule 3 enumerates what counts as a check that could not RUN: spawn, budget, timeout,
+auth, invalid output. **"No check matched these paths" is not on that list** — nothing broke,
+nothing was attempted. `outcomeOf` collapses the two into `incomplete` anyway, so both exit 2,
+and a pre-push hook blocks on both.
+
+The consequence, reported from a day of use in a repo Whetstone does not own: a change touching
+only markdown has **no legitimate way through the gate.** That report's own signals live in that
+repo's log, not this one, so there is no local id to cite — the evidence is the behaviour, which
+reproduces here on any clean tree. The seeded checks watch `src/**`; a README edit matches none of them,
+so the gate reports the gate is broken and refuses a push that nothing was ever going to
+verify. There is no edit the author can make to fix it.
+
+- **Rejected: leave it.** It is the exact pressure this project names everywhere else — a gate
+  that blocks what nobody can fix teaches `--no-verify`, and a routed-around gate stops
+  catching the real findings too. Recorded because it is no longer hypothetical: on
+  2026-08-17 an amend that changed **only a commit message** produced an empty range, and the
+  author of this entry ran `--no-verify` on Whetstone's own hook rather than fight it. Third
+  time that day the same conflation blocked a change nothing was going to verify. Whetstone deleted `wst pr` for producing output nobody could
+  act on; this produces a refusal nobody can act on.
+- **Rejected: make the hook special-case exit 2.** It only sees an exit code, and the two
+  situations it would have to tell apart are exactly the two this conflates. Pushing the
+  distinction to every consumer of the CLI is the wrong end.
+- **Rejected: seed a catch-all check so everything is covered.** A check that matches every
+  path in order to keep the gate quiet verifies nothing and reports a pass — which is the
+  failure adr-0009 deleted a whole command over.
+- **Rejected: exit 0 silently.** "Nothing was verified" may never read as "verified". The
+  distinction is the message, not the absence of one.
+
+**A fourth outcome, `uncovered`: report it loudly, exit 0.** The run says in its own words
+that nothing here was checked, and names the paths, which is what `wst plan` already reports
+as its fourth output. It does not block, because there is no action behind the block.
+
+Cost accepted, and it is the uncomfortable half: a repo can push a change no check looked at,
+and CI reading only the exit code sees green. That is true today as well — the difference is
+that today it is *also* true for changes the gate genuinely failed to verify, and those two
+being indistinguishable is worse than either.
+
+Reversal: if `uncovered` becomes the normal result rather than the rare one, the coverage is
+the defect and the answer is checks, not a louder message.
