@@ -364,3 +364,39 @@ describe("outcomeOf — uncovered is its own outcome", () => {
     expect(exitCodeFor(aggregate(errored))).toBe(EXIT_INCOMPLETE);
   });
 });
+
+/**
+ * adr-0018: a method is DECLARED, never verified.
+ *
+ * It is prose an agent follows — drive the browser, take the screenshots — so the
+ * gate cannot produce a verdict on it. Two things follow, and the second is the
+ * one hard rule 3 cares about: a run whose only applicable check was a method has
+ * verified nothing, and must not headline a pass.
+ */
+describe("a method check in a run", () => {
+  const declared = [result("ui-states", "annotate", { status: "declared" })];
+
+  it("does not count as something verified", () => {
+    expect(outcomeOf(aggregate(declared))).toBe("uncovered");
+  });
+
+  it("does not block, whatever else happened", () => {
+    expect(exitCodeFor(aggregate(declared))).toBe(EXIT_PASS);
+  });
+
+  it("is named in the run, because an unmentioned method is one nobody will run", () => {
+    const text = renderGateRun(gateRun(declared));
+
+    expect(text).toContain("ui-states");
+    expect(text).toMatch(/declared/i);
+  });
+
+  it("does not let a passing check make the method read as verified", () => {
+    const mixed = [...declared, result("typecheck", "block", { status: "pass" })];
+    const text = renderGateRun(gateRun(mixed));
+
+    // The run passed — typecheck ran. The method still did not.
+    expect(outcomeOf(aggregate(mixed))).toBe("passed");
+    expect(text).toMatch(/declared/i);
+  });
+});

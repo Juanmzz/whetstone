@@ -322,7 +322,7 @@ Explicitly out of scope, and left for adr-0019: the seventeen files already on d
 *"Narrowing what earns an ADR is not the same as making the ones we have editable."*
 
 ### adr-0018 — a verification method is a third kind in the registry, and it never blocks
-`proposed` · 2026-08-14 · signals: sig-0041
+`accepted` · 2026-08-14 · signals: sig-0041
 
 Rejected: a separate registry under `.wst/methods/`. The obvious shape, and it duplicates the
 whole of the check file — globs, `tiers`, `origin`, `version`, `enabled` — so every consumer

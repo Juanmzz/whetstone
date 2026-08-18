@@ -131,6 +131,10 @@ function statusLine(result: CheckResult): string {
       return `  errored  ${id} — could not run`;
     case "skipped":
       return `  skipped  ${id} — ${result.outcome.reason}`;
+    case "declared":
+      // Its own word, never `pass` and never `skipped`. The gate did not run it
+      // and never could; whoever does the work does (adr-0018).
+      return `  declared ${id} — a method, for you to run. Not verified here`;
   }
 }
 

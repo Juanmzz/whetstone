@@ -73,7 +73,17 @@ export type CheckOutcome =
   | { readonly status: "pass" }
   | { readonly status: "fail"; readonly detail: string }
   | { readonly status: "skipped"; readonly reason: "receipt" | "not-in-tier" | "disabled" }
-  | { readonly status: "errored"; readonly detail: string };
+  | { readonly status: "errored"; readonly detail: string }
+  /**
+   * A `method` check applied and was NOT run (adr-0018). It is prose an agent
+   * follows, so the gate has no verdict to give — it reports that the method was
+   * declared and leaves the doing to whoever does the work.
+   *
+   * Deliberately not `skipped`: a skip means something could have run and did
+   * not. Nothing here was ever going to run, and collapsing the two would let a
+   * run with only methods read as one that chose to skip its checks.
+   */
+  | { readonly status: "declared" };
 
 export interface CheckResult {
   readonly checkId: string;

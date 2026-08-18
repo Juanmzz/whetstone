@@ -290,6 +290,23 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
 
   const deterministic = toRun.filter((item) => item.check.kind === "deterministic");
   const lenses = toRun.filter((item) => item.check.kind === "agent-lens");
+  // Everything else is a `method` (adr-0018) — prose an agent follows, which this
+  // does not run and must not drop. The first version filtered for the two kinds
+  // it knew and let a selected method vanish between them, which is worse than
+  // not supporting it: the run said `passed` and never mentioned it.
+  const methods = toRun.filter(
+    (item) => item.check.kind !== "deterministic" && item.check.kind !== "agent-lens",
+  );
+
+  for (const item of methods) {
+    results.set(item.check.id, {
+      checkId: item.check.id,
+      checkVersion: item.check.version,
+      severity: item.check.severity,
+      outcome: { status: "declared" },
+      durationMs: 0,
+    });
+  }
 
   for (const result of await Promise.all(deterministic.map(runOne))) {
     results.set(result.checkId, result);
