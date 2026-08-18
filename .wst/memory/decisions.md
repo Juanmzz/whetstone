@@ -471,9 +471,7 @@ Reversal: if the drafted payload needs as much human editing as the blanks did, 
 adding a step and not judgment — delete the mode and keep the minimum.
 
 ### adr-0021 — "nothing covers this" is not "the gate broke", and must not block
-`proposed` · 2026-08-17
-
-*Not in force. `outcomeOf` still returns `incomplete` for both.*
+`accepted` · 2026-08-17
 
 Hard rule 3 enumerates what counts as a check that could not RUN: spawn, budget, timeout,
 auth, invalid output. **"No check matched these paths" is not on that list** — nothing broke,

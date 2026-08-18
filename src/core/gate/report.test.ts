@@ -6,6 +6,7 @@ import {
   EXIT_INCOMPLETE,
   EXIT_PASS,
   exitCodeFor,
+  outcomeOf,
   renderGateRun,
 } from "./report.js";
 import type { GateRun } from "./run.js";
@@ -231,17 +232,27 @@ describe("renderGateRun", () => {
  * A receipt skip DOES count as verified: it means this exact input passed already.
  * "Nothing matched" and "nothing needed re-running" are different facts.
  */
-describe("a run that verified nothing does not exit 0", () => {
-  it("is INCOMPLETE when no check applied at all", () => {
-    expect(exitCodeFor(aggregate([]))).toBe(EXIT_INCOMPLETE);
+describe("a run that verified nothing says so, and no longer blocks", () => {
+  /**
+   * Reversed by adr-0021. Both cases used to exit 2, which a hook reads as a
+   * required check failing to run — so a change nothing was going to verify was
+   * refused, and no edit could make it pass. Measured four times in two days:
+   * a markdown-only commit, a message amend, a tag push, twice answered with
+   * --no-verify.
+   *
+   * The prose contract is unchanged and is what carries the honesty: the run
+   * still says nothing about this change was verified.
+   */
+  it("is UNCOVERED when no check applied at all", () => {
+    expect(exitCodeFor(aggregate([]))).toBe(EXIT_PASS);
   });
 
-  it("is INCOMPLETE when every check was skipped for not applying", () => {
+  it("is UNCOVERED when every check was skipped for not applying", () => {
     const skipped = [
       result("test", "block", { status: "skipped", reason: "not-in-tier" }),
-      result("lint", "warn", { status: "skipped", reason: "disabled" }),
+      result("lint", "warn", { status: "skipped", reason: "not-in-tier" }),
     ];
-    expect(exitCodeFor(aggregate(skipped))).toBe(EXIT_INCOMPLETE);
+    expect(exitCodeFor(aggregate(skipped))).toBe(EXIT_PASS);
   });
 
   it("PASSES when every check was skipped by a RECEIPT — that input did pass", () => {
@@ -327,5 +338,29 @@ describe("exitCodeFor", () => {
     expect(
       exitCodeFor(aggregate([result("test", "block", { status: "skipped", reason: "receipt" })])),
     ).toBe(EXIT_PASS);
+  });
+});
+
+/**
+ * adr-0021: "nothing covers this" is not "the gate broke".
+ *
+ * They shared `incomplete` and therefore exit 2, so a hook blocked both. Hard
+ * rule 3 enumerates what counts as could-not-run — spawn, budget, timeout, auth,
+ * invalid output — and "no check matched these paths" is not on that list.
+ *
+ * The cost of the conflation, measured four times in two days: a markdown-only
+ * change, a commit-message amend and a tag push were each refused by a gate that
+ * was never going to verify them, and twice the author reached for --no-verify.
+ */
+describe("outcomeOf — uncovered is its own outcome", () => {
+  it("names it uncovered when nothing matched, not incomplete", () => {
+    expect(outcomeOf(aggregate([]))).toBe("uncovered");
+  });
+
+  it("stays incomplete when a blocking check could not RUN", () => {
+    const errored = [result("test", "block", { status: "errored", detail: "spawn" })];
+
+    expect(outcomeOf(aggregate(errored))).toBe("incomplete");
+    expect(exitCodeFor(aggregate(errored))).toBe(EXIT_INCOMPLETE);
   });
 });

@@ -19,7 +19,7 @@ import type { Tier } from "../core/checks/schema.js";
 import type { CheckOutcome, Routing } from "../core/contracts.js";
 import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
-import { exitCodeFor, renderGateRun } from "../core/gate/report.js";
+import { EXIT_INCOMPLETE, exitCodeFor, renderGateRun } from "../core/gate/report.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
 import { NULL_SINK } from "../core/events/record.js";
 import { DEFINITION_DIR } from "../core/paths.js";
@@ -435,7 +435,10 @@ export async function runGate(
     }
   }
 
-  const exit = exitCodeFor(run.verdict);
+  // A repo with an EMPTY registry is not an uncovered change — it is a gate that
+  // could not run, and adr-0021 unblocks the first case only. `wst init` is the
+  // remedy, and it is a remedy, which is the test that separates the two.
+  const exit = registry.byId.size === 0 ? EXIT_INCOMPLETE : exitCodeFor(run.verdict);
   emit({
     kind: "run-finished",
     // The verdict, plus what it was made of. A `block` line that does not name the
