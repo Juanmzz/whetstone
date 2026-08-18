@@ -30,6 +30,7 @@ import { access, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { environmentGaps } from "../core/dispatch/environment.js";
+import { prepareEnvelope } from "../core/dispatch/machine.js";
 import { laneReport } from "../core/dispatch/lane.js";
 import {
   buildCharter,
@@ -77,6 +78,8 @@ export interface PrepareOptions {
    */
   readonly dryRun?: boolean;
   readonly lane?: string;
+  /** The same answer as data, for an orchestrator rather than a reader. */
+  readonly json?: boolean;
 }
 
 export async function runPrepare(
@@ -112,6 +115,28 @@ export async function runPrepare(
     .catch(() => false);
 
   if (opts.dryRun === true) {
+    if (opts.json === true) {
+      // Both flags together. Silently printing prose because one of them won
+      // is how a caller ends up parsing a charter it asked for as data.
+      console.log(
+        JSON.stringify(
+          { dryRun: true, leased: false, branch, lane: opts.lane ?? null, charter: buildCharter({
+            task: opts.task,
+            worktreePath: "<leased when you run this for real>",
+            branch,
+            lane: opts.lane ?? null,
+            laneGuard,
+            gatingChecks,
+            strictPaths,
+            presentDocs: await presentDocsIn(repoRoot),
+          }) },
+          null,
+          2,
+        ),
+      );
+      return 0;
+    }
+
     console.log(
       buildCharter({
         task: opts.task,
@@ -213,6 +238,26 @@ export async function runPrepare(
     // dependency on any of them.
     //
     // A notary can prepare the file. It does not sit down and do the work.
+    if (opts.json === true) {
+      // The three paths a caller acts on, without parsing English for them.
+      console.log(
+        JSON.stringify(
+          prepareEnvelope({
+            task: opts.task,
+            worktreePath: worktree.path,
+            branch,
+            charterPath,
+            lane: opts.lane ?? null,
+            laneGuard,
+            gaps: environmentGaps({ untracked: ignored, linked: ["node_modules"] }),
+          }),
+          null,
+          2,
+        ),
+      );
+      return 0;
+    }
+
     console.log(`\n  prepared — nothing was dispatched, nothing was spent.\n`);
     console.log(`  worktree  ${worktree.path}`);
     console.log(`  branch    ${branch}`);

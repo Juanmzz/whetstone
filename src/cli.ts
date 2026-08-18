@@ -18,8 +18,15 @@ import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js
 import { runInit } from "./commands/init.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 import { DEFINITION_DIR } from "./core/paths.js";
+import { createRequire } from "node:module";
 
-const VERSION = "0.4.0-alpha";
+// Read, not retyped. It was hand-kept in step with package.json and drifted the
+// first time only one of them was bumped — `wst --version` said 0.4.0-alpha while
+// the package it came from said 0.5.0-alpha, which is the one number a user
+// checks to know what they are running.
+const VERSION = (
+  createRequire(import.meta.url)("../package.json") as { version: string }
+).version;
 
 const program = new Command();
 
@@ -118,12 +125,14 @@ program
   .argument("<task...>", "what the crewmate should do")
   .description("lease a worktree, branch it, and write the charter — then stop")
   .option("--dry-run", "print the charter and exit, leasing nothing")
-  .option("--lane <lane>", "scope the crewmate to a lane (boundary enforced by hook)")
-  .action(async (task: string[], opts: { dryRun?: boolean; lane?: string }) => {
+  .option("--lane <lane>", "scope the crewmate to a lane, where a hook enforces one")
+  .option("--json", "the worktree, branch and charter as data, for an orchestrator")
+  .action(async (task: string[], opts: { dryRun?: boolean; lane?: string; json?: boolean }) => {
     process.exitCode = await runPrepare({
       task: task.join(" "),
       ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
       ...(opts.lane !== undefined ? { lane: opts.lane } : {}),
+      ...(opts.json !== undefined ? { json: opts.json } : {}),
     });
   });
 
@@ -152,7 +161,8 @@ program
   .description("cluster new signals and propose rule changes (human-gated, never applied)")
   .option("--dry-run", "cluster only — no LLM calls, nothing written")
   .option("--model <model>", "model for the proposal step")
-  .action(async (opts: { dryRun?: boolean; model?: "haiku" | "sonnet" | "opus" }) => {
+  .option("--json", "the proposals as data, for the agent that presents them")
+  .action(async (opts: { dryRun?: boolean; model?: "haiku" | "sonnet" | "opus"; json?: boolean }) => {
     process.exitCode = await runRetro(opts);
   });
 
