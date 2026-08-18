@@ -175,3 +175,55 @@ never ran.
 Do not re-run this lens unchanged; it will fail the same way. The remaining failure is
 concentrated in one fixture family (concurrency), which suggests a lens addition about
 async/interleaving reasoning specifically, rather than another general rewrite.
+
+## 2026-08-18 — lens v4, the concurrency clause. FAIL, and it went backwards.
+
+v4 was written after v3 failed on one flip in five, and it added a concurrency clause
+aimed at exactly that fixture. Measured before deciding whether it worked, which is the
+point of the pre-registered bar.
+
+`npm run calibrate -- --runs 10`, unfiltered, claude 2.1.234, sonnet. **$4.45 / 100 calls.**
+
+| fixture | expect | correct | vs v3 |
+|---|---|---|---|
+| `known-bad` / `known-good` (easy) | — | 10/10 · 10/10 | held |
+| `swallow-bad` / `swallow-good` (medium) | — | 10/10 · 10/10 | held |
+| `nullish-bad` / `nullish-good` (hard) | — | 10/10 · 10/10 | held |
+| `boundary-bad` / `boundary-good` (hard) | — | 10/10 · 10/10 | held |
+| `race-bad` (hard) | fail | 10/10 | held |
+| `race-good` (hard) | pass | **6/10** | **worse** — was 4/5 |
+
+### Result — **FAIL. `correctness` stays at `warn`.**
+
+Nine of ten fixtures unanimous and correct, including every `-bad` one: at this N the lens
+still misses no planted bug. The whole failure is one fixture, and it is the same fixture
+that failed v3.
+
+**The clause written to fix it made it worse.** v3 flipped once in five on `race-good`
+(80% correct); v4 flips three times in ten (60%). A change aimed at a single known failure
+moved the number in the wrong direction, which is the argument for measuring rather than
+reasoning about a prompt.
+
+**What it gets wrong is a correct fix.** `race-good` clears the in-flight promise in a
+`finally`, so a failed refresh rejects the waiters and the next call starts fresh. The lens
+reads that as a race three times in ten. It is not missing bugs; it is inventing one in
+concurrent code that handles its own failure path — and a check that fails correct work is
+the false positive this bar exists to catch.
+
+**One harness error in 100.** A single `spawn` failure on `race-good`, counted as neither
+pass nor fail. Down from 13/80 at v2 and consistent with v3's 0/50 at a third of the volume;
+worth watching, not worth a conclusion.
+
+### What this run does NOT prove
+
+- Nothing about a fifth kind of bug. Six fixtures, five defect shapes, one project's taste.
+- Nothing about `opus` or `haiku`. One model, one version of it.
+- That `race-good` is the ONLY weakness — it is the only one this fixture set can see.
+
+### What would move it
+
+Not another clause aimed at `race-good`. Two attempts have now been aimed at that fixture
+and the second lost ground. The honest next step is a wider fixture set: if the lens is
+inventing races in correct concurrent code, three more `-good` concurrency fixtures would
+say whether that is one fixture's phrasing or the lens's actual failure mode — and that
+distinction decides whether the prompt or the approach is wrong.
