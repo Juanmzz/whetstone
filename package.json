@@ -21,6 +21,7 @@
     "test:watch": "vitest",
     "check:adr-refs": "tsx scripts/check-adr-refs.ts",
     "check:docs": "tsx scripts/check-docs-fresh.ts",
+    "check:provenance": "tsx scripts/check-provenance.ts",
     "check:skills": "tsx scripts/check-skills.ts",
     "untested": "tsx scripts/untested.ts",
     "calibrate": "tsx scripts/calibrate.ts",
