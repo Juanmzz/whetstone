@@ -13,6 +13,7 @@
  * Applying it is a human act — constitution non-negotiable 3.
  */
 
+import { retroEnvelope } from "../core/retro/machine.js";
 import { join } from "node:path";
 import { z } from "zod";
 import { clusterSignals, signalsSince, type Cluster } from "../core/retro/cluster.js";
@@ -32,6 +33,8 @@ export interface RetroOptions {
   /** Cluster and print, but make no LLM calls and write nothing. */
   readonly dryRun?: boolean;
   readonly model?: "haiku" | "sonnet" | "opus";
+  /** The proposals as data, for the agent that presents them to a human. */
+  readonly json?: boolean;
 }
 
 const RecommendationSchema = z.object({
@@ -204,6 +207,19 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
 
   const retroId = `retro-${String(all.length).padStart(4, "0")}`;
   const path = await writeProposals(definitionRoot, retroId, lines.join("\n"));
+
+  if (opts.json === true) {
+    // The proposals as data. An agent handed prose paraphrases it, and a
+    // paraphrased proposal is a rule change nobody approved.
+    console.log(
+      JSON.stringify(
+        { ...retroEnvelope({ signals: all.length, fresh: fresh.length, clusters: clusters.length, accepted, rejected, costUsd: cost }), wrote: path },
+        null,
+        2,
+      ),
+    );
+    return 0;
+  }
 
   console.log(`\n  ${accepted.length} proposal(s) survived the anti-poisoning gate`);
   if (rejected.length > 0) {

@@ -30,6 +30,7 @@ import { access, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { environmentGaps } from "../core/dispatch/environment.js";
+import { prepareEnvelope } from "../core/dispatch/machine.js";
 import { laneReport } from "../core/dispatch/lane.js";
 import {
   buildCharter,
@@ -77,6 +78,8 @@ export interface PrepareOptions {
    */
   readonly dryRun?: boolean;
   readonly lane?: string;
+  /** The same answer as data, for an orchestrator rather than a reader. */
+  readonly json?: boolean;
 }
 
 export async function runPrepare(
@@ -112,20 +115,49 @@ export async function runPrepare(
     .catch(() => false);
 
   if (opts.dryRun === true) {
-    console.log(
-      buildCharter({
-        task: opts.task,
-        worktreePath: "<leased when you run this for real>",
-        branch,
-        lane: opts.lane ?? null,
-        laneGuard,
-        gatingChecks,
-        strictPaths,
-        // No worktree has been leased, so this is the orchestrator's own tree. It
-        // over-reports anything untracked; the real path below stats the leased one.
-        presentDocs: await presentDocsIn(repoRoot),
-      }),
-    );
+    // Built once. Each output mode had grown its own call, with identical
+    // arguments, which is two charters that can drift for no reason.
+    const charter = buildCharter({
+      task: opts.task,
+      worktreePath: "<leased when you run this for real>",
+      branch,
+      lane: opts.lane ?? null,
+      laneGuard,
+      gatingChecks,
+      strictPaths,
+      // No worktree has been leased, so this is the orchestrator's own tree. It
+      // over-reports anything untracked; the real path below stats the leased one.
+      presentDocs: await presentDocsIn(repoRoot),
+    });
+
+    if (opts.json === true) {
+      // Both flags together. Silently printing prose because one of them won
+      // is how a caller ends up parsing a charter it asked for as data.
+      //
+      // The SAME envelope the real run emits. This branch used to hand-roll a
+      // second shape whose `charter` held the charter text where the other held
+      // its path — one key, two types, one command.
+      console.log(
+        JSON.stringify(
+          prepareEnvelope({
+            task: opts.task,
+            leased: false,
+            worktreePath: "",
+            branch,
+            charterPath: "",
+            charterText: charter,
+            lane: opts.lane ?? null,
+            laneGuard,
+            gaps: [],
+          }),
+          null,
+          2,
+        ),
+      );
+      return 0;
+    }
+
+    console.log(charter);
     return 0;
   }
 
@@ -184,7 +216,10 @@ export async function runPrepare(
       console.log(`            ${gap.why}`);
     }
     if (opts.lane !== undefined) {
-      await exec("sh", ["-c", `printf '%s\\n' '${opts.lane}' > .wst-lane`], { cwd: worktree.path });
+      // Written, not shelled. `--lane` was interpolated into a single-quoted
+      // `sh -c` string, so an apostrophe broke it and a crafted value escaped
+      // it. Every other spawn in this file already uses the argv form.
+      await writeFile(join(worktree.path, ".wst-lane"), `${opts.lane}\n`, "utf-8");
       // Only claim the boundary where something reads `.wst-lane`. The guard is
       // emitted per repo with its lane globs compiled in, so it exists here and
       // not in a repo Whetstone bootstrapped.
@@ -213,6 +248,27 @@ export async function runPrepare(
     // dependency on any of them.
     //
     // A notary can prepare the file. It does not sit down and do the work.
+    if (opts.json === true) {
+      // The three paths a caller acts on, without parsing English for them.
+      console.log(
+        JSON.stringify(
+          prepareEnvelope({
+            task: opts.task,
+            leased: true,
+            worktreePath: worktree.path,
+            branch,
+            charterPath,
+            lane: opts.lane ?? null,
+            laneGuard,
+            gaps: environmentGaps({ untracked: ignored, linked: ["node_modules"] }),
+          }),
+          null,
+          2,
+        ),
+      );
+      return 0;
+    }
+
     console.log(`\n  prepared — nothing was dispatched, nothing was spent.\n`);
     console.log(`  worktree  ${worktree.path}`);
     console.log(`  branch    ${branch}`);
