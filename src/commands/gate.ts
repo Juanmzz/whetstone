@@ -161,9 +161,12 @@ function unifiedDiff(range: string, paths: readonly string[], cwd: string): Prom
   return new Promise((resolve, reject) => {
     execFile(
       "git",
-      ["diff", range, "--", ...paths],
-      // Same stripped environment as `shell/git.ts`. This is the lens payload: an
-      // inherited `GIT_DIR` would send a diff of ANOTHER repository to a paid
+      ["-c", "core.quotePath=false", "diff", range, "--", ...paths],
+      // Same stripped environment as `shell/git.ts`, and the same `quotePath`: the
+      // paths arrive unquoted from `diffNameStatus`, so git must be told not to
+      // re-quote them in the `diff --git` headers the lens reads.
+      //
+      // An inherited `GIT_DIR` would send a diff of ANOTHER repository to a paid
       // model and file its verdict against this change.
       { cwd, env: gitEnv(), maxBuffer: MAX_BUFFER },
       (error, stdout) => (error === null ? resolve(stdout) : reject(error)),
