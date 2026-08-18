@@ -610,6 +610,20 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       console.error(`\n${renderCollisions(collisions)}`);
       return 1;
     }
+    // --force replaces generated files. It does not empty an append-only log:
+    // that is not a file being regenerated, it is a project's evidence, and
+    // non-negotiable 4 says a correction is appended and never overwritten.
+    // Someone had to invent a backup-force-restore dance to survive this.
+    const protectedPaths = collisions.filter((c) => !c.forceable);
+    if (protectedPaths.length > 0) {
+      console.error(
+        `\n--force will not write ${String(protectedPaths.length)} append-only file(s):\n` +
+          protectedPaths.map((c) => `  ${c.path}\n      ${c.stake}`).join("\n") +
+          `\n\n  Move them aside if you truly want them gone. Everything else would be written.`,
+      );
+      return 1;
+    }
+
     // --force still SAYS what it is about to destroy. A destructive flag that
     // works silently teaches people to pass it by reflex.
     console.log(`\n--force: overwriting ${String(collisions.length)} existing file(s):`);
