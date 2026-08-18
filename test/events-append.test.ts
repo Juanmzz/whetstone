@@ -1,9 +1,10 @@
+import { tempDir } from "./tmp.js";
 /**
  * The event log adapter against a real filesystem. The pure half is unit-tested in
  * `src/core/events/`; what only a real disk can show is here.
  */
 
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,7 +13,7 @@ import { createEventLog, EVENTS_PATH, readEventLog } from "../src/shell/events.j
 
 const roots: string[] = [];
 const root = async (): Promise<string> => {
-  const dir = await mkdtemp(join(tmpdir(), "wst-events-"));
+  const dir = await tempDir("wst-events-");
   roots.push(dir);
   return dir;
 };

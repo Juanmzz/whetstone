@@ -12,7 +12,7 @@
 
 import { execFile } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -21,6 +21,7 @@ import { recordCalibration } from "../src/core/calibration/receipt.js";
 import { recordPass } from "../src/core/receipts/receipt.js";
 import { hashFixtureDir } from "../src/shell/calibration.js";
 import { assertWorktreeAt, createGitAdapter } from "../src/shell/git.js";
+import { tempDir } from "./tmp.js";
 import { describePlugin } from "../src/shell/plugin.js";
 import { readReceipt, receiptPath, writeReceipt } from "../src/shell/receipts.js";
 import { readCursor, readSignals } from "../src/shell/retro.js";
@@ -37,7 +38,7 @@ const exec = promisify(execFile);
 const git = (cwd: string, ...args: string[]): Promise<unknown> => exec("git", args, { cwd });
 
 const temp = async (prefix: string): Promise<string> =>
-  realpathSync(await mkdtemp(join(tmpdir(), prefix)));
+  await tempDir(prefix, true);
 
 afterEach(() => restorePath());
 

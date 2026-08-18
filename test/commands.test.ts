@@ -1,3 +1,4 @@
+import { tempDir } from "./tmp.js";
 /**
  * The composition roots other than `wst gate`, at their boundary.
  *
@@ -18,7 +19,7 @@
 
 import { execFile } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -92,7 +93,7 @@ interface RepoOptions {
 }
 
 async function repo(options: RepoOptions = {}): Promise<string> {
-  const dir = realpathSync(await mkdtemp(join(tmpdir(), "wst-cmd-")));
+  const dir = await tempDir("wst-cmd-", true);
   await git(dir, "init", "-q", "-b", "main");
   await git(dir, "config", "user.email", "fixture@example.com");
   await git(dir, "config", "user.name", "fixture");
@@ -245,7 +246,7 @@ describe("wst status", () => {
     // The exit code is what a script reads. Reporting problems on stdout while
     // exiting 0 would make `wst status` unusable in CI.
     await withPlugin();
-    const bare = realpathSync(await mkdtemp(join(tmpdir(), "wst-status-")));
+    const bare = await tempDir("wst-status-", true);
     await git(bare, "init", "-q", "-b", "main");
 
     expect(await runStatus(bare)).toBe(1);
@@ -340,7 +341,7 @@ describe("wst init", () => {
   const PURPOSE = "A fixture service that does nothing in particular.";
 
   async function bare(): Promise<string> {
-    const dir = realpathSync(await mkdtemp(join(tmpdir(), "wst-init-")));
+    const dir = await tempDir("wst-init-", true);
     await git(dir, "init", "-q", "-b", "main");
     await writeFile(join(dir, "package.json"), '{"name":"fixture"}\n', "utf-8");
     return dir;

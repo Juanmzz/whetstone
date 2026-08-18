@@ -1,3 +1,4 @@
+import { tempDir } from "./tmp.js";
 /**
  * `wst events` at the boundary: a real repository, a real log file, real exit codes.
  *
@@ -14,7 +15,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -37,7 +38,7 @@ afterEach(() => void vi.restoreAllMocks());
 
 /** A repo with a definition directory and, optionally, a log in it. */
 async function repo(log?: string): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "wst-events-cmd-"));
+  const dir = await tempDir("wst-events-cmd-");
   await git("git", ["init", "-q"], { cwd: dir });
   // Spelled out rather than built from DEFINITION_DIR: this is what pins the
   // constant's value, which is why `test/definition-dir.test.ts` exempts tests.
@@ -173,7 +174,7 @@ describe("wst events", () => {
   });
 
   it("is not fooled by a repo that has no definition directory", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "wst-events-bare-"));
+    const dir = await tempDir("wst-events-bare-");
     await git("git", ["init", "-q"], { cwd: dir });
     expect(await runEvents({}, dir)).toBe(0);
     expect(printed()).toContain("no runs recorded yet");

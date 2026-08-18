@@ -1,3 +1,4 @@
+import { tempDir } from "./tmp.js";
 /**
  * A stand-in executable on `PATH`, for the adapters that spawn one.
  *
@@ -13,7 +14,7 @@
  * call, which is how "the flag set is load-bearing" quietly stops being true.
  */
 
-import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -86,7 +87,7 @@ const originalPath = process.env["PATH"];
 
 /** Puts `name` at the FRONT of PATH, so it shadows a real install if one exists. */
 export async function installFakeBin(name: string, response: Response = {}): Promise<FakeBin> {
-  const dir = await mkdtemp(join(tmpdir(), "wst-fake-bin-"));
+  const dir = await tempDir("wst-fake-bin-");
   const bin = join(dir, name);
   await writeFile(bin, SCRIPT, "utf-8");
   await chmod(bin, 0o755);

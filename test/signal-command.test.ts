@@ -1,3 +1,4 @@
+import { tempDir } from "./tmp.js";
 /**
  * `wst signal` at the boundary: a real repository, a real filesystem, real exit
  * codes. `src/commands/` is light tier and carries no test ceremony by default —
@@ -6,7 +7,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -33,7 +34,7 @@ beforeEach(() => {
 afterEach(() => void vi.restoreAllMocks());
 
 async function repo(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "wst-signal-cmd-"));
+  const dir = await tempDir("wst-signal-cmd-");
   await run("git", ["init", "-q"], { cwd: dir });
   return dir;
 }

@@ -1,3 +1,4 @@
+import { tempDir } from "./tmp.js";
 /**
  * `wst plan` at the boundary: a real repository, a real plan file, real exit codes.
  *
@@ -9,7 +10,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -32,7 +33,7 @@ afterEach(() => void vi.restoreAllMocks());
 
 /** A repo with a definition directory holding one blocking check and one rule. */
 async function repo(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "wst-plan-cmd-"));
+  const dir = await tempDir("wst-plan-cmd-");
   await git("git", ["init", "-q"], { cwd: dir });
   // Spelled out rather than built from DEFINITION_DIR: this asserts the value the
   // constant is supposed to have, which is what `test/definition-dir.test.ts`
