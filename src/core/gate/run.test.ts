@@ -39,6 +39,17 @@ function lens(over: Partial<LoadedCheck> = {}): LoadedCheck {
   };
 }
 
+function method(over: Partial<LoadedCheck> = {}): LoadedCheck {
+  const { command: _drop, ...base } = det();
+  return {
+    ...base,
+    id: "ui-states",
+    kind: "method",
+    severity: "annotate",
+    ...over,
+  };
+}
+
 const routing = (over: Partial<Routing> = {}): Routing => ({
   tier: "strict",
   checks: ["typecheck"],
@@ -593,5 +604,64 @@ describe("scheduling — deterministic checks are free, judgements are not", () 
     );
     expect(run.verdict.results[0]?.costUsd).toBeCloseTo(0.04);
     expect(run.verdict.totalCostUsd).toBeCloseTo(0.04);
+  });
+
+  // ── methods (adr-0018) ─────────────────────────────────────────────────────
+
+  it("reports a selected method as declared, instead of letting it vanish", async () => {
+    // The first version filtered for the two kinds it knew, and a selected method
+    // fell between them: the run said `passed` and never mentioned it. Deleting
+    // the loop that fixes this left the whole suite green, so this is the guard.
+    const h = harness();
+    const run = await runGate(
+      {
+        routing: routing({ checks: ["ui-states"] }),
+        registry: buildRegistry([method()]),
+        files: FILES,
+      },
+      h.ports,
+    );
+
+    expect(run.verdict.results.map((r) => r.checkId)).toEqual(["ui-states"]);
+    expect(run.verdict.results[0]?.outcome.status).toBe("declared");
+  });
+
+  it("never runs a method — it is prose for an agent, not a command", async () => {
+    const h = harness();
+    await runGate(
+      {
+        routing: routing({ checks: ["typecheck", "ui-states"] }),
+        registry: buildRegistry([det(), method()]),
+        files: FILES,
+      },
+      h.ports,
+    );
+
+    expect(h.ran).toEqual(["typecheck"]);
+  });
+
+  it("ignores a receipt for a method, which has nothing to cache", async () => {
+    // A method never passes, so nothing mints one — but a receipt is plain JSON
+    // that whoever produced the diff could write. Honouring it would report the
+    // method as `skipped: receipt`, which counts as verification and would
+    // headline the run `passed` without the method ever being mentioned.
+    const m = method();
+    const h = harness({
+      stored: {
+        "ui-states": recordPass({
+          checkId: "ui-states",
+          check: identityOf(m),
+          files: hashedFiles(["src/a.ts", "src/b.ts"]),
+          at: AT,
+        }),
+      },
+    });
+
+    const run = await runGate(
+      { routing: routing({ checks: ["ui-states"] }), registry: buildRegistry([m]), files: FILES },
+      h.ports,
+    );
+
+    expect(run.verdict.results[0]?.outcome.status).toBe("declared");
   });
 });

@@ -118,3 +118,55 @@ describe("CheckSchema", () => {
     expect(r.success).toBe(false);
   });
 });
+
+/**
+ * adr-0018: a verification method is a third kind.
+ *
+ * Some verification is not a command and not a diff review. The case that
+ * produced this: drive a browser, take the screenshots, compare them against the
+ * intended design. A deterministic check reduces to an exit code and there is no
+ * exit code for "the empty state looks wrong"; an agent-lens reads a diff and a
+ * screenshot is not in one.
+ *
+ * The schema is where the never-blocks rule lives, for the same reason
+ * non-negotiable 2 lives here: a rule enforced at parse time cannot be forgotten
+ * by the next person who writes a check file.
+ */
+describe("a method check", () => {
+  const method = (over: Record<string, unknown> = {}) => ({
+    id: "ui-states",
+    description: "Drive the three states and compare them against the design.",
+    kind: "method",
+    severity: "annotate",
+    tiers: ["strict"],
+    include: ["src/ui/**"],
+    version: 1,
+    ...over,
+  });
+
+  it("parses without a command, because a method is prose an agent follows", () => {
+    expect(CheckSchema.safeParse(method()).success).toBe(true);
+  });
+
+  it("refuses to block, at parse time", () => {
+    // The gate cannot enforce it — a method's outcome is a human's judgment or an
+    // agent's report — so a method claiming `block` would be a promise nothing
+    // keeps. Rejected by the schema rather than remembered by a reviewer.
+    const result = CheckSchema.safeParse(method({ severity: "block" }));
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(JSON.stringify(result.error.issues)).toMatch(/method/i);
+  });
+
+  it("refuses to block even at warn, which is still a verdict it cannot produce", () => {
+    expect(CheckSchema.safeParse(method({ severity: "warn" })).success).toBe(false);
+  });
+
+  it("refuses a command, which would make it a deterministic check wearing a name", () => {
+    expect(CheckSchema.safeParse(method({ command: "npm run e2e" })).success).toBe(false);
+  });
+
+  it("refuses a review_lens for the same reason", () => {
+    expect(CheckSchema.safeParse(method({ review_lens: "look at it" })).success).toBe(false);
+  });
+});
