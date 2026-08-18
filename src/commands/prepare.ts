@@ -216,7 +216,10 @@ export async function runPrepare(
       console.log(`            ${gap.why}`);
     }
     if (opts.lane !== undefined) {
-      await exec("sh", ["-c", `printf '%s\\n' '${opts.lane}' > .wst-lane`], { cwd: worktree.path });
+      // Written, not shelled. `--lane` was interpolated into a single-quoted
+      // `sh -c` string, so an apostrophe broke it and a crafted value escaped
+      // it. Every other spawn in this file already uses the argv form.
+      await writeFile(join(worktree.path, ".wst-lane"), `${opts.lane}\n`, "utf-8");
       // Only claim the boundary where something reads `.wst-lane`. The guard is
       // emitted per repo with its lane globs compiled in, so it exists here and
       // not in a repo Whetstone bootstrapped.
