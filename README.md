@@ -10,7 +10,7 @@ runs in a pre-push hook and in CI, so it does not depend on an agent choosing to
 because it records the friction it hits, the checks a project needs grow and tighten over time —
 each carrying a receipt for why it exists.
 
-> **Status: alpha (v0.4.0).** The gate runs on this repo's own changes, in a pre-push hook and in
+> **Status: alpha (v0.5.0).** The gate runs on this repo's own changes, in a pre-push hook and in
 > CI. The judgment tier is not done — the review lens is uncalibrated, so it may only warn.
 > [AGENTS.md](./AGENTS.md) carries the current numbers and
 > [what is still weak](./AGENTS.md#known-weaknesses-stated-plainly), stated plainly and checked by
