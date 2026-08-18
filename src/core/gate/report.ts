@@ -47,7 +47,22 @@ function verifiedSomething(verdict: GateVerdict): boolean {
   );
 }
 
-export type GateOutcome = "blocked" | "incomplete" | "passed";
+export type GateOutcome =
+  /** A check failed. The only outcome that is a verdict on the change. */
+  | "blocked"
+  /** A blocking check could not RUN. The gate is broken, not the change. */
+  | "incomplete"
+  /**
+   * No check matched these paths. Nothing broke and nothing was attempted.
+   *
+   * adr-0021. It shared `incomplete` and therefore exit 2, so a hook refused a
+   * change no edit could make pass — a markdown-only commit, a message amend, a
+   * tag. That is the pressure that teaches `--no-verify`, and a routed-around
+   * gate stops catching the real findings too.
+   */
+  | "uncovered"
+  /** Something ran, or a receipt proved it already had. */
+  | "passed";
 
 /**
  * The ONE decision, made once and consumed by both the number and the prose.
@@ -65,7 +80,21 @@ export type GateOutcome = "blocked" | "incomplete" | "passed";
 export function outcomeOf(verdict: GateVerdict): GateOutcome {
   if (verdict.verdict === "block") return "blocked";
   if (lostGating(verdict)) return "incomplete";
-  return verifiedSomething(verdict) ? "passed" : "incomplete";
+  if (verifiedSomething(verdict)) return "passed";
+
+  // Everything below is "nothing was verified". `uncovered` is the narrow case
+  // where that is nobody's doing and nothing can be done about it.
+  //
+  // An errored check of ANY severity tried and broke — the gate, not the
+  // coverage, even when the check was only advisory.
+  if (verdict.results.some((r) => r.outcome.status === "errored")) return "incomplete";
+  // A check switched off — by `enabled: false` or by `--no-lens` — means the
+  // change HAD coverage and someone declined it. There is a remedy, so this is
+  // not the case adr-0021 unblocks: exiting 0 here would tell a hook that a
+  // change nobody looked at is fine.
+  if (verdict.results.some((r) => r.outcome.status === "skipped" && r.outcome.reason === "disabled"))
+    return "incomplete";
+  return "uncovered";
 }
 
 /** The exit code is a CI SIGNAL, not the verdict — it is `outcomeOf`, as a number. */
@@ -75,6 +104,10 @@ export function exitCodeFor(verdict: GateVerdict): number {
       return EXIT_BLOCKED;
     case "incomplete":
       return EXIT_INCOMPLETE;
+    // Exit 0, and the message says nothing was verified. There is no action
+    // behind a block here, and a block nobody can satisfy is how a gate gets
+    // disarmed (adr-0021).
+    case "uncovered":
     case "passed":
       return EXIT_PASS;
   }
@@ -131,15 +164,15 @@ export function renderGateRun(run: GateRun): string {
       }
       break;
     case "incomplete":
-      // One headline for the whole outcome, with the reason appended rather than
-      // a different word per cause. "No check applied" and "a blocking check could
-      // not run" are both `incomplete`, and hard rule 3 forbids either of them
-      // sharing a sentence with `passed`.
-      lines.push(
-        verdict.results.length === 0
-          ? "  INCOMPLETE — no check applied, so nothing about this change was verified"
-          : "  INCOMPLETE — a check that can block never ran, so this change is unverified",
-      );
+      // Something tried to run and broke. Hard rule 3 forbids this sharing a
+      // sentence with `passed`, and the exit code says the same (2).
+      lines.push("  INCOMPLETE — a check never ran, so this change is unverified");
+      break;
+    case "uncovered":
+      // Exits 0, so the WORDS are the whole of the honesty. It must never read
+      // as a pass, and it must name what is missing rather than what failed:
+      // there is no failure here and no edit that would fix one (adr-0021).
+      lines.push("  UNCOVERED — no check applied, so nothing about this change was verified");
       break;
     case "passed":
       lines.push("  passed");
