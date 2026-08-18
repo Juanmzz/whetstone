@@ -1,4 +1,3 @@
-import { tempDir } from "./tmp.js";
 /**
  * `wst signal` at the boundary: a real repository, a real filesystem, real exit
  * codes. `src/commands/` is light tier and carries no test ceremony by default —
@@ -8,11 +7,11 @@ import { tempDir } from "./tmp.js";
 
 import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runSignal } from "../src/commands/signal.js";
+import { tempDir } from "./tmp.js";
 
 const run = promisify(execFile);
 

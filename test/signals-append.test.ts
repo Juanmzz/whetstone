@@ -9,7 +9,6 @@
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { tempDir } from "./tmp.js";
 import { describe, expect, it } from "vitest";

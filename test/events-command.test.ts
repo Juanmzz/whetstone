@@ -1,4 +1,3 @@
-import { tempDir } from "./tmp.js";
 /**
  * `wst events` at the boundary: a real repository, a real log file, real exit codes.
  *
@@ -16,11 +15,11 @@ import { tempDir } from "./tmp.js";
 
 import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runEvents } from "../src/commands/events.js";
+import { tempDir } from "./tmp.js";
 
 const git = promisify(execFile);
 

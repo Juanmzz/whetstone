@@ -1,4 +1,3 @@
-import { tempDir } from "./tmp.js";
 /**
  * A stand-in executable on `PATH`, for the adapters that spawn one.
  *
@@ -15,8 +14,8 @@ import { tempDir } from "./tmp.js";
  */
 
 import { chmod, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { tempDir } from "./tmp.js";
 
 /** What the child observed. The three facts the adapters are made of. */
 export interface Invocation {

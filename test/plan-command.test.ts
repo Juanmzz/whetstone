@@ -1,4 +1,3 @@
-import { tempDir } from "./tmp.js";
 /**
  * `wst plan` at the boundary: a real repository, a real plan file, real exit codes.
  *
@@ -11,11 +10,11 @@ import { tempDir } from "./tmp.js";
 
 import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPlan } from "../src/commands/plan.js";
+import { tempDir } from "./tmp.js";
 
 const git = promisify(execFile);
 

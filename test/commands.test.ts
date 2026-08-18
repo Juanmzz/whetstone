@@ -1,4 +1,3 @@
-import { tempDir } from "./tmp.js";
 /**
  * The composition roots other than `wst gate`, at their boundary.
  *
@@ -18,9 +17,7 @@ import { tempDir } from "./tmp.js";
  */
 
 import { execFile } from "node:child_process";
-import { realpathSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +30,7 @@ import { runStatus } from "../src/commands/status.js";
 import { runTriage } from "../src/commands/triage.js";
 import { installFakeBin, restorePath, type FakeBin } from "./fake-bin.js";
 import { isolateFromInheritedGit } from "./git-env.js";
+import { tempDir } from "./tmp.js";
 
 // Before anything builds a repository. See `git-env.ts`: run from the pre-push
 // hook, every temp repo below otherwise inherits the pushing repo's GIT_DIR.

@@ -23,9 +23,7 @@
  *   the current name, and (once there is an old one) never the old one.
  */
 
-import { realpathSync } from "node:fs";
 import { mkdir, readdir, readFile, stat, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { basename, join, relative } from "node:path";
 import { tempDir } from "./tmp.js";
 import { describe, expect, it } from "vitest";

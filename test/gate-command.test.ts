@@ -1,4 +1,3 @@
-import { tempDir } from "./tmp.js";
 /**
  * `wst gate` end to end, against a real repository on a real filesystem.
  *
@@ -24,8 +23,6 @@ import { tempDir } from "./tmp.js";
 
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { realpathSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,6 +34,7 @@ import type { LoadedCheck } from "../src/core/checks/registry.js";
 import type { Routing } from "../src/core/contracts.js";
 import type { LlmJudge } from "../src/core/ports.js";
 import { isolateFromInheritedGit } from "./git-env.js";
+import { tempDir } from "./tmp.js";
 
 // Before anything builds a repository. See `git-env.ts`: run from the pre-push
 // hook, every temp repo below otherwise inherits the pushing repo's GIT_DIR.
