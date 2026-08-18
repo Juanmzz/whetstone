@@ -439,6 +439,43 @@ receipts/
 `;
 }
 
+/**
+ * `.wst/.gitattributes` — how git must merge the files two workers append to at once.
+ *
+ * `wst prepare` exists to put N workers on one repository. `memory/signals.jsonl`
+ * is append-only and committed on purpose, so every pair of concurrent workers
+ * writes a new last line and git reports a conflict it cannot resolve: it sees two
+ * edits to one region and cannot know the records are independent. Measured three
+ * times in a single day on a real repo running five workers.
+ *
+ * Resolving it by hand is worse than tedious. Picking a side DISCARDS a signal
+ * somebody recorded, and non-negotiable 4 forbids exactly that. `union` keeps both
+ * sides' lines, which for an append-only log is not a heuristic but the correct
+ * answer.
+ *
+ * WHY THIS IS SAFE HERE, and would not be everywhere. `union` concatenates the two
+ * halves verbatim, so a file whose last line lacks a newline would come back with
+ * two records fused into one unparseable line — and `parseSignalLog` fails closed
+ * and loud, so that breaks the gate rather than degrading it. `shell/jsonl.ts`
+ * removes the hazard at the source: `appendJsonl` always terminates with a
+ * newline, and repairs a missing separator before appending.
+ *
+ * `memory/decisions.md` is the tempting second entry and is deliberately absent.
+ * Its records are numbered, so two workers branching from one base both compute
+ * "the next is adr-0011" and both write it. `union` would not conflict on that; it
+ * would merge two different decisions carrying the same id, turning a loud failure
+ * into a silent one. The fix there is to the numbering, and it is a decision.
+ */
+export function renderWstGitattributes(): string {
+  return `# How git must merge the files more than one worker appends to.
+# See ${DEFINITION_DIR}/memory/README.md for what each page is.
+
+# Append-only, committed, and written by every worker at once. \`union\` keeps both
+# sides' lines. Picking a side would discard a signal somebody recorded.
+memory/signals.jsonl merge=union
+`;
+}
+
 /** The two files `wst prepare` writes into a leased worktree, never the branch. */
 export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([
   ".wst-charter.md",

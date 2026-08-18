@@ -30,6 +30,7 @@ import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {
   renderDecisionsMd,
   renderWstGitignore,
+  renderWstGitattributes,
   CLAUDE_MD,
   MEMORY_README,
   OUT_OF_SCOPE_README,
@@ -155,6 +156,10 @@ export function planInit(input: InitPlanInput): InitPlan {
     // receipts cache) must never be committed. `memory/signals.jsonl` below is
     // NOT covered here on purpose: it is committed, deliberately.
     { path: `${DEFINITION_DIR}/.gitignore`, contents: renderWstGitignore() },
+    // How git merges the one committed page every worker appends to at once.
+    // `wst prepare` hands out N worktrees; without this, every second worker
+    // conflicts on the last line of the signal log.
+    { path: `${DEFINITION_DIR}/.gitattributes`, contents: renderWstGitattributes() },
     ...checkFiles,
     { path: `${DEFINITION_DIR}/memory/README.md`, contents: MEMORY_README },
     // Empty on purpose. A seeded example would be the first line of the log, and

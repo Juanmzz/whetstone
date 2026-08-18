@@ -1,0 +1,6 @@
+# How git must merge the files more than one worker appends to.
+# See .wst/memory/README.md for what each page is.
+
+# Append-only, committed, and written by every worker at once. `union` keeps both
+# sides' lines. Picking a side would discard a signal somebody recorded.
+memory/signals.jsonl merge=union
