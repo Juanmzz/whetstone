@@ -29,6 +29,7 @@ import { execFile } from "node:child_process";
 import { access, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { environmentGaps } from "../core/dispatch/environment.js";
 import { laneReport } from "../core/dispatch/lane.js";
 import {
   buildCharter,
@@ -168,6 +169,20 @@ export async function runPrepare(
       cwd: worktree.path,
     }).catch(() => undefined);
     console.log(`  branch    ${branch}`);
+
+    // A worktree holds what git tracks and nothing else. Say what it is missing
+    // rather than letting it surface later as a check failing on a file the work
+    // never touched, or as a green that only means "skipped".
+    const ignored = await exec("git", ["ls-files", "--others", "--directory", "-i", "--exclude-standard"], {
+      cwd: repoRoot,
+      env: gitEnv(),
+    })
+      .then(({ stdout }) => stdout.split("\n").map((l) => l.replace(/\/$/, "")).filter(Boolean))
+      .catch(() => [] as string[]);
+    for (const gap of environmentGaps({ untracked: ignored, linked: ["node_modules"] })) {
+      console.log(`  missing   ${gap.paths.slice(0, 4).join(", ")}${gap.paths.length > 4 ? ` (+${String(gap.paths.length - 4)})` : ""}`);
+      console.log(`            ${gap.why}`);
+    }
     if (opts.lane !== undefined) {
       await exec("sh", ["-c", `printf '%s\\n' '${opts.lane}' > .wst-lane`], { cwd: worktree.path });
       // Only claim the boundary where something reads `.wst-lane`. The guard is
