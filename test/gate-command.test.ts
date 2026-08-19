@@ -291,22 +291,6 @@ describe("a registry the gate cannot read", () => {
   });
 });
 
-describe("a repository still holding the pre-ADR-0012 directory", () => {
-  it("refuses before the event log exists, and says which directory it found", async () => {
-    // The one failure that CANNOT be recorded: the log lives under the directory
-    // that could not be resolved. Reported on stderr only, and it must still be
-    // an exit code, not a stack trace.
-    const dir = await tempDir("wst-gate-legacy-", true);
-    await git(dir, "init", "-q", "-b", "main");
-    await mkdir(join(dir, ".sdd"), { recursive: true });
-
-    expect(await runGate({ range: "HEAD", noLens: true }, dir)).toBe(2);
-    expect(stderr()).toMatch(/configuration failed to load/);
-    expect(stderr()).toMatch(/\.sdd/);
-    expect(await read(dir, ".wst/events.jsonl")).toBeNull();
-  });
-});
-
 describe("outside a repository", () => {
   it("says the gate needs one instead of reporting an empty diff as clean", async () => {
     const dir = await tempDir("wst-gate-norepo-");

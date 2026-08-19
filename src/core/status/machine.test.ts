@@ -6,7 +6,6 @@ const facts = (over: Partial<StatusFacts> = {}): StatusFacts => ({
   repoRoot: "/repos/acme",
   branch: "main",
   definitionPresent: true,
-  legacyPresent: false,
   judge: { name: "claude", version: "2.1.224" },
   nodeVersion: "v24.19.0",
   hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },

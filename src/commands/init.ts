@@ -42,6 +42,7 @@ import {
   renderProposal,
 } from "../core/init/propose.js";
 import { createClaudeJudge } from "../shell/claude.js";
+import { exists } from "../shell/fs.js";
 import {
   MAX_FILES,
   NO_RISK,
@@ -301,15 +302,6 @@ function printPlan(plan: InitPlan, root: string): void {
 }
 
 // ── writing ──────────────────────────────────────────────────────────────────
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Whetstone's own payload directory, holding the skills copied verbatim into the

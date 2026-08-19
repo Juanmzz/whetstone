@@ -4,14 +4,13 @@
 
 import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { exists } from "./fs.js";
 import { buildRegistry, parseCheckFile, type Registry } from "../core/checks/registry.js";
 import { hashFixtureDir, loadCalibration } from "./calibration.js";
 import type { TriageRule } from "../core/contracts.js";
 import { DEFAULT_RULES, parseTriageRules } from "../core/triage/index.js";
 import {
   DEFINITION_DIR,
-  LEGACY_DEFINITION_DIR,
-  legacyDirectoryMessage,
 } from "../core/paths.js";
 
 /**
@@ -24,15 +23,6 @@ import {
  */
 export function definitionRoot(repoRoot: string): string {
   return join(repoRoot, DEFINITION_DIR);
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -54,9 +44,6 @@ async function exists(path: string): Promise<boolean> {
 export async function resolveDefinitionRoot(repoRoot: string): Promise<string> {
   const root = definitionRoot(repoRoot);
   if (await exists(root)) return root;
-  if (await exists(join(repoRoot, LEGACY_DEFINITION_DIR))) {
-    throw new Error(legacyDirectoryMessage(repoRoot));
-  }
   return root;
 }
 

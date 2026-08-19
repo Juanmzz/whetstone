@@ -9,24 +9,16 @@ import { access } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { createGitAdapter, gitEnv } from "../shell/git.js";
+import { exists } from "../shell/fs.js";
 import { definitionRoot } from "../shell/sdd.js";
-import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../core/paths.js";
+import { DEFINITION_DIR } from "../core/paths.js";
 import { createClaudeJudge } from "../shell/claude.js";
-import { describePlugin } from "../shell/plugin.js";
+import { describePlugin, pluginHookRoot } from "../shell/plugin.js";
 import {
   buildStatusReport,
   renderStatusReport,
   WHETSTONE_HOOKS_PATH,
 } from "../core/status/report.js";
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * `core.hooksPath`, or null when unset.
@@ -75,16 +67,12 @@ export async function runStatus(
   const repoRoot = await git.repoRoot();
   const [branch, judgeInfo] = await Promise.all([git.currentBranch(), judge.describe()]);
 
-  // Where the plugin's Stop hook would run the gate. It reads `CLAUDE_PROJECT_DIR`,
-  // which is NOT always the repo — in the field it was the umbrella folder holding
-  // several repos, so both hooks were inert all session with nothing to show for it.
-  const hookRoot = process.env["CLAUDE_PROJECT_DIR"] ?? cwd;
+  const hookRoot = pluginHookRoot(cwd);
 
   const report = buildStatusReport({
     repoRoot,
     branch,
     definitionPresent: await exists(definitionRoot(repoRoot ?? cwd)),
-    legacyPresent: await exists(join(repoRoot ?? cwd, LEGACY_DEFINITION_DIR)),
     judge: judgeInfo,
     hooks: {
       configuredPath: await hooksPath(repoRoot ?? cwd),

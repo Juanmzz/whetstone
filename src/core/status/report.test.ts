@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildStatusReport, renderStatusReport, type StatusFacts } from "./report.js";
-import { DEFINITION_DIR, LEGACY_DEFINITION_DIR } from "../paths.js";
+import { DEFINITION_DIR } from "../paths.js";
 
 const base = {
   repoRoot: "/repo",
   branch: "engine-skeleton",
   definitionPresent: true,
-  legacyPresent: false,
   judge: { name: "claude", version: "2.1.224" },
   nodeVersion: "v24.19.0",
   hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },
@@ -38,26 +37,8 @@ describe("buildStatusReport", () => {
     expect(r.problems.join(" ")).toMatch(/wst init/i);
   });
 
-  /**
-   * ADR-0012: a repo installed before the rename must not fail blankly.
-   *
-   * "run `wst init` to create one" is the WRONG advice for a repo that already has
-   * a full definition layer under the old name — following it either refuses on a
-   * collision or, with `--force`, overwrites a directory `init` cannot see. Status
-   * is where a human looks when something is off, so it is where the old name has
-   * to be said out loud.
-   */
-  it("names the old directory rather than telling a migrated repo to init", () => {
-    const r = buildStatusReport({ ...base, definitionPresent: false, legacyPresent: true });
-    expect(r.ready).toBe(false);
-    const said = r.problems.join(" ");
-    expect(said).toContain(LEGACY_DEFINITION_DIR);
-    expect(said).toContain(`git mv ${LEGACY_DEFINITION_DIR} ${DEFINITION_DIR}`);
-    expect(said).not.toMatch(/wst init/i);
-  });
-
-  it("still says `wst init` when there is nothing to migrate", () => {
-    const r = buildStatusReport({ ...base, definitionPresent: false, legacyPresent: false });
+  it("says `wst init` when there is no definition layer", () => {
+    const r = buildStatusReport({ ...base, definitionPresent: false });
     expect(r.problems.join(" ")).toMatch(/wst init/i);
   });
 
