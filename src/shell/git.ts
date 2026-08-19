@@ -4,6 +4,9 @@
  */
 
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { realpathSync } from "node:fs";
 import { promisify } from "node:util";
 import type { GitPort } from "../core/ports.js";
@@ -96,10 +99,22 @@ export function createGitAdapter(cwd: string = process.cwd()): GitPort {
       }
       return out;
     },
+    /**
+     * Read and hash in process, rather than spawning `git hash-object` per file.
+     *
+     * The receipt never compares against git's object store — it only needs a
+     * fingerprint of the bytes, and any hash serves. Measured over 50 files:
+     * 391ms of spawns against 30ms in process.
+     *
+     * Changing the function makes every receipt on disk stop matching, which is
+     * self-healing: one full gate run re-earns them.
+     */
     async hashFile(path: string) {
-      const hash = await git(["hash-object", path], cwd);
-      if (hash === null) throw new Error(`could not hash ${path}`);
-      return hash;
+      try {
+        return createHash("sha256").update(await readFile(join(cwd, path))).digest("hex");
+      } catch (cause) {
+        throw new Error(`could not hash ${path}: ${(cause as Error).message}`);
+      }
     },
   };
 }
