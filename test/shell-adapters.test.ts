@@ -22,7 +22,8 @@ import { assertWorktreeAt, createGitAdapter } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
 import { describePlugin } from "../src/shell/plugin.js";
 import { readReceipt, receiptPath, writeReceipt } from "../src/shell/receipts.js";
-import { appendRetroLogStub, countRetros, readCursor, readSignals, writeProposals } from "../src/shell/retro.js";
+import { appendRetroLogStub, countRetros, readCursor, writeProposals } from "../src/shell/retro.js";
+import { filesMemory } from "../src/shell/memory.js";
 import { loadRegistry, loadTriageRules, resolveDefinitionRoot } from "../src/shell/sdd.js";
 import { createTreehouseAdapter } from "../src/shell/treehouse.js";
 import { emptyPath, installFakeBin, restorePath } from "./fake-bin.js";
@@ -628,15 +629,15 @@ describe("the retro cursor", () => {
     await expect(writeProposals(root, "retro-0001", "second")).rejects.toThrow(/already exists/);
   });
 
-  it("reads a missing signal log as empty, and a corrupt one as a stop", async () => {
+  it("reads a missing store as empty, and a corrupt one as a stop", async () => {
     // Clustering over a subset while reporting it processed everything is worse
     // than stopping: the proposal would cite evidence that was never read.
     const root = await temp("wst-retro-");
-    expect(await readSignals(root)).toEqual([]);
+    expect(await filesMemory(root).all()).toEqual([]);
 
     await mkdir(join(root, "memory"), { recursive: true });
     await writeFile(join(root, "memory/signals.jsonl"), "{ not json\n", "utf-8");
-    await expect(readSignals(root)).rejects.toThrow();
+    await expect(filesMemory(root).all()).rejects.toThrow();
   });
 });
 

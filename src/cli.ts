@@ -233,4 +233,13 @@ program
   });
 
 
-await program.parseAsync(process.argv);
+// A misconfigured repo gets a sentence, not a stack. Anything else keeps its
+// trace: an unexpected throw is a bug in Whetstone and the trace is the report.
+try {
+  await program.parseAsync(process.argv);
+} catch (cause) {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  if (!message.startsWith("wst.yaml:")) throw cause;
+  console.error(message);
+  process.exitCode = 2;
+}

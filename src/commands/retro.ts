@@ -19,7 +19,8 @@ import {
 } from "../core/retro/propose.js";
 import { createGitAdapter } from "../shell/git.js";
 import { resolveJudge } from "../shell/judge.js";
-import { appendRetroLogStub, countRetros, readCursor, readSignals, writeProposals } from "../shell/retro.js";
+import { appendRetroLogStub, countRetros, readCursor, writeProposals } from "../shell/retro.js";
+import { resolveMemory } from "../shell/memory.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { readdir, readFile } from "node:fs/promises";
@@ -116,7 +117,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   const repoRoot = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
   const definitionRoot = await resolveDefinitionRoot(repoRoot);
 
-  const all = await readSignals(definitionRoot);
+  const all = await (await resolveMemory(definitionRoot)).all();
   const cursor = await readCursor(definitionRoot);
 
   let fresh;
