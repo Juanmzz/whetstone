@@ -52,4 +52,19 @@ describe("progressLines — what a waiting reader is told", () => {
   it("says nothing at all when asked to be quiet, which is what --json needs", () => {
     expect(progressLines({ phase: "started", checkId: "test" }, { quiet: true })).toEqual([]);
   });
+
+  it("says a slow check is still alive, with how long it has been", () => {
+    // The gap this closes: `running test` printed once, then 45 seconds of
+    // nothing. Silence is indistinguishable from a hang, and a Ctrl-C taken for
+    // a hang leaves half-written receipts.
+    expect(progressLines({ phase: "still-running", checkId: "test", ms: 12_000 }, {})).toEqual([
+      "  ...      test           (12.0s)",
+    ]);
+  });
+
+  it("stays quiet under --json, like every other progress line", () => {
+    expect(
+      progressLines({ phase: "still-running", checkId: "test", ms: 12_000 }, { quiet: true }),
+    ).toEqual([]);
+  });
 });

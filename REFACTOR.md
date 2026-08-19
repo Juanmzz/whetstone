@@ -16,7 +16,7 @@ Status legend: **open** — argued, not decided · **agreed** — decided, unbui
 
 ## 1. The vendor choice is hardcoded in five places
 
-**agreed** · the shape below is decided; Gemini itself comes later
+**done** · `shell/judge.ts` is the only place that names a vendor; Gemini still to come
 
 `architecture.md` says *"Agnosticism is multiple adapters behind [one port];
 `agent:` config selects one."* **That is false twice over:** there is no
@@ -358,7 +358,7 @@ port shape is not being invented in a vacuum.
 
 ## 13. Config that is written and never read
 
-**agreed** · a rule, not a one-off fix
+**done for `wst.yaml`** · it has a reader now, and an out-of-enum value throws. The general rule — anything `init` writes as config must have a reader — is still worth a check
 
 `backend:` in `wst.yaml` is written by `init` and parsed by nothing. So is the
 whole file. A key that looks like configuration and configures nothing is worse
@@ -579,7 +579,7 @@ parses. That is also exactly when a wrong answer is most expensive.
 
 ## 25. `wst retro` is broken in four ways, and one of them is silent and expensive
 
-**agreed** · reported from sift, reproduced twice there, all four confirmed in
+**done** · all four, plus the cursor is now written rather than asked for · reported from sift, reproduced twice there, all four confirmed in
 this source. Ranked by cost.
 
 ### 25a. The cursor regex only matches the OLD id format
@@ -895,7 +895,7 @@ files the check does not declare.
 
 ## 20. Progress says a check started and then goes silent
 
-**agreed** · observed live
+**done** · a heartbeat every 10s, and no announcement for a check --no-lens will skip
 
 `core/gate/progress.ts` exists because *"twenty-five seconds of nothing is
 indistinguishable from a hang, and a Ctrl-C taken for a hang leaves half-written

@@ -297,13 +297,36 @@ export function createCheckRunner(deps: {
  * piping the verdict still sees the run is alive. `--json` silences it anyway:
  * a machine reading the envelope has no use for progress.
  */
-function withProgress(runner: CheckRunner, target: ProgressTarget): CheckRunner {
+/** How long a check runs before it has to say it is still there, and how often. */
+const HEARTBEAT_MS = 10_000;
+
+function withProgress(
+  runner: CheckRunner,
+  target: ProgressTarget,
+  /** A check the runner will skip without work. Announcing it is noise. */
+  willSkip: (check: LoadedCheck) => boolean = () => false,
+): CheckRunner {
   return async (check, files) => {
+    if (willSkip(check)) return runner(check, files);
+
     for (const line of progressLines({ phase: "started", checkId: check.id }, target)) {
       process.stderr.write(`${line}\n`);
     }
     const began = Date.now();
-    const outcome = await runner(check, files);
+    // `unref` so a check that resolves between ticks cannot hold the process open.
+    const beat = setInterval(() => {
+      for (const line of progressLines(
+        { phase: "still-running", checkId: check.id, ms: Date.now() - began },
+        target,
+      )) {
+        process.stderr.write(`${line}\n`);
+      }
+    }, HEARTBEAT_MS);
+    beat.unref?.();
+
+    const outcome = await runner(check, files).finally(() => {
+      clearInterval(beat);
+    });
     const lines = progressLines(
       { phase: "finished", checkId: check.id, status: outcome.outcome.status, ms: Date.now() - began },
       target,
@@ -415,7 +438,11 @@ export async function runGate(
         maxLensTotalUsd: opts.maxLensTotalUsd ?? DEFAULT_MAX_LENS_TOTAL_USD,
         noLens: opts.noLens ?? false,
         timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      }), opts.json === true ? { quiet: true } : {}),
+      }),
+      opts.json === true ? { quiet: true } : {},
+      // `--no-lens` skips every llm check without work. Announcing `running` and
+      // then `skipped (0ms)` for it is the gate narrating something it did not do.
+      (check) => opts.noLens === true && check.kind === "llm"),
     },
   );
 
