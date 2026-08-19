@@ -4,7 +4,7 @@ import type { Routing } from "../contracts.js";
 import type { ChangedFile } from "../diff/parse.js";
 import { inputHash, type HashedFile } from "../receipts/hash.js";
 import { recordPass, type Receipt } from "../receipts/receipt.js";
-import type { RunOutcome } from "./outcomes.js";
+import type { CheckRun } from "./outcomes.js";
 import { DELETED_FILE_HASH, identityOf, runGate, type CheckRunner, type GatePorts } from "./run.js";
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ function lens(over: Partial<LoadedCheck> = {}): LoadedCheck {
   return {
     ...base,
     id: "correctness",
-    kind: "agent-lens",
+    kind: "llm",
     severity: "warn",
     review_lens: "look for correctness bugs",
     ...over,
@@ -110,7 +110,7 @@ function harness(
           written.push(receipt);
         }),
     },
-    run:
+    runCheck:
       over.run ??
       (async (check) => {
         ran.push(check.id);
@@ -508,12 +508,12 @@ describe("hashing the receipt input", () => {
 
 describe("scheduling — deterministic checks are free, judgements are not", () => {
   it("runs deterministic checks concurrently", async () => {
-    const gates = new Map<string, ReturnType<typeof deferred<RunOutcome>>>();
+    const gates = new Map<string, ReturnType<typeof deferred<CheckRun>>>();
     const started: string[] = [];
     const h = harness({
       run: (check) => {
         started.push(check.id);
-        const d = deferred<RunOutcome>();
+        const d = deferred<CheckRun>();
         gates.set(check.id, d);
         return d.promise;
       },
@@ -535,13 +535,13 @@ describe("scheduling — deterministic checks are free, judgements are not", () 
     expect(run.verdict.verdict).toBe("pass");
   });
 
-  it("runs agent-lens checks ONE AT A TIME — each one costs money", async () => {
-    const gates = new Map<string, ReturnType<typeof deferred<RunOutcome>>>();
+  it("runs llm checks ONE AT A TIME — each one costs money", async () => {
+    const gates = new Map<string, ReturnType<typeof deferred<CheckRun>>>();
     const started: string[] = [];
     const h = harness({
       run: (check) => {
         started.push(check.id);
-        const d = deferred<RunOutcome>();
+        const d = deferred<CheckRun>();
         gates.set(check.id, d);
         return d.promise;
       },

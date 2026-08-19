@@ -1,7 +1,7 @@
 ---
 id: correctness
 description: Does this diff introduce a correctness bug?
-kind: agent-lens
+kind: llm
 severity: warn
 tiers: [strict]
 include: ["src/**/*.ts"]
@@ -50,7 +50,7 @@ origin: [adr-0008, sig-0007, sig-0008, sig-0011]
 version: 4
 ---
 
-The first `agent-lens` check, and the reason the calibration harness exists.
+The first `llm` check, and the reason the calibration harness exists.
 
 **Why this is `warn`, and now cannot be anything else.** The 2026-08-07 run passed 10/10,
 but on two mirror-image fixtures — unambiguous by construction. The debt that result

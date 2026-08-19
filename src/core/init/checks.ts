@@ -10,7 +10,7 @@
  * command it read out of the project's own scripts or one the detected toolchain
  * guarantees. A repo with no runner gets ZERO checks, which is the correct answer.
  *
- * **2. An `agent-lens` check may never be seeded at `severity: block`.** A fresh
+ * **2. An `llm` check may never be seeded at `severity: block`.** A fresh
  * repo has no calibration receipt by definition, and `CheckSchema` refuses the
  * combination at parse time — so an init that emitted one would hand over a repo
  * whose registry cannot load. The cap is applied here as well as in the schema,
@@ -211,7 +211,7 @@ function agentLensDraft(options: SeedChecksOptions): Draft {
   return {
     id: "correctness",
     description: "Does this diff introduce a correctness bug?",
-    kind: "agent-lens",
+    kind: "llm",
     severity,
     tiers: ["strict"],
     include: options.include,

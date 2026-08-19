@@ -230,7 +230,7 @@ describe("cost", () => {
     expect(verdict.totalCostUsd).toBeCloseTo(0.06);
   });
 
-  it("counts an errored agent-lens check's cost — a failed judgement is still billed", () => {
+  it("counts an errored llm check's cost — a failed judgement is still billed", () => {
     const verdict = aggregate([result("correctness", "warn", ERRORED, { costUsd: 0.09 })]);
     expect(verdict.totalCostUsd).toBeCloseTo(0.09);
   });

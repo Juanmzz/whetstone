@@ -91,7 +91,7 @@ export interface CheckResult {
   readonly severity: Check["severity"];
   readonly outcome: CheckOutcome;
   readonly durationMs: number;
-  /** Only set for agent-lens checks. Deterministic checks are free. */
+  /** Only set for llm checks. Deterministic checks are free. */
   readonly costUsd?: number;
 }
 

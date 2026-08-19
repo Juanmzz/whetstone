@@ -52,7 +52,7 @@ export interface CheckIdentity {
   readonly version: number;
   /** The shell command, for a `deterministic` check. Absent for a lens. */
   readonly command?: string;
-  /** The review prompt, for an `agent-lens`. Absent for a deterministic check. */
+  /** The review prompt, for an `llm`. Absent for a deterministic check. */
   readonly reviewLens?: string;
 }
 

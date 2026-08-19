@@ -48,7 +48,7 @@ export interface Selection {
    * broken — a stale routing table or a deleted check file — not a fact about the
    * change, so it surfaces as `errored`, never as a failure.
    */
-  readonly unknown: readonly string[];
+  readonly missingFromRegistry: readonly string[];
   /**
    * Enabled and in tier, but matched none of the changed files. It never applied,
    * so it is neither run nor skipped. Reported because node's `matchesGlob` returns
@@ -108,7 +108,7 @@ export function selectChecks(
 ): Selection {
   const selected: SelectedCheck[] = [];
   const excluded: ExcludedCheck[] = [];
-  const unknown: string[] = [];
+  const missingFromRegistry: string[] = [];
   const unmatched: string[] = [];
 
   // One result per check id. A duplicate would produce two CheckResults for one
@@ -121,7 +121,7 @@ export function selectChecks(
 
     const check = registry.byId.get(id);
     if (check === undefined) {
-      unknown.push(id);
+      missingFromRegistry.push(id);
       continue;
     }
 
@@ -163,5 +163,5 @@ export function selectChecks(
     declined.push(check.id);
   }
 
-  return { selected, excluded, unknown, unmatched, declined };
+  return { selected, excluded, missingFromRegistry, unmatched, declined };
 }

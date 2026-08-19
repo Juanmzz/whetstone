@@ -20,7 +20,7 @@ import type { CheckOutcome } from "../contracts.js";
 import type { JudgeResult } from "../ports.js";
 
 /**
- * What an `agent-lens` check must return. `reason` is mandatory and non-empty: an
+ * What an `llm` check must return. `reason` is mandatory and non-empty: an
  * unexplained verdict cannot be reviewed, argued with, or turned into a signal.
  */
 export const LensVerdictSchema = z.object({
@@ -31,9 +31,9 @@ export const LensVerdictSchema = z.object({
 export type LensVerdict = z.infer<typeof LensVerdictSchema>;
 
 /** What running one check produced. `skipped` is not reachable here — only the gate skips. */
-export interface RunOutcome {
+export interface CheckRun {
   readonly outcome: CheckOutcome;
-  /** Only set by agent-lens checks. Deterministic ones are free. */
+  /** Only set by llm checks. Deterministic ones are free. */
   readonly costUsd?: number;
 }
 
@@ -116,7 +116,7 @@ function signalSuffix(signal: string | null): string {
   return signal === null ? "" : ` (killed by ${signal})`;
 }
 
-export function interpretJudgeResult(result: JudgeResult<LensVerdict>): RunOutcome {
+export function interpretJudgeResult(result: JudgeResult<LensVerdict>): CheckRun {
   if (!result.ok) {
     // EVERY JudgeError lands here, `invalid-output` included. A model that cannot
     // produce a parseable verdict has not found a bug — it has failed to answer,

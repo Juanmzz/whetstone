@@ -46,13 +46,12 @@ export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()):
   for (const check of registry.all) {
     // Three kinds, three labels. A method rendered as `det` reads as something
     // the gate runs, which is the one thing it never does.
-    const kind = check.kind === "agent-lens" ? "lens" : check.kind === "method" ? "meth" : "det ";
-    // Severity IS the calibration status now: an agent-lens that reaches `block` has
+    const kind = check.kind === "llm" ? "llm " : check.kind === "method" ? "meth" : "det ";
+    // Severity IS the calibration status now: an llm that reaches `block` has
     // a verified receipt, because the registry refuses to load it otherwise. Printing
     // a separate "calibration: passed" would restate the same fact from a field that
     // no longer decides anything.
-    const cal = check.kind === "agent-lens" && check.severity !== "block" ? " [advisory]" : "";
-    console.log(`  ${severityMark(check)} ${kind}  ${check.id.padEnd(14)} ${check.description}${cal}`);
+    console.log(`  ${severityMark(check)} ${kind}  ${check.id.padEnd(14)} ${check.description}`);
   }
 
   if (registry.index.blocking.length > 0) {

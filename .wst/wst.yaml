@@ -1,5 +1,5 @@
 version: 0
-agent: claude             # which adapter runs agent-lens checks
+agent: claude             # which adapter runs llm checks
 backend: files            # files = self-contained, git-native, zero deps
 memory:
   # Pins the namespace for any memory adapter (ADR-0001's save/search/summarize port).

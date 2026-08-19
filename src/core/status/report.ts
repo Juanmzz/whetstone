@@ -128,7 +128,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   }
   if (facts.judge.version === null) {
     problems.push(
-      `\`${facts.judge.name}\` not found on PATH — agent-lens checks cannot run without it`,
+      `\`${facts.judge.name}\` not found on PATH — llm checks cannot run without it`,
     );
   }
 

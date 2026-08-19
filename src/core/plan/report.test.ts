@@ -31,7 +31,7 @@ function check(over: Partial<LoadedCheck> = {}): LoadedCheck {
 
 const LENS = check({
   id: "correctness",
-  kind: "agent-lens",
+  kind: "llm",
   severity: "warn",
   tiers: ["strict"],
   command: undefined,

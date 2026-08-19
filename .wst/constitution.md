@@ -35,7 +35,7 @@ keeping the core small, not about financial correctness.
 6. **Determinism by default.** The LLM is called only for irreducible judgment; `src/core/` never
    calls one. Enforced by the import boundary, not by discipline. The alternative — trusting the
    prompt — is what makes agent tooling unreproducible.
-7. **A judgment check earns its `block`.** Deterministic checks may block freely. An `agent-lens`
+7. **A judgment check earns its `block`.** Deterministic checks may block freely. An `llm`
    check may block only after passing calibration: correct and unanimous over known-good and
    known-bad fixtures. Otherwise it is capped at `warn`/`annotate`.
 

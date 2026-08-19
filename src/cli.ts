@@ -92,7 +92,7 @@ program
   .option("--range <range>", "git diff range", "HEAD")
   .option("--tier <tier>", "provisional triage tier override")
   .option("--json", "print the verdict as JSON")
-  .option("--no-lens", "skip agent-lens checks (fast and free; for the pre-push hook)")
+  .option("--no-lens", "skip llm checks (fast and free; for the pre-push hook)")
   .option("--no-emit", "do not record signals — for verifying the gate itself")
   .action(async (opts: { range?: string; tier?: string; json?: boolean; lens?: boolean; emit?: boolean }) => {
     // Validate rather than cast: an unrecognised --tier must be rejected loudly.
@@ -223,7 +223,7 @@ program
   .option("--stack <text>", "what the project is built with, for the constitution")
   .option("--propose", "draft the answers with the judge — you edit and sign (one model call)")
   .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
-  .option("--agent-lens", "also seed an uncalibrated review lens (capped at warn)")
+  .option("--llm", "also seed an uncalibrated review lens (capped at warn)")
   .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else — no AGENTS.md, no CLAUDE.md`)
   .option("--force", "overwrite existing files, listing them first")
   .option("--dry-run", "show the plan, write nothing")

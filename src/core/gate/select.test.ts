@@ -73,7 +73,7 @@ describe("selectChecks", () => {
     expect(selection.selected[0]?.check.id).toBe("typecheck");
     expect(selection.selected[0]?.files.map((f) => f.path)).toEqual(["src/core/gate/select.ts"]);
     expect(selection.excluded).toEqual([]);
-    expect(selection.unknown).toEqual([]);
+    expect(selection.missingFromRegistry).toEqual([]);
     expect(selection.unmatched).toEqual([]);
   });
 
@@ -122,7 +122,7 @@ describe("selectChecks", () => {
     const registry = buildRegistry([check()]);
     const selection = selectChecks(routing({ checks: ["typecheck", "ghost"] }), registry, FILES);
 
-    expect(selection.unknown).toEqual(["ghost"]);
+    expect(selection.missingFromRegistry).toEqual(["ghost"]);
     expect(selection.selected.map((s) => s.check.id)).toEqual(["typecheck"]);
   });
 
@@ -145,7 +145,7 @@ describe("selectChecks", () => {
     const registry = buildRegistry([
       check(),
       check({ id: "test", command: "npm test" }),
-      check({ id: "correctness", kind: "agent-lens", command: undefined, review_lens: "look" }),
+      check({ id: "correctness", kind: "llm", command: undefined, review_lens: "look" }),
     ]);
     const selection = selectChecks(
       routing({ checks: ["correctness", "test", "typecheck"] }),

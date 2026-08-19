@@ -16,7 +16,7 @@ const deterministic = {
 const agentLens = {
   id: "correctness",
   description: "Does this diff introduce a correctness bug?",
-  kind: "agent-lens",
+  kind: "llm",
   severity: "warn",
   tiers: ["strict"],
   include: ["src/**/*.ts"],
@@ -58,7 +58,7 @@ describe("CheckSchema", () => {
     if (!r.success) expect(r.error.message).toMatch(/command/i);
   });
 
-  it("requires a review_lens when the check is agent-lens", () => {
+  it("requires a review_lens when the check is llm", () => {
     const { review_lens: _drop, ...noLens } = agentLens;
     const r = CheckSchema.safeParse(noLens);
     expect(r.success).toBe(false);
@@ -74,7 +74,7 @@ describe("CheckSchema", () => {
   // The registry itself refuses to load a flaky blocking check. Making this a
   // schema rule rather than a runtime check means it cannot be forgotten.
 
-  it("lets an agent-lens check WARN without any calibration", () => {
+  it("lets an llm check WARN without any calibration", () => {
     expect(CheckSchema.safeParse(agentLens).success).toBe(true);
   });
 
@@ -90,7 +90,7 @@ describe("CheckSchema", () => {
    * `parseCheckFile`, which is handed the receipt; see `registry.test.ts`. Leaving a
    * weaker copy here would be two authorities that can disagree.
    */
-  it("no longer decides whether an agent-lens may block", () => {
+  it("no longer decides whether an llm may block", () => {
     // Parses fine. Whether it LOADS is the registry's call, with evidence in hand.
     expect(CheckSchema.safeParse({ ...agentLens, severity: "block" }).success).toBe(true);
   });
@@ -125,7 +125,7 @@ describe("CheckSchema", () => {
  * Some verification is not a command and not a diff review. The case that
  * produced this: drive a browser, take the screenshots, compare them against the
  * intended design. A deterministic check reduces to an exit code and there is no
- * exit code for "the empty state looks wrong"; an agent-lens reads a diff and a
+ * exit code for "the empty state looks wrong"; an llm reads a diff and a
  * screenshot is not in one.
  *
  * The schema is where the never-blocks rule lives, for the same reason

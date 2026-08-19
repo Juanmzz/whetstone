@@ -63,7 +63,7 @@ harness works and the easy case is stable — not that borderline diffs are. Unt
 ## The contract
 
 ```ts
-type Kind     = "deterministic" | "agent-lens";
+type Kind     = "deterministic" | "llm";
 type Severity = "block" | "warn" | "annotate";
 type Tier     = "strict" | "light" | "off";
 
@@ -79,12 +79,12 @@ interface Check {
   version: number;       // bump on behaviour change — feeds the receipt hash
   origin: string[];      // signals/ADRs that earned it
   command?: string;      // required iff kind === "deterministic"
-  review_lens?: string;  // required iff kind === "agent-lens"
+  review_lens?: string;  // required iff kind === "llm"
   calibration?: { status: "uncalibrated" | "passed" | "failed"; runs: number; date: string; ... };
 }
 ```
 
-**Enforced at parse time, not run time:** an `agent-lens` check declaring `severity: block` without a
+**Enforced at parse time, not run time:** an `llm` check declaring `severity: block` without a
 passing calibration receipt is *refused by the loader*. Constitution non-negotiable 7 is a schema
 rule so it cannot be forgotten under deadline. Verify with:
 
