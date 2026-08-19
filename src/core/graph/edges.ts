@@ -6,6 +6,7 @@
 
 import { DEFINITION_DIR } from "../paths.js";
 import { parseDecisions } from "../decisions/anchors.js";
+import { parseSignalLog } from "../signals/parse.js";
 
 export type EdgeKind =
   /** A signal names the rule it implicates, in `rule_affected`. */
@@ -60,33 +61,12 @@ const SIGNAL_ID = /\bsig-[0-9a-z]{4,8}\b/g;
 const ORIGIN_ADR = /^origin:.*$/m;
 const ADR_ID = /\badr-\d{4}\b/g;
 
-interface SignalRow {
-  readonly id: string;
-  readonly rules: readonly string[];
-}
-
-function signalRows(jsonl: string): readonly SignalRow[] {
-  const rows: SignalRow[] = [];
-  for (const line of jsonl.split("\n")) {
-    if (line.trim() === "") continue;
-    try {
-      const parsed = JSON.parse(line) as { id?: string; rule_affected?: string[] };
-      if (typeof parsed.id !== "string") continue;
-      rows.push({ id: parsed.id, rules: parsed.rule_affected ?? [] });
-    } catch {
-      // A malformed line is `signals`' problem, not this one. Parsing it twice to
-      // report the same defect twice helps nobody.
-    }
-  }
-  return rows;
-}
-
 /** Every relationship the corpus declares, each carrying the file that declared it. */
 export function edgesOf(corpus: Corpus): readonly Edge[] {
   const edges: Edge[] = [];
 
-  for (const row of signalRows(corpus.signals)) {
-    for (const rule of row.rules) {
+  for (const row of parseSignalLog(corpus.signals)) {
+    for (const rule of row.rule_affected ?? []) {
       edges.push({
         kind: "signal-affects-rule",
         from: row.id,
