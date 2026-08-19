@@ -6,6 +6,8 @@
 
 export type ProgressEvent =
   | { readonly phase: "started"; readonly checkId: string }
+  /** Still working. Silence past a few seconds is indistinguishable from a hang. */
+  | { readonly phase: "still-running"; readonly checkId: string; readonly ms: number }
   | {
       readonly phase: "finished";
       readonly checkId: string;
@@ -30,6 +32,10 @@ export function progressLines(event: ProgressEvent, target: ProgressTarget): rea
     // Off a terminal this is the only proof the run is alive, so it is printed
     // even though the finished line will repeat the name.
     return [`  running  ${event.checkId}`];
+  }
+
+  if (event.phase === "still-running") {
+    return [`  ${"...".padEnd(8)} ${event.checkId.padEnd(14)} (${elapsed(event.ms)})`];
   }
 
   return [`  ${event.status.padEnd(8)} ${event.checkId.padEnd(14)} (${elapsed(event.ms)})`];
