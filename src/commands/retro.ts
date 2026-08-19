@@ -24,7 +24,7 @@ import {
 } from "../core/retro/propose.js";
 import { createGitAdapter } from "../shell/git.js";
 import { createClaudeJudge } from "../shell/claude.js";
-import { countRetros, readCursor, readSignals, writeProposals } from "../shell/retro.js";
+import { appendRetroLogStub, countRetros, readCursor, readSignals, writeProposals } from "../shell/retro.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { readdir, readFile } from "node:fs/promises";
@@ -238,9 +238,35 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
     for (const { rec, reasons } of rejected) console.log(`    ${rec.target}: ${reasons[0]}`);
   }
   console.log(`  cost: $${cost.toFixed(4)}`);
+
+  // The cursor is written HERE, not asked for. It is a mechanical fact — "this
+  // run processed up to sig-x" — and leaving it to a human means the first
+  // forgotten copy makes the next retro reprocess everything and pay again.
+  // What the human owns is the sentence underneath: what was applied, and what
+  // was refused.
+  const cursorId = fresh[fresh.length - 1]?.id ?? cursor ?? "";
+  let logged = false;
+  if (cursorId !== "") {
+    try {
+      await appendRetroLogStub(definitionRoot, {
+        retroId,
+        cursor: cursorId,
+        signals: all.length,
+        clusters: clusters.length,
+        actionable: actionable.length,
+        costUsd: cost,
+      });
+      logged = true;
+    } catch (cause) {
+      console.log(`  could not append to the retro log: ${(cause as Error).message}`);
+    }
+  }
+
   console.log(`\n  wrote ${path}`);
-  console.log(`  Review it. Nothing is applied until you apply it.`);
-  console.log(`  Then append a "## ${retroId}" entry to ${DEFINITION_DIR}/memory/retro-log.md with`);
-  console.log(`  \`cursor: ${fresh[fresh.length - 1]?.id}\` so the next retro starts after it.`);
+  if (logged) {
+    console.log(`  recorded "## ${retroId}" with \`cursor: ${cursorId}\` in ${DEFINITION_DIR}/memory/retro-log.md`);
+  }
+  console.log(`  Review the proposals. Nothing is applied until you apply it.`);
+  console.log(`  Then say in that entry what you accepted and what you refused.`);
   return 0;
 }
