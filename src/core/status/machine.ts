@@ -42,7 +42,6 @@ export interface StatusEnvelope {
     readonly branch: string | null;
     /** Whether `.wst/` is here. `legacy` is the pre-rename directory (adr-0012). */
     readonly definition: boolean;
-    readonly legacy: boolean;
   };
   readonly judge: {
     readonly name: string;
@@ -68,7 +67,6 @@ export function statusEnvelope(report: StatusReport): StatusEnvelope {
       root: facts.repoRoot,
       branch: facts.branch,
       definition: facts.definitionPresent,
-      legacy: facts.legacyPresent,
     },
     judge: {
       name: facts.judge.name,

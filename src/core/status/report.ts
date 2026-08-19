@@ -8,7 +8,7 @@
  */
 
 import { resolve } from "node:path";
-import { DEFINITION_DIR, legacyDirectoryMessage } from "../paths.js";
+import { DEFINITION_DIR } from "../paths.js";
 
 /** The `claude` build the adapter's flag set was measured against. */
 export const VALIDATED_JUDGE_VERSION = "2.1.224";
@@ -25,7 +25,6 @@ export interface StatusFacts {
    * rules live under the old name either refuses on a collision or, with
    * `--force`, overwrites a layer it cannot see.
    */
-  readonly legacyPresent: boolean;
   readonly judge: { readonly name: string; readonly version: string | null };
   readonly nodeVersion: string;
   readonly hooks: HookFacts;
@@ -125,13 +124,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     problems.push("not inside a git repository — Whetstone is git-native by design");
   }
   if (!facts.definitionPresent) {
-    // Never "missing, run init" when the rules are sitting right there under the
-    // old name. That advice is how someone loses them.
-    problems.push(
-      facts.legacyPresent
-        ? legacyDirectoryMessage(facts.repoRoot ?? ".")
-        : `no ${DEFINITION_DIR}/ directory — run \`wst init\` to create one`,
-    );
+    problems.push(`no ${DEFINITION_DIR}/ directory — run \`wst init\` to create one`);
   }
   if (facts.judge.version === null) {
     problems.push(

@@ -1,5 +1,5 @@
 /**
- * The name of the definition directory, and its ONLY owner (ADR-0012).
+ * The name of the definition directory, and its ONLY owner (adr-0012).
  *
  * PURE, and deliberately the smallest module in the core: everything imports it,
  * so anything else living here would be imported everywhere too.
@@ -22,35 +22,6 @@
 
 /** The directory Whetstone writes into a repo. Relative to the repo root. */
 export const DEFINITION_DIR = ".wst";
-
-/**
- * What the directory used to be called (ADR-0012).
- *
- * Kept for exactly ONE purpose: saying the word in an error message. Nothing is
- * read from it, and nothing may be — adr-0012 rejected supporting both paths. This
- * constant is diagnosis, and the moment anything joins a path onto it, that
- * decision has been reversed by accident.
- */
-export const LEGACY_DEFINITION_DIR = ".sdd";
-
-/**
- * The error a repo installed before the rename gets.
- *
- * The alternative is failing blankly, which for a repo with a complete definition
- * layer under the old name is the worst answer available: `wst init` is not the
- * fix (it refuses on a collision, or with `--force` overwrites a directory it
- * cannot see), so a message that only says "missing" sends the reader toward
- * losing their rules.
- */
-export function legacyDirectoryMessage(repoRoot: string): string {
-  return (
-    `no ${DEFINITION_DIR}/ in ${repoRoot}, but ${LEGACY_DEFINITION_DIR}/ is there.\n` +
-    `Whetstone renamed its definition directory (ADR-0012) and reads ${DEFINITION_DIR}/ only.\n` +
-    `Migrate it, keeping the history:\n\n` +
-    `    git mv ${LEGACY_DEFINITION_DIR} ${DEFINITION_DIR}\n\n` +
-    `This is diagnosis, not a fallback: nothing is read from ${LEGACY_DEFINITION_DIR}/.`
-  );
-}
 
 /**
  * The same name, escaped for interpolation into a `RegExp` source.

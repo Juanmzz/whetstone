@@ -497,15 +497,6 @@ Body.
 });
 
 describe("resolving the definition directory", () => {
-  it("names the pre-ADR-0012 directory instead of reporting no checks", async () => {
-    // ADR-0012 chose a clean rename with no dual path. The cost lands here: a
-    // repo installed before it would otherwise get an empty registry, which is a
-    // gate that reports fine while enforcing nothing.
-    const repoRoot = await temp("wst-legacy-");
-    await mkdir(join(repoRoot, ".sdd"), { recursive: true });
-    await expect(resolveDefinitionRoot(repoRoot)).rejects.toThrow(/\.sdd/);
-  });
-
   it("returns the path for a repo that has neither, since init needs that", async () => {
     const repoRoot = await temp("wst-neither-");
     expect(await resolveDefinitionRoot(repoRoot)).toBe(join(repoRoot, ".wst"));

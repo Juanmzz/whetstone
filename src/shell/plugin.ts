@@ -17,6 +17,18 @@ const run = promisify(execFile);
 /** The plugin's name in the harness. Marketplace-independent: ids are `name@market`. */
 export const PLUGIN_NAME = "whetstone";
 
+/**
+ * Where the plugin's Stop hook would run the gate.
+ *
+ * `CLAUDE_PROJECT_DIR` is the harness's variable, so knowing it belongs to this
+ * adapter rather than to a generic command. In the field it was the umbrella
+ * folder holding several repos, so both hooks were inert all session with
+ * nothing to show for it.
+ */
+export function pluginHookRoot(fallback: string): string {
+  return process.env["CLAUDE_PROJECT_DIR"] ?? fallback;
+}
+
 export async function describePlugin(): Promise<PluginInstall> {
   let stdout: string;
   try {

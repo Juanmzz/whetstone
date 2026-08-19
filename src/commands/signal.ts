@@ -17,6 +17,7 @@
  */
 
 import { access } from "node:fs/promises";
+import { exists } from "../shell/fs.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { humanSignal } from "../core/signals/human.js";
@@ -54,12 +55,6 @@ export const DEFAULT_SEVERITY = "medium";
 const EXIT_MISCONFIGURED = 2;
 /** A rejected observation and a failed write both mean: nothing was recorded. */
 const EXIT_NOT_RECORDED = 1;
-
-const exists = async (path: string): Promise<boolean> =>
-  access(path).then(
-    () => true,
-    () => false,
-  );
 
 /**
  * Evidence that a HUMAN typed this, which is the whole basis of `source: "human"`.

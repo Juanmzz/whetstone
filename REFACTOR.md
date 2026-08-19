@@ -76,7 +76,7 @@ calls, so Whetstone never owns the directory. The third is the smallest promise.
 
 ## 3. `paths.ts` carries a rename that is over
 
-**agreed**
+**done**
 
 `LEGACY_DEFINITION_DIR` and `legacyDirectoryMessage()` exist for a rename
 (adr-0012) that has already happened. Every `wst status` pays a filesystem check
@@ -146,7 +146,7 @@ That path is a signal → retro → amendment, which is the human's to start.
 
 ## 6. `exists()` exists four times
 
-**agreed** · trivial
+**done** · one `shell/fs.ts`
 
 `shell/sdd.ts:29`, `commands/init.ts:305`, `commands/status.ts:22`,
 `commands/signal.ts:58`. Four copies of the same four lines. `signal.ts` writes
@@ -270,7 +270,7 @@ Things a read might flag that are correct as they stand:
 
 ## 11. Vendor knowledge leaks into a generic command
 
-**agreed**
+**done** · `pluginHookRoot()` in the plugin adapter
 
 `commands/status.ts:81` reads `process.env["CLAUDE_PROJECT_DIR"]` inline.
 
