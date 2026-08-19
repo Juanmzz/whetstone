@@ -52,7 +52,7 @@ handbook for adding a third (codex) comes after, not a third adapter.
 
 ## 2. The pre-push hook takes over the whole hooks directory
 
-**open** · sharpest risk to a repo that adopts Whetstone
+**partly done** · the detection half already exists (see below); the design choice is still open
 
 Activation is `git config core.hooksPath .githooks`. That setting is
 repo-global: it redirects **every** git hook, not just `pre-push`. A project
@@ -68,7 +68,13 @@ specifically so a husky repo is not told to disarm itself.
 That is thin for a failure whose blast radius is "every other hook this project
 had stops running".
 
-**Options:** detect an existing hook manager and refuse to touch `hooksPath` ·
+**Already built, verified 2026-08-19:** `core/status/report.ts:141` detects that another
+tool owns `core.hooksPath` and **refuses to print a command that would disarm it** — *"there
+is one core.hooksPath, so any instruction we could give here silently disarms whatever is
+already protecting this repo, and choosing that for someone is not status's call."* So the
+detection half is done; what remains is a design choice.
+
+**Remaining options:** always chain rather than own ·
 always chain rather than own · ship a `wst-gate` script the project's own hook
 calls, so Whetstone never owns the directory. The third is the smallest promise.
 
@@ -159,7 +165,7 @@ copies, and this repo has found the same defect class seven times.
 
 ## 7. Git is right for one job and questionable for the other
 
-**open**
+**done** · hashing moved in process; 391ms → 34ms over 50 files
 
 **Defining what changed:** `git diff --name-status A..B`. Irreplaceable, and
 nobody has to invent a definition. Keep.
@@ -887,7 +893,7 @@ immediately skip, and it times with `Date.now()` while the runner times with
 
 ## 21. `events.jsonl` grows and nothing prunes it
 
-**open**
+**done** · `wst events` says it is disposable once the file is worth wondering about
 
 172 KB over 174 runs — **~990 bytes per run**. At ten runs a day for two years,
 roughly 7 MB.

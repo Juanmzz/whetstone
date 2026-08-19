@@ -13,6 +13,7 @@
  * reader has to wade through.
  */
 
+import { stat } from "node:fs/promises";
 import { EventLogParseError } from "../core/events/parse.js";
 import type { EventRecord } from "../core/events/record.js";
 import {
@@ -21,6 +22,7 @@ import {
   renderRunEnding,
   renderRunHeader,
   renderRunList,
+  logSizeNotice,
   renderRunTimeline,
   runReading,
 } from "../core/events/report.js";
@@ -227,6 +229,17 @@ export async function runEvents(
         : renderRunList(runs),
     );
     return 0;
+  }
+
+  // Said once, on the default view, and only when the file is big enough to
+  // wonder about. Nobody has a way to know it is disposable otherwise.
+  try {
+    const { size } = await stat(logPath);
+    const notice = logSizeNotice(logPath, size);
+    if (notice !== null && opts.json !== true) console.log(notice + "\n");
+  } catch {
+    // The log was just read, so this cannot normally fail. If it does, the size
+    // is a nicety and the timeline is the answer.
   }
 
   let summary = runs[0] as RunSummary;

@@ -297,3 +297,22 @@ export function noRunsMessage(logPath: string): string {
     "  `wst gate` appends to it as it runs."
   );
 }
+
+/**
+ * A word about the log's size, once it is big enough to wonder about.
+ *
+ * The file is gitignored per-machine scratch: nothing reads it but `wst events`,
+ * it never travels, and it is never reviewed. So it is disposable — but nothing
+ * said so, and a reader who finds several megabytes under `.wst/` has no way to
+ * know that. Roughly a kilobyte per run, so this arrives after a few thousand.
+ */
+export const LOG_SIZE_NOTICE_BYTES = 2 * 1024 * 1024;
+
+export function logSizeNotice(path: string, bytes: number): string | null {
+  if (bytes < LOG_SIZE_NOTICE_BYTES) return null;
+  return (
+    `  ${path} is ${(bytes / 1024 / 1024).toFixed(1)} MB of this machine's runs. ` +
+    `It is gitignored scratch — delete it whenever you like; nothing but this ` +
+    `command reads it.`
+  );
+}
