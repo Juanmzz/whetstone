@@ -547,7 +547,7 @@ reopened it goes through a status flip on adr-0013, not a quiet rewrite.
 
 ## 26. The pre-push hook runs a build that can be older than the change
 
-**open** · found while pushing the rename
+**done** · the hook builds first; 1.5s against the suite's 45
 
 `.githooks/pre-push` runs `dist/cli.js`. Renaming a schema value made it refuse
 the push:

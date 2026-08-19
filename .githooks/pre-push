@@ -16,9 +16,21 @@ ZERO="0000000000000000000000000000000000000000"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 CLI="$REPO_ROOT/dist/cli.js"
 
+# BUILD FIRST. This repo self-hosts, so `dist/` can be older than the change being
+# gated — and then the gate verifying it is an older version of itself. Renaming a
+# schema value once made the hook refuse a push with "expected one of ..." listing
+# the vocabulary the source no longer had. ~1.5s against the suite's 45.
+#
+# A repo that merely USES Whetstone runs an installed `wst` and cannot hit this.
+if ! npm run --silent build >/dev/null 2>&1; then
+  echo "whetstone: the gate would not compile, so it cannot verify this push." >&2
+  echo "           run 'npm run build' to see the error." >&2
+  exit 1
+fi
+
 if [ ! -f "$CLI" ]; then
-  echo "whetstone: dist/cli.js missing, run 'npm run build'. Push allowed." >&2
-  exit 0   # never block a push because the gate itself is not built
+  echo "whetstone: dist/cli.js missing after a build, so the gate cannot run." >&2
+  exit 1
 fi
 
 # git feeds pre-push one line per ref: <local ref> <local sha> <remote ref> <remote sha>
