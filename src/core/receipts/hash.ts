@@ -2,14 +2,14 @@
  * The receipt input hash — Turborepo-style content addressing for the gate.
  *
  * Why this exists: without it, every gate run re-reviews the whole repo. Frugality
- * is the point of the gate (`.wst/architecture.md`), and re-running a check against
+ * is the point of the gate (`docs/architecture.md`), and re-running a check against
  * code that has not changed is the most expensive way to learn nothing.
  *
  * PURE. `node:crypto`'s `createHash` is a deterministic function of its input — no
  * I/O, no ambient state, no process — so it does not breach the FCIS rule, which is
  * about effects reaching the core, not about builtins. `test/architecture.test.ts`
  * draws the same line: it bans `node:fs` and `node:child_process`. Hashing is listed
- * as an ENGINE responsibility in `.wst/architecture.md`, not an adapter one. The
+ * as an ENGINE responsibility in `docs/architecture.md`, not an adapter one. The
  * digest is injectable anyway, so the canonical form stays testable on its own.
  */
 

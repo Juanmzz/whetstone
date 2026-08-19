@@ -19,7 +19,7 @@ const base: CharterInput = {
     { id: "correctness", severity: "warn", description: "No correctness bug." },
   ],
   strictPaths: ["src/core/", ".wst/skills/"],
-  presentDocs: ["AGENTS.md", "CLAUDE.md", ".wst/architecture.md", ".wst/triage-rules.md"],
+  presentDocs: ["AGENTS.md", "CLAUDE.md", "docs/architecture.md", ".wst/triage-rules.md"],
 };
 
 describe("buildCharter", () => {
@@ -106,7 +106,7 @@ describe("buildCharter", () => {
  */
 describe("a charter for a repo Whetstone did not grow up in", () => {
   // What `wst init --definitions-only` leaves behind, and nothing more: no AGENTS.md
-  // (the host harness owns that surface), no .wst/architecture.md (init never writes
+  // (the host harness owns that surface), no docs/architecture.md (init never writes
   // one — it exists only in Whetstone's own repo).
   const foreignDocs = [".wst/constitution.md", ".wst/triage-rules.md", "CLAUDE.md"];
 
@@ -135,7 +135,7 @@ describe("a charter for a repo Whetstone did not grow up in", () => {
 
   it("does not order the crewmate to read files this repo does not have", () => {
     expect(charter).not.toContain("AGENTS.md");
-    expect(charter).not.toContain(".wst/architecture.md");
+    expect(charter).not.toContain("docs/architecture.md");
   });
 
   it("points at the orientation file this repo does have", () => {
@@ -155,7 +155,7 @@ describe("a charter for a repo Whetstone did not grow up in", () => {
   it("still names AGENTS.md and architecture.md in a repo that has them", () => {
     const own = buildCharter(base);
     expect(own).toContain("AGENTS.md");
-    expect(own).toContain(".wst/architecture.md");
+    expect(own).toContain("docs/architecture.md");
   });
 
   // AGENTS.md and CLAUDE.md are one source of truth under ADR-0002 — CLAUDE.md is a

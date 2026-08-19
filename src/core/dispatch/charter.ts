@@ -5,7 +5,7 @@
  * call hermetic, stripping the target repo's `AGENTS.md`, MCP servers and hooks so a
  * repo cannot hijack its own reviewer. A CREWMATE is the exact opposite — `.wst/` IS
  * its charter and must be loaded. Same binary, opposite flags. See
- * `.wst/architecture.md` and `src/shell/claude.ts`.
+ * `docs/architecture.md` and `src/shell/claude.ts`.
  *
  * The charter is a MAP, not a copy. Inlining the constitution into every crewmate
  * prompt is exactly the waste `token-economy` exists to stop; the crewmate can read
@@ -26,7 +26,7 @@ export interface OrientationDoc {
 /**
  * Every file the charter is allowed to send a crewmate to, in reading order.
  *
- * The charter used to hardcode `AGENTS.md` and `.wst/architecture.md`. Neither is
+ * The charter used to hardcode `AGENTS.md` and `docs/architecture.md`. Neither is
  * written by `wst init --definitions-only` — the mode for a repo whose own harness
  * already owns that surface — and `architecture.md` is written by no mode at all: it
  * exists only in Whetstone's own repo. So the first install into a foreign repo
@@ -40,7 +40,10 @@ export interface OrientationDoc {
 export const ORIENTATION_DOCS: readonly OrientationDoc[] = [
   { path: "AGENTS.md", note: "orientation, and the hard rules" },
   { path: "CLAUDE.md", note: "orientation, and the hard rules" },
-  { path: `${DEFINITION_DIR}/architecture.md`, note: "how this system is built" },
+  // Not Whetstone-only any more: it moved out of the definition layer, so this
+  // names whatever architecture doc the TARGET repo has, if it has one. Filtered
+  // by `presentDocs`, so a repo without one is never sent to a missing file.
+  { path: "docs/architecture.md", note: "how this system is built" },
   {
     path: `${DEFINITION_DIR}/constitution.md`,
     note: "the non-negotiables this project governs itself by",

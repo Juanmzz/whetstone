@@ -1,7 +1,7 @@
 /**
  * The lane guard against the file it claims to be generated from.
  *
- * `.claude/hooks/lane-guard.mjs` opens with *"GENERATED … from .wst/lanes.yaml
+ * `.claude/hooks/lane-guard.mjs` opens with *"GENERATED … from docs/lanes.yaml
  * (ADR-0005). Do NOT edit by hand"*, and nothing generated it or checked it. It
  * drifted: the hook carried an `annotate` lane over `src/core/annotate/`,
  * `src/commands/pr.ts` and `src/shell/github.ts` — a lane ADR-0009 retired and
@@ -16,7 +16,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFINITION_DIR } from "../src/core/paths.js";
 
 const repoRoot = new URL("..", import.meta.url).pathname;
 
@@ -40,7 +39,7 @@ async function hookLanes(): Promise<Record<string, string[]>> {
 
 /** Lane ids and their `owns:` lists, read out of the YAML without a parser. */
 async function declaredLanes(): Promise<Record<string, string[]>> {
-  const text = await read(join(DEFINITION_DIR, "lanes.yaml"));
+  const text = await read("docs/lanes.yaml");
   const block = text.slice(text.indexOf("\nlanes:"));
 
   const lanes: Record<string, string[]> = {};

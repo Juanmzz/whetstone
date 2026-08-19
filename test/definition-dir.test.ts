@@ -11,7 +11,7 @@
  * What is checked, and what is deliberately not:
  *
  * - **String and template literals under `src/`** may not spell the name. Prose in
- *   a COMMENT may: a comment cannot interpolate, and "see `.wst/architecture.md`"
+ *   a COMMENT may: a comment cannot interpolate, and "see `docs/architecture.md`"
  *   is worth more to a reader than a sentence that talks around the name. This is
  *   why the scan below distinguishes the two instead of grepping.
  * - **`*.test.ts` is exempt** from that rule. A test asserting the literal

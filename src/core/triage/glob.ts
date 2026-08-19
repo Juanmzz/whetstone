@@ -5,7 +5,7 @@
  * ambient state — so it belongs in the core under exactly the rule that lets
  * `node:crypto` in (see `core/receipts/hash.ts` and `test/architecture.test.ts`:
  * the boundary is about EFFECTS, not built-ins). Using it is a recorded decision
- * (`.wst/lanes.yaml`, lane `triage`): no glob dependency is added.
+ * (`docs/lanes.yaml`, lane `triage`): no glob dependency is added.
  *
  * Two measured behaviours of `matchesGlob` that callers must know:
  *

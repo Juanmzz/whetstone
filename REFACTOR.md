@@ -100,7 +100,7 @@ constant means hardcoding again in 225 sites.
 
 ## 4. `.wst/` mixes three different kinds of thing
 
-**agreed**
+**done** · `architecture.md` and `lanes.yaml` moved to `docs/`
 
 `.wst/` is described as the definition layer — what `init` writes into a target
 repo. Its contents do not all fit that description:
@@ -120,7 +120,7 @@ any of it. `docs/` already holds exactly this kind of document (`PARALLEL.md`).
 `PARALLEL.md`. Mechanical.
 
 Related: `ORIENTATION_DOCS` (`core/dispatch/charter.ts:43`) lists
-`.wst/architecture.md` as a doc to orient a crewmate. It is filtered by what
+`docs/architecture.md` as a doc to orient a crewmate. It is filtered by what
 actually exists, so it does not dangle — but it is the one entry of five that
 can only ever match inside Whetstone's own repo.
 
@@ -205,7 +205,7 @@ reasons, and the names do not distinguish them without reading the doc comment.
 
 ## 9. Two different things are called "layers"
 
-**open**
+**done** · the page says which it means
 
 `architecture.md` describes **6 conceptual layers** (definition, init, triage,
 execution seam, gate, self-sharpening) — about the product.
@@ -453,7 +453,7 @@ tool this size, and adr-0019 already compacted them once.
 
 ## 18. `triage-rules.md` is declared the source and nobody reads it
 
-**agreed** · option 2 below
+**done** · adr-0022 supersedes adr-0005; the table matches the YAML now
 
 adr-0005 makes the markdown table in `.wst/triage-rules.md` the source and
 `.wst/triage.yaml` its compilation. In practice `shell/sdd.ts:126` opens the

@@ -38,7 +38,7 @@ wst events  → read the log back: what a run did, which check took how long, ho
 wst retro   → cluster signals → propose checks → human approves → amend with a receipt
 ```
 
-**[`.wst/architecture.md`](./.wst/architecture.md) is the full picture** — the three parts, the loop
+**[`docs/architecture.md`](./docs/architecture.md) is the full picture** — the three parts, the loop
 as a diagram, the layers, the check registry, the plan format, and the measured `claude -p`
 invocation. It is written in the present tense and it is the authority; anything here that
 disagrees with it is drift.

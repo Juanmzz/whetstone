@@ -47,9 +47,9 @@ describe("auditSelfContained — Whetstone's own files may never be referenced",
 
 describe("auditSelfContained — every .wst/ path named must be a path that gets created", () => {
   it("catches a reference to a .wst/ file the plan does not write", () => {
-    const found = audit("Architecture lives in `.wst/architecture.md`.");
+    const found = audit("Architecture lives in `docs/architecture.md`.");
     expect(found).toHaveLength(1);
-    expect(found[0]?.match).toBe(".wst/architecture.md");
+    expect(found[0]?.match).toBe("docs/architecture.md");
   });
 
   it("accepts a reference to a file the plan does write", () => {

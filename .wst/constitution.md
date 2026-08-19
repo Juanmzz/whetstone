@@ -57,4 +57,4 @@ Rules 6 and 7 originate in ADR-0008; rules 1–5 predate it and are unchanged.
   `gh auth status` shows the active account. Whetstone itself has no GitHub surface to break
   (ADR-0009 deleted the only one), so this is purely git plumbing.
 
-See `.wst/architecture.md` for how these fit together.
+See `docs/architecture.md` for how these fit together.
