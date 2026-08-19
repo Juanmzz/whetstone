@@ -74,8 +74,7 @@ is one core.hooksPath, so any instruction we could give here silently disarms wh
 already protecting this repo, and choosing that for someone is not status's call."* So the
 detection half is done; what remains is a design choice.
 
-**Remaining options:** always chain rather than own ·
-always chain rather than own · ship a `wst-gate` script the project's own hook
+**Remaining options:** always chain rather than own · ship a `wst-gate` script the project's own hook
 calls, so Whetstone never owns the directory. The third is the smallest promise.
 
 ---
@@ -296,7 +295,7 @@ environment. So this is one call site, not a pattern.
 
 ## 12. Build the memory port
 
-**agreed** · wanted, so the tool is fit to grow
+**done** · two verbs, one `files` adapter, and it collapsed the duplicate signal reader
 
 Non-negotiable 2 says memory is an interface — `save` / `search` / `summarize` —
 and that nothing may hard-depend on a backend, engram included. Today

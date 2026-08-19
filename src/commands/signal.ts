@@ -8,7 +8,7 @@ import { DEFINITION_DIR } from "../core/paths.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { humanSignal } from "../core/signals/human.js";
 import { createGitAdapter } from "../shell/git.js";
-import { appendSignalRecord } from "../shell/signals.js";
+import { resolveMemory } from "../shell/memory.js";
 
 export interface SignalOptions {
   readonly type: string;
@@ -115,9 +115,8 @@ export async function runSignal(
     return EXIT_MISCONFIGURED;
   }
 
-  let path: string;
   try {
-    path = await appendSignalRecord(root, result.record);
+    await (await resolveMemory(root)).save([result.record]);
   } catch (cause) {
     // The human typed this at the moment they had the thought. A raw stack trace
     // that also loses the words is the worst possible answer to a full disk or a
@@ -130,7 +129,7 @@ export async function runSignal(
     console.log(line);
     return EXIT_NOT_RECORDED;
   }
-  console.log(`recorded ${result.record.id} in ${path}`);
+  console.log(`recorded ${result.record.id} in ${DEFINITION_DIR}/memory/signals.jsonl`);
   if (result.record.source !== "human") {
     // Not an error, and not silent either. `source` is the log's only provenance
     // distinction and the retro weighs it; the person reading this deserves to

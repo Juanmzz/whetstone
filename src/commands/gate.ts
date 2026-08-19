@@ -17,7 +17,8 @@ import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
 import { NULL_SINK } from "../core/events/record.js";
 import { DEFINITION_DIR } from "../core/paths.js";
-import { appendSignals, readSignalLog } from "../shell/signals.js";
+import { appendSignals } from "../shell/signals.js";
+import { resolveMemory } from "../shell/memory.js";
 import { createEventLog, EVENTS_PATH, type EventLog } from "../shell/events.js";
 import { checkEnv } from "../core/gate/env.js";
 import {
@@ -458,7 +459,7 @@ export async function runGate(
       // signal records the unit of work the verdict was actually about.
       emitted = await appendSignals(
         definitionRoot,
-        dedupe(candidates, await readSignalLog(definitionRoot)),
+        dedupe(candidates, await (await resolveMemory(definitionRoot)).all()),
         new Date(),
         await git.currentBranch(),
       );
