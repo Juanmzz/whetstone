@@ -1,5 +1,6 @@
 /**
- * The triage compiler: one rule list, three renderings.
+ * The triage compiler: one rule list, rendered as the YAML the engine reads and
+ * the table a human reads. adr-0022 makes the YAML the source.
  */
 
 import type { TriageRule } from "../contracts.js";

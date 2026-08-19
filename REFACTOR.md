@@ -223,7 +223,7 @@ Sharing the word costs a reader their bearings before they open a file.
 
 ## 10. Small, confirmed
 
-**open**
+**mostly done** · the stale triage.ts header, the duplicate signal parser in graph/edges.ts and the orphan receipts are fixed. The embedded lens prompt and the four unenforced hard rules remain
 
 - `core/init/triage.ts:5` says the rules render **three** ways and names
   `.claude/hooks/strict-path-guard.mjs`. That file does not exist;
@@ -394,7 +394,7 @@ and the docs.
 
 ## 15. Documentation shape
 
-**agreed**
+**done** · docs/design.md added, README 86 → 79 lines and pointing rather than explaining
 
 - **`docs/design.md`** — an index that points at the documents worth reading in
   depth, so `README.md` does not have to carry everything. First entry: the

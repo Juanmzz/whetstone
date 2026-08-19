@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { edgesOf, contradictionsIn } from "./edges.js";
 
-const SIGNALS = [
-  '{"id":"sig-0002","type":"x","detail":"d","rule_affected":["skills/token-economy.md"]}',
-  '{"id":"sig-0009","type":"x","detail":"d","rule_affected":[]}',
-].join("\n");
+// Complete records on purpose: the graph reads through `parseSignalLog`, which
+// requires all six fields and THROWS on a partial one. A lenient local parser
+// used to live here and disagree with it — reporting "93 edges agree" over a
+// half-read log is the same lie the strict policy exists to prevent.
+const signal = (id: string, rules: readonly string[]): string =>
+  JSON.stringify({
+    id,
+    ts: "2026-08-19T00:00:00.000Z",
+    type: "x",
+    phase: "review",
+    severity: "low",
+    detail: "d",
+    rule_affected: rules,
+  });
+
+const SIGNALS = [signal("sig-0002", ["skills/token-economy.md"]), signal("sig-0009", [])].join("\n");
 
 const SKILLS = {
   "skills/lazy.md": "Five entries: `sig-0002` (the emitter wrote both files identical).",
@@ -80,7 +92,7 @@ describe("contradictionsIn — where a document rests on something that moved", 
 
   it("says nothing about a repo whose edges agree", () => {
     const agreeing = {
-      signals: '{"id":"sig-0002","type":"x","detail":"d","rule_affected":["skills/lazy.md"]}',
+      signals: signal("sig-0002", ["skills/lazy.md"]),
       skills: { "skills/lazy.md": "Earned by `sig-0002`." },
       checks: { "checks/x.md": "origin: [adr-0019]\n" },
       decisions: DECISIONS,
