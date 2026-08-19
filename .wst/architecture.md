@@ -170,7 +170,8 @@ diff.
 
 ## The judge
 
-One port, `LlmJudge`. Agnosticism is multiple adapters behind it; `agent:` config selects one.
+One port, `LlmJudge`. Agnosticism is multiple adapters behind it, and `agent:` in `wst.yaml`
+selects one — read by `shell/judge.ts`, which is the only place that names a vendor.
 The core never knows the model. Today one adapter ships: `shell/claude.ts`, which shells out to
 `claude -p` and uses the Max subscription rather than an API key.
 

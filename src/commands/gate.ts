@@ -42,7 +42,7 @@ import {
 } from "../core/gate/outcomes.js";
 import type { JudgeResult, LlmJudge } from "../core/ports.js";
 import { classify, route } from "../core/triage/index.js";
-import { createClaudeJudge } from "../shell/claude.js";
+import { resolveJudge } from "../shell/judge.js";
 import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { readReceipt, writeReceipt } from "../shell/receipts.js";
 import {
@@ -424,7 +424,7 @@ export async function runGate(
       run: withProgress(createCheckRunner({
         cwd: repoRoot,
         range,
-        judge: createClaudeJudge(),
+        judge: await resolveJudge(definitionRoot),
         routing,
         maxLensUsd: opts.maxLensUsd ?? DEFAULT_MAX_LENS_USD,
         maxLensTotalUsd: opts.maxLensTotalUsd ?? DEFAULT_MAX_LENS_TOTAL_USD,
