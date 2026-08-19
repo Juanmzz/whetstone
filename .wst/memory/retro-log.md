@@ -127,3 +127,9 @@ about a live bug should be checked against the branch state before it is applied
 than configuring it) and 4 (`recording` — an ADR removing a subsystem must enumerate the
 prose describing it) are both sound and both wanted evidence a reader could check in one
 sitting. They stay for the next window rather than being applied unread.
+
+## retro-0004
+
+cursor: sig-6406e533 · 54 signals · 3 clusters, 2 actionable · $0.1825
+
+_Proposals written, none applied. Replace this line with what was accepted and refused._
