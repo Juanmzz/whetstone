@@ -8,6 +8,7 @@ import {
   renderDecisionsMd,
   renderRootGitignoreStanza,
   renderWstGitignore,
+  renderWstGitattributes,
   CLAUDE_MD,
   MEMORY_README,
   ROOT_GITIGNORE_ENTRIES,
@@ -218,6 +219,37 @@ describe("runtime state the target repo must never commit", () => {
 
     it("uses no em-dash, same as every other page init writes into a target repo", () => {
       expect(gitignore).not.toContain("—");
+    });
+  });
+
+  describe("renderWstGitattributes — .wst/.gitattributes", () => {
+    const attributes = renderWstGitattributes();
+
+    it("merges the signal log by union, because two workers always append at once", () => {
+      // `wst prepare` exists to put N workers on one repo, and `signals.jsonl` is
+      // append-only, so every pair of concurrent workers conflicts on the last
+      // line. Measured three times in one day on a real repo with five workers.
+      //
+      // Resolving it by hand is worse than tedious: picking a side DISCARDS a
+      // signal someone recorded, which is what non-negotiable 4 forbids. `union`
+      // keeps both, which is the only correct resolution for this file.
+      expect(attributes).toMatch(/^memory\/signals\.jsonl\s+merge=union$/m);
+    });
+
+    it("claims union for nothing else, since it is only sound for append-only files", () => {
+      // `decisions.md` is the tempting second entry and would be WRONG: two
+      // workers computing "the next ADR is 0011" both write adr-0011, and union
+      // would merge two records that share an id rather than conflict on them.
+      const claims = attributes
+        .split("\n")
+        .filter((line) => line.includes("merge=union"))
+        .map((line) => line.split(/\s+/)[0]);
+
+      expect(claims).toEqual(["memory/signals.jsonl"]);
+    });
+
+    it("uses no em-dash, same as every other page init writes into a target repo", () => {
+      expect(attributes).not.toContain("—");
     });
   });
 

@@ -41,6 +41,7 @@ export {
   renderDecisionsMd,
   renderRootGitignoreStanza,
   renderWstGitignore,
+  renderWstGitattributes,
   CLAUDE_MD,
   MEMORY_README,
   ROOT_GITIGNORE_ENTRIES,
