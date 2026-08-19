@@ -801,7 +801,12 @@ but the reason to hold here is that **the input is wrong**, not the ceremony.
 
 ## 22. A receipt can authorise a skip the check never earned
 
-**agreed** · reproduced live · the most serious item here
+**done** · reproduced live, then fixed by widening `test`'s `include` to what the
+suite actually reads. Audited the other six: **only `test` had the hole** —
+`adr-refs` already declares `.wst/**` and every other tree it walks, and
+`docs-fresh`, `provenance` and `skill-shape` match what they read. Moving the
+repo-invariant assertions out of the suite into their own checks stays the better
+long-term shape and is now recorded in `test.md` itself.
 
 A check's `include` is what invalidates its receipt. When a check's **real**
 dependency surface is wider than the globs it declares, a receipt keeps matching
