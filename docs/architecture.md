@@ -86,7 +86,11 @@ runs) · `gate --no-emit` (record no signals; for verifying the gate itself) · 
 
 ## The layers
 
-| # | Layer | What it does |
+These are the six **product** stages, numbered by when they happen to a change. The code
+has its own dependency depth — seven levels of imports — and the two do not line up.
+When this page says "layer" it means a stage below, never an import level.
+
+| # | Stage | What it does |
 |---|---|---|
 | 0 | **Definition** — `.wst/` | Per-project source of truth: constitution, triage rules, check registry, skills, memory |
 | 1 | **Apply** — `wst init` | Interview a repo, generate its `.wst/`. Reads declared facts; asks about everything else |
@@ -212,6 +216,6 @@ The prompt goes on **stdin** — diffs exceed argv limits.
 | `.wst/memory/retro-log.md` | What a retro concluded. A proposal under `proposals/` is transient — deleted once the log records the decision (adr-0017) |
 | `.wst/memory/out-of-scope/` | What was deliberately refused, so it is not re-proposed |
 | `.wst/checks/*.calibration.json` | The receipt that grants a lens blocking authority |
-| `.wst/lanes.yaml` | Lane ownership. `.claude/hooks/lane-guard.mjs` is compiled from it |
+| `docs/lanes.yaml` | Lane ownership. `.claude/hooks/lane-guard.mjs` is compiled from it |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
 | `.claude/` | Emitter output, compiled from `.wst/`. A hand-edit here is drift |

@@ -173,7 +173,7 @@ describe("what the judge meters", () => {
   it("counts cached input alongside fresh input", async () => {
     // The frugality thesis is measured in input tokens. Counting only
     // `input_tokens` would under-report a cached call by the entire cache read,
-    // and the hermetic-versus-charged numbers in .wst/architecture.md are the
+    // and the hermetic-versus-charged numbers in docs/architecture.md are the
     // comparison that would quietly stop being true.
     await installFakeBin("claude", { stdout: VERDICT_ENVELOPE });
     const result = await createClaudeJudge().judge({

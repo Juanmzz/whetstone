@@ -4,7 +4,7 @@ The check schema (`src/core/checks/schema.ts`) is now fixed, which is what makes
 Before it existed, Steps 2 and 3 would each have invented it and collided in the one place that
 hurts most. This document is the contract and the split.
 
-**Read first:** `.wst/architecture.md` (the layers, the FCIS rule), `.wst/triage-rules.md` (`src/core/**`
+**Read first:** `docs/architecture.md` (the layers, the FCIS rule), `.wst/triage-rules.md` (`src/core/**`
 is strict tier — full TDD, RED first).
 
 ## The rules that make parallel work safe

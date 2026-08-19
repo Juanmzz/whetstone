@@ -8,11 +8,11 @@ status: active
 
 Classify every change into a discipline level BEFORE work starts.
 
-| Level    | Applies to | Discipline |
-| -------- | ---------- | ---------- |
-| `strict` | **The deterministic engine** — `src/core/**`: triage, check selection, receipts, the gate verdict, the LLM verdict contract. A bug here silently mis-gates every change in every project that runs Whetstone. Also **the payload that PROPAGATES verbatim** to bootstrapped projects: `.wst/skills/**`, the schemas (`docs/woz/SPEC.md` — signal, ADR, memory-adapter, directory contract), and the emitter/compiler output (`.claude/hooks/**`). Keywords: schema, emitter, compiler, gate, receipt, verdict, skill rule, contract, `.wst/` template. | **Full TDD — RED→GREEN→TRIANGULATE→REFACTOR.** No exceptions: this is code now. For the non-code payload (skills, schemas), a fresh-context review and a worked example before it ships. Blast radius is every future project |
-| `light`  | The imperative shell (`src/shell/**` — thin adapters, integration-tested not unit-tested), commands, and governance/design prose that does NOT propagate: `VISION.md`, `README.md`, `AGENTS.md`, `docs/woz/OPEN_QUESTIONS.md`, ADR bodies. | reasoned before merge; no test ceremony |
-| `off`    | trivial: typos, formatting, `## Changelog` lines, `retro-log.md` entries | no ceremony |
+| Level | Globs, as `triage.yaml` declares them | Discipline |
+| --- | --- | --- |
+| `strict` | `src/core/**` · `.wst/skills/**` · `.claude/hooks/**` | **Full TDD, RED first.** The deterministic engine — a bug here silently mis-gates every change in every project that runs Whetstone. Plus the payload that propagates verbatim to bootstrapped repos |
+| `light` | `src/shell/**` · `src/commands/**` · `src/cli.ts` · `docs/**` · `.wst/memory/decisions.md` · `{README,VISION,AGENTS,CLAUDE}.md` | Reasoned before merge, no test ceremony. Thin adapters, composition roots, and prose that does not propagate |
+| `off` | `.wst/memory/retro-log.md` | No ceremony |
 
 Default when a change matches nothing above: `light`.
 
@@ -24,5 +24,15 @@ Default when a change matches nothing above: `light`.
 > test suites — "the moment the emitter becomes code (V1), `strict` regains its full-TDD meaning."
 > That moment has arrived. `src/core/**` is now the primary strict surface.
 
-This file **is** retro-amendable. `.claude/hooks/strict-path-guard.mjs` is COMPILED from the `strict`
-row above (ADR-0005) — change this table and regenerate the hook, never the reverse.
+**This table is documentation, not the source.** `.wst/triage.yaml` is what the engine
+reads (`shell/sdd.ts`), and `DEFAULT_RULES_YAML` in `core/triage/rules.ts` is pinned to it
+byte-for-byte by `test/triage-defaults.test.ts`. Nothing parses this page.
+
+adr-0005 named it the source and adr-0005 was right at the time — the hook it compiled to
+was real. That hook is gone, nothing ever compiled the YAML from this table, and the two
+drifted: this page omits `src/commands/**`, `src/cli.ts` and `docs/**`, all of which the
+YAML carries. A declared source nobody reads is worse than no declaration, because a
+reader edits it and expects an effect.
+
+So: **edit `triage.yaml`, then update this page to match.** It is still retro-amendable —
+what changes is which of the two is authoritative.

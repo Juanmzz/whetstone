@@ -94,7 +94,7 @@ adr-0008 narrowed the ordering rule's scope, not its reasoning: discharged for `
 `retro`, explicitly waived for the gate, registry, triage and receipts.
 
 ### adr-0005 — the emitter is a compiler; the code tier is V1
-`accepted` · 2026-07-13 · signals: sig-0001
+`superseded by adr-0022` · 2026-07-13 · signals: sig-0001
 
 Rejected: building Whetstone *as* a Claude Code plugin. It would vendor-lock the tool itself,
 which is the thesis inverted; a plugin may be a distribution wrapper, never the identity.
@@ -512,3 +512,23 @@ being indistinguishable is worse than either.
 
 Reversal: if `uncovered` becomes the normal result rather than the rare one, the coverage is
 the defect and the answer is checks, not a louder message.
+
+### adr-0022 — `triage.yaml` is the source; the table is documentation
+`accepted` · 2026-08-19
+
+Rejected: building the compiler adr-0005 described — markdown table in, YAML out, plus a
+check that they agree. It would add a compiler and a check to keep in sync a page nothing
+reads, while the pair that actually decides anything (`DEFAULT_RULES_YAML` ↔
+`triage.yaml`) is already pinned byte-for-byte by `test/triage-defaults.test.ts`.
+Rejected: deleting `triage-rules.md` — a human-readable statement of what each tier means
+is worth keeping, and it is where the retro amends the *reasoning*. Rejected: leaving it,
+which is what produced the drift.
+
+adr-0005 was right when it was written: the table compiled to
+`.claude/hooks/strict-path-guard.mjs`, and that hook was real. adr-0010 removed the hook.
+Nothing has compiled the YAML from the table since, and the two diverged — the page omitted
+`src/commands/**`, `src/cli.ts` and `docs/**`, all of which the engine enforces. A declared
+source nobody parses is worse than no declaration: a reader edits it and expects an effect.
+
+What survives from adr-0005: the emitter-as-compiler shape for everything it still compiles,
+and the refusal to build Whetstone *as* a vendor plugin.

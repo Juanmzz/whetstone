@@ -1,7 +1,7 @@
 # Whetstone — agent orientation
 
 > **Keep this file thin.** Per ADR-0002 the content lives in `.wst/` and vendor files render
-> from it. If you are about to explain architecture here, put it in `.wst/architecture.md` and
+> from it. If you are about to explain architecture here, put it in `docs/architecture.md` and
 > link instead.
 >
 > ⚠ This file went stale five times before anything checked it. `docs-fresh` now verifies the
@@ -15,13 +15,13 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 ## Read first
 
-1. **`.wst/architecture.md`** — the single statement of what is true now: the three parts, the
+1. **`docs/architecture.md`** — the single statement of what is true now: the three parts, the
    loop, the layers, FCIS, the check registry, the measured `claude -p` invocation.
 2. **`.wst/constitution.md`** — governance and the seven non-negotiables.
 3. **`.wst/triage-rules.md`** — which discipline a change earns. Read BEFORE editing.
 4. **`.wst/memory/decisions.md`** — every decision by anchor id, carrying what it ruled out.
    Open it when you are about to change one, not to learn how the system works.
-5. **`docs/PARALLEL.md`** + **`.wst/lanes.yaml`** — if you are a crewmate in a lane.
+5. **`docs/PARALLEL.md`** + **`docs/lanes.yaml`** — if you are a crewmate in a lane.
 
 ## The commands
 
@@ -42,7 +42,7 @@ Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-em
 record signals; for when you are testing the gate itself) · `prepare --dry-run` (print the charter,
 lease nothing) · `retro --dry-run` · `plan --json` (the full triage reason, untruncated) ·
 `events --list` (every run, newest first) · `events --follow` (tail a run in progress). The plan
-format is in `.wst/architecture.md`.
+format is in `docs/architecture.md`.
 
 ## Where things live
 
@@ -96,7 +96,7 @@ format is in `.wst/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 21 ADRs · 54 signals · 10 commands
+## Status — branch `main` · 22 ADRs · 54 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
