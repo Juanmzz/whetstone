@@ -22,7 +22,7 @@ import { assertWorktreeAt, createGitAdapter } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
 import { describePlugin } from "../src/shell/plugin.js";
 import { readReceipt, receiptPath, writeReceipt } from "../src/shell/receipts.js";
-import { countRetros, readCursor, readSignals, writeProposals } from "../src/shell/retro.js";
+import { appendRetroLogStub, countRetros, readCursor, readSignals, writeProposals } from "../src/shell/retro.js";
 import { loadRegistry, loadTriageRules, resolveDefinitionRoot } from "../src/shell/sdd.js";
 import { createTreehouseAdapter } from "../src/shell/treehouse.js";
 import { emptyPath, installFakeBin, restorePath } from "./fake-bin.js";
@@ -588,6 +588,45 @@ describe("the retro cursor", () => {
     );
 
     expect(await countRetros(root)).toBe(2);
+  });
+
+  it("writes a cursor its own reader can read back", async () => {
+    // The round trip is the whole point. The reader broke once because ids moved
+    // to hex and the writer was a sentence asking a human to copy one by hand.
+    const root = await temp("wst-retro-");
+    await mkdir(join(root, "memory"), { recursive: true });
+    await writeFile(join(root, "memory/retro-log.md"), "# Retro log\n", "utf-8");
+
+    await appendRetroLogStub(root, {
+      retroId: "retro-0001",
+      cursor: "sig-cb978aef",
+      signals: 24,
+      clusters: 9,
+      actionable: 7,
+      costUsd: 0.7283,
+    });
+
+    expect(await readCursor(root)).toBe("sig-cb978aef");
+    expect(await countRetros(root)).toBe(1);
+  });
+
+  it("leaves the judgment half of the entry to a human", async () => {
+    // The retro records that it processed up to a signal. What was accepted and
+    // what was refused is not a fact it has.
+    const root = await temp("wst-retro-");
+    await mkdir(join(root, "memory"), { recursive: true });
+    await writeFile(join(root, "memory/retro-log.md"), "# Retro log\n", "utf-8");
+
+    const written = await appendRetroLogStub(root, {
+      retroId: "retro-0001",
+      cursor: "sig-0001",
+      signals: 1,
+      clusters: 1,
+      actionable: 1,
+      costUsd: 0,
+    });
+
+    expect(written).toContain("none applied");
   });
 
   it("refuses to overwrite a proposal nobody applied yet", async () => {

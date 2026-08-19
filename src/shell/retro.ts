@@ -3,8 +3,8 @@
  * proposals. All judgement about them lives in `core/retro/`.
  */
 
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { access, appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type { Signal } from "../core/retro/cluster.js";
 import { parseSignalLog } from "../core/signals/parse.js";
 
@@ -59,6 +59,31 @@ export async function countRetros(definitionRoot: string): Promise<number> {
     return 0;
   }
   return [...text.matchAll(/^## retro-/gm)].length;
+}
+
+/**
+ * Append the mechanical half of a retro-log entry: the id, the cursor and the
+ * counts. Returns the text written.
+ *
+ * **The cursor is a fact, not a judgment.** It used to be prose asking the human
+ * to copy an id by hand, and the first time somebody forgot, the next retro
+ * reprocessed the whole log and paid to re-propose over signals already handled.
+ * What the human owns is the paragraph underneath: which proposals were applied
+ * and which were refused.
+ */
+export async function appendRetroLogStub(
+  definitionRoot: string,
+  entry: { retroId: string; cursor: string; signals: number; clusters: number; actionable: number; costUsd: number },
+): Promise<string> {
+  const path = join(definitionRoot, RETRO_LOG);
+  const text =
+    `\n## ${entry.retroId}\n\n` +
+    `cursor: ${entry.cursor} · ${entry.signals} signals · ${entry.clusters} clusters, ` +
+    `${entry.actionable} actionable · $${entry.costUsd.toFixed(4)}\n\n` +
+    `_Proposals written, none applied. Replace this line with what was accepted and refused._\n`;
+  await mkdir(dirname(path), { recursive: true });
+  await appendFile(path, text, "utf-8");
+  return text;
 }
 
 export async function writeProposals(
