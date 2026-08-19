@@ -775,8 +775,27 @@ signals it deliberately did **not** fold in, and why. Worth checking that
 property holds for all eight before applying any.
 
 Also open: the sift retro clustered fine (11 signals, 5 actionable) but its full
-run left no `proposals/` directory, so it failed at the LLM step. Diagnose before
-concluding anything about the loop outside this repo.
+run left no `proposals/` directory. Diagnosed in #25 — it was neither auth nor
+network nor the filter, it was silence: up to 60 minutes of it.
+
+### Do NOT apply retro-0054 as it stands
+
+It was produced over a **stale cursor** (#25a) and is largely a re-run of work
+already done and already paid for. The retro log shows:
+
+```
+## retro-0049
+cursor: sig-cb978aef · 24 signals · 9 clusters, 7 actionable · $0.7283
+```
+
+That run covered through `sig-cb978aef`. Today's run could not parse that cursor
+— hex id, trailing text — fell back to `sig-0025`, and its proposals cite
+`sig-0026` through `sig-0045`: **the range retro-0049 had already processed.**
+The same analysis, billed twice.
+
+Order that fixes it: repair the cursor, re-run, then review proposals that are
+actually about new signals. Applying a rule change is a human act either way,
+but the reason to hold here is that **the input is wrong**, not the ceremony.
 
 ---
 
