@@ -786,7 +786,7 @@ table again with better numbers.
 
 ## 24. Apply retro-0054
 
-**open** · 8 proposals waiting, nothing applied
+**superseded by retro-0004** · retro-0054 was produced over the broken cursor and is removed; a clean run over the 5 genuinely new signals produced 2 proposals for $0.18. Applying them is still a human act
 
 `wst retro` ran on 2026-08-19 over 29 new signals: 10 clusters, 8 actionable,
 $0.78, written to `.wst/memory/proposals/retro-0054.md`. Nothing is applied
