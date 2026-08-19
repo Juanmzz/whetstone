@@ -1,5 +1,6 @@
 version: 0
-backend: files            # files | engram | ...  (see .wst/memory/README.md)
+agent: claude             # which adapter runs agent-lens checks
+backend: files            # files = self-contained, git-native, zero deps
 memory:
   # Pins the namespace for any memory adapter (ADR-0001's save/search/summarize port).
   # Without this it is inferred from the git remote — this repo has none, and the ambient

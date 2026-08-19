@@ -41,7 +41,10 @@ import {
   proposalToAnswers,
   renderProposal,
 } from "../core/init/propose.js";
-import { createClaudeJudge } from "../shell/claude.js";
+// `init` runs BEFORE a definition layer exists, so there is no `agent:` key to
+// read. It uses the default adapter, which is the only one that ships.
+import { judgeFor } from "../shell/judge.js";
+import { DEFAULT_CONFIG } from "../core/config/schema.js";
 import { exists } from "../shell/fs.js";
 import {
   MAX_FILES,
@@ -395,7 +398,7 @@ const DEFAULT_ANSWERS_FILE = ".wst-answers.json";
 
 /** Whether there is a judge to call at all. Checked before advertising `--propose`. */
 async function judgeAvailable(): Promise<boolean> {
-  return (await createClaudeJudge().describe()).version !== null;
+  return (await judgeFor(DEFAULT_CONFIG).describe()).version !== null;
 }
 
 /**
@@ -419,7 +422,7 @@ async function proposeAnswers(
   // The judge asked for this on the first live run and could not go and get it.
   const readme = await readFirst(root, ["README.md", "readme.md", "README", "docs/README.md"]);
 
-  const result = await createClaudeJudge().judge({
+  const result = await judgeFor(DEFAULT_CONFIG).judge({
     lens:
       "You draft project definitions for review by the project's owner. You argue " +
       "from evidence you were given and never from assumption. You propose; you do " +

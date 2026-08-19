@@ -23,7 +23,7 @@ import {
   type Recommendation,
 } from "../core/retro/propose.js";
 import { createGitAdapter } from "../shell/git.js";
-import { createClaudeJudge } from "../shell/claude.js";
+import { resolveJudge } from "../shell/judge.js";
 import { appendRetroLogStub, countRetros, readCursor, readSignals, writeProposals } from "../shell/retro.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
@@ -159,7 +159,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   }
 
   const skillIndex = await listSkills(definitionRoot);
-  const judge = createClaudeJudge();
+  const judge = await resolveJudge(definitionRoot);
   const accepted: Recommendation[] = [];
   const rejected: { rec: Recommendation; reasons: readonly string[] }[] = [];
   let cost = 0;

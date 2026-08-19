@@ -12,7 +12,7 @@ import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { exists } from "../shell/fs.js";
 import { definitionRoot } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
-import { createClaudeJudge } from "../shell/claude.js";
+import { resolveJudge } from "../shell/judge.js";
 import { describePlugin, pluginHookRoot } from "../shell/plugin.js";
 import {
   buildStatusReport,
@@ -62,9 +62,8 @@ export async function runStatus(
   options: { readonly quiet?: boolean; readonly json?: boolean } = {},
 ): Promise<number> {
   const git = createGitAdapter(cwd);
-  const judge = createClaudeJudge();
-
   const repoRoot = await git.repoRoot();
+  const judge = await resolveJudge(definitionRoot(repoRoot ?? cwd));
   const [branch, judgeInfo] = await Promise.all([git.currentBranch(), judge.describe()]);
 
   const hookRoot = pluginHookRoot(cwd);
