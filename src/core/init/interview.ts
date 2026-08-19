@@ -1,24 +1,9 @@
 /**
  * The interview — the "ask everything the repo does not declare" half of `wst init`.
  *
- * PURE, and deliberately so: this module returns the QUESTIONS AS DATA. It never
- * prompts, never reads stdin, never prints. The composition root decides how to
- * ask (a coding agent asking a human in chat, flags on the CLI, a JSON file), and
- * the engine stays testable and non-interactive.
- *
  * Six questions, each carrying the `why` it is asked at all. `source-paths` and
  * `stack` are new: they used to be inferred by a directory-name list and a
  * file-extension table inside `detect.ts`, both removed by adr-0016.
- *
- * Deliberately NOT asked, and these are recorded deviations rather than oversights:
- * `working relationship` (`skills/voice.md` ships calibrated defaults) and `backend`
- * (`files` is the default AND the recommendation). Neither answer changes a single
- * byte of what init generates, so asking would spend the human's attention on
- * nothing. A backend other than `files` is a flag on the composition root.
- *
- * The ceiling still matters. Every question spent on something the repo already
- * answered is a question the human stops answering carefully — which is why
- * `commands`, `packageManager` and `hasTests` are read and never asked.
  */
 
 import { DEFINITION_DIR } from "../paths.js";

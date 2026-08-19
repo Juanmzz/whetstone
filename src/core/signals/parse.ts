@@ -1,18 +1,5 @@
 /**
  * The ONE parser for `signals.jsonl`. PURE — text in, records out.
- *
- * There used to be two, with opposite policies. `shell/retro.ts` threw on a corrupt
- * line, and its reasoning was right: clustering over a subset while reporting it
- * processed everything is worse than stopping. `shell/signals.ts` caught everything
- * and returned `[]`, so the gate read a corrupt log as an EMPTY one — and an empty
- * log deduplicates against nothing, so every signal gets re-emitted. That inflates
- * the recurrence the retro reasons over, which is the exact failure `dedupe` exists
- * to prevent. Two policies over one file means one of them is wrong; this is the
- * surviving one.
- *
- * Fail closed means fail LOUD and WHOLE: the caller gets an error naming the line,
- * never a partial log that looks complete. Deciding what to do about it is the
- * caller's — the retro stops, the gate skips emission and says so.
  */
 
 import type { SignalSeverity } from "./emit.js";

@@ -1,17 +1,5 @@
 /**
  * Signals emitted BY THE ENGINE, from what a gate run actually observed. PURE.
- *
- * Why this exists. Every signal in this repo's log up to now was hand-written by an
- * agent, and the retro then clustered over that log and produced rules stamped
- * "earned by evidence". The anti-poisoning gate stops a FABRICATED signal from
- * becoming a rule. Nothing stops a MISSING one: an agent that systematically fails
- * to notice a class of error also fails to log it, so the sample is biased in
- * exactly the shape of its blind spots, and every rule inherits that shape while
- * wearing a receipt that says otherwise.
- *
- * A machine-written record is boring, mechanical and complete, which is what
- * evidence should be. `source` keeps it distinguishable from an agent's commentary
- * rather than blending the two.
  */
 
 import { createHash } from "node:crypto";

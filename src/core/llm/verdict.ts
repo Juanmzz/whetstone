@@ -2,12 +2,6 @@
  * The LLM verdict contract. PURE — given a raw `claude -p --output-format json`
  * envelope, decide whether we have a trustworthy verdict, should retry, or must
  * give up.
- *
- * This module exists because of a measured failure, not a hypothetical one. See
- * `docs/architecture.md`: with `--system-prompt` (replacing rather than appending),
- * the model emitted a payload that PASSED schema validation while carrying raw
- * tool-call markup inside a string field. Native `--json-schema` validation is
- * therefore necessary but not sufficient.
  */
 
 import type { ZodType } from "zod";

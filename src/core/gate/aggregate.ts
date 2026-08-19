@@ -1,30 +1,6 @@
 /**
  * The verdict. PURE, total, and the most safety-critical function in Whetstone:
  * every gated change in every project that runs it passes through here.
- *
- * It is deliberately a fold over `CheckResult[]` with no I/O, no ports and no
- * configuration. Everything that could make the decision situational — which checks
- * ran, what they cost, whether a receipt let one be skipped — has already happened
- * upstream. What is left is one question per result, answered the same way every
- * time.
- *
- * The five invariants, which the tests are written to break:
- *
- *   1. Only a real check FAILURE may block. `errored` is the gate being broken —
- *      spawn failure, budget, timeout, auth, unusable LLM output — not a judgement
- *      about the change. It surfaces in `errored`, never in `blocking`.
- *   2. Severity is obeyed ABSOLUTELY. A `warn` or `annotate` check that fails goes
- *      in `warnings` no matter how badly it failed. `correctness` sits at `warn`
- *      because it false-positives on ~20% of correct code; a cap that a bad enough
- *      failure could escape is not a cap.
- *   3. Receipts are written on pass only (enforced upstream by `recordPass` — this
- *      function never writes anything).
- *   4. A skipped check is NOT a passed check. It is reported in `skipped` with its
- *      reason.
- *   5. `verdict === "block"` if and only if `blocking.length > 0`.
- *
- * Invariant 5 is why `verdict` is DERIVED from `blocking` rather than computed
- * alongside it: there is no code path that can set one without the other.
  */
 
 import type { CheckResult, GateVerdict } from "../contracts.js";

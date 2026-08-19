@@ -3,13 +3,6 @@
  *
  * PURE. Text in, entries and problems out — no I/O, no clock, no process.
  *
- * Two checks read this page and used to answer the same question separately:
- * `docs-fresh` counts the entries against `AGENTS.md`'s status block, `adr-refs`
- * resolves every citation in the repo against them. They disagreed on the first
- * page that quoted an entry inside a fence — one counted the example, the other
- * did not — which is one rule implemented twice and drifting, the defect this
- * project keeps finding in itself. One parser, two callers.
- *
  * WHAT IT DOES NOT DO: judge the prose. Whether an entry states its rejected
  * alternative well is a reader's call and a retro's (adr-0019). Whether it has a
  * status is a fact.

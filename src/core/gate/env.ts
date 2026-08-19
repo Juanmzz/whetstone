@@ -1,37 +1,10 @@
 /**
- * What a check is told about the checkout it is verifying.
+ * What a check is told about the checkout it verifies. PURE.
  *
- * PURE. `node:crypto` is a built-in with no effects, allowed here by the same rule
- * that lets `core/receipts/hash.ts` use it: the boundary is about EFFECTS, not
- * built-ins.
- *
- * ## The failure this exists for
- *
- * A check runs as a shell command in a working directory, and until now that was
- * all it knew. Observed in a real repo running five agents in leased worktrees: an
- * end-to-end check configured with Playwright's `reuseExistingServer: true` found
- * a dev server already listening on the shared port, attached to it, and passed —
- * **against a different worktree's code.** The gate reported a verdict on a
- * checkout it had never read.
- *
- * That is worse than every other kind of gate failure. A check that errors is the
- * gate being broken and says so; a check that blocks wrongly is annoying and
- * visible. A check that PASSES for the wrong tree is indistinguishable from
- * working, and it removes the only reason to run a gate at all.
- *
- * ## What Whetstone can and cannot do about it
- *
- * It cannot know what a command does. It cannot rewrite someone's Playwright
- * config, and guessing which commands bind ports would be the same inference
- * adr-0016 took out of `init`.
- *
- * What it can do is stop withholding the one fact that makes the fix a single
- * line. A repo that knows which checkout it is being run for can say
- * `reuseExistingServer: !process.env.WST_GATE_CWD`, or bind
- * `3000 + Number(process.env.WST_GATE_PORT_OFFSET ?? 0)`, and the collision is
- * gone. The variables are the contract; what a repo does with them is its own.
+ * A Playwright check with `reuseExistingServer` attached to a sibling worktree's
+ * dev server and passed against the wrong code (sig-0042). These variables are
+ * what let a repo tell its own checkout apart.
  */
-
 import { createHash } from "node:crypto";
 
 /** Distinct per checkout, and low enough to stay inside the ephemeral range. */

@@ -1,17 +1,5 @@
 /**
  * The gate orchestrator: select -> skip by receipt -> run -> aggregate -> record.
- *
- * PURE, in the sense `core/orchestrate/` means it: every effect arrives as a
- * PARAMETER. Nothing here spawns a process, reads a file or calls a model, so the
- * whole sequencing and receipt policy is unit-testable without a repository, a
- * `claude` binary or a single billed token. That is the point of the tier — without
- * it this logic would land in `src/commands/`, which no test guards.
- *
- * The five invariants live at three different levels, deliberately:
- *   - `aggregate` decides pass/block and is the only place `blocking` is populated.
- *   - `outcomes.ts` decides fail-vs-errored at each boundary.
- *   - this file decides what runs and what gets a receipt.
- * A bug in one is visible in its own tests rather than smeared across the pipeline.
  */
 
 import { NULL_SINK, type EventSink } from "../events/record.js";
@@ -203,11 +191,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   // ── the receipt skip ──────────────────────────────────────────────────────
   const toRun: CheckWithInput[] = [];
   for (const item of prepared) {
-    // A method is not verification, so it has nothing to cache. Nothing mints a
-    // receipt for one (they never pass), but a receipt is plain JSON that whoever
-    // produced the diff could write — and honouring it would report the method as
-    // `skipped: receipt`, which counts as something having been verified and would
-    // headline the run `passed` without the method ever appearing.
+    // A method is not verification, so it has nothing to cache.
     if (item.check.kind === "method") {
       toRun.push(item);
       continue;
@@ -253,16 +237,9 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
 
   // ── running ───────────────────────────────────────────────────────────────
   //
-  // Deterministic checks are free and independent, so they go together.
-  // Agent-lens checks are billed per call, so they go one at a time: it keeps the
-  // spend observable and bounded rather than fanning out N concurrent models.
-  //
-  // There is deliberately NO short-circuit when a blocking check has already
-  // failed. Skipping the remaining checks would be cheaper, but `CheckOutcome` has
-  // no honest reason code for "we stopped early", and rule 4 requires every skip to
-  // be reported with its reason. Reusing one of the existing reasons would be a lie
-  // in the audit trail. Adding one is a change to the shared contract, i.e. a
-  // conversation. Meanwhile the full report is also the more useful one.
+  // Deterministic checks are free, so they run together; an llm is billed per
+  // call, so they run one at a time. No short-circuit once something has failed:
+  // `CheckOutcome` has no honest reason code for "we stopped early".
   const runOne = async (item: CheckWithInput): Promise<CheckResult> => {
     const started = ports.clock.now().getTime();
     let outcome: CheckRun;
@@ -303,12 +280,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   const deterministic = toRun.filter((item) => item.check.kind === "deterministic");
   const lenses = toRun.filter((item) => item.check.kind === "llm");
   // Everything else is a `method` (adr-0018) — prose an agent follows, which this
-  // does not run and must not drop. The first version filtered for the two kinds
-  // it knew and let a selected method vanish between them, which is worse than
-  // not supporting it: the run said `passed` and never mentioned it.
-  // Selected by NAME. Written as "everything that is not the other two", a fourth
-  // kind would silently land here and be reported `declared` — the same vanishing
-  // this loop exists to prevent, one kind further along.
+  // does not run and must not drop.
   const methods = toRun.filter((item) => item.check.kind === "method");
 
   for (const item of methods) {

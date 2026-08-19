@@ -1,20 +1,5 @@
 /**
  * The event log adapter. THIN — it stamps, serialises and appends.
- *
- * Lives at `.wst/events.jsonl`, NOT under `.wst/memory/`. `memory/` is the
- * human-gated layer: decisions, `signals.jsonl`, retro proposals — things a person writes,
- * reads and edits. This file is machine-written, never edited, and feeds no
- * decision. Filing it there would make "everything in `memory/` is human-gated"
- * false, which is a load-bearing sentence in the constitution.
- *
- * Each event is appended AS IT HAPPENS rather than buffered to the end of the run.
- * A log flushed on exit answers "what did that run do" and not "what is this run
- * doing", and the second question is the one ADR-0011 says is unanswerable today.
- * The cost is one small append per event; a gate run produces single digits of them.
- *
- * Writes are SERIALISED through one promise chain. Two concurrent `appendFile`s on
- * the deterministic checks — which run under `Promise.all` — is how two lines get
- * interleaved into one corrupt line.
  */
 
 import { unwatchFile, watchFile } from "node:fs";

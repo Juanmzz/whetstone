@@ -2,28 +2,6 @@
  * `wst init` — composition root. Gather the facts, call the core, show the plan,
  * write the files. Every decision lives in `src/core/init/`; if a judgement call
  * appears in this file it is in the wrong layer.
- *
- * ## The two-phase shape, and why
- *
- * `init` is agent-driven, not interactive. Run with no answers it PRINTS what it
- * inferred and the questions it cannot answer, then exits without writing
- * anything. The agent (or the human) answers those questions and runs it again
- * with `--answers`. That keeps the engine non-interactive and the questions
- * reviewable — a prompt loop in here would be untestable and would put the
- * interview's wording out of reach of the unit tests that check it.
- *
- * ## Never clobber
- *
- * ANY existing file the plan would write stops the command dead, not just `.wst/`.
- * The guard used to cover `.wst/` alone, which meant a repo that had never seen
- * Whetstone but did have a hand-written `AGENTS.md`, a `CLAUDE.md` and a populated
- * `.claude/settings.json` lost all three on the first command a new user ran. The
- * writer is `mkdir -p` + `writeFile` with no existence check of its own, so this is
- * the only thing standing between the plan and somebody's work.
- *
- * `core/init/collisions.ts` decides what a collision costs; this file only asks the
- * filesystem what is there. `--force` overwrites, still prints the list first, and
- * is not the default.
  */
 
 import { execFile } from "node:child_process";
@@ -458,9 +436,6 @@ async function writePlan(plan: InitPlan, root: string): Promise<void> {
     await writeFile(target, file.contents, "utf-8");
     // A hook without the executable bit is a hook that silently never runs, and
     // "the guard is installed but does nothing" is the worst state to be in.
-    // `chmod`, not writeFile's `mode` option: that option only applies when the
-    // file is CREATED, so on the second write it is silently ignored — which is
-    // exactly how this shipped broken the first time.
     if (file.executable === true) await chmod(target, 0o755);
   }
 
@@ -528,12 +503,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 1;
   }
 
-  // --propose: the judge drafts, the human signs. Deliberately OPT-IN, not the
-  // default, and for the same reason the `correctness` lens sits at `warn`: it has
-  // not earned the promotion by measurement yet. Making an unvalidated model call
-  // the default path of the FIRST command a new user runs is the investment the
-  // check schema already refuses to make for the lens. Promote it by ADR once it
-  // has shown it drafts well, not before.
+  // --propose: the judge drafts, the human signs.
   if (opts.propose === true) {
     return await proposeAnswers(facts, stack, root, opts.out ?? DEFAULT_ANSWERS_FILE);
   }
@@ -595,9 +565,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
 
   // Checked AFTER the questions phase and the plan on purpose: both are read-only,
   // and printing what init WOULD ask or write stays useful in a repo it refuses to
-  // touch. Checked BEFORE the writer because the writer has no existence check of
-  // its own — it is `mkdir -p` + `writeFile`, and by the time it runs the previous
-  // contents are already gone.
+  // touch.
   const collisions = collisionsIn(plan, await existingOf(plan, root));
 
   if (collisions.length > 0) {

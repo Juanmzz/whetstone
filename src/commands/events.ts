@@ -7,10 +7,6 @@
  * ADR-0011 built the log to pay three debts, the first being observability — *"what
  * is a dispatched agent doing right now"*. The log has been written since; nothing
  * read it. This command is the read.
- *
- * It writes NOTHING: no signal, no event, no receipt. Reading a log is not a run,
- * and a reader that logged would put its own activity into the record the next
- * reader has to wade through.
  */
 
 import { stat } from "node:fs/promises";

@@ -134,7 +134,7 @@ can only ever match inside Whetstone's own repo.
 
 ## 5. Comments are 37% of the core
 
-**agreed**
+**done** · 36% → 30% across src/, 1,032 lines of prose removed
 
 Measured on `src/core/`: **3,093 comment lines against 5,180 of code.** Files
 routinely open with 20-line headers narrating history, rejected alternatives and
@@ -543,6 +543,37 @@ same day for being more than one person could hold."*
 
 The counter worth weighing: refining a task is not a workflow graph. If this is
 reopened it goes through a status flip on adr-0013, not a quiet rewrite.
+
+---
+
+## 26. The pre-push hook runs a build that can be older than the change
+
+**open** · found while pushing the rename
+
+`.githooks/pre-push` runs `dist/cli.js`. Renaming a schema value made it refuse
+the push:
+
+```
+correctness.md: invalid check definition
+  kind: Invalid option: expected one of "deterministic"|"agent-lens"|"method"
+```
+
+The source said `llm`, the check file said `llm`, and the **compiled gate still
+knew only the old vocabulary**. The gate verifying a change was an older version
+of itself.
+
+The hook already handles a *missing* `dist/` — it allows the push and says so.
+It does not handle a *stale* one, and stale is the common case: `dist/` is
+gitignored and only rebuilt by hand.
+
+**Options:** build before gating in the hook (slow, every push) · compare
+`dist/`'s mtime against `src/` and refuse with an instruction · run the gate
+through `tsx` from source in this repo, since the compiled artifact only matters
+for distribution. The third is closest to honest: what the hook should verify is
+the code as written.
+
+Narrow today — it bites only when a change alters something the gate itself
+parses. That is also exactly when a wrong answer is most expensive.
 
 ---
 

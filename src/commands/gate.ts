@@ -3,13 +3,6 @@
  * orchestrator, print, exit. **No decisions are made here**: which checks run, what
  * blocks, what earns a receipt and what the exit code is are all decided in
  * `src/core/gate/`, where the tests can reach them.
- *
- * One thing in this file is deliberately temporary, and it is marked in place:
- * `runShellCommand` and `unifiedDiff` spawn processes, which belongs in
- * `src/shell/`. The gate lane does not own `src/shell/`, and the lane guard denies
- * the write — correctly, since a second lane may be editing there. They are kept as
- * thin as the rest of `src/shell/` is: no branching logic, all interpretation is in
- * `core/gate/outcomes.ts`.
  */
 
 import { exec, execFile } from "node:child_process";
@@ -165,9 +158,6 @@ function unifiedDiff(range: string, paths: readonly string[], cwd: string): Prom
       // Same stripped environment as `shell/git.ts`, and the same `quotePath`: the
       // paths arrive unquoted from `diffNameStatus`, so git must be told not to
       // re-quote them in the `diff --git` headers the lens reads.
-      //
-      // An inherited `GIT_DIR` would send a diff of ANOTHER repository to a paid
-      // model and file its verdict against this change.
       { cwd, env: gitEnv(), maxBuffer: MAX_BUFFER },
       (error, stdout) => (error === null ? resolve(stdout) : reject(error)),
     );
@@ -262,10 +252,8 @@ export function createCheckRunner(deps: {
     }
 
     // CHUNKED, per sig-0023. One call carrying the whole diff cost $0.607 against a
-    // $0.50 cap on a real 114 KB change and was killed, so the lens errored on every
-    // strict-tier PR. The budget is now PER CHUNK, which is what makes it bounded:
-    // a fixed total ceiling divided by an unknown number of files is just the same
-    // failure with extra steps.
+    // $0.50 cap on a real 114 KB change and was killed, so the lens errored on
+    // every strict-tier PR.
     const chunks = chunkDiff(diff, LENS_CHUNK_BYTES);
     if (chunks.length === 0) {
       return { outcome: { status: "skipped", reason: "not-in-tier" } };
@@ -339,10 +327,7 @@ export async function runGate(
 
   // Resolved on its own, ahead of everything else, because the event log lives
   // under it: a failure after this point can be RECORDED, and a failure before it
-  // cannot be. That is the whole reason this is no longer one `try` with the
-  // registry — the two config failures below used to vanish into stderr, and they
-  // are exactly the runs where "the gate was broken, not the change" has to be
-  // provable afterwards.
+  // cannot be.
   let definitionRoot: string;
   try {
     definitionRoot = await resolveDefinitionRoot(repoRoot);
@@ -434,20 +419,9 @@ export async function runGate(
     },
   );
 
-  // Record what the gate OBSERVED, before printing. Deduped against the log —
-  // `core/signals/emit.ts` has the why.
-  //
-  // Never let this fail the run. The gate's verdict is the product; the signal is
-  // bookkeeping, and bookkeeping that can break a gate is worse than no bookkeeping.
-  //
-  // But SKIPPING must not be silent. Now that the log parser fails closed, the
-  // likeliest thing thrown here is a corrupt line, and the two silent options are
-  // both bad: emitting anyway means re-emitting every signal the unreadable log
-  // already holds, and skipping quietly means the run that finally broke the build
-  // leaves no trace, which is the one run whose evidence matters. So: skip, keep
-  // the verdict, and tell the human — on stderr, and in the JSON for anything
-  // reading this as an API. Losing one run's signal is recoverable by re-running
-  // after a one-line fix; poisoning the retro's recurrence evidence is not.
+  // Bookkeeping must never fail the run, and must never fail QUIETLY: emitting
+  // over an unreadable log re-emits everything it holds, and skipping in silence
+  // loses the evidence of the run that finally broke the build.
   let emitted: string[] = [];
   let signalError: string | null = null;
   if (opts.noEmit !== true) {
@@ -472,16 +446,6 @@ export async function runGate(
   const exit = registry.byId.size === 0 ? EXIT_INCOMPLETE : exitCodeFor(run.verdict, run.selection);
 
   // The OUTCOME, not the verdict.
-  //
-  // `verdict.verdict` has two values, and this line used to carry it: every
-  // non-block run was logged `status: "pass"` under the detail "passed — N
-  // check(s)". So an UNCOVERED run — the console saying in as many words that
-  // nothing about the change was verified — was archived as a pass, and `wst
-  // events` replayed it as one. The event log is what this project uses as
-  // evidence about itself, which is what makes that worse than a cosmetic bug.
-  //
-  // `outcomeOf` is the single decision `core/gate/report.ts` exists to make once.
-  // Deriving it a third time here was how the third copy got it wrong.
   const outcome = outcomeOf(run.verdict, run.selection);
   emit({
     kind: "run-finished",

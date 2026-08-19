@@ -2,25 +2,6 @@
  * `wst status` as data.
  *
  * PURE. A report in, a JSON-safe object out.
- *
- * ## Who reads this
- *
- * The plugin's init skill tells an agent to run `wst status` FIRST — before it
- * writes anything, to find out whether the repo already has a `.wst/`, whether
- * something else owns the git hooks, whether a judge is reachable. Until now the
- * answer came back as prose, so the agent had to read English to decide, and any
- * wording change was a silent behaviour change for every agent downstream.
- *
- * The human-facing renderer is unchanged and stays the default. This is the
- * second reader, not a replacement.
- *
- * ## Why `enforcement` is computed here and not left to the caller
- *
- * "Will the gate actually run from this directory?" is the question every other
- * one is asked in service of, and answering it means knowing that a pre-push hook
- * and a plugin Stop hook are two independent routes — either is enough, and
- * neither being live is the state worth acting on. Leaving that to each consumer
- * is how three of them end up disagreeing.
  */
 
 import { hooksArmed, type PluginInstall, type StatusReport } from "./report.js";

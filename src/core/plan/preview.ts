@@ -1,16 +1,6 @@
 /**
  * What will judge this plan. PURE, and deterministic end to end — no model. Why an
  * LLM was rejected here: adr-0013.
- *
- * Nothing here classifies anything. `classify`, `route` and `selectChecks` are the
- * gate's own functions, called unchanged. A second implementation of "which checks
- * match which paths" would be a front door answering a question about a gate that
- * does not exist — the same divergence `commands/gate.ts` records having already
- * cost this project three bugs.
- *
- * The one thing this module adds is the view the gate never needs: coverage read
- * PER PATH rather than per check, so an uncovered path is stated as a gap rather
- * than left as silence.
  */
 
 import type { Check, Tier } from "../checks/schema.js";

@@ -4,29 +4,6 @@
  * PURE. The walking is I/O and lives in `src/commands/init.ts`; what counts as
  * "deep enough" is a decision, and decisions live here where a unit test can
  * reach them.
- *
- * ## Why depth is counted from the nearest manifest, not from the repo root
- *
- * A fixed depth from the root is a bound on the wrong thing. `src/a/b/c/d.ts` and
- * `apps/api/src/llm/__tests__/retry.test.ts` are the same distance into their own
- * package; only the second one is five levels from the root, and only because the
- * repo is a monorepo. Counting from the root therefore makes the walk's blindness
- * proportional to how many packages a repo has — the repos where seeing the code
- * matters most are the ones it sees least of.
- *
- * The concrete cost of getting this wrong is not a thinner file list. `init` reads
- * `hasTests` off that list, and `seedChecks` writes "no test files were found at
- * init" into the generated `test` check when it is false. On a monorepo with a
- * blocking test suite in CI that sentence is not a conservative default, it is a
- * false statement that DEGRADES a guarantee the project already enforces. That
- * cost is now the ONLY thing paying for this module: ADR-0016 deleted the layout
- * and language inference the walk also used to feed, and `hasTests` plus the file
- * list handed to `--propose` are what is left.
- *
- * So the budget restarts at every package manifest: a monorepo is a repo of repos,
- * and each of them gets the same depth a flat repo gets. `MAX_DEPTH` still bounds
- * the walk *within* a package, and `MAX_FILES` still bounds it globally — the two
- * halves of the cost the old constant was paying for on its own.
  */
 
 /**

@@ -1,21 +1,5 @@
 /**
  * The execution record. PURE — identity, sequencing, and the shape of one line.
- *
- * Why this exists next to `core/signals/` rather than inside it. They share a
- * mechanism (append-only JSONL under `.wst/`, a parser that fails closed) and have
- * opposite contracts. A SIGNAL is a judgment worth learning from: rare, deduped,
- * hand-editable, and deliberately silent about a run that passed, because "a log
- * that records success is a log nobody reads". An EVENT is the run itself: written
- * on every path, never deduped — the repetition IS the datum — and never edited,
- * because a corrupt line here is a bug, not a typo.
- *
- * Folding the second into the first would mean one file with two policies, and
- * `parse.ts`'s header already records what that cost the last time.
- *
- * ADR-0011 asks this primitive to pay three debts: observability (what is a run
- * doing right now), resumability (an event log IS a checkpoint), and comparison
- * (two agents on one task cannot be compared without a common record). Every field
- * below is here because one of the three needs it.
  */
 
 import { createHash } from "node:crypto";

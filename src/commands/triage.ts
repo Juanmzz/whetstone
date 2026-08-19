@@ -1,17 +1,6 @@
 /**
  * `wst triage` — composition root. Reads the diff and the rules, hands both to
  * the pure core, prints the answer. No classification decisions are made here.
- *
- * The rules come from `shell/sdd.ts`, the SAME loader `wst gate` uses, and that is
- * load-bearing rather than tidy. This file used to carry its own, and the two agreed
- * on the sentence in the comment and disagreed in the code: both fell back to the
- * built-in defaults for a MISSING file, but this one also fell back for a file it
- * could not READ. An unreadable `triage.yaml` therefore made `wst triage` report a
- * tier derived from rules nobody wrote, while `wst gate` on the same repository
- * exited 2 and said so.
- *
- * Two commands that disagree about a tier disagree about which checks apply, which
- * makes the project's own rules decorative exactly where they matter.
  */
 
 import { createGitAdapter } from "../shell/git.js";

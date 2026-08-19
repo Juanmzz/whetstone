@@ -1,15 +1,6 @@
 /**
  * Retro steps 3-4: the recommendation, and the anti-poisoning gate that must pass
  * BEFORE a human ever sees it. PURE.
- *
- * Why this exists (OWASP ASI06): the retro's proposal is
- * AGENT-GENERATED. A human gate alone is not enough — a plausible proposal citing a
- * signal that never happened is exactly the thing a tired reviewer rubber-stamps. So
- * the machine checks the machine's own evidence first, deterministically, and a
- * recommendation that fails never reaches the human at all.
- *
- * The division of labour: the LLM proposes (judgment), this validates the citations
- * and the blast radius (mechanical), the human disposes (authority).
  */
 
 import { DEFINITION_DIR } from "../paths.js";
@@ -84,12 +75,7 @@ export function validateRecommendation(
     );
   }
 
-  // 3. A proposal a human cannot evaluate is not a proposal.
-  //
-  // "Empty" is not the only way to be unreviewable. The first real retro returned
-  // proposals whose entire body was the word "placeholder" — the model knew it lacked
-  // the information and said so, and the gate passed them through to a human anyway.
-  // A proposal that admits it could not propose must be dropped, not forwarded.
+  // 3.
   const PLACEHOLDER = /^\s*(placeholder|tbd|todo|n\/a)\b/i;
   const MIN_RATIONALE = 60;
 

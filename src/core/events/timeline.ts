@@ -1,18 +1,5 @@
 /**
  * Reading the log back. PURE — records in, runs out.
- *
- * `record.ts` says a `check-started` kind was left out because the only thing it
- * buys is "what is running RIGHT NOW", *"which is a real need that arrives with the
- * reader, not with the log"*. This is that reader, and the note holds: the shape
- * below answers it from what is already written, by saying plainly that a run whose
- * last line is a `check-finished` has not ended.
- *
- * The one judgment this module makes, and the reason it is core rather than a
- * formatting detail of the command: HOW A RUN ENDED is a three-way answer, not a
- * boolean. Finished, failed, and never wrote a terminal line are three different
- * facts with three different meanings for the change that was being gated, and
- * `core/gate/report.ts` already records what collapsing that distinction costs —
- * *"never let a reader conclude 'verified' from something that was not"*.
  */
 
 import type { EventRecord } from "./record.js";

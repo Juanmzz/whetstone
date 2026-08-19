@@ -2,17 +2,6 @@
  * Layer 1 — `wst init`. The engine that reads a repo and decides what its `.wst/`
  * should contain. PURE: facts in, file contents out. `src/commands/init.ts` does
  * the reading and the writing.
- *
- * The three things this module is responsible for, in the order they happen:
- *
- * 1. `detectStack` — what the repo DECLARES about itself: its scripts, its
- *    lockfile, whether tests exist. Whatever the engine can read it must not ask,
- *    and it must never infer a command that might not exist.
- * 2. `buildInterview` — everything else, returned as questions. Six of them, and
- *    they do not shrink when detection gets lucky (ADR-0016).
- * 3. `planInit` — the generated payload, which must parse through the same
- *    loaders the rest of the engine uses and must not reference a single file
- *    that lives only in Whetstone.
  */
 
 export type { CopyRequest, GeneratedFile } from "./artifact.js";

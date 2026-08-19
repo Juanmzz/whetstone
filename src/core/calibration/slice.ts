@@ -1,22 +1,5 @@
 /**
  * Reading a calibration run by DEFECT SHAPE, not only by difficulty. PURE.
- *
- * The v4 run scored 9/10 fixtures clean and printed
- * `easy 2/2 · medium 2/2 · hard 5/6`. True, and it hides the finding: every one
- * of the misses was the same KIND of mistake — the lens inventing a race in
- * correct concurrent code. Reading that off the report meant noticing that the
- * one failing fixture was called `race-good`.
- *
- * Slicing the evaluation set and reporting per slice is standard evaluation
- * practice (Chip Huyen, *AI Engineering*, ch. 4). Difficulty is a slice about how
- * hard we expected a fixture to be; defect shape is a slice about what the lens
- * is actually for, and it is the one that tells you whether a failure is one
- * fixture's phrasing or a systematic blind spot.
- *
- * The two directions are kept apart on purpose. A lens that misses planted bugs
- * is under-sensitive; a lens that invents them in correct code is over-sensitive,
- * and only the second teaches people to route around the gate. Collapsing them
- * into one number per slice would hide exactly the asymmetry that matters.
  */
 
 /**

@@ -1,22 +1,5 @@
 /**
  * The payload: everything `init` writes that is not the triage compiler's output.
- *
- * The constraint that shapes every string in this file is **ADR-0004: the payload
- * must be self-contained.** All of this travels into someone else's repository. A
- * sentence here that says "see Whetstone's SPEC" produces a dangling reference in
- * a repo that has never heard of Whetstone, and the agent reading it either
- * hallucinates the missing file or gives up on the rule. That has already happened
- * once in this project's history, which is why `selfcontained.ts` exists and why
- * `planInit` refuses to return a plan that violates it.
- *
- * Two consequences visible below:
- *
- * - `MEMORY_README` restates the signal and ADR schemas IN FULL rather than citing
- *   them. Duplication is the correct trade when the alternative is a broken link.
- * - The retro is described inline in `AGENTS.md`. The Wizard-of-Oz template said
- *   "run the retro (see `retro.md`)", but `retro.md` is a Whetstone document and
- *   does not exist in the target — that reference is exactly the bug class the ADR
- *   names, so it is not reproduced here.
  */
 
 import { DEFINITION_DIR } from "../paths.js";
@@ -106,17 +89,7 @@ export function skillCopies(texts?: ReadonlyMap<string, string>): readonly CopyR
  * missingFromRegistry: absence of evidence was never evidence of solo work.
  */
 export function activeSkills(present?: readonly string[]): readonly string[] {
-  // `present` is what the shell read off `.wst/skills/`. Without it this returned
-  // the eight shipped names regardless of what was on disk, and `AGENTS.md` is
-  // rendered from it — so a skill somebody wrote by hand after `init` never
-  // appeared in the list an agent reads, and was invisible in practice.
-  //
-  // The fallback is for `init` writing a fresh repo, where there is no directory
-  // to read yet.
-  // `undefined` means the shell did not read a directory — a fresh repo, where the
-  // shipped set is the right answer. An EMPTY array means it read one and found
-  // nothing, which is a different repo entirely: listing eight files that are not
-  // there is the failure this function was fixed for, pointed the other way.
+  // `present` is what the shell read off `.wst/skills/`.
   return present ?? SKILL_FILES.map((name) => `skills/${name}`);
 }
 

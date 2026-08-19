@@ -1,23 +1,5 @@
 /**
  * `planInit` — the whole of Layer 1 as one pure function.
- *
- * Facts and answers in, a complete description of what the target repo should
- * contain out. Nothing here touches a filesystem, spawns a process or prints; the
- * composition root (`src/commands/init.ts`) does all three. That is what lets the
- * hard questions — does the generated triage document parse? does a fresh repo
- * get a check whose command does not exist? does anything reference a file that
- * only lives in Whetstone? — be answered by unit tests instead of by installing
- * into a scratch repo and reading it.
- *
- * The function REFUSES rather than degrades, in three places:
- *
- * - answers that do not validate (a blank purpose, an elevated risk profile that
- *   maps to no concrete path);
- * - generated content that references a path this init does not create;
- * - anything the deny-list recognises as a Whetstone-only artefact.
- *
- * All three produce a payload that looks installed and governs nothing, which is
- * strictly worse than a failed install: a failed install gets retried.
  */
 
 import type { TriageRule } from "../contracts.js";

@@ -1,44 +1,5 @@
 /**
  * The calibration receipt. PURE.
- *
- * ## What this replaces, and why it had to
- *
- * `AGENTS.md` non-negotiable 2 reads: *"A judgment check earns its `block` — enforced
- * by the SCHEMA."* Until this module, the schema asked one question — does the YAML say
- * `status: passed` with `runs >= 1`? Two hand-typed fields.
- *
- * That was demonstrated, not theorised: editing three lines of
- * `.wst/checks/correctness.md` in a text editor took a lens sitting at
- * `uncalibrated`, `runs: 0` and loaded it at `severity: block`. No measurement ran.
- * The one property an outside survey could not find in any comparable tool was, in
- * practice, an honour-system checkbox.
- *
- * A receipt is not a claim about a measurement. It is a set of FINGERPRINTS of what
- * was measured, and the schema recomputes them from the current state. Forging it
- * means guessing a sha256 of a prompt and of a fixture set, which is the same as
- * running the measurement.
- *
- * ## Same object as a gate receipt, one level up
- *
- *   gate receipt          "check X passed on exactly THIS INPUT"
- *                          bound by: file hashes + check identity
- *
- *   calibration receipt   "lens X held on exactly THESE FIXTURES"
- *                          bound by: fixture-set hash + lens hash + model + runtime
- *
- * And the same consequence, which is the point: change the thing and the binding
- * breaks by itself. `sig-0028` put a check's `command` into its gate receipt because
- * trusting a human to bump a version number did not hold. `correctness.md` carries the
- * same warning today as PROSE — *"Changing the lens INVALIDATES the previous
- * measurement"* — addressed to someone who has to remember it. A hash does not need
- * to be remembered.
- *
- * ## Portability is the product
- *
- * Comparable tools (Stet, RepoGauge) measure agents well and emit a REPORT. A report
- * is an assertion: you believe it because you believe whoever ran it. A receipt is
- * re-derivable — hand it over with the fixture set and the other side recomputes the
- * hashes. That is the difference worth having, not "we measure agents".
  */
 
 import { createHash } from "node:crypto";

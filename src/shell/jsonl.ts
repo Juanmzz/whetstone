@@ -1,14 +1,5 @@
 /**
  * Appending to a JSONL log under `.wst/`. THIN, and the ONE place that knows how.
- *
- * APPEND ONLY, with `appendFile`, never read-modify-write. Two of these logs exist
- * now — `memory/signals.jsonl` and `events.jsonl` — and a read-modify-write on
- * either is how a concurrent run silently drops someone else's line. A lost line is
- * invisible by construction.
- *
- * Extracted rather than copied when the event log arrived. This repo has three bugs
- * on record that were one rule implemented twice and drifting; the separator logic
- * below is subtle enough (see `separator`) that a second copy would be a fourth.
  */
 
 import { appendFile, mkdir, open } from "node:fs/promises";

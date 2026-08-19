@@ -1,21 +1,5 @@
 /**
  * Seeding `.wst/checks/`.
- *
- * Two rules govern this module, and both of them are about what NOT to write.
- *
- * **1. Never seed a check whose command might not exist.** A check that cannot
- * run does not report `fail` — it reports `errored`, on every change, forever.
- * That reads as "the gate is broken", and a gate believed broken is switched off.
- * So every command here comes from `detectStack`, which only ever reports a
- * command it read out of the project's own scripts or one the detected toolchain
- * guarantees. A repo with no runner gets ZERO checks, which is the correct answer.
- *
- * **2. An `llm` check may never be seeded at `severity: block`.** A fresh
- * repo has no calibration receipt by definition, and `CheckSchema` refuses the
- * combination at parse time — so an init that emitted one would hand over a repo
- * whose registry cannot load. The cap is applied here as well as in the schema,
- * because relying on a downstream throw to enforce it means shipping the bug and
- * discovering it in someone else's terminal.
  */
 
 import type { Check } from "../checks/schema.js";
@@ -123,12 +107,7 @@ export function seedChecks(
   }
 
   if (stack.commands.test !== null) {
-    // `init` has never seen this suite run, so it may not block on it. Seeding
-    // `block` on the evidence that test FILES exist is what put a real repo's
-    // gate permanently red: large parts of its suite opened a database nobody had
-    // started, so dozens of tests failed for reasons unrelated to any diff. A
-    // check that is red on every machine gets routed around, and a routed check
-    // stops catching the real findings too.
+    // `init` has never seen this suite run, so it may not block on it.
     drafts.push({
       id: "test",
       description: "The test suite passes.",
@@ -156,9 +135,7 @@ export function seedChecks(
   if (stack.commands.lint !== null) {
     // A command carrying `--fix` REWRITES the tree while judging it: it reports on
     // a file that no longer exists in the form the author wrote it, and it hides
-    // the finding it was meant to surface. The flag lives inside the repo's own
-    // script, so it cannot be stripped from here — the check ships off, with the
-    // reason, and a human decides.
+    // the finding it was meant to surface.
     const mutates = stack.mutating.includes("lint");
     drafts.push({
       id: "lint",

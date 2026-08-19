@@ -1,18 +1,8 @@
 /**
  * Where a raw result becomes a `CheckOutcome`. PURE.
  *
- * This module exists so that RULE 1 — only a real check failure may block — is
- * drawn in the tested core rather than in an adapter. Both boundaries the gate runs
- * checks across (a child process, and the LLM judge) can fail in two categorically
- * different ways, and the whole verdict depends on telling them apart:
- *
  *   the check ran and said no        -> `fail`    -> may block, if severity allows
  *   the check could not run at all   -> `errored` -> NEVER blocks
- *
- * `core/llm/verdict.ts` already draws that line for the LLM. This does not
- * re-litigate it: every `JudgeError` it produces is by construction the second kind.
- * The equivalent line for a child process is drawn here, because "non-zero exit" and
- * "could not spawn" both arrive as one rejected promise from `execFile`.
  */
 
 import { z } from "zod";
@@ -86,14 +76,10 @@ export function interpretCommandResult(result: CommandResult): CheckOutcome {
   if (result.exitCode === 0) return { status: "pass" };
 
   // A deterministic check runs through a shell, so a missing or non-executable
-  // binary never reaches us as a spawn error — the shell starts fine and exits
-  // 127 / 126. POSIX reserves both codes for exactly that, and treating them as a
-  // failure would let one missing tool block every change in a repo while blaming
-  // the change for it. Found by running the gate on Whetstone itself.
-  //
-  // The line stops here deliberately: 128+N (killed by signal N) is NOT included,
-  // because unlike 126/127 it is not reserved and real tools return codes in that
-  // range. When the shell's own child is signalled, `signal` above catches it.
+  // binary never reaches us as a spawn error — the shell starts fine and exits 127
+  // / 126. The line stops here deliberately: 128+N (killed by signal N) is NOT
+  // included, because unlike 126/127 it is not reserved and real tools return codes
+  // in that range.
   if (result.exitCode === 126 || result.exitCode === 127) {
     const why = result.exitCode === 127 ? "command not found" : "command not executable";
     const printed = output(result);

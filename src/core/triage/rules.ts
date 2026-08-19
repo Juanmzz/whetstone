@@ -2,12 +2,6 @@
  * The triage rules loader. PURE — text in, validated rules out. Reading
  * `.wst/triage.yaml` off disk belongs to the composition root
  * (`src/commands/triage.ts`), so the format stays testable without a filesystem.
- *
- * `DEFAULT_RULES_YAML` is the exact text shipped as `.wst/triage.yaml`, and
- * `DEFAULT_RULES` is its parse — one source, so the built-in fallback and the
- * file on disk cannot drift apart. It also keeps the payload self-contained
- * (ADR-0004): a project that has not written a `triage.yaml` yet still gets a
- * working, reviewable ruleset instead of a crash or an empty one.
  */
 
 import { parse as parseYaml } from "yaml";

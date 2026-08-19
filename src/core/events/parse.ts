@@ -1,17 +1,5 @@
 /**
  * The ONE parser for `events.jsonl`. PURE — text in, records out.
- *
- * Fails closed, like `core/signals/parse.ts`, for a different reason. There, a
- * partial log read as complete deduplicates against nothing and re-emits signals
- * the log already holds, inflating the recurrence the retro reasons over. Here, a
- * partial log read as complete is a RUN THAT LOOKS LIKE IT STOPPED where the
- * corruption starts — which is precisely the false conclusion a reader, a resume
- * and a comparison would each draw independently.
- *
- * What the caller does about it differs, though, and this is the one asymmetry
- * worth stating: nothing decides anything from this log yet. A corrupt
- * `signals.jsonl` stops the retro and stops emission. A corrupt `events.jsonl` is
- * reported and the gate carries on, because no verdict depends on it.
  */
 
 import { isEventKind, type EventRecord } from "./record.js";

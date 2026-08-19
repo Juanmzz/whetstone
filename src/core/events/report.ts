@@ -1,24 +1,5 @@
 /**
  * Rendering a run out of the log. PURE.
- *
- * The same job `core/gate/report.ts` has, one layer later and with the same rule:
- * *never let a reader conclude "verified" from something that was not.* A gate run
- * has three endings that must not share a word; the log makes it FIVE, because a
- * run can also break outright, or stop without writing an ending at all:
- *
- *   passed          a verdict was reached, and it was yes
- *   BLOCKED         a verdict was reached, and it was no
- *   INCOMPLETE      the run exited 2 — something that could have blocked never ran
- *   FAILED          the gate itself broke; there is no verdict here
- *   NO END RECORDED nothing was written; the run is going, or it died
- *
- * The last two are the reason this file reads `exit` instead of trusting `detail`.
- * The live log is full of lines like `{"kind":"run-finished","detail":"passed — 0
- * check(s), 0 errored","status":"pass","exit":2}`: the gate's own wording is about
- * the verdict OBJECT, which really did not block, while exit 2 is `EXIT_INCOMPLETE`
- * and means nothing about the change was verified. Echoing the word "passed" there
- * would reproduce, in a new command, precisely the confusion hard rule 3 exists to
- * stop.
  */
 
 import { EXIT_BLOCKED, EXIT_INCOMPLETE, EXIT_PASS } from "../gate/report.js";

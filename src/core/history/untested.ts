@@ -3,19 +3,6 @@
  *
  * PURE. Git is the shell's problem: this takes a sequence of commits as data and
  * returns the modules that landed with nothing covering them.
- *
- * **What this deliberately does NOT measure.** An earlier version of this module
- * also reported implementation and test landing in the SAME commit, as a proxy for
- * "the test never got to fail". That was dropped, and the reason is worth keeping:
- * git cannot distinguish a test written first from one written afterwards and
- * committed first, so the proxy measured commit ceremony rather than discipline —
- * 35 of its 42 findings were that kind. Watching a test fail is where the value
- * is, and the evidence for it belongs in the commit body, where it can show the
- * test failed for the RIGHT reason. `[TD7]` asks for exactly that, and a separate
- * commit never proves it.
- *
- * What survives is the finding that is not ceremony: a module entered the strict
- * tier and nothing ever tested it. Seven of the forty-two, and each one actionable.
  */
 
 import type { ChangedFile } from "../diff/parse.js";

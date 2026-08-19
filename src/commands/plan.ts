@@ -6,10 +6,6 @@
  *
  * The front door: not a step inside anything, and not gated on criticality. Why:
  * adr-0013.
- *
- * It writes nothing. No signal, no event, no receipt: reading a plan is not a run,
- * and a command that logs would give the retro a stream of activity that never
- * verified anything.
  */
 
 import { readFile } from "node:fs/promises";
