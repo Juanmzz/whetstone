@@ -38,7 +38,7 @@ import {
   interpretJudgeResult,
   type CommandResult,
   type LensVerdict,
-  type RunOutcome,
+  type CheckRun,
 } from "../core/gate/outcomes.js";
 import type { JudgeResult, LlmJudge } from "../core/ports.js";
 import { classify, route } from "../core/triage/index.js";
@@ -69,7 +69,7 @@ export interface GateOptions {
   readonly maxLensTotalUsd?: number;
   readonly timeoutMs?: number;
   /**
-   * Skip agent-lens checks, reporting them as skipped rather than run.
+   * Skip llm checks, reporting them as skipped rather than run.
    *
    * For the pre-push hook. A hook that costs 50 seconds and real money on every
    * push gets bypassed with --no-verify, and a routed-around gate has negative
@@ -224,7 +224,7 @@ export function createCheckRunner(deps: {
   readonly noLens: boolean;
   readonly timeoutMs: number;
 }): CheckRunner {
-  return async (check: LoadedCheck, files: readonly ChangedFile[]): Promise<RunOutcome> => {
+  return async (check: LoadedCheck, files: readonly ChangedFile[]): Promise<CheckRun> => {
     if (check.kind === "deterministic") {
       if (check.command === undefined) {
         // Unreachable through the schema, which requires `command` for this kind.
@@ -421,7 +421,7 @@ export async function runGate(
       // Wrapped, not plumbed through `GatePorts`: `check-started` is deliberately
       // absent from the event schema, and that reasoning still holds — the need is
       // the reader's, not the log's. This channel is in-process and reaches no file.
-      run: withProgress(createCheckRunner({
+      runCheck: withProgress(createCheckRunner({
         cwd: repoRoot,
         range,
         judge: await resolveJudge(definitionRoot),

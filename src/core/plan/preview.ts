@@ -63,7 +63,7 @@ export interface PlanPreview {
    * Routing named a check the registry does not have. The REGISTRY being broken,
    * not the plan — rule 3, arriving here through `selectChecks`.
    */
-  readonly unknown: readonly string[];
+  readonly missingFromRegistry: readonly string[];
   /** Every declared path, in declaration order. */
   readonly coverage: readonly PathCoverage[];
   /** Question 4: declared paths no check would look at. */
@@ -134,7 +134,7 @@ export function previewPlan(
     blocking: planned.filter((c) => c.severity === "block"),
     advisory: planned.filter((c) => c.severity !== "block"),
     unmatched: selection.unmatched,
-    unknown: selection.unknown,
+    missingFromRegistry: selection.missingFromRegistry,
     coverage,
     uncovered,
     manual: uncovered.filter((c) => c.tier === "strict"),

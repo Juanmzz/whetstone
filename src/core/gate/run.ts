@@ -22,7 +22,7 @@ import type { ClockPort, GitPort } from "../ports.js";
 import { inputHash, type CheckIdentity, type HashedFile } from "../receipts/hash.js";
 import { recordPass, shouldSkip, type Receipt } from "../receipts/receipt.js";
 import { aggregate } from "./aggregate.js";
-import type { RunOutcome } from "./outcomes.js";
+import type { CheckRun } from "./outcomes.js";
 import { selectChecks, type Selection } from "./select.js";
 
 /**
@@ -58,14 +58,14 @@ export interface ReceiptStore {
 export type CheckRunner = (
   check: LoadedCheck,
   files: readonly ChangedFile[],
-) => Promise<RunOutcome>;
+) => Promise<CheckRun>;
 
 export interface GatePorts {
   /** `GitPort.hashFile` — content hash at the working tree. */
   readonly hashFile: GitPort["hashFile"];
   readonly clock: ClockPort;
   readonly receipts: ReceiptStore;
-  readonly run: CheckRunner;
+  readonly runCheck: CheckRunner;
   /**
    * Where per-check progress is recorded. OPTIONAL, and the asymmetry with
    * `appendSignals`' required-but-nullable `branch` is deliberate: a signal with no
@@ -120,12 +120,14 @@ export const identityOf = (check: LoadedCheck): CheckIdentity => ({
 });
 
 /** What one selected check needs before it can be run or skipped. */
-interface Prepared {
+/** A selected check bundled with the input its receipt is keyed on. */
+interface CheckWithInput {
   readonly check: LoadedCheck;
   readonly files: readonly ChangedFile[];
-  /** `null` when some file could not be hashed — then no receipt is read or written. */
-  readonly hashed: readonly HashedFile[] | null;
-  readonly hash: string | null;
+  /** Each matched file with its content hash. `null` when one could not be read. */
+  readonly hashedFiles: readonly HashedFile[] | null;
+  /** Those hashes plus the check's identity, as one digest. `null` when unhashable. */
+  readonly inputHash: string | null;
 }
 
 export async function runGate(input: GateInput, ports: GatePorts): Promise<GateRun> {
@@ -139,7 +141,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   // file someone deleted. We do not know its severity, so we assume the worst —
   // `block` — precisely to demonstrate that it STILL does not block. `errored` is
   // never consulted for severity.
-  for (const checkId of selection.unknown) {
+  for (const checkId of selection.missingFromRegistry) {
     results.set(checkId, {
       checkId,
       checkVersion: 0,
@@ -166,17 +168,17 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
 
   // One hash per path, however many checks matched it. `git hash-object` is a
   // process spawn per call in the real adapter, so this is not a micro-optimisation.
-  const hashes = new Map<string, Promise<string>>();
+  const pendingHashes = new Map<string, Promise<string>>();
   const hashOf = (file: ChangedFile): Promise<string> => {
     if (file.status === "deleted") return Promise.resolve(DELETED_FILE_HASH);
-    const existing = hashes.get(file.path);
+    const existing = pendingHashes.get(file.path);
     if (existing !== undefined) return existing;
     const pending = ports.hashFile(file.path);
-    hashes.set(file.path, pending);
+    pendingHashes.set(file.path, pending);
     return pending;
   };
 
-  const prepared: Prepared[] = [];
+  const prepared: CheckWithInput[] = [];
   for (const selected of selection.selected) {
     let hashed: HashedFile[] | null = null;
     try {
@@ -193,13 +195,13 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
     prepared.push({
       check: selected.check,
       files: selected.files,
-      hashed,
-      hash: hashed === null ? null : inputHash(hashed, identityOf(selected.check)),
+      hashedFiles: hashed,
+      inputHash: hashed === null ? null : inputHash(hashed, identityOf(selected.check)),
     });
   }
 
   // ── the receipt skip ──────────────────────────────────────────────────────
-  const toRun: Prepared[] = [];
+  const toRun: CheckWithInput[] = [];
   for (const item of prepared) {
     // A method is not verification, so it has nothing to cache. Nothing mints a
     // receipt for one (they never pass), but a receipt is plain JSON that whoever
@@ -211,7 +213,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
       continue;
     }
 
-    if (item.hash === null) {
+    if (item.inputHash === null) {
       toRun.push(item);
       continue;
     }
@@ -225,7 +227,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
       receipt = null;
     }
 
-    if (shouldSkip(receipt, item.hash).skip) {
+    if (shouldSkip(receipt, item.inputHash).skip) {
       // The one skip worth recording. `selection.excluded` is a check that was never
       // going to run on this change; a RECEIPT skip is the gate choosing not to
       // re-verify something, which is the decision a reader of this log will want to
@@ -261,11 +263,11 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   // be reported with its reason. Reusing one of the existing reasons would be a lie
   // in the audit trail. Adding one is a change to the shared contract, i.e. a
   // conversation. Meanwhile the full report is also the more useful one.
-  const runOne = async (item: Prepared): Promise<CheckResult> => {
+  const runOne = async (item: CheckWithInput): Promise<CheckResult> => {
     const started = ports.clock.now().getTime();
-    let outcome: RunOutcome;
+    let outcome: CheckRun;
     try {
-      outcome = await ports.run(item.check, item.files);
+      outcome = await ports.runCheck(item.check, item.files);
     } catch (cause) {
       outcome = {
         outcome: {
@@ -299,7 +301,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   };
 
   const deterministic = toRun.filter((item) => item.check.kind === "deterministic");
-  const lenses = toRun.filter((item) => item.check.kind === "agent-lens");
+  const lenses = toRun.filter((item) => item.check.kind === "llm");
   // Everything else is a `method` (adr-0018) — prose an agent follows, which this
   // does not run and must not drop. The first version filtered for the two kinds
   // it knew and let a selected method vanish between them, which is worse than
@@ -335,7 +337,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   const receiptsWritten: string[] = [];
   const receiptErrors: ReceiptError[] = [];
   for (const item of toRun) {
-    if (item.hashed === null) continue; // no describable input, no receipt
+    if (item.hashedFiles === null) continue; // no describable input, no receipt
     if (results.get(item.check.id)?.outcome.status !== "pass") continue;
 
     try {
@@ -343,7 +345,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
         recordPass({
           checkId: item.check.id,
           check: identityOf(item.check),
-          files: item.hashed,
+          files: item.hashedFiles,
           at: ports.clock.now(),
         }),
       );

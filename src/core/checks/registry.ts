@@ -97,11 +97,11 @@ export function parseCheckFile(
     );
   }
 
-  // NON-NEGOTIABLE 2, and the only place it is decided. An `agent-lens` may hold
+  // NON-NEGOTIABLE 2, and the only place it is decided. An `llm` may hold
   // `block` only when a receipt describes THIS prompt against THESE fixtures and
   // passed. `blockAuthority` denies on every ambiguity, including the absent
   // evidence a forgetful caller produces.
-  if (parsed.data.kind === "agent-lens" && parsed.data.severity === "block") {
+  if (parsed.data.kind === "llm" && parsed.data.severity === "block") {
     const decision = blockAuthority(
       parsed.data.review_lens ?? "",
       evidence?.receipt ?? null,
@@ -109,7 +109,7 @@ export function parseCheckFile(
     );
     if (!decision.ok) {
       throw new Error(
-        `${filename}: agent-lens "${parsed.data.id}" declares severity: block but has not ` +
+        `${filename}: llm "${parsed.data.id}" declares severity: block but has not ` +
           `earned it — ${decision.reason}`,
       );
     }

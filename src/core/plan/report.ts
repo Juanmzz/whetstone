@@ -86,11 +86,11 @@ export function renderPlanPreview(preview: PlanPreview, plan: PlanSource): strin
     lines.push("", `  matched no declared path: ${preview.unmatched.join(", ")}`);
   }
 
-  if (preview.unknown.length > 0) {
+  if (preview.missingFromRegistry.length > 0) {
     // The REGISTRY is broken, not the plan — rule 3, one layer early.
     lines.push(
       "",
-      `  routed but missing from the registry: ${preview.unknown.join(", ")}`,
+      `  routed but missing from the registry: ${preview.missingFromRegistry.join(", ")}`,
       "  that is the check registry being wrong, not this plan",
     );
   }

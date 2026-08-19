@@ -178,6 +178,6 @@ git add .wst .claude AGENTS.md CLAUDE.md
 - Do not run `wst init --force` to get past a collision.
 - Do not register a mutating command as a check.
 - Do not set `core.hooksPath` where husky or lefthook already owns it.
-- Do not set an `agent-lens` to `severity: block`. It will refuse to load without a
+- Do not set an `llm` to `severity: block`. It will refuse to load without a
   calibration receipt, which needs `npm run calibrate` and ten runs per fixture.
 - Do not answer the risk question for the user. Draft it, argue it, let them sign it.

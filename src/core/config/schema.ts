@@ -11,7 +11,7 @@
 import { z } from "zod";
 
 /**
- * Which adapter runs `agent-lens` checks.
+ * Which adapter runs `llm` checks.
  *
  * One value ships. A second arrives with its own adapter, its own measured
  * invocation — none of `claude -p`'s flags transfer — and its own calibration,

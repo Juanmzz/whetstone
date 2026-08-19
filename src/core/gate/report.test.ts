@@ -15,7 +15,7 @@ import type { Selection } from "./select.js";
 
 const coverage = (over: Partial<Coverage> = {}): Coverage => ({ declined: [], ...over });
 
-const EMPTY_SELECTION: Selection = { selected: [], excluded: [], unknown: [], unmatched: [], declined: [] };
+const EMPTY_SELECTION: Selection = { selected: [], excluded: [], missingFromRegistry: [], unmatched: [], declined: [] };
 
 function result(
   checkId: string,

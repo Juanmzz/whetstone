@@ -191,7 +191,7 @@ something git is not needed for.
 
 ## 8. Naming, gate pipeline
 
-**open**
+**done**
 
 Found while reading `core/gate/` end to end.
 
@@ -376,7 +376,7 @@ Related and cheap: **regenerate the payload and diff it against this repo's own
 
 ## 14. Naming: `agent-lens` hides the distinction that matters
 
-**open**
+**done** · `llm`, clean break like the .sdd rename
 
 `KINDS = ["deterministic", "agent-lens", "method"]`. Two of the three begin with
 "agent", and the real difference is *who executes*:

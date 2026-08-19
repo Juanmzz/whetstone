@@ -38,7 +38,7 @@ const RULES: readonly TriageRule[] = [
 
 const REGISTRY = buildRegistry([
   check(),
-  check({ id: "correctness", kind: "agent-lens", severity: "warn", tiers: ["strict"], command: undefined, review_lens: "look for bugs" }),
+  check({ id: "correctness", kind: "llm", severity: "warn", tiers: ["strict"], command: undefined, review_lens: "look for bugs" }),
 ]);
 
 describe("declaredFiles", () => {
@@ -91,7 +91,7 @@ describe("previewPlan", () => {
     // passes the gate no matter what that lens says, and a report that filed it
     // under "covered" would be telling the reader they are protected.
     const lensOnly = buildRegistry([
-      check({ id: "correctness", kind: "agent-lens", severity: "warn", tiers: ["strict"], command: undefined, review_lens: "look for bugs" }),
+      check({ id: "correctness", kind: "llm", severity: "warn", tiers: ["strict"], command: undefined, review_lens: "look for bugs" }),
     ]);
     const preview = previewPlan(["src/core/a.ts"], RULES, "rules.yaml", lensOnly);
     expect(preview.advisoryOnly.map((p) => p.path)).toEqual(["src/core/a.ts"]);

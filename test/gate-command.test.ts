@@ -86,13 +86,13 @@ Fixture check.
 
 /**
  * `severity: warn`, and it has to be: the registry physically refuses to load an
- * agent-lens at `block` without a calibration receipt (non-negotiable 2), so
+ * llm at `block` without a calibration receipt (non-negotiable 2), so
  * there is no way to write this fixture wrong.
  */
 const LENS_CHECK = `---
 id: lens
-description: An agent-lens check.
-kind: agent-lens
+description: An llm check.
+kind: llm
 severity: warn
 tiers: [light, strict]
 include: ["src/**"]
@@ -455,8 +455,8 @@ describe("createCheckRunner", () => {
 
   const lensCheck: LoadedCheck = {
     id: "lens",
-    description: "An agent-lens check.",
-    kind: "agent-lens",
+    description: "An llm check.",
+    kind: "llm",
     severity: "warn",
     tiers: ["light"],
     include: ["src/**"],

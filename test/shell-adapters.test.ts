@@ -380,7 +380,7 @@ describe("loading the check registry", () => {
   const lens = (severity: string): string => `---
 id: correctness
 description: A review lens.
-kind: agent-lens
+kind: llm
 severity: ${severity}
 tiers: [strict]
 include: ["src/**"]

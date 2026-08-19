@@ -1,7 +1,7 @@
 /**
  * Calibration harness — ADR-0008's pre-registered kill criterion.
  *
- * The whole design rests on one unmeasured assumption: that an `agent-lens` verdict
+ * The whole design rests on one unmeasured assumption: that an `llm` verdict
  * is stable enough to gate on. A flaky check that blocks legitimate work is worse
  * than no check, because the user routes around it and the gate's value goes
  * negative.
@@ -50,8 +50,8 @@ async function loadLens(repoRoot: string, checkId: string): Promise<string> {
   const registry = await loadRegistry(definitionRoot(repoRoot));
   const check = registry.byId.get(checkId);
   if (!check) throw new Error(`no check "${checkId}" in ${DEFINITION_DIR}/checks/`);
-  if (check.kind !== "agent-lens" || check.review_lens === undefined) {
-    throw new Error(`check "${checkId}" is not an agent-lens check — nothing to calibrate`);
+  if (check.kind !== "llm" || check.review_lens === undefined) {
+    throw new Error(`check "${checkId}" is not an llm check — nothing to calibrate`);
   }
   return check.review_lens;
 }

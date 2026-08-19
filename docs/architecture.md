@@ -19,12 +19,12 @@ and the other is drift.
 - **The engine = CODE, deterministic.** Reads `.wst/`, classifies a change by glob, selects
   checks, runs them, enforces the gate, writes receipts and events, records signals, clusters a
   retro.
-- **The LLM = judgment only.** `agent-lens` checks, and proposing a new check. `src/core/`
+- **The LLM = judgment only.** `llm` checks, and proposing a new check. `src/core/`
   never calls one.
 
 | Deterministic — the engine | LLM — judgment only |
 |---|---|
-| triage classification · check selection · `wst plan` · running deterministic checks · enforcing the gate · receipt hashing · the event log · signal collection and clustering · emitting hooks | `agent-lens` checks · proposing a new check (human-gated) |
+| triage classification · check selection · `wst plan` · running deterministic checks · enforcing the gate · receipt hashing · the event log · signal collection and clustering · emitting hooks | `llm` checks · proposing a new check (human-gated) |
 
 Frugality is about VERIFICATION, not execution. The agent doing the work costs what it costs;
 Whetstone verifies frugally, triage-gated.
@@ -134,10 +134,10 @@ home in `core/` instead of accreting in `commands/`, which nothing guards.
 ## The check registry
 
 One file per check in `.wst/checks/`, YAML frontmatter plus prose. `id`, `kind`
-(`deterministic` | `agent-lens`), `severity` (`block` | `warn` | `annotate`), `tiers`,
+(`deterministic` | `llm`), `severity` (`block` | `warn` | `annotate`), `tiers`,
 `include`/`exclude` globs, `command` or `review_lens`, `origin`, `version`.
 
-**A judgment check earns its `block` at parse time.** An `agent-lens` declaring
+**A judgment check earns its `block` at parse time.** An `llm` declaring
 `severity: block` without a passing calibration receipt does not load. Authority comes from
 `<id>.calibration.json`, whose hashes the loader recomputes — not from a hand-typed field. The
 bar is 10/10 correct and unanimous on a known-good and a known-bad fixture, zero flips.

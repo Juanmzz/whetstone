@@ -157,7 +157,7 @@ describe("planInit — everything generated must load through the real loaders",
         .map((f) => parseCheckFile(f.path.replace(".wst/checks/", ""), f.contents));
       expect(() => buildRegistry(checks)).not.toThrow();
       for (const check of checks) {
-        if (check.kind === "agent-lens") expect(check.severity).not.toBe("block");
+        if (check.kind === "llm") expect(check.severity).not.toBe("block");
       }
     });
 

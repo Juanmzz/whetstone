@@ -114,20 +114,20 @@ describe("seedChecks — never seed a check that cannot run", () => {
   });
 });
 
-describe("seedChecks — the agent-lens rule", () => {
-  it("seeds no agent-lens check by default — apparatus is earned, not sprayed", () => {
+describe("seedChecks — the llm rule", () => {
+  it("seeds no llm check by default — apparatus is earned, not sprayed", () => {
     const kinds = load(seedChecks(tsRepo, seeded)).map((c) => c.kind);
-    expect(kinds).not.toContain("agent-lens");
+    expect(kinds).not.toContain("llm");
   });
 
   it("seeds one on request, uncalibrated and capped at warn", () => {
     const checks = load(seedChecks(tsRepo, { ...seeded, agentLens: true }));
-    const lens = checks.find((c) => c.kind === "agent-lens");
+    const lens = checks.find((c) => c.kind === "llm");
     expect(lens).toBeDefined();
     expect(lens?.severity).toBe("warn");
   });
 
-  it("NEVER emits an agent-lens check at severity block, whatever it is asked for", () => {
+  it("NEVER emits an llm check at severity block, whatever it is asked for", () => {
     // The schema would refuse it (no calibration receipt exists in a fresh repo),
     // so an init that emitted one would produce a repo whose registry will not load.
     const checks = load(
@@ -138,7 +138,7 @@ describe("seedChecks — the agent-lens rule", () => {
       }),
     );
     for (const check of checks) {
-      if (check.kind === "agent-lens") expect(check.severity).not.toBe("block");
+      if (check.kind === "llm") expect(check.severity).not.toBe("block");
     }
   });
 

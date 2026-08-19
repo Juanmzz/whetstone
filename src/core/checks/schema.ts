@@ -3,7 +3,7 @@
  *
  * The important design decision here: constitution non-negotiable 7 ("a judgment
  * check earns its `block`") is enforced AT PARSE TIME, not at run time. The registry
- * physically refuses to load an `agent-lens` check that declares `severity: block`
+ * physically refuses to load an `llm` check that declares `severity: block`
  * without a passing calibration receipt. A rule enforced by the schema cannot be
  * forgotten, worked around in a hurry, or lost when someone edits the gate.
  */
@@ -21,7 +21,7 @@ export const SEVERITIES = ["block", "warn", "annotate"] as const;
  * and tiers as everything else here, which is the whole reason it lives in this
  * registry instead of a second one.
  */
-export const KINDS = ["deterministic", "agent-lens", "method"] as const;
+export const KINDS = ["deterministic", "llm", "method"] as const;
 
 /**
  * Where the measurement lives, and a note for whoever reads the file.
@@ -64,7 +64,7 @@ const BaseCheck = z.strictObject({
 
   /** Required when kind === "deterministic". */
   command: z.string().min(1).optional(),
-  /** Required when kind === "agent-lens". Appended to the system prompt. */
+  /** Required when kind === "llm". Appended to the system prompt. */
   review_lens: z.string().min(1).optional(),
   calibration: CalibrationSchema.optional(),
 });
@@ -108,15 +108,15 @@ export const CheckSchema = BaseCheck.superRefine((check, ctx) => {
     return;
   }
 
-  // kind === "agent-lens"
+  // kind === "llm"
   if (check.review_lens === undefined) {
-    ctx.addIssue({ code: "custom", path: ["review_lens"], message: "an agent-lens check requires `review_lens`" });
+    ctx.addIssue({ code: "custom", path: ["review_lens"], message: "an llm check requires `review_lens`" });
   }
   if (check.command !== undefined) {
     ctx.addIssue({
       code: "custom",
       path: ["command"],
-      message: "an agent-lens check must not declare `command` — pick one kind",
+      message: "an llm check must not declare `command` — pick one kind",
     });
   }
 
