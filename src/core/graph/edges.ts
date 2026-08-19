@@ -2,25 +2,6 @@
  * The provenance graph, derived rather than stored.
  *
  * PURE. Text in, edges out — no filesystem, no database, no index.
- *
- * Whetstone's files already declare the relationships between a signal, a rule,
- * a check and a decision: `rule_affected` on a signal, `origin:` on a check, a
- * `sig-` id in a skill's prose. Nobody called that a graph, and because nothing
- * ever traversed it, two of those edges have been contradicting each other in
- * this repo without anything noticing.
- *
- * WHY DERIVE AND NOT STORE. adr-0001 refused the memory product — no embeddings,
- * no database, no index — and the core stays functional on files and grep. That
- * ruling is about *storing* a graph. Deriving one costs a parse of files the gate
- * already reads, and if it ever disagrees with them the files win, because the
- * files are what git holds.
- *
- * WHAT IS BORROWED. `Glitch-Cat-Club/graph-memory-starter` carries `source_doc`
- * on every relation — the edge knows which document asserted it. That single
- * field is what turns "two texts differ" into "this file is wrong", so it is on
- * every edge here. What is NOT borrowed is its extraction stage: it needs a model
- * to infer edges from prose because its corpus is prose. Whetstone's documents
- * declare their edges as fields, so there is nothing to infer.
  */
 
 import { DEFINITION_DIR } from "../paths.js";

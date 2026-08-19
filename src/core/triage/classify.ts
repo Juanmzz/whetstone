@@ -1,20 +1,5 @@
 /**
  * Triage classification — Layer 2, the first half. PURE.
- *
- * Turns `ChangedFile[]` + `TriageRule[]` into the one number the whole gate hangs
- * off: which discipline this change gets. Three rules, all from
- * `.wst/triage-rules.md`, and all of them load-bearing:
- *
- * 1. **First-match-wins, in rule order.** Order IS precedence. Not
- *    most-specific-wins: that would be an implicit ranking nobody wrote down,
- *    and reviewing a ruleset would mean simulating a resolver in your head.
- * 2. **The change's tier is the MAXIMUM across its files.** One `src/core/` file
- *    makes the whole change strict. Size only ever escalates, never de-escalates.
- * 3. **An unmatched file is `light`, not `off`.** A path the rules have never
- *    heard of is not evidence that it is trivial.
- *
- * `matches[]` records which rule won for each file, so a tier decision is
- * re-checkable months later without re-running anything.
  */
 
 import type { Tier } from "../checks/schema.js";

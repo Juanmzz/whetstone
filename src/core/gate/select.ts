@@ -1,15 +1,5 @@
 /**
  * Check selection — step one of the gate. PURE.
- *
- * Given a `Routing` (produced by triage) and the loaded registry, decide which
- * checks actually run and, for each, EXACTLY which changed files it matched. The
- * matched-file list is not decoration: it is the input to the receipt hash, so a
- * check that claims more files than it looked at would mint a receipt that vouches
- * for code it never saw.
- *
- * `Routing` is the seam with the triage lane. This module takes it as a parameter
- * and never imports `core/triage/` — the two are built in parallel, and a seam that
- * is a type rather than a call is what makes that safe.
  */
 
 import { matchesGlob } from "node:path";

@@ -1,28 +1,5 @@
 /**
  * `wst prepare <task>` — the briefing, and nothing after it.
- *
- *   lease a worktree -> branch it -> build the charter -> write it in -> print the path
- *
- * adr-0014 split `wst run` here and deleted the other half: dispatch a crewmate, wait
- * out a 30-minute timeout, gate what came back, release the worktree. The charter is
- * what survived: it renders *"what will gate your work"* from the registry and triage
- * rules AS THEY ARE RIGHT NOW, so it cannot go stale the way a hand-written prompt
- * does — the hardcoded version sent a crewmate in a foreign repo to two files that
- * were not there (sig-0041).
- *
- * NOTHING HERE RELEASES THE WORKTREE, on purpose. The lease is the human's from minute
- * zero; `treehouse return` belongs to whoever knows whether the work is finished, and
- * this process exits long before anyone does. That is ADR-0014's decision, not an
- * omission.
- *
- * There is also no gate here any more. Enforcement is the push: git config is shared
- * across worktrees (no `extensions.worktreeConfig`), so a crewmate pushing from a leased
- * worktree fires the same `pre-push` gate, and CI runs the full gate on the PR. Work
- * abandoned in a worktree is never gated — that is the cost ADR-0014 accepted, and it is
- * acceptable only because abandoned work does not land.
- *
- * Composition root: it wires adapters and sequences them. Every decision it makes lives
- * in `core/` (the charter); nothing is judged here.
  */
 
 import { execFile } from "node:child_process";
@@ -131,12 +108,7 @@ export async function runPrepare(
     });
 
     if (opts.json === true) {
-      // Both flags together. Silently printing prose because one of them won
-      // is how a caller ends up parsing a charter it asked for as data.
-      //
-      // The SAME envelope the real run emits. This branch used to hand-roll a
-      // second shape whose `charter` held the charter text where the other held
-      // its path — one key, two types, one command.
+      // Both flags together.
       console.log(
         JSON.stringify(
           prepareEnvelope({
@@ -179,12 +151,9 @@ export async function runPrepare(
     });
     const base = baseOut.trim();
 
-    // ASK BEFORE DESTROYING. Everything below this line resets a tree, moves a
-    // branch or overwrites a symlink, and every one of them trusts `cwd` — which
-    // `GIT_DIR` overrides. `sig-82dec46b` is what that costs: the main repository's
-    // index written twice by commands that believed they were elsewhere. Stripping
-    // the environment removes the cause that was found; this refuses to act on a
-    // target that cannot prove it is the target.
+    // ASK BEFORE DESTROYING. `sig-82dec46b` is what that costs: the main
+    // repository's index written twice by commands that believed they were
+    // elsewhere.
     await assertWorktreeAt(worktree.path);
     await exec("git", ["fetch", "--no-tags", repoRoot, base], {
       cwd: worktree.path,
@@ -243,11 +212,7 @@ export async function runPrepare(
     );
 
     // The workdir is treehouse's job, the charter is Whetstone's, and the WINDOW is
-    // nobody's here — that is the point. Handing the worktree back lets a human, a
-    // multiplexer or a harness supply the session, without Whetstone taking a
-    // dependency on any of them.
-    //
-    // A notary can prepare the file. It does not sit down and do the work.
+    // nobody's here — that is the point.
     if (opts.json === true) {
       // The three paths a caller acts on, without parsing English for them.
       console.log(

@@ -85,14 +85,6 @@ export function createGitAdapter(cwd: string = process.cwd()): GitPort {
     },
     async diffNameStatus(range: string) {
       // THROWS on a range git rejected, rather than reporting an empty diff.
-      //
-      // `git()` swallowing an error is right for the two calls above — "not a
-      // repository" and "detached HEAD" are answers. Here it produced the same
-      // bytes for "this range has no changes" and "this range does not exist", and
-      // the second is not an answer. `wst triage --range typo` reported
-      // `off — no files changed` and exit 0; every caller of this port already has
-      // a `catch` that says "could not read the diff for <range>", which is the
-      // sentence that sends someone to look at what they typed.
       const out = await git(["diff", "--name-status", range], cwd);
       if (out === null) {
         throw new Error(`git could not read the range \`${range}\` — check that it exists`);

@@ -1,17 +1,5 @@
 /**
  * What `init` would destroy. PURE.
- *
- * `init` writes files into somebody else's repository. Until this module existed the
- * only guard was on `.wst/` itself (`commands/init.ts`), so a repo that had never
- * seen Whetstone but did have a hand-written `AGENTS.md`, a `CLAUDE.md` and a
- * populated `.claude/settings.json` lost all three, silently, with no backup and no
- * mention in the output. The writer is `mkdir -p` + `writeFile`, unconditional.
- *
- * That is the worst shape a destructive bug can take: it fires on the FIRST command
- * a new user runs, on the repo they were evaluating the tool with, and the files it
- * takes are exactly the ones a careful team hand-maintains.
- *
- * The fs check belongs to the caller. This decides what a collision MEANS.
  */
 
 import { DEFINITION_DIR, DEFINITION_DIR_PATTERN } from "../paths.js";

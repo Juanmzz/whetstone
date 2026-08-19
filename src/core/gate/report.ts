@@ -1,16 +1,5 @@
 /**
  * Rendering the gate run, and turning it into an exit code. PURE.
- *
- * This is not cosmetics. The gate's whole value rests on a human trusting what it
- * says, so the report has one job beyond listing outcomes: never let a reader
- * conclude "verified" from something that was not. Three states get separate words
- * on purpose —
- *
- *   blocked     a check ran and said no
- *   incomplete  a check that could have blocked never ran — we do not know
- *   passed      everything that applied actually ran and agreed
- *
- * and "no checks applied" is reported as itself rather than dressed up as a pass.
  */
 
 import type { CheckResult, GateVerdict } from "../contracts.js";
@@ -94,20 +83,9 @@ export function outcomeOf(verdict: GateVerdict, coverage: Coverage): GateOutcome
   if (lostGating(verdict)) return "incomplete";
   if (verifiedSomething(verdict)) return "passed";
 
-  // Everything below is "nothing was verified". `uncovered` is the narrow case
-  // where that is nobody's doing and nothing can be done about it — and it is
-  // narrow, because it exits 0. Every way of arriving here that HAS a remedy has
-  // to be named above it, or the remedy never gets applied.
-  //
-  // An errored check of ANY severity tried and broke — the gate, not the
-  // coverage, even when the check was only advisory.
+  // Everything below is "nothing was verified".
   if (verdict.results.some((r) => r.outcome.status === "errored")) return "incomplete";
   // A check switched off means the change HAD coverage and someone declined it.
-  // Two ways in, and they arrive differently: `--no-lens` produces a `skipped`
-  // RESULT, while `enabled: false` is dropped by `route()` before selection and
-  // produces nothing at all. The second was unreachable through the results, so
-  // it fell to `uncovered` and exit 0 — a change nobody looked at, reported as
-  // fine. `coverage.declined` is how the second one gets here.
   if (verdict.results.some((r) => r.outcome.status === "skipped" && r.outcome.reason === "disabled"))
     return "incomplete";
   if (coverage.declined.length > 0) return "incomplete";

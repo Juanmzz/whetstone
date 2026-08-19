@@ -91,15 +91,6 @@ export function clusterSignals(signals: readonly Signal[]): readonly Cluster[] {
   }));
 
   // Drop a `type:` cluster whose signals are entirely covered by a `rule:` cluster.
-  // The same signal legitimately lands in both, so without this the retro pays for
-  // two LLM proposals over identical evidence and hands the human a duplicate.
-  //
-  // ONE DIRECTION ONLY. `rule_affected` is the strongest axis (retro.md §2): a rule
-  // names the thing that would actually be amended, while `type:` is a label. An
-  // earlier version dropped whichever cluster was smaller, and a catch-all
-  // `type:generic` bucket promptly swallowed the rule clusters that were the entire
-  // point. Two rule clusters never subsume each other either — different rules are
-  // different remediation targets even on identical evidence.
   const ruleClusters = clusters.filter((c) => c.key.startsWith("rule:"));
   const kept = clusters.filter((cluster) => {
     if (cluster.key.startsWith("rule:")) return true;

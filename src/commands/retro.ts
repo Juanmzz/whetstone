@@ -4,11 +4,6 @@
  *   cursor -> new signals -> cluster (ENGINE) -> recommend (LLM) -> anti-poisoning
  *   gate (ENGINE) -> propose to a human (NEVER applied automatically)
  *
- * The gate in the middle is the point. The recommendation is agent-generated, so a
- * human gate alone is not enough: a plausible proposal citing a signal that never
- * happened is exactly what a tired reviewer approves. The machine checks its own
- * evidence first, and a proposal that fails never reaches the human.
- *
  * This command NEVER writes to a skill, a hook, or an ADR. It writes a proposal file.
  * Applying it is a human act — constitution non-negotiable 3.
  */
@@ -165,11 +160,6 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   let cost = 0;
 
   // One line per cluster, not one for the whole loop.
-  //
-  // Each iteration is a judge call at up to 3 attempts against a 120s timeout,
-  // so ten clusters is an hour in the worst case. Printed once before the loop,
-  // that is an hour of silence, which is indistinguishable from a hang — and it
-  // got killed in the field, losing every proposal already paid for.
   console.log(`\n  proposing over ${actionable.length} cluster(s)...`);
   for (const [index, cluster] of actionable.entries()) {
     console.log(`    [${index + 1}/${actionable.length}] ${cluster.key}`);
@@ -239,11 +229,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   }
   console.log(`  cost: $${cost.toFixed(4)}`);
 
-  // The cursor is written HERE, not asked for. It is a mechanical fact — "this
-  // run processed up to sig-x" — and leaving it to a human means the first
-  // forgotten copy makes the next retro reprocess everything and pay again.
-  // What the human owns is the sentence underneath: what was applied, and what
-  // was refused.
+  // The cursor is written HERE, not asked for.
   const cursorId = fresh[fresh.length - 1]?.id ?? cursor ?? "";
   let logged = false;
   if (cursorId !== "") {

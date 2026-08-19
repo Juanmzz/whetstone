@@ -5,25 +5,8 @@
  * walking and reading. That is what makes "a repo with no tests seeds no test
  * check" a unit test instead of a fixture directory.
  *
- * ## What this module is allowed to know
- *
  * It reads what a repo DECLARES about itself and nothing else — scripts, lockfile,
  * whether a test file exists. Why declared beats inferred: adr-0016.
- *
- * WHAT USED TO LIVE HERE, and why it is gone: a file-extension table that decided
- * `language`, a list of fashionable directory names that decided `sourceGlobs`, a
- * five-entry marker table that decided `ci`, and a regex over recent commit
- * subjects that decided whether a project "uses Conventional Commits". All four
- * were inference, and inference breaks on the stack nobody tabulated — `sig-0041`
- * is what that costs from inside a foreign repo. Those facts are asked now, of a
- * human through the interview or of an agent through `--propose`.
- *
- * The second rule, and it survives unchanged: **never infer a command that might
- * not exist.** A seeded check whose `command` cannot run does not fail the build
- * in a legible way — it makes the gate `errored` on every single run, which reads
- * as "the gate is broken" and gets the gate switched off. So every command below
- * is either read from the project's own scripts or is one the manifest's own
- * toolchain guarantees.
  */
 
 export interface PackageJson {

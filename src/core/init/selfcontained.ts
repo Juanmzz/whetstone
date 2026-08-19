@@ -1,25 +1,5 @@
 /**
  * ADR-0004, enforced instead of remembered.
- *
- * Everything `init` writes travels into someone else's repository. A generated
- * sentence that says "see `docs/PARALLEL.md`" or "copy the skills from
- * Whetstone's `.wst/skills/`" produces a reference to a file that does not exist
- * there. The reader — usually an agent — then either invents the missing content
- * or drops the rule, and both failures are silent.
- *
- * This is not hypothetical. It has already happened in this project: a shipped
- * skill cited `OPEN_QUESTIONS.md`, a Whetstone-only file. The Wizard-of-Oz
- * `AGENTS.md` template carries the same bug today, telling the target repo to
- * "run the retro (see `retro.md`)" — a document that only exists here.
- *
- * Two rules, and the second is the one that keeps working as the payload grows:
- *
- * 1. **Deny-list.** Named Whetstone-only artefacts, and possessive references to
- *    its tree. Catches the cases a generic rule cannot see.
- * 2. **Reference closure.** Every `.wst/…` and `.claude/…` path mentioned in
- *    generated content must be a path the plan actually creates. This one needs no
- *    maintenance: add a reference to a file init stopped writing and it fails on
- *    its own, which is exactly what a hand-maintained list never does.
  */
 
 import { DEFINITION_DIR, DEFINITION_DIR_PATTERN } from "../paths.js";
@@ -72,11 +52,10 @@ const DENY: readonly DenyRule[] = [
     pattern: /\bSPEC\s*§\s*[\d.]+/g,
     why: "a section of Whetstone's own SPEC, which does not travel",
   },
-  // DELIBERATELY ABSENT: `sig-NNNN`. A signal id in the payload is never a
-  // pointer a reader is expected to follow — it appears as a label beside its
-  // own description ("`sig-0002` (the emitter wrote both files byte-identical)"),
-  // so the sentence still carries its meaning where the id resolves to nothing.
-  // A decision id is the opposite: "per `adr-0001`" is only the pointer.
+  // DELIBERATELY ABSENT: `sig-NNNN`. A signal id in the payload is never a pointer
+  // a reader is expected to follow — it appears as a label beside its own
+  // description ("`sig-0002` (the emitter wrote both files byte-identical)"), so
+  // the sentence still carries its meaning where the id resolves to nothing.
   {
     pattern: /\blanes\.yaml\b/g,
     why: "Whetstone's own lane ownership file",

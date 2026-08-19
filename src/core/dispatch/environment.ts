@@ -2,26 +2,6 @@
  * How a leased worktree differs from the tree it was cut from.
  *
  * PURE. Paths in, gaps out.
- *
- * A worktree contains what git tracks and nothing else. Everything ignored stays
- * behind, and `prepare` links one directory — the root `node_modules` — which is
- * a good default and not the whole story. Nothing reported the remainder, so the
- * difference surfaced later as a failure that looked like the worker's fault.
- *
- * Two shapes of it, both observed in one day of real use:
- *
- * - **Nested dependencies.** npm hoists most packages to the root but a workspace
- *   keeps its own. The worktree has neither, so a BLOCKING typecheck fails with
- *   `Cannot find module` in a file the worker never opened. Someone symlinked them
- *   by hand to get moving.
- * - **Absent environment.** `.env` is ignored, so it does not travel. Tests that
- *   self-skip without a key then PASS in the worktree and FAIL for whoever pulls
- *   the branch. A green that means "skipped" is the worst kind.
- *
- * WHAT THIS DOES NOT DO: fix either. Copying a `.env` into a worktree moves a
- * secret somewhere its owner did not put it, and linking every nested directory
- * guesses at a package manager's layout — the inference adr-0016 took out of
- * `init`. Naming the gap costs nothing and turns a mystery into a decision.
  */
 
 export type GapKind =

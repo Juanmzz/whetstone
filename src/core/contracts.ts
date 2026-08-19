@@ -1,17 +1,6 @@
 /**
  * Shared domain types for the gate pipeline. SHARED CONTRACT — owned by the
  * orchestrator, not by any lane.
- *
- * This file exists because of what Step 1 taught: the check schema had to be fixed
- * BEFORE triage and receipts could be built in parallel, or each lane would have
- * invented it and collided in the one place that hurts most. Triage and the gate
- * have the same relationship, so the seam between them is written down first.
- *
- * The pipeline these describe:
- *   git diff -> ChangedFile[] -> classify() -> TriageResult
- *                                           -> route() -> Routing
- *                                           -> select checks -> receipts skip?
- *                                           -> run -> CheckResult[] -> aggregate() -> GateVerdict
  */
 
 import type { ChangedFile } from "./diff/parse.js";

@@ -1,19 +1,5 @@
 /**
  * `wst signal` — a human records an observation, at the moment they have it.
- *
- * A composition root, nothing more: read the branch from git, hand the observation
- * to `core/signals/human.ts`, write what comes back. Every decision about what a
- * valid signal is lives there, where the tests can reach it.
- *
- * **This is the only command that may write to memory, and the reason is narrow:**
- * the human typed it, which IS [RC3]'s human gate (`.wst/skills/recording.md`).
- * Nothing else inherits that. An agent that thinks it has spotted a signal still
- * proposes it and waits — including an agent that could technically run this
- * command, since a gate discharged by "an agent ran the human's tool" is not a gate.
- *
- * That last sentence used to be a hope. `humanIsAtTheKeyboard` is where it becomes
- * a check: this layer is the one that can see a terminal, so it is the one that
- * decides whether the record may claim `source: "human"` at all.
  */
 
 import { access } from "node:fs/promises";
@@ -114,17 +100,8 @@ export async function runSignal(
     return 0;
   }
 
-  // `.wst/` must already be there. `appendSignalRecord` creates its parents, so
-  // without this check an uninitialised repo gets a fabricated memory tree and a
-  // success message — and every other command that touches `.wst/` calls that
-  // misconfigured and exits 2. It gets worse downstream: `core/init/plan.ts` plans
-  // this exact path, so the stray file makes `wst init` refuse to bootstrap, and
-  // `init --force` overwrites it, deleting the human's only copy of what they saw.
-  //
-  // A repo still holding the OLD directory gets the migration message rather than
-  // "run `wst init` first" (ADR-0012). Following that advice here would refuse on
-  // a collision, or with `--force` overwrite the signal log this command exists to
-  // append to — losing exactly the record the human is standing here trying to make.
+  // `.wst/` must already be there. A repo still holding the OLD directory gets the
+  // migration message rather than "run `wst init` first" (ADR-0012).
   let root: string;
   try {
     root = await resolveDefinitionRoot(repoRoot);

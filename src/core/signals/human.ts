@@ -1,28 +1,5 @@
 /**
  * A signal a HUMAN recorded, built and validated. PURE.
- *
- * Why this exists. Every one of the 45 entries in this repo's log was typed by an
- * agent into a file, because that was the only route: no command, no validation,
- * just JSON and a steady hand. The engine emits its own signals now, and the human
- * — who notices the things a gate cannot express and whose observation is the best
- * evidence the log ever gets — still had the worst tool of anyone.
- *
- * The write is legitimate because the human TYPED IT. That is [RC3]'s gate
- * discharged in the most direct form it has: not an agent proposing and a human
- * confirming, but the human authoring. Nothing else in the system inherits that
- * right from this file — an agent that thinks it has a signal still proposes.
- *
- * Which is why `source: "human"` is EVIDENCED, not assumed. `wst` is on a
- * crewmate's PATH, so calling this function proves nothing about who called it;
- * an agent minting the log's strongest provenance class is the hallucinated-
- * signal-becomes-a-rule path the anti-poisoning gate exists to block. The caller
- * passes what it observed (`attested`), and an unevidenced record still keeps
- * every word — it just says `cli`, which is all anyone can back.
- *
- * Validation is here rather than in the command because it is deterministic and it
- * is where the damage is done: `type` and `severity` are what the retro clusters
- * and ranks on, so a typo in either one is not a cosmetic problem, it is a signal
- * that quietly never joins the group it belongs to.
  */
 
 import { DEFINITION_DIR } from "../paths.js";
@@ -166,12 +143,6 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
       // `human` is NOT `gate`, and not absent either: absent is what the
       // agent-written entries look like, and blending a human's observation into
       // those loses the only provenance distinction the log has.
-      //
-      // But it is only written when something evidenced a human. Unattested, the
-      // record still says where it came from — the CLI — and says nothing it
-      // cannot back. The observation is kept; only the claim about who made it is
-      // dropped, because a retro that treats an agent's line as first-class human
-      // evidence is exactly the poisoning route the [RC3] gate exists to close.
       source: input.attested ? "human" : "cli",
     },
   };

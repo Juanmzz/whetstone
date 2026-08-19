@@ -1,19 +1,5 @@
 /**
  * Triage routing — Layer 2, the second half. PURE.
- *
- * Turns a tier into the operating envelope for the change: which checks run, who
- * signs off, which model does the judging, and whether a failure may be patched
- * up automatically.
- *
- * THE PRINCIPLE: **autonomy is inverse to criticality.** The most consequential
- * changes keep a human in the loop and are never auto-fixed; the trivial ones go
- * to the cheapest model and are left alone. Inverting either half is how an
- * autonomous agent quietly "fixes" the engine that decides whether its own work
- * is acceptable — and an autofix on a strict change is a second, unreviewed
- * change smuggled in under the first one's review.
- *
- * The frugality half is the same table read the other way (`docs/architecture.md`):
- * opus judgment is spent only where a wrong verdict is expensive.
  */
 
 import type { Check, Tier } from "../checks/schema.js";

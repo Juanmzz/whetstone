@@ -2,17 +2,7 @@
  * The `claude` adapter — the only place in Whetstone that spawns an LLM.
  *
  * THE FLAG SET IS LOAD-BEARING. Every flag below was measured against claude
- * v2.1.224; see `docs/architecture.md` for the evidence table. Do not "simplify" it:
- *
- *  - `--strict-mcp-config --mcp-config {}` + `--settings {hooks:{}}` make the call
- *    HERMETIC. Without them the child inherits the caller's MCP servers, plugins and
- *    SessionStart hooks: measured at 140,682 input tokens / $0.84 for a one-word
- *    answer, versus ~11.4k / $0.03-0.08 hermetic. This is the frugality thesis.
- *  - `--append-system-prompt`, never `--system-prompt`. Replacing the system prompt
- *    made the model leak tool-call markup into schema-valid fields.
- *  - NOT `--bare`: it forces ANTHROPIC_API_KEY and never reads OAuth, which would
- *    bill separately and lose the subscription cost advantage.
- *  - Prompt on stdin — diffs exceed argv limits.
+ * v2.1.224; see `docs/architecture.md` for the evidence table. Do not "simplify" it.
  */
 
 import { execFile } from "node:child_process";
@@ -73,17 +63,6 @@ const invokeClaude: SingleShot = async (req, _attempt): Promise<RawInvocation> =
   const started = Date.now();
   const child = run("claude", buildArgs(req), {
     // A NEUTRAL directory, not the repo under review.
-    //
-    // Auto-memory is indexed BY DIRECTORY, and no flag turns it off (`--bare` does,
-    // but it forces ANTHROPIC_API_KEY and abandons OAuth — see the header). Standing
-    // in the target repo therefore loads that repo's memory index into the judge:
-    // measured, a line reading "uses sift-app as a tutor-mode sandbox" reached a
-    // verdict about sift-app and shaped it.
-    //
-    // The judge has no use for a working directory anyway. Hard rule 9 already
-    // requires everything it must judge to be INLINED, precisely because a hermetic
-    // call cannot resolve a path. A judge standing inside the repo it judges was
-    // always the wrong posture; now it is also a measured leak.
     cwd: tmpdir(),
     timeout: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     maxBuffer: MAX_BUFFER,
@@ -95,11 +74,8 @@ const invokeClaude: SingleShot = async (req, _attempt): Promise<RawInvocation> =
 
   // The CLI exits NON-ZERO on its own terminal errors — notably
   // `error_max_budget_usd` — while still writing a complete, parseable envelope to
-  // stdout. execFile rejects on that exit code, so discarding stdout here made every
-  // such case surface as `spawn` ("could not run the check") when the truth was
-  // "ran out of budget". That is precisely the distinction the gate works to
-  // preserve, destroyed one layer below it. Measured: exit 1, stdout carries
-  // {is_error:true, subtype:"error_max_budget_usd", total_cost_usd:0.607}.
+  // stdout. Measured: exit 1, stdout carries {is_error:true,
+  // subtype:"error_max_budget_usd", total_cost_usd:0.607}.
   let stdout: string;
   try {
     ({ stdout } = await child);

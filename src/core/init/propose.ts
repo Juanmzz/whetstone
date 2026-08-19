@@ -1,27 +1,6 @@
 /**
  * The draft. PURE — the prompt, the schema, and what a proposal is allowed to
  * become. The shell makes the call; nothing here spawns anything.
- *
- * ## Why the judge proposes and never decides
- *
- * Why a model may argue but not sign: adr-0003. The distinction that makes it safe is
- * between DECIDING and ARGUING — "where is a bug expensive here?" is not a fact about
- * the code, it is a declaration of what the owner is willing to lose, and everything
- * downstream hangs off it. `init` was the last command not following that shape.
- *
- * ## Evidence over assertion, enforced by the type
- *
- * A risk flag arrives with the paths that justify it, and a flag citing nothing is
- * DROPPED — not trusted, not kept with a caveat. It IS reported, as
- * `DISCARDED for lack of evidence`, which is harsher than a warning and is the point:
- * a confident `money: true` with no path behind it would arrive dressed as a finding.
- *
- * ## The hermetic constraint (hard rule 9)
- *
- * The judge runs with `--tools ""` and no filesystem — it cannot open one file. So
- * everything it must reason over is INLINED here. A prompt that says "read the
- * README" produces a confident answer about a repo the model never saw, which is
- * worse than no answer because it is indistinguishable from a real one.
  */
 
 import { z } from "zod";

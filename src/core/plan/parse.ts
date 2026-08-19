@@ -5,17 +5,6 @@
  * **`wst plan` reads a plan; it does not write one** (adr-0013). So there is no
  * inference here — no guessing paths from a task description, no model. A path is in
  * the plan because somebody wrote it down.
- *
- * The format is markdown with YAML frontmatter, which is what every other
- * human-written artifact in this repo already uses (ADRs, check files, the skills).
- * `paths:` is the machine-readable half; the body is prose for the human, and the
- * engine never reads it.
- *
- * FAILS CLOSED, like `diff/parse.ts` and for the same reason turned around. There, a
- * dropped line leaves a file ungated. Here, a path this parser accepts but the glob
- * engine can never match is worse than a rejection: the tier still gets computed, the
- * report still prints, and the answer is confidently wrong. Anything that would
- * quietly degrade the prediction is therefore an error, not a warning.
  */
 
 import { parse as parseYaml } from "yaml";

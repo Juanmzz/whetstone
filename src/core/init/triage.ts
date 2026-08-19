@@ -1,17 +1,5 @@
 /**
  * The triage compiler: one rule list, three renderings.
- *
- * `.wst/triage-rules.md` (the human table), `.wst/triage.yaml` (what the engine
- * parses) and `.claude/hooks/strict-path-guard.mjs` (what the editor enforces)
- * are ONE source rendered three ways. In the Wizard-of-Oz era the table was the
- * source and the other two were compiled from it by hand, which is exactly the
- * drift ADR-0005 names — so here the `TriageRule[]` is the source and all three
- * are outputs of the same function call.
- *
- * The hard constraint on the YAML renderer: whatever it writes must parse back
- * through `parseTriageRules` to the rules it was given, EXACTLY. A generator that
- * emits a document its own loader rejects ships a repo that cannot triage, and
- * the failure surfaces on someone else's first change, not on ours.
  */
 
 import type { TriageRule } from "../contracts.js";

@@ -1,15 +1,5 @@
 /**
  * The crewmate charter. PURE — builds the prompt a dispatched agent starts from.
- *
- * The asymmetry worth understanding: when Whetstone runs a REVIEW LENS it makes the
- * call hermetic, stripping the target repo's `AGENTS.md`, MCP servers and hooks so a
- * repo cannot hijack its own reviewer. A CREWMATE is the exact opposite — `.wst/` IS
- * its charter and must be loaded. Same binary, opposite flags. See
- * `docs/architecture.md` and `src/shell/claude.ts`.
- *
- * The charter is a MAP, not a copy. Inlining the constitution into every crewmate
- * prompt is exactly the waste `token-economy` exists to stop; the crewmate can read
- * the files itself, and it has tools to do so.
  */
 
 import type { Check } from "../checks/schema.js";
