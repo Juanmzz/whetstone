@@ -24,7 +24,7 @@ import {
 } from "../core/retro/propose.js";
 import { createGitAdapter } from "../shell/git.js";
 import { createClaudeJudge } from "../shell/claude.js";
-import { readCursor, readSignals, writeProposals } from "../shell/retro.js";
+import { countRetros, readCursor, readSignals, writeProposals } from "../shell/retro.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { readdir, readFile } from "node:fs/promises";
@@ -164,8 +164,15 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   const rejected: { rec: Recommendation; reasons: readonly string[] }[] = [];
   let cost = 0;
 
-  console.log(`\n  proposing...`);
-  for (const cluster of actionable) {
+  // One line per cluster, not one for the whole loop.
+  //
+  // Each iteration is a judge call at up to 3 attempts against a 120s timeout,
+  // so ten clusters is an hour in the worst case. Printed once before the loop,
+  // that is an hour of silence, which is indistinguishable from a hang — and it
+  // got killed in the field, losing every proposal already paid for.
+  console.log(`\n  proposing over ${actionable.length} cluster(s)...`);
+  for (const [index, cluster] of actionable.entries()) {
+    console.log(`    [${index + 1}/${actionable.length}] ${cluster.key}`);
     const result = await judge.judge({
       lens: LENS,
       prompt: await describeCluster(cluster, definitionRoot, skillIndex),
@@ -176,9 +183,10 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
     cost += result.costUsd;
 
     if (!result.ok) {
-      console.log(`    ${cluster.key}: no proposal (${result.error.kind})`);
+      console.log(`        no proposal (${result.error.kind}) · $${cost.toFixed(4)} so far`);
       continue;
     }
+    console.log(`        proposed · $${cost.toFixed(4)} so far`);
 
     const rec: Recommendation = { clusterKey: cluster.key, ...result.value };
     // THE ANTI-POISONING GATE. Validated against the FULL log, not the cluster,
@@ -205,7 +213,10 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
     lines.push(``);
   }
 
-  const retroId = `retro-${String(all.length).padStart(4, "0")}`;
+  // The Nth retro, counted from the log's own entries. It used to be the SIGNAL
+  // count, so the first retro in a repo with ten signals wrote `retro-0010.md`,
+  // and two retros at the same count overwrote each other.
+  const retroId = `retro-${String((await countRetros(definitionRoot)) + 1).padStart(4, "0")}`;
   const path = await writeProposals(definitionRoot, retroId, lines.join("\n"));
 
   if (opts.json === true) {

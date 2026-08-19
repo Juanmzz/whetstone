@@ -22,7 +22,7 @@ import { assertWorktreeAt, createGitAdapter } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
 import { describePlugin } from "../src/shell/plugin.js";
 import { readReceipt, receiptPath, writeReceipt } from "../src/shell/receipts.js";
-import { readCursor, readSignals } from "../src/shell/retro.js";
+import { countRetros, readCursor, readSignals, writeProposals } from "../src/shell/retro.js";
 import { loadRegistry, loadTriageRules, resolveDefinitionRoot } from "../src/shell/sdd.js";
 import { createTreehouseAdapter } from "../src/shell/treehouse.js";
 import { emptyPath, installFakeBin, restorePath } from "./fake-bin.js";
@@ -531,6 +531,71 @@ describe("the retro cursor", () => {
 
   it("is null when no retro has run", async () => {
     expect(await readCursor(await temp("wst-retro-"))).toBeNull();
+  });
+
+  it("reads a hex signal id, which is the format every id has since sig-0046", async () => {
+    // The pattern was `sig-\d+`, digits only. Ids moved to hex and the cursor
+    // silently stopped matching, so every retro reprocessed the whole log and
+    // billed for it again. Broken in this repo and in the field.
+    const root = await temp("wst-retro-");
+    await mkdir(join(root, "memory"), { recursive: true });
+    await writeFile(join(root, "memory/retro-log.md"), "## retro-0049\ncursor: sig-cb978aef\n", "utf-8");
+
+    expect(await readCursor(root)).toBe("sig-cb978aef");
+  });
+
+  it("reads a cursor that carries a summary after it", async () => {
+    // The real log writes `cursor: sig-x · 24 signals · 9 clusters · $0.72`.
+    // Anchoring at end-of-line rejected exactly the lines the retro itself emits.
+    const root = await temp("wst-retro-");
+    await mkdir(join(root, "memory"), { recursive: true });
+    await writeFile(
+      join(root, "memory/retro-log.md"),
+      "## retro-0049\ncursor: sig-cb978aef \u00b7 24 signals \u00b7 9 clusters, 7 actionable \u00b7 $0.7283\n",
+      "utf-8",
+    );
+
+    expect(await readCursor(root)).toBe("sig-cb978aef");
+  });
+
+  it("takes the newest cursor even when an older one is the only parseable line", async () => {
+    // What actually happened: the newest entry was unreadable on both counts, so
+    // `.pop()` fell back to a numeric cursor two retros stale and the run
+    // re-proposed over signals already handled.
+    const root = await temp("wst-retro-");
+    await mkdir(join(root, "memory"), { recursive: true });
+    await writeFile(
+      join(root, "memory/retro-log.md"),
+      "## retro-0025\ncursor: sig-0025\n\n## retro-0049\ncursor: sig-cb978aef \u00b7 24 signals\n",
+      "utf-8",
+    );
+
+    expect(await readCursor(root)).toBe("sig-cb978aef");
+  });
+
+  it("numbers a retro by how many have run, not by how many signals exist", async () => {
+    // `retro-${signalCount}` made the FIRST retro in a repo with ten signals
+    // write `retro-0010.md`, and two retros at the same count overwrote each
+    // other's proposals.
+    const root = await temp("wst-retro-");
+    await mkdir(join(root, "memory"), { recursive: true });
+    expect(await countRetros(root)).toBe(0);
+
+    await writeFile(
+      join(root, "memory/retro-log.md"),
+      "# Retro log\n\n## retro-0001\ncursor: sig-0010\n\n## retro-0002\ncursor: sig-0026\n",
+      "utf-8",
+    );
+
+    expect(await countRetros(root)).toBe(2);
+  });
+
+  it("refuses to overwrite a proposal nobody applied yet", async () => {
+    // Replacing a file silently is the expensive way to learn the id collided.
+    const root = await temp("wst-retro-");
+    await writeProposals(root, "retro-0001", "first");
+
+    await expect(writeProposals(root, "retro-0001", "second")).rejects.toThrow(/already exists/);
   });
 
   it("reads a missing signal log as empty, and a corrupt one as a stop", async () => {
