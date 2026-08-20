@@ -132,4 +132,17 @@ sitting. They stay for the next window rather than being applied unread.
 
 cursor: sig-6406e533 · 54 signals · 3 clusters, 2 actionable · $0.1825
 
-_Proposals written, none applied. Replace this line with what was accepted and refused._
+**Applied.** Proposal 1 — `docs-fresh` gained `npm run fix:docs`, which writes the counts
+instead of only asserting them. Two gate-blocked signals a day apart are the same root
+cause, and the check version had already bumped once between them: a reminder is not the
+fix for bookkeeping that is one file operation away. Narrowed on the way in — the gate
+still only checks, because a fix running inside it would rewrite the tree after the commit
+it was judging already existed, and in CI would write to a runner nobody keeps.
+
+**Refused, already satisfied.** Proposal 2 asked for a changelog line in `tdd-discipline`
+recording why the two-commit ceremony was retired, on the grounds that "the Changelog
+section only documents v6". It does not: v5 (2026-08-14) carries that entry with
+`sig-e8dfefd0` as its receipt — the same signal the proposal cites. The retro read the
+rule text closely enough to refuse restating it, and then missed the changelog it was
+proposing to write. Worth noting as a failure mode: a proposal's claim about what a file
+lacks is checkable, and nothing checks it.

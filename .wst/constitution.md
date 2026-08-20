@@ -26,8 +26,18 @@ keeping the core small, not about financial correctness.
 
 1. **Files-first.** All state is plain text in git. The core must be fully functional with
    the file backend alone. No required servers or databases.
-2. **Memory is an interface.** `save` / `search` / `summarize` is the only contract the core
-   depends on. Never fork or hard-depend on a specific backend (engram included).
+2. **Memory is an interface.** The core depends on `MemoryPort` and never on a backend —
+   no forking, no hard dependency, engram included. The port carries the verbs that have a
+   live caller and nothing else; which ones those are is read from the port, not from here.
+
+   > Amended 2026-08-20. This clause named `save` / `search` / `summarize` as the contract.
+   > It was wrong on two of the three and had been since `adr-0001`'s 2026-07-11 survey ruled
+   > `summarize` out as a per-adapter verb — it is core-owned as `render(search(scope))`, and no
+   > surveyed backend exposes prose synthesis. `search` has no caller yet and is deliberately
+   > absent (`adr-0015`: *"declare three verbs, implement two, and let `summarize` throw"*).
+   > `MemoryPort` ships `save` and `all`. Pinning a verb list in a document nobody executes is
+   > the same failure as `AGENTS.md`'s status block, which needed a check to stop lying; the
+   > list is removed rather than corrected so it cannot go stale a second time.
 3. **Human-in-the-loop.** The retro proposes; a human disposes. No autonomous rule writes.
    Applied triage-gated on the forward path: critical changes keep a human gate, trivial ones do not.
 4. **Rules carry receipts.** Every rule — and every check — cites the signals/decisions that created it.
