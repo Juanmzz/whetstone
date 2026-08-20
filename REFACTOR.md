@@ -297,6 +297,11 @@ environment. So this is one call site, not a pattern.
 
 **done** · two verbs, one `files` adapter, and it collapsed the duplicate signal reader
 
+**Left open by it:** the constitution still names three verbs (`save` / `search` /
+`summarize`) at non-negotiable 2, and the port ships two. The code is right and the
+constitution is stale — but it is the constitution, so the amendment is a human act,
+not a drive-by edit. Found 2026-08-20.
+
 Non-negotiable 2 says memory is an interface — `save` / `search` / `summarize` —
 and that nothing may hard-depend on a backend, engram included. Today
 **`MemoryPort` does not exist** and `wst.yaml` has a `backend:` key selecting

@@ -10,8 +10,8 @@ include:
   - ".wst/memory/decisions.md"
   - ".wst/memory/signals.jsonl"
 command: npm run check:docs
-origin: [adr-0002, adr-0017, adr-0019]
-version: 3
+origin: [adr-0002, adr-0017, adr-0019, sig-a9ff00c4, sig-5c2d6751]
+version: 4
 ---
 
 `AGENTS.md` carries a warning saying it has gone stale four times, calls the drift
@@ -46,8 +46,15 @@ unique.
 It caught an error on its first run — a hand-written "11 commands" against 10
 registrations, because `--help` lists `help` and the registry does not.
 
-**When it fails:** update the status line. Every number in it is one command away, and
-the failure message prints both the claim and the reality.
+**v4 (retro-0004):** `npm run fix:docs` writes the counts. Two gate-blocked signals a day
+apart — `sig-a9ff00c4` and `sig-5c2d6751` — are the same root cause recurring, and the
+version had already bumped once between them, which says a reminder is not the fix for
+mechanical bookkeeping. The gate still only CHECKS: a fix running inside it would rewrite
+the tree after the commit it was judging already existed, and in CI would write to a
+runner nobody keeps. It also refuses to place a count the status line never named.
+
+**When it fails:** run `npm run fix:docs`, or update the line by hand. Every number in it
+is one command away, and the failure message prints both the claim and the reality.
 
 Deterministic checks may block freely (constitution non-negotiable 7). Every rule here
 compares a number in a file to a number the filesystem already knows.

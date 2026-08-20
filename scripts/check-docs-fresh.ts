@@ -20,7 +20,7 @@
  * so the block stays the first kind.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseDecisions } from "../src/core/decisions/anchors.js";
 import { DEFINITION_DIR } from "../src/core/paths.js";
@@ -35,9 +35,26 @@ const STATUS = /^## Status\b.*$/m;
 
 interface Claim {
   readonly label: string;
+  /** The pattern naming this count in the status line, used to read it and to rewrite it. */
+  readonly unit: string;
   readonly claimed: number | null;
   readonly actual: number;
 }
+
+/**
+ * The status line with every located count replaced by the real one.
+ *
+ * Only the digits move. Preserving the surrounding text is what lets the branch
+ * name, the separators and the singular/plural spelling survive a fix.
+ */
+const rewrite = (line: string, claims: readonly Claim[]): string =>
+  claims.reduce(
+    (acc, c) =>
+      c.claimed === null
+        ? acc
+        : acc.replace(new RegExp(`\\d+(\\s+${c.unit}\\b)`), `${String(c.actual)}$1`),
+    line,
+  );
 
 const claimOf = (line: string, unit: string): number | null => {
   const found = new RegExp(`(\\d+)\\s+${unit}\\b`).exec(line);
@@ -45,6 +62,7 @@ const claimOf = (line: string, unit: string): number | null => {
 };
 
 async function main(): Promise<void> {
+  const fix = process.argv.includes("--fix");
   const agents = await readFile(AGENTS, "utf-8");
   const status = STATUS.exec(agents)?.[0];
   if (status === undefined) {
@@ -64,9 +82,9 @@ async function main(): Promise<void> {
   const commands = [...(await readFile(CLI, "utf-8")).matchAll(/\n\s*\.command\(/g)].length;
 
   const claims: Claim[] = [
-    { label: "ADRs", claimed: claimOf(status, "ADRs?"), actual: adrs },
-    { label: "signals", claimed: claimOf(status, "signals?"), actual: signals },
-    { label: "commands", claimed: claimOf(status, "commands?"), actual: commands },
+    { label: "ADRs", unit: "ADRs?", claimed: claimOf(status, "ADRs?"), actual: adrs },
+    { label: "signals", unit: "signals?", claimed: claimOf(status, "signals?"), actual: signals },
+    { label: "commands", unit: "commands?", claimed: claimOf(status, "commands?"), actual: commands },
   ];
 
   const missing = claims.filter((c) => c.claimed === null);
@@ -80,7 +98,21 @@ async function main(): Promise<void> {
     for (const c of wrong) {
       console.error(`  claims ${String(c.claimed)} ${c.label} — the repo has ${c.actual}`);
     }
-    console.error(`\nUpdate the status line. Every number in it is one command away.`);
+
+    // A count the line never names has no place to be written back to, so `--fix`
+    // reports it and still fails rather than guessing where it belongs.
+    if (fix && missing.length === 0) {
+      const fixed = rewrite(status, claims);
+      await writeFile(AGENTS, agents.replace(status, () => fixed), "utf-8");
+      console.error(`\nfixed — ${AGENTS} now says ${adrs} ADRs, ${signals} signals, ${commands} commands`);
+      return;
+    }
+
+    console.error(
+      fix
+        ? `\nCannot fix a count the status line does not name. Add it, then re-run.`
+        : `\nUpdate the status line, or run \`npm run fix:docs\`.`,
+    );
     process.exit(1);
   }
 
