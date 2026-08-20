@@ -73,7 +73,7 @@ The loop: **use → record → distill → amend.** That is the moat.
   `CLAUDE.md`. It owns the definition-and-verification layer, not your spec format.
 - **Not a memory server.** Memory is an interface, not a product. The default backend is plain files
   in git. Engram, sqlite+embeddings, or any MCP memory server plug in as optional adapters behind
-  the same contract: `save(record)`, `search(query)`, `summarize(scope)`.
+  the same port. Which verbs that port carries is a question for `MemoryPort`, not for this page.
 - **Not autonomous self-modification.** Every amendment to a rule passes a human gate. The value is
   *auditable* evolution, not unsupervised drift.
 - **Not a fleet manager.** Whetstone takes *light* orchestration — triage, plan gate, fan-out, gate,

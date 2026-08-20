@@ -297,10 +297,12 @@ environment. So this is one call site, not a pattern.
 
 **done** · two verbs, one `files` adapter, and it collapsed the duplicate signal reader
 
-**Left open by it:** the constitution still names three verbs (`save` / `search` /
-`summarize`) at non-negotiable 2, and the port ships two. The code is right and the
-constitution is stale — but it is the constitution, so the amendment is a human act,
-not a drive-by edit. Found 2026-08-20.
+**Closed 2026-08-20.** The clause named three verbs and was wrong on two: `summarize`
+had been ruled out as a per-adapter verb by adr-0001's own 2026-07-11 survey, and
+`search` is deliberately absent until a caller exists (adr-0015). The verb list is
+removed rather than corrected — pinning method names in a document nobody executes is
+the same failure as the `AGENTS.md` status block. Same edit in `VISION.md` and
+`wst.yaml`, which carried the same list.
 
 Non-negotiable 2 says memory is an interface — `save` / `search` / `summarize` —
 and that nothing may hard-depend on a backend, engram included. Today
