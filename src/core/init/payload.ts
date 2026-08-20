@@ -458,17 +458,14 @@ memory/retro-log.md merge=union
 `;
 }
 
-/** The two files `wst prepare` writes into a leased worktree, never the branch. */
-export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([
-  ".wst-charter.md",
-  ".wst-lane",
-]);
+/** Written at the worktree root by a worker, never committed to the branch. */
+export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([".wst-lane"]);
 
 /**
  * The stanza `init` ensures is present in the target repo's OWN `.gitignore`.
  *
- * Unlike \`.wst/.gitignore\` this cannot be a plain generated file: \`.wst-charter.md\`
- * and \`.wst-lane\` live at the repo root, and almost every repo already has a root
+ * Unlike \`.wst/.gitignore\` this cannot be a plain generated file: \`.wst-lane\`
+ * lives at the repo root, and almost every repo already has a root
  * \`.gitignore\` with content worth keeping. The shell reads it and appends only
  * what is missing (source: \`src/commands/init.ts\`) rather than treating a
  * pre-existing \`.gitignore\` as a collision.

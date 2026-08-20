@@ -259,18 +259,16 @@ describe("runtime state the target repo must never commit", () => {
     });
   });
 
-  describe("renderRootGitignoreStanza — .wst-charter.md and .wst-lane", () => {
-    it("ignores both files `wst prepare` writes into a leased worktree", () => {
-      expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-charter.md", ".wst-lane"]);
-      const stanza = renderRootGitignoreStanza();
-      expect(stanza).toContain(".wst-charter.md");
-      expect(stanza).toContain(".wst-lane");
+  describe("renderRootGitignoreStanza — .wst-lane", () => {
+    it("ignores the lane file a worker writes at the worktree root", () => {
+      expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-lane"]);
+      expect(renderRootGitignoreStanza()).toContain(".wst-lane");
     });
 
-    it("can render only the entries missing from a .gitignore that already exists", () => {
-      const stanza = renderRootGitignoreStanza([".wst-lane"]);
-      expect(stanza).toContain(".wst-lane");
-      expect(stanza).not.toContain(".wst-charter.md");
+    it("renders only what it is given, so init can append just what is missing", () => {
+      // The caller filters to the entries a pre-existing .gitignore lacks. Given
+      // none, the stanza must not name a file anyway.
+      expect(renderRootGitignoreStanza([])).not.toContain(".wst-lane");
     });
 
     it("uses no em-dash", () => {

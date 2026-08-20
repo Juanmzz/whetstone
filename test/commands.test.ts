@@ -25,7 +25,6 @@ import { runCheck } from "../src/commands/check.js";
 import { runGate } from "../src/commands/gate.js";
 import { runInit } from "../src/commands/init.js";
 import { runRetro } from "../src/commands/retro.js";
-import { runPrepare } from "../src/commands/prepare.js";
 import { runStatus } from "../src/commands/status.js";
 import { runTriage } from "../src/commands/triage.js";
 import { installFakeBin, restorePath, type FakeBin } from "./fake-bin.js";
@@ -252,39 +251,6 @@ describe("wst status", () => {
   });
 });
 
-// ── wst prepare --dry-run ────────────────────────────────────────────────────────
-
-describe("wst prepare --dry-run", () => {
-  it("spends nothing and leases nothing", async () => {
-    // The flag exists so a charter can be read before any of it is real. A
-    // dry run that leased a worktree or spawned an agent would cost money and
-    // print exactly the same thing.
-    const claude = await installFakeBin("claude", { stdout: "{}" });
-    const treehouse = await installFakeBin("treehouse", { stdout: "/tmp/wt\n" });
-
-    expect(await runPrepare({ task: "add a health endpoint", dryRun: true }, await repo())).toBe(0);
-    expect(await claude.invocations()).toEqual([]);
-    expect(await treehouse.invocations()).toEqual([]);
-  });
-
-  it("names the strict paths from THIS project's rules, not Whetstone's", async () => {
-    // sig-0041: the charter hardcoded Whetstone's own three directories, so a
-    // crewmate in another repo was warned about paths it would never touch and
-    // told nothing about the ones that mattered.
-    await runPrepare({ task: "alter a table", dryRun: true }, await repo());
-
-    expect(stdout()).toContain("migrations/**");
-    expect(stdout()).not.toContain("src/core/**");
-  });
-
-  it("names the checks its work will be gated by", async () => {
-    // A crewmate that does not know what will judge it cannot check its own work
-    // before handing it over.
-    await runPrepare({ task: "add a health endpoint", dryRun: true }, await repo());
-    expect(stdout()).toContain("green");
-  });
-});
-
 // ── wst retro --dry-run ──────────────────────────────────────────────────────
 
 describe("wst retro", () => {
@@ -400,12 +366,11 @@ describe("wst init", () => {
       expect(gitignore).not.toMatch(/signals\.jsonl/);
     });
 
-    it("creates a root .gitignore excluding .wst-charter.md and .wst-lane when none exists", async () => {
+    it("creates a root .gitignore excluding .wst-lane when none exists", async () => {
       const dir = await bare();
       await runInit({ purpose: PURPOSE }, dir);
 
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      expect(gitignore).toContain(".wst-charter.md");
       expect(gitignore).toContain(".wst-lane");
     });
 
@@ -418,7 +383,6 @@ describe("wst init", () => {
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
       expect(gitignore).toContain("node_modules/");
       expect(gitignore).toContain("dist/");
-      expect(gitignore).toContain(".wst-charter.md");
       expect(gitignore).toContain(".wst-lane");
     });
 
@@ -431,7 +395,6 @@ describe("wst init", () => {
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
       const occurrences = gitignore.split("\n").filter((l) => l.trim() === ".wst-lane").length;
       expect(occurrences).toBe(1);
-      expect(gitignore).toContain(".wst-charter.md");
     });
 
     it("leaves the root .gitignore untouched under --dry-run", async () => {

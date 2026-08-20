@@ -9,9 +9,7 @@ import { banner } from "./banner.js";
 import { runStatus } from "./commands/status.js";
 import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
-import { runPlan } from "./commands/plan.js";
 import { runGate } from "./commands/gate.js";
-import { runPrepare } from "./commands/prepare.js";
 import { runRetro } from "./commands/retro.js";
 import { runEvents } from "./commands/events.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
@@ -69,23 +67,6 @@ program
     process.exitCode = await runTriage(opts);
   });
 
-// The front door (ADR-0013). Placed between triage and gate because that is where
-// it sits in the loop: a plan is read before the work starts, and the same rules
-// classify the real diff at the other end.
-program
-  .command("plan")
-  .argument("[file]", "a plan declaring `paths:` in its frontmatter — stdin when omitted")
-  .description("read a plan and report which checks will judge it, and what nothing covers")
-  .option("--json", "print the preview as JSON")
-  .action(async (file: string | undefined, opts: { json?: boolean }) => {
-    // No exit code stops anything here: `wst plan` does not block, so 0 means the
-    // plan was readable and 2 means this command could not run at all.
-    process.exitCode = await runPlan({
-      ...(file !== undefined ? { file } : {}),
-      ...(opts.json !== undefined ? { json: opts.json } : {}),
-    });
-  });
-
 program
   .command("gate")
   .description("run the verification gate over a diff")
@@ -116,28 +97,6 @@ program
       ...(opts.emit === false ? { noEmit: true } : {}),
     });
   });
-
-// Was `wst run`, which dispatched and gated too (ADR-0014). No `--model`, `--budget`
-// or `--keep`: nothing is spawned, so there is nothing to charge or bound, and the
-// worktree is always kept because the lease is yours from the moment it is handed over.
-program
-  .command("prepare")
-  .argument("<task...>", "what the crewmate should do")
-  .description("lease a worktree, branch it, and write the charter — then stop")
-  .option("--dry-run", "print the charter and exit, leasing nothing")
-  .option("--lane <lane>", "scope the crewmate to a lane, where a hook enforces one")
-  .option("--json", "the worktree, branch and charter as data, for an orchestrator")
-  .action(async (task: string[], opts: { dryRun?: boolean; lane?: string; json?: boolean }) => {
-    process.exitCode = await runPrepare({
-      task: task.join(" "),
-      ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
-      ...(opts.lane !== undefined ? { lane: opts.lane } : {}),
-      ...(opts.json !== undefined ? { json: opts.json } : {}),
-    });
-  });
-
-// The read side of the log the gate has been writing since ADR-0011. Placed after
-// `gate` because that is what produces the runs this reads.
 program
   .command("events")
   .description("read the event log: what a run did, and how it ended")

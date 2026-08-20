@@ -18,14 +18,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { recordCalibration } from "../src/core/calibration/receipt.js";
 import { recordPass } from "../src/core/receipts/receipt.js";
 import { hashFixtureDir } from "../src/shell/calibration.js";
-import { assertWorktreeAt, createGitAdapter } from "../src/shell/git.js";
+import { createGitAdapter } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
 import { describePlugin } from "../src/shell/plugin.js";
 import { readReceipt, receiptPath, writeReceipt } from "../src/shell/receipts.js";
 import { appendRetroLogStub, countRetros, readCursor, writeProposals } from "../src/shell/retro.js";
 import { filesMemory } from "../src/shell/memory.js";
 import { loadRegistry, loadTriageRules, resolveDefinitionRoot } from "../src/shell/sdd.js";
-import { createTreehouseAdapter } from "../src/shell/treehouse.js";
 import { emptyPath, installFakeBin, restorePath } from "./fake-bin.js";
 import { isolateFromInheritedGit } from "./git-env.js";
 
@@ -131,33 +130,6 @@ describe("the git adapter", () => {
     await expect(createGitAdapter(await seeded()).hashFile("gone.txt")).rejects.toThrow(
       /could not hash/,
     );
-  });
-
-  describe("refusing a target that is not what it claims", () => {
-    /**
-     * `wst prepare` runs `git reset --hard`, `git switch -C` and `ln -sfn` against
-     * a leased worktree. Stripping `GIT_*` fixes the leak that was FOUND; this is
-     * what survives the next one, a treehouse bug, or a caller passing the wrong
-     * string. A destructive command should ask where it is standing.
-     */
-    it("accepts a directory that really is the root of the repository it resolves to", async () => {
-      const dir = await seeded();
-      await expect(assertWorktreeAt(dir)).resolves.toBeUndefined();
-    });
-
-    it("refuses a directory git resolves somewhere else", async () => {
-      // A subdirectory: git answers with the repo root, not with the path given.
-      // Same shape as an inherited GIT_DIR pointing at another repository.
-      const dir = await seeded();
-      await mkdir(join(dir, "sub"), { recursive: true });
-      await expect(assertWorktreeAt(join(dir, "sub"))).rejects.toThrow(/not what it claims/);
-    });
-
-    it("refuses a directory that is no repository at all", async () => {
-      await expect(assertWorktreeAt(await temp("wst-none-"))).rejects.toThrow(
-        /not a git worktree/,
-      );
-    });
   });
 
   describe("an inherited git environment", () => {
@@ -676,44 +648,6 @@ describe("describing the plugin install", () => {
 
     await installFakeBin("claude", { stdout: '{"plugins":[]}' });
     expect(await describePlugin()).toBe("unknown");
-  });
-});
-
-// ── treehouse ────────────────────────────────────────────────────────────────
-
-describe("the treehouse adapter", () => {
-  it("takes the worktree path from the LAST line, past any progress output", async () => {
-    // `treehouse get --lease` prints the path; anything it prints before that is
-    // noise. Reading the first line would hand `wst run` a status message as a
-    // directory, and the crewmate would be dispatched somewhere that is not a
-    // worktree.
-    await installFakeBin("treehouse", {
-      stdout: "leasing...\npreparing worktree\n/tmp/pool/wt-3\n",
-    });
-    expect(await createTreehouseAdapter("/tmp").lease("holder")).toEqual({
-      path: "/tmp/pool/wt-3",
-      holder: "holder",
-    });
-  });
-
-  it("throws when it printed no path at all", async () => {
-    // An empty string here would become `cwd` for the crewmate, which resolves to
-    // the ORCHESTRATOR's directory — an agent with tools, editing the repo that
-    // dispatched it, outside any worktree.
-    await installFakeBin("treehouse", { stdout: "\n" });
-    await expect(createTreehouseAdapter("/tmp").lease("holder")).rejects.toThrow(/no path/);
-  });
-
-  it("reports itself unavailable rather than throwing when it is not installed", async () => {
-    // `wst run` prints an install hint on false. An exception would print a stack
-    // trace instead.
-    emptyPath();
-    expect(await createTreehouseAdapter("/tmp").available()).toBe(false);
-  });
-
-  it("reports itself available when the binary answers", async () => {
-    await installFakeBin("treehouse", { stdout: "treehouse 0.4.0\n" });
-    expect(await createTreehouseAdapter("/tmp").available()).toBe(true);
   });
 });
 

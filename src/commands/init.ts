@@ -452,7 +452,7 @@ async function writePlan(plan: InitPlan, root: string): Promise<void> {
 }
 
 /**
- * `.wst-charter.md` and `.wst-lane` are written later, by `wst prepare`, into a
+ * `.wst-lane` is written at the worktree root by a worker, into a
  * worktree this command never sees — so they cannot be a plan `file` guarded by
  * `collisionsIn`. What CAN be done now is make sure the target repo's own
  * `.gitignore` already excludes them, so the very first leased worktree is not
