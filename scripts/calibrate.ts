@@ -130,7 +130,7 @@ interface Outcome {
   spread: string;
   /** Raw per-run outcome, in order. The receipt records these, not a score. */
   verdicts: readonly ("pass" | "fail" | "errored")[];
-  /** What the lens said on the runs it got wrong. Diagnostic only; not in the receipt. */
+  /** What the lens said on the runs it got wrong. Not in the receipt. */
   wrongReasons: readonly string[];
 }
 
@@ -178,9 +178,6 @@ async function main() {
   for (const fixture of fixtures) {
     const diff = await readFile(join(dir, fixture.file), "utf-8");
 
-    // Kept, not discarded. The harness parsed `reason` and threw it away, so a MISS
-    // printed the ground truth and never what the lens actually believed — which is
-    // the one thing that says whether the prompt or the approach needs changing.
     const wrongReasons: string[] = [];
 
     const verdicts = await pool(Array.from({ length: RUNS }, (_, i) => i), CONCURRENCY, async () => {

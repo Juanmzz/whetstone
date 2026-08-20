@@ -237,14 +237,8 @@ describe("runtime state the target repo must never commit", () => {
     });
 
     it("claims union only for the files nothing rewrites in place", () => {
-      // `retro-log.md` qualifies: a retro appends its record and leaves the
-      // earlier ones alone, so two of them in parallel want both entries kept.
-      //
-      // `decisions.md` is the tempting third entry and would be WRONG: two
-      // workers computing "the next ADR is 0011" both write adr-0011, and union
-      // would merge two records that share an id rather than conflict on them.
-      // A status change edits a line inside an existing entry too, and union
-      // would keep both versions of it.
+      // `decisions.md` would be WRONG: two workers computing "the next ADR is
+      // 0011" both write adr-0011, and union merges them instead of conflicting.
       const claims = attributes
         .split("\n")
         .filter((line) => line.includes("merge=union"))
@@ -266,8 +260,6 @@ describe("runtime state the target repo must never commit", () => {
     });
 
     it("renders only what it is given, so init can append just what is missing", () => {
-      // The caller filters to the entries a pre-existing .gitignore lacks. Given
-      // none, the stanza must not name a file anyway.
       expect(renderRootGitignoreStanza([])).not.toContain(".wst-lane");
     });
 
