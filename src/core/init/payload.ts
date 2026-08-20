@@ -447,6 +447,14 @@ export function renderWstGitattributes(): string {
 # Append-only, committed, and written by every worker at once. \`union\` keeps both
 # sides' lines. Picking a side would discard a signal somebody recorded.
 memory/signals.jsonl merge=union
+
+# Also append-only: a retro adds an entry, it does not rewrite the ones before it.
+memory/retro-log.md merge=union
+
+# DELIBERATELY ABSENT: memory/decisions.md. Two workers each computing "the next
+# id" write the same one, and \`union\` would merge two different decisions under a
+# single id instead of conflicting on them. Changing a decision edits a line inside
+# an entry that already exists, which \`union\` would then keep twice.
 `;
 }
 

@@ -236,16 +236,22 @@ describe("runtime state the target repo must never commit", () => {
       expect(attributes).toMatch(/^memory\/signals\.jsonl\s+merge=union$/m);
     });
 
-    it("claims union for nothing else, since it is only sound for append-only files", () => {
-      // `decisions.md` is the tempting second entry and would be WRONG: two
+    it("claims union only for the files nothing rewrites in place", () => {
+      // `retro-log.md` qualifies: a retro appends its record and leaves the
+      // earlier ones alone, so two of them in parallel want both entries kept.
+      //
+      // `decisions.md` is the tempting third entry and would be WRONG: two
       // workers computing "the next ADR is 0011" both write adr-0011, and union
       // would merge two records that share an id rather than conflict on them.
+      // A status change edits a line inside an existing entry too, and union
+      // would keep both versions of it.
       const claims = attributes
         .split("\n")
         .filter((line) => line.includes("merge=union"))
         .map((line) => line.split(/\s+/)[0]);
 
-      expect(claims).toEqual(["memory/signals.jsonl"]);
+      expect(claims).toEqual(["memory/signals.jsonl", "memory/retro-log.md"]);
+      expect(claims).not.toContain("memory/decisions.md");
     });
 
     it("uses no em-dash, same as every other page init writes into a target repo", () => {

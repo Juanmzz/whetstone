@@ -130,6 +130,8 @@ interface Outcome {
   spread: string;
   /** Raw per-run outcome, in order. The receipt records these, not a score. */
   verdicts: readonly ("pass" | "fail" | "errored")[];
+  /** What the lens said on the runs it got wrong. Diagnostic only; not in the receipt. */
+  wrongReasons: readonly string[];
 }
 
 /**
@@ -176,6 +178,11 @@ async function main() {
   for (const fixture of fixtures) {
     const diff = await readFile(join(dir, fixture.file), "utf-8");
 
+    // Kept, not discarded. The harness parsed `reason` and threw it away, so a MISS
+    // printed the ground truth and never what the lens actually believed — which is
+    // the one thing that says whether the prompt or the approach needs changing.
+    const wrongReasons: string[] = [];
+
     const verdicts = await pool(Array.from({ length: RUNS }, (_, i) => i), CONCURRENCY, async () => {
       const r = await judge.judge({
         lens: LENS,
@@ -185,8 +192,12 @@ async function main() {
         maxAttempts: 3,
       });
       totalCost += r.costUsd;
-      if (!r.ok) console.error(`    ! ${r.error.kind}: ${r.error.detail.slice(0, 160)}`);
-      return r.ok ? r.value.verdict : `ERROR:${r.error.kind}`;
+      if (!r.ok) {
+        console.error(`    ! ${r.error.kind}: ${r.error.detail.slice(0, 160)}`);
+        return `ERROR:${r.error.kind}`;
+      }
+      if (r.value.verdict !== fixture.expect) wrongReasons.push(r.value.reason);
+      return r.value.verdict;
     });
 
     const tally = new Map<string, number>();
@@ -202,7 +213,7 @@ async function main() {
     const unanimous = tally.size === 1;
     const spread = [...tally.entries()].map(([v, n]) => `${v}×${n}`).join(", ");
     outcomes.push({
-      fixture, correct, errors, flipped, unanimous, spread,
+      fixture, correct, errors, flipped, unanimous, spread, wrongReasons,
       verdicts: verdicts.map((v) => (v === "pass" ? "pass" : v === "fail" ? "fail" : "errored")),
     });
 
@@ -224,8 +235,12 @@ async function main() {
   const broken = outcomes.filter((o) => o.errors > 0);
 
   if (failed.length > 0) {
-    console.log("\n  where it went wrong — ground truth for each miss:");
-    for (const o of failed) console.log(`    ${o.fixture.file}: ${o.fixture.truth}`);
+    console.log("\n  where it went wrong:");
+    for (const o of failed) {
+      console.log(`    ${o.fixture.file}`);
+      console.log(`      truth: ${o.fixture.truth}`);
+      for (const reason of o.wrongReasons) console.log(`      lens:  ${reason}`);
+    }
   }
 
   const byDifficulty = new Map<string, { total: number; clean: number }>();
