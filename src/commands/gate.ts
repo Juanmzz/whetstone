@@ -12,10 +12,9 @@ import type { Tier } from "../core/checks/schema.js";
 import type { CheckOutcome, Routing } from "../core/contracts.js";
 import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
-import { EXIT_INCOMPLETE, exitCodeFor, outcomeOf, renderGateRun } from "../core/gate/report.js";
+import { EXIT_INCOMPLETE, exitCodeFor, renderGateRun } from "../core/gate/report.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
-import { DEFINITION_DIR } from "../core/paths.js";
 import { appendSignals } from "../shell/signals.js";
 import { resolveMemory } from "../shell/memory.js";
 import { checkEnv } from "../core/gate/env.js";
@@ -354,7 +353,6 @@ export async function runGate(
     return EXIT_MISCONFIGURED;
   }
 
-  const startedAt = new Date();
 
   const failed = (detail: string, exit: number): number => {
     console.error(detail);
