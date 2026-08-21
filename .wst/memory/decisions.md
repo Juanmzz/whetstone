@@ -589,3 +589,66 @@ file no decision reads.
 Cost accepted: a run no longer prints an id, so two people comparing runs have the console
 output and nothing else. And an outcome is now asserted through what the gate prints rather
 than through a record of it, which is a weaker test of the same guarantee.
+
+### adr-0025 — `init` may propose an opinion, but never seed one unasked
+`accepted` · 2026-08-21 · signals: sig-4a2610fb, sig-ea119c62
+
+adr-0016 left `init` reading only what a repo DECLARES: its scripts, its lockfile, whether
+test files exist. That rule was written against inference -- a table guessing a language from
+file extensions -- and it has held. It does not answer a different question that has now
+arrived twice: what to do with a rule that is generic, earned by evidence, and declared by
+nobody.
+
+Two exist already. `comment-density` came from `sig-4a2610fb`, a rule stated twice and
+regressed anyway. A guard on commands that discard uncommitted work came from `sig-ea119c62`,
+an hour of work lost to `git checkout`. Neither is inferable from a repo, and both are as true
+in a payments API as here.
+
+The rule: an opinion may be OFFERED in the interview, named, with the friction that earned it,
+and it is written only if the human says yes. It is never written by default. A declared fact
+still needs no question.
+
+Rejected: seeding them silently. A repo that gains a blocking check nobody asked for is the
+"pile of config from guesses" that adr-0016 exists to prevent, and the fact that this guess
+happens to be right does not change what it teaches.
+
+Rejected: keeping them out of the payload entirely and leaving them as Whetstone-only checks.
+That is the position adr-0016 implies, and it is what stops the loop from paying out: friction
+found here would sharpen only this repo, when the whole thesis is that a rule earned once
+travels.
+
+Rejected: a `--opinions` flag instead of a question. A flag is answered by whoever typed the
+command fastest; the interview is the one place a human is already reading and deciding.
+
+Cost accepted: the interview grows by one question per opinion, and an opinion nobody accepts
+is dead weight in the payload. Six questions was already the number adr-0016 settled on, and
+this reopens that budget.
+
+### adr-0026 — two judges report, they do not vote
+`accepted` · 2026-08-21
+
+`LlmJudge` had one adapter, which made vendor-agnosticism a claim rather than a seam. A second
+adapter raises a question one adapter never had to answer: what the gate does when the judges
+disagree.
+
+The rule: each judge is its own check, with its own severity and its own calibration receipt.
+They do not vote and they are not merged. Two `warn` lenses that disagree produce two lines a
+human reads.
+
+Rejected: AND -- block if either fails. It multiplies the false-positive rate, and neither
+lens has passed calibration, so this ships the worst property of both.
+
+Rejected: OR -- pass if either passes. It lets a change route around a judge by finding the
+laxer one, which is the routed-around gate that has negative value.
+
+Rejected: merging them into one verdict behind one check id. A calibration receipt binds a
+lens hash, a model and a runtime; a merged verdict has no single one of those to bind, so it
+could never earn `block` under non-negotiable 2.
+
+**Which judge runs by default follows the harness**, because a judge without credentials is a
+check that cannot run at all: inside Claude Code the default is `claude`, inside Gemini CLI it
+is `gemini`. Cross-vendor judging -- the reviewer being a different model from the author --
+is the reason to override it, and remains an explicit choice.
+
+An absent CLI is `errored`, never `fail` (hard rule 3), and an errored `warn` check blocks
+nothing. That is what makes a second judge free to offer: where it cannot run, nothing happens.
