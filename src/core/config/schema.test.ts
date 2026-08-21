@@ -21,10 +21,14 @@ describe("parseConfig", () => {
   });
 
   it("throws on an agent it cannot run, rather than falling back to claude", () => {
-    // The whole point of the key. Silently running claude under `agent: gemini`
-    // is invisible: the run succeeds and the verdict looks normal, so nobody
-    // learns the second judge was never consulted.
-    expect(() => parseConfig({ agent: "gemini" })).toThrow(/wst\.yaml: agent/);
+    // The whole point of the key. Silently running claude under another name is
+    // invisible: the run succeeds and the verdict looks normal, so nobody learns
+    // the judge they asked for was never consulted.
+    expect(() => parseConfig({ agent: "codex" })).toThrow(/wst\.yaml: agent/);
+  });
+
+  it("accepts an agent that HAS an adapter, which is what makes the key mean anything", () => {
+    expect(parseConfig({ agent: "gemini" }).agent).toBe("gemini");
   });
 
   it("throws on a backend nothing implements", () => {
