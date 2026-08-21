@@ -105,6 +105,7 @@ function runShellCommand(
   command: string,
   cwd: string,
   timeoutMs: number,
+  range?: string,
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
     exec(
@@ -114,7 +115,7 @@ function runShellCommand(
         // A check that binds a port must be able to tell one checkout from
         // another, or a server left running by one worktree gets reused by the
         // next and the gate passes against code it never read.
-        env: checkEnv(process.env, cwd),
+        env: checkEnv(process.env, cwd, range),
         timeout: timeoutMs,
         maxBuffer: MAX_BUFFER,
         killSignal: "SIGKILL",
@@ -218,7 +219,7 @@ export function createCheckRunner(deps: {
           outcome: { status: "errored", detail: `check "${check.id}" declares no command` },
         };
       }
-      const result = await runShellCommand(check.command, deps.cwd, deps.timeoutMs);
+      const result = await runShellCommand(check.command, deps.cwd, deps.timeoutMs, deps.range);
       return { outcome: interpretCommandResult(result) };
     }
 

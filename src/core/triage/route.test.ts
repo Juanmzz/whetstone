@@ -12,6 +12,7 @@ const check = (id: string, tiers: readonly Tier[], enabled = true): Check => ({
   include: ["src/**/*.ts"],
   exclude: [],
   enabled,
+  skippable: true,
   version: 1,
   origin: [],
 });

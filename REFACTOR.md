@@ -418,7 +418,7 @@ and the docs.
 
 **open**
 
-Seven checks run on this repo. Four of them — `adr-refs`, `docs-fresh`,
+Eight checks run on this repo. Four of them — `adr-refs`, `docs-fresh`,
 `provenance`, `skill-shape` — are Whetstone-only: `init` never seeds them, and
 they would mean nothing in a payments API. They exist because this project's own
 documentation discipline needed enforcing.

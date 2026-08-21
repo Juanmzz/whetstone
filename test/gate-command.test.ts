@@ -351,6 +351,7 @@ describe("createCheckRunner", () => {
     include: ["src/**"],
     exclude: [],
     enabled: true,
+    skippable: true,
     version: 1,
     origin: [],
     review_lens: "Review this diff.",

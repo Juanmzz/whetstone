@@ -21,11 +21,18 @@ const PORT_SPACE = 1000;
 export function checkEnv(
   parent: Readonly<Record<string, string | undefined>>,
   cwd: string,
+  range?: string,
 ): Record<string, string | undefined> {
   return {
     ...parent,
     /** Absolute path of the checkout under verification. */
     WST_GATE_CWD: cwd,
+    /**
+     * The git range this run is judging, when there is one. Absent rather than
+     * defaulted: a check that fell back to `HEAD` would measure the last commit
+     * and report it as the change.
+     */
+    WST_GATE_RANGE: range,
     /**
      * A stable number in [0, 1000) derived from that path. Stable because a
      * receipt claims a check passed on an input, and a check whose port moved
