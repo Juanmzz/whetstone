@@ -21,6 +21,7 @@
     "test:watch": "vitest",
     "check:adr-refs": "tsx scripts/check-adr-refs.ts",
     "check:docs": "tsx scripts/check-docs-fresh.ts",
+    "check:comments": "tsx scripts/check-comment-density.ts",
     "fix:docs": "tsx scripts/check-docs-fresh.ts --fix",
     "check:provenance": "tsx scripts/check-provenance.ts",
     "check:skills": "tsx scripts/check-skills.ts",

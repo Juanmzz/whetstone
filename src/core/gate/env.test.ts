@@ -10,6 +10,17 @@ describe("checkEnv — what a check is told about where it is running", () => {
     expect(env["WST_GATE_CWD"]).toBe("/repos/feature-a");
   });
 
+  it("names the range under verification, so a check can measure the change itself", () => {
+    const env = checkEnv(BASE, "/repos/x", "main..HEAD");
+
+    expect(env["WST_GATE_RANGE"]).toBe("main..HEAD");
+  });
+
+  it("omits the range rather than inventing one when the gate has none", () => {
+    // `HEAD` would silently measure the last commit instead of the change.
+    expect(checkEnv(BASE, "/repos/x")["WST_GATE_RANGE"]).toBeUndefined();
+  });
+
   it("derives a stable port offset from that path", () => {
     // A leased worktree and the main checkout must not agree on a port, or a
     // server started by one is reused by the other and the gate verifies code
