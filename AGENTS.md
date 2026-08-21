@@ -31,14 +31,12 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst check` | the check registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
-| `wst events` | read the log `gate` writes: a run's timeline, which check took how long, how it ended. Reads only — no LLM, no verdict, writes nothing |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
 | `wst init` | interview a repo and generate its `.wst/` |
 
 Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
-record signals; for when you are testing the gate itself) · `retro --dry-run` ·
-`events --list` (every run, newest first) · `events --follow` (tail a run in progress).
+record signals; for when you are testing the gate itself) · `retro --dry-run`.
 
 ## Where things live
 
@@ -93,7 +91,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run` �
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 23 ADRs · 55 signals · 8 commands
+## Status — branch `main` · 24 ADRs · 55 signals · 7 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 

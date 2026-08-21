@@ -353,14 +353,14 @@ describe("wst init", () => {
   });
 
   describe("runtime state is gitignored, not just written", () => {
-    it("writes .wst/.gitignore covering the compiled index, the event log and receipts", async () => {
+    it("writes .wst/.gitignore covering the compiled index and receipts", async () => {
       const dir = await bare();
       await runInit({ purpose: PURPOSE }, dir);
 
       const gitignore = await readFile(join(dir, ".wst/.gitignore"), "utf-8");
       const lines = gitignore.split("\n").map((l) => l.trim());
       expect(lines).toEqual(
-        expect.arrayContaining(["checks/_index.json", "events.jsonl", "receipts/"]),
+        expect.arrayContaining(["checks/_index.json", "receipts/"]),
       );
       // signals.jsonl is committed on purpose — an ignore rule here would hide it.
       expect(gitignore).not.toMatch(/signals\.jsonl/);

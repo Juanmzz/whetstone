@@ -24,7 +24,7 @@ and the other is drift.
 
 | Deterministic — the engine | LLM — judgment only |
 |---|---|
-| triage classification · check selection · running deterministic checks · enforcing the gate · receipt hashing · the event log · signal collection and clustering · emitting hooks | `llm` checks · proposing a new check (human-gated) |
+| triage classification · check selection · running deterministic checks · enforcing the gate · receipt hashing · signal collection and clustering · emitting hooks | `llm` checks · proposing a new check (human-gated) |
 
 Frugality is about VERIFICATION, not execution. The agent doing the work costs what it costs;
 Whetstone verifies frugally, triage-gated.
@@ -37,7 +37,7 @@ flowchart TB
   work["the work happens<br/>Claude Code, another agent, or a person<br/>oriented by reading .wst/"]:::harness
   push["git push · CI"]:::harness
   gate["wst gate<br/>deterministic checks · calibrated lens · receipts"]:::wst
-  sig[("signals.jsonl · events log")]:::wst
+  sig[("signals.jsonl")]:::wst
   retro["wst retro<br/>cluster signals · propose amendments"]:::wst
   sign2{{"a human accepts an amendment"}}:::human
 
@@ -68,8 +68,7 @@ not a fleet manager, not a spec framework, not a memory server.
 | `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
 | `wst check` | list the registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |
-| `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals and events |
-| `wst events` | read the log `gate` writes: a run's timeline, per-check duration, how it ended. Writes nothing |
+| `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst signal` | record an observation in `memory/signals.jsonl`. For a human to type |
 | `wst retro` | cluster signals, propose rule changes, never apply them |
 | `wst init` | interview a repo and generate its `.wst/` |
@@ -93,8 +92,8 @@ When this page says "layer" it means a stage below, never an import level.
 | 4 | **Verification gate** | Deterministic checks always, a calibrated lens when the tier earns it. Receipts skip what already passed |
 | 5 | **Self-sharpening** — `wst retro` | Signals → clusters → proposed amendments → a human accepts → `.wst/` changes |
 
-Cross-cutting: **memory** (`.wst/memory/`, files backend), **receipts** (skip re-work, audit,
-tamper-guard) and the **event log** (what a run did, while it runs).
+Cross-cutting: **memory** (`.wst/memory/`, files backend) and **receipts** (skip re-work,
+audit, tamper-guard).
 
 ## FCIS — functional core, imperative shell
 

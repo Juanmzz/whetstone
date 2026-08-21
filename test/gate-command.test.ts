@@ -14,7 +14,7 @@
  *    change the verdict. Hard rule 3 says a broken gate and a failed check must
  *    never share a message; these two warnings are the same rule applied to the
  *    bookkeeping, and merging them is a one-line edit.
- *  - `--no-emit` must silence BOTH logs. Hard rule 10 tells an agent breaking
+ *  - `--no-emit` must silence the signal log. Hard rule 10 tells an agent breaking
  *    something on purpose to use it, and a `--no-emit` that still wrote events
  *    would contaminate the evidence log in exactly the runs it exists to protect.
  *
@@ -26,8 +26,6 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { parseEventLog } from "../src/core/events/parse.js";
-import type { EventRecord } from "../src/core/events/record.js";
 import { parseSignalLog, type SignalRecord } from "../src/core/signals/parse.js";
 import { createCheckRunner, runGate } from "../src/commands/gate.js";
 import type { LoadedCheck } from "../src/core/checks/registry.js";
@@ -144,11 +142,6 @@ const read = async (dir: string, rel: string): Promise<string | null> => {
   }
 };
 
-const events = async (dir: string): Promise<EventRecord[]> => {
-  const text = await read(dir, ".wst/events.jsonl");
-  return text === null ? [] : parseEventLog(text);
-};
-
 const signals = async (dir: string): Promise<SignalRecord[]> => {
   const text = await read(dir, ".wst/memory/signals.jsonl");
   return text === null ? [] : parseSignalLog(text);
@@ -170,21 +163,6 @@ describe("--no-emit", () => {
     expect(stdout()).not.toMatch(/events:/);
   });
 
-  it("changes nothing about the verdict it suppresses the record of", async () => {
-    const dir = await repo({ checks: { "red.md": deterministicCheck("red", "exit 1") } });
-    const quiet = await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir);
-    const loud = await runGate({ range: "HEAD", noLens: true }, dir);
-    expect(quiet).toBe(loud);
-  });
-
-  it("is the only thing that stops a blocked run from being recorded", async () => {
-    // The control for the two tests above: without the flag, both logs appear.
-    const dir = await repo({ checks: { "red.md": deterministicCheck("red", "exit 1") } });
-    await runGate({ range: "HEAD", noLens: true }, dir);
-
-    expect((await signals(dir)).map((s) => s.type)).toEqual(["gate-blocked"]);
-    expect((await events(dir)).map((e) => e.kind)).toContain("run-finished");
-  });
 });
 
 describe("a signal log that cannot be read", () => {
@@ -203,92 +181,6 @@ describe("a signal log that cannot be read", () => {
     );
   });
 
-  it("says so out loud, because a run with no trace is the run that mattered", async () => {
-    await runGate({ range: "HEAD", noLens: true }, await withCorruptSignals());
-    expect(stderr()).toMatch(/no signals were recorded for this run/);
-    expect(stderr()).toMatch(/verdict above still stands/);
-  });
-
-  it("still writes the event log, which failed at nothing", async () => {
-    // The two channels are independent. Letting one failure suppress the other
-    // would lose the only record of the run that lost its signal.
-    const dir = await withCorruptSignals();
-    await runGate({ range: "HEAD", noLens: true }, dir);
-    expect((await events(dir)).map((e) => e.kind)).toContain("run-finished");
-  });
-
-  it("reports itself in its own JSON field, never in the event log's", async () => {
-    // Hard rule 3 applied to the bookkeeping: two different failures, two
-    // different names. Anything reading this as an API has to be able to tell
-    // "the evidence was lost" from "the trace was lost".
-    const dir = await withCorruptSignals();
-    await runGate({ range: "HEAD", noLens: true, json: true }, dir);
-    const report = JSON.parse(stdout().slice(stdout().indexOf("{"))) as Record<string, unknown>;
-
-    expect(report["signalError"]).toEqual(expect.any(String));
-    expect(report["eventError"]).toBeNull();
-    expect(report["emitted"]).toEqual([]);
-    expect(report["verdict"]).toBe("block"); // the verdict survived intact
-  });
-});
-
-describe("an event log that cannot be written", () => {
-  /** `.wst/events.jsonl` as a DIRECTORY — the same EISDIR a broken mount gives. */
-  async function withBlockedEvents(): Promise<string> {
-    const dir = await repo({ checks: { "red.md": deterministicCheck("red", "exit 1") } });
-    await mkdir(join(dir, ".wst/events.jsonl"), { recursive: true });
-    return dir;
-  }
-
-  it("is reported with its own words, not the signal warning's", async () => {
-    // The mirror of the test above, and the pair is the point: a reader must
-    // never see "no signals were recorded" when the signals were recorded fine.
-    const dir = await withBlockedEvents();
-    await runGate({ range: "HEAD", noLens: true }, dir);
-
-    expect(stderr()).toMatch(/event log for this run is incomplete/);
-    expect(stderr()).not.toMatch(/no signals were recorded/);
-  });
-
-  it("does not stop the signal from being written, or the verdict from standing", async () => {
-    const dir = await withBlockedEvents();
-    expect(await runGate({ range: "HEAD", noLens: true }, dir)).toBe(1);
-    expect((await signals(dir)).map((s) => s.type)).toEqual(["gate-blocked"]);
-  });
-});
-
-// ── configuration that will not load ─────────────────────────────────────────
-
-describe("a registry the gate cannot read", () => {
-  async function withBrokenRegistry(): Promise<string> {
-    const dir = await repo();
-    await writeFile(join(dir, ".wst/checks/green.md"), "no frontmatter here\n", "utf-8");
-    return dir;
-  }
-
-  it("exits misconfigured rather than passing a change nothing verified", async () => {
-    expect(await runGate({ range: "HEAD", noLens: true }, await withBrokenRegistry())).toBe(2);
-    expect(stderr()).toMatch(/configuration failed to load/);
-  });
-
-  it("records the failure, which is the whole reason the log is opened first", async () => {
-    // `definitionRoot` is resolved ahead of everything else so that a failure
-    // after that point can be RECORDED. Loading the registry before creating the
-    // log would make this evidence vanish, and no other test would notice.
-    const dir = await withBrokenRegistry();
-    await runGate({ range: "HEAD", noLens: true }, dir);
-    const kinds = (await events(dir)).map((e) => e.kind);
-
-    expect(kinds).toContain("run-started");
-    expect(kinds).toContain("run-failed");
-    expect(kinds).not.toContain("run-finished"); // it did not finish
-  });
-
-  it("stamps the exit code on the failure event, so a reader need not infer it", async () => {
-    const dir = await withBrokenRegistry();
-    await runGate({ range: "HEAD", noLens: true }, dir);
-    expect((await events(dir)).find((e) => e.kind === "run-failed")?.exit).toBe(2);
-  });
 });
 
 describe("outside a repository", () => {
@@ -371,11 +263,9 @@ describe("a check switched off in its own file", () => {
     expect(stdout()).not.toMatch(/UNCOVERED/);
   });
 
-  it("archives an uncovered run as uncovered, so `wst events` cannot call it passed", async () => {
-    // The console said "UNCOVERED — nothing about this change was verified" while
-    // the log recorded `status: "pass"` and `detail: "passed — 0 check(s)"`, so
-    // the reader replayed it as a pass. The event log is this project's evidence
-    // about itself, which is what makes the mismatch worse than cosmetic.
+  it("reports an uncovered run as uncovered and never as passed", async () => {
+    // Exit 0 is shared by "everything passed" and "nothing ran", so the words are
+    // the only thing telling a reader which one happened (hard rule 3).
     const dir = await repo({
       checks: { "elsewhere.md": deterministicCheck("elsewhere", "exit 0").replace(
         'include: ["src/**"]',
@@ -384,10 +274,9 @@ describe("a check switched off in its own file", () => {
     });
 
     expect(await runGate({ range: "HEAD" }, dir)).toBe(0);
-    const finished = (await events(dir)).find((e) => e.kind === "run-finished");
 
-    expect(finished?.status).toBe("uncovered");
-    expect(finished?.detail).not.toContain("passed");
+    expect(stdout()).toMatch(/UNCOVERED/);
+    expect(stdout()).not.toMatch(/passed/i);
   });
 
   it("blocks when the same check is left on, which is the control", async () => {

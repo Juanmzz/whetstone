@@ -46,9 +46,6 @@ anything.
   present tense. It is the authority; anything that disagrees with it is drift.
 - **[`docs/design.md`](./docs/design.md)** — where to read about each part, and the
   anatomy of a check file.
-- **[`.wst/memory/decisions.md`](./.wst/memory/decisions.md)** — what was decided and
-  what each decision ruled out. There is no roadmap: this project has changed shape
-  twice, and a milestone list is what keeps claiming the old one.
 
 **Not bundled:** `llm` checks need the `claude` CLI. Nothing else.
 

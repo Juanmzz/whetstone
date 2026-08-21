@@ -40,11 +40,7 @@ const under = (subpath: string): RegExp =>
 /** Append-only records. `init` seeds them empty and must never re-empty them. */
 const APPEND_ONLY: readonly RegExp[] = [
   under("memory/signals.jsonl"),
-  // `.wst/events.jsonl`, NOT under `memory/` — `shell/events.ts` says so in its
-  // own header. Written as `memory/events.jsonl` first, which protected a path
-  // that does not exist: dead today because `init` writes no event log, and a
-  // silent hole the day it does.
-  new RegExp(`^${DEFINITION_DIR_PATTERN}/events\\.jsonl`),
+  under("memory/retro-log.md"),
 ];
 
 const STAKES: readonly (readonly [RegExp, string])[] = [

@@ -398,12 +398,6 @@ export function renderWstGitignore(): string {
 # version string for identity.
 checks/_index.json
 
-# The execution log: what a gate run did, minute by minute. Per-machine state,
-# not a judgment a team shares, and committing it leaves the tree dirty right
-# after every push, since the pre-push hook runs the gate and the gate writes
-# this file.
-events.jsonl
-
 # Receipts are a derived cache: "check X passed on this exact input". Regenerable,
 # and a stale one would claim a pass that never happened for the current code.
 # Worse than stale if committed: a receipt authorises skipping a check, so every

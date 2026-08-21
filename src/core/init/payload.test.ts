@@ -207,9 +207,9 @@ describe("runtime state the target repo must never commit", () => {
   describe("renderWstGitignore — .wst/.gitignore", () => {
     const gitignore = renderWstGitignore();
 
-    it("ignores the compiled check index, the event log and the receipts cache", () => {
+    it("ignores the compiled check index and the receipts cache", () => {
       expect(gitignore.split("\n").map((l) => l.trim())).toEqual(
-        expect.arrayContaining(["checks/_index.json", "events.jsonl", "receipts/"]),
+        expect.arrayContaining(["checks/_index.json", "receipts/"]),
       );
     });
 

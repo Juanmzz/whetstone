@@ -199,7 +199,7 @@ requires. Cost accepted, plainly: in a host repo the gate then lives in a pre-pu
 `--no-verify` skips it.
 
 ### adr-0011 — build the event log; refuse the workflow engine
-`accepted` · 2026-08-09
+`superseded by adr-0024` · 2026-08-09
 
 Rejected: the YAML workflow engine with branching and `goto`. It reimplements state machines
 Temporal, LangGraph, Dagger and GitHub Actions already own, and branching destroys the one
@@ -565,3 +565,27 @@ with a separate blast radius.
 Cost accepted: `assertWorktreeAt` goes with `prepare`. It was the guard `sig-82dec46b` earned
 — a destructive command asking where it is standing — and it had no other caller. Anything
 that later runs git against a directory it did not open must bring it back.
+
+### adr-0024 — stop writing a log nobody reads
+`accepted` · 2026-08-21
+
+Takes only the first half of adr-0011. **The refusal of the workflow engine stands** and is
+untouched; every rule that cites adr-0011 for that reason still resolves to it.
+
+The event log had exactly one reader, `wst events`, and that reader existed to explain the
+log. It was gitignored, so it never left the machine that wrote it, which is why the run CI
+recorded evaporated with the runner. What it was for -- knowing which check was slow, and
+whether a run ended the way the console said -- is served live by the progress lines the gate
+already writes to stderr, and permanently by the signal log, which is committed.
+
+Rejected: keeping the writer and cutting only the reader. That leaves the gate spending disk
+and code on a file with no consumer, which is the same defect with fewer symptoms.
+
+Rejected: committing the log instead of ignoring it, so it would accumulate across machines.
+It is per-run state that changes on every push; committing it leaves the tree dirty
+immediately after the pre-push hook runs, and a team would resolve a conflict per push in a
+file no decision reads.
+
+Cost accepted: a run no longer prints an id, so two people comparing runs have the console
+output and nothing else. And an outcome is now asserted through what the gate prints rather
+than through a record of it, which is a weaker test of the same guarantee.
