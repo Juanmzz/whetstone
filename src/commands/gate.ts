@@ -12,14 +12,11 @@ import type { Tier } from "../core/checks/schema.js";
 import type { CheckOutcome, Routing } from "../core/contracts.js";
 import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
-import { EXIT_INCOMPLETE, exitCodeFor, outcomeOf, renderGateRun } from "../core/gate/report.js";
+import { EXIT_INCOMPLETE, exitCodeFor, renderGateRun } from "../core/gate/report.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
-import { NULL_SINK } from "../core/events/record.js";
-import { DEFINITION_DIR } from "../core/paths.js";
 import { appendSignals } from "../shell/signals.js";
 import { resolveMemory } from "../shell/memory.js";
-import { createEventLog, EVENTS_PATH, type EventLog } from "../shell/events.js";
 import { checkEnv } from "../core/gate/env.js";
 import {
   runGate as executeGate,
@@ -101,10 +98,6 @@ const MAX_BUFFER = 64 * 1024 * 1024;
 
 /** Exit code for a gate that could not even start. Distinct from a block. */
 const EXIT_MISCONFIGURED = 2;
-
-/** `--no-emit` means no log at all, so every drain has to tolerate its absence. */
-const drain = (log: EventLog | null): Promise<string | null> =>
-  log === null ? Promise.resolve(null) : log.drain();
 
 // ── adapters (see the file header: these belong in src/shell/) ───────────────
 
@@ -360,22 +353,9 @@ export async function runGate(
     return EXIT_MISCONFIGURED;
   }
 
-  const startedAt = new Date();
-  const events =
-    opts.noEmit === true
-      ? null
-      : createEventLog(
-          definitionRoot,
-          `gate|${range}|${startedAt.toISOString()}`,
-          () => new Date(),
-        );
-  const emit = events?.sink ?? NULL_SINK;
-  emit({ kind: "run-started", detail: `wst gate --range ${range}` });
 
-  const failed = async (detail: string, exit: number): Promise<number> => {
-    emit({ kind: "run-failed", detail, exit });
+  const failed = (detail: string, exit: number): number => {
     console.error(detail);
-    await drain(events);
     return exit;
   };
 
@@ -413,18 +393,12 @@ export async function runGate(
   // project's own triage rules decorative exactly where they matter.
   const triage = classify(files, rules.rules, rules.origin);
   const routing = route(opts.tier ?? triage.tier, registry.active);
-  emit({
-    kind: "triage-classified",
-    detail: `${files.length} file(s) classified as ${routing.tier}`,
-    tier: routing.tier,
-  });
 
   const run = await executeGate(
     { routing, registry, files },
     {
       hashFile: (path) => git.hashFile(path),
       clock: { now: () => new Date() },
-      events: emit,
       receipts:
         opts.noReceipts === true ? createDistrustfulReceiptStore() : createReceiptStore(definitionRoot),
       // Wrapped, not plumbed through `GatePorts`: `check-started` is deliberately
@@ -473,26 +447,11 @@ export async function runGate(
   // remedy, and it is a remedy, which is the test that separates the two.
   const exit = registry.byId.size === 0 ? EXIT_INCOMPLETE : exitCodeFor(run.verdict, run.selection);
 
-  // The OUTCOME, not the verdict.
-  const outcome = outcomeOf(run.verdict, run.selection);
-  emit({
-    kind: "run-finished",
-    // The outcome, plus what it was made of. A `block` line that does not name the
-    // check that blocked sends the reader back to a console the run already lost.
-    detail:
-      outcome === "blocked"
-        ? `blocked by ${run.verdict.blocking.join(", ")}`
-        : `${outcome} — ${run.verdict.results.length} check(s), ${run.verdict.errored.length} errored`,
-    status: outcome,
-    exit,
-    ms: Math.max(0, Date.now() - startedAt.getTime()),
-  });
-  const eventError = await drain(events);
 
   if (opts.json === true) {
     console.log(
       JSON.stringify(
-        { range, tier: routing.tier, emitted, signalError, run: events?.run ?? null, eventError, ...run.verdict },
+        { range, tier: routing.tier, emitted, signalError, ...run.verdict },
         null,
         2,
       ),
@@ -502,15 +461,6 @@ export async function runGate(
     if (emitted.length > 0) {
       console.log(`\n  signals emitted: ${emitted.join(", ")}`);
     }
-    if (events !== null) {
-      console.log(`  events: ${events.run} in ${DEFINITION_DIR}/${EVENTS_PATH}`);
-    }
-  }
-  if (eventError !== null) {
-    // Reported, never fatal, and never confused with the signal warning above: no
-    // verdict is derived from this log, so a failure to write it costs a record and
-    // nothing else.
-    console.error(`\n  ⚠ the event log for this run is incomplete — ${eventError}`);
   }
   if (signalError !== null) {
     console.error(

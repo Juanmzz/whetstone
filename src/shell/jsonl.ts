@@ -10,7 +10,7 @@ import { dirname } from "node:path";
  *
  * `signals.jsonl` is hand-edited as a documented workflow and 45 of this repo's
  * entries were written that way, so a last line with no newline after it is the
- * ordinary state of that file. `events.jsonl` is never hand-edited, but a process
+ * ordinary state of that file. The log is never hand-edited, but a process
  * killed mid-append leaves exactly the same shape. Appending blind welds two JSON
  * objects onto one line, and both parsers fail closed on it.
  *

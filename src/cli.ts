@@ -11,7 +11,6 @@ import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
 import { runRetro } from "./commands/retro.js";
-import { runEvents } from "./commands/events.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
@@ -66,7 +65,6 @@ program
   .action(async (opts: { range?: string; json?: boolean; why?: boolean }) => {
     process.exitCode = await runTriage(opts);
   });
-
 program
   .command("gate")
   .description("run the verification gate over a diff")
@@ -95,23 +93,6 @@ program
       ...(opts.json !== undefined ? { json: opts.json } : {}),
       ...(opts.lens === false ? { noLens: true } : {}),
       ...(opts.emit === false ? { noEmit: true } : {}),
-    });
-  });
-program
-  .command("events")
-  .description("read the event log: what a run did, and how it ended")
-  .option("--run <id>", "a run id, or an unambiguous prefix of one (default: the most recent run)")
-  .option("--list", "one line per run, newest first")
-  .option("--json", "print the run as JSON")
-  .option("--follow", "tail a run that is still going (polls; ^C to stop)")
-  .action(async (opts: { run?: string; list?: boolean; json?: boolean; follow?: boolean }) => {
-    // No exit code here means "the run went badly": 0 means the log was read, 2
-    // means it could not be. A BLOCKED run reported faithfully is a successful read.
-    process.exitCode = await runEvents({
-      ...(opts.run !== undefined ? { run: opts.run } : {}),
-      ...(opts.list !== undefined ? { list: opts.list } : {}),
-      ...(opts.json !== undefined ? { json: opts.json } : {}),
-      ...(opts.follow !== undefined ? { follow: opts.follow } : {}),
     });
   });
 

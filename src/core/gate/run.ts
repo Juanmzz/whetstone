@@ -2,7 +2,6 @@
  * The gate orchestrator: select -> skip by receipt -> run -> aggregate -> record.
  */
 
-import { NULL_SINK, type EventSink } from "../events/record.js";
 import type { LoadedCheck, Registry } from "../checks/registry.js";
 import type { CheckResult, GateVerdict, Routing } from "../contracts.js";
 import type { ChangedFile } from "../diff/parse.js";
@@ -54,14 +53,6 @@ export interface GatePorts {
   readonly clock: ClockPort;
   readonly receipts: ReceiptStore;
   readonly runCheck: CheckRunner;
-  /**
-   * Where per-check progress is recorded. OPTIONAL, and the asymmetry with
-   * `appendSignals`' required-but-nullable `branch` is deliberate: a signal with no
-   * branch is a RECORD MISSING A FIELD, so a caller has to answer for it, whereas a
-   * gate with no sink simply produces no log. Omitting it costs observability, not
-   * correctness, and the verdict is byte-identical either way.
-   */
-  readonly events?: EventSink;
 }
 
 export interface GateInput {
@@ -120,7 +111,6 @@ interface CheckWithInput {
 
 export async function runGate(input: GateInput, ports: GatePorts): Promise<GateRun> {
   const { routing, registry, files } = input;
-  const emit = ports.events ?? NULL_SINK;
   const selection = selectChecks(routing, registry, files);
 
   const results = new Map<string, CheckResult>();
@@ -212,16 +202,6 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
     }
 
     if (shouldSkip(receipt, item.inputHash).skip) {
-      // The one skip worth recording. `selection.excluded` is a check that was never
-      // going to run on this change; a RECEIPT skip is the gate choosing not to
-      // re-verify something, which is the decision a reader of this log will want to
-      // second-guess.
-      emit({
-        kind: "check-skipped",
-        detail: `\`${item.check.id}\` skipped — a receipt covers this input`,
-        check: item.check.id,
-        status: "skipped",
-      });
       results.set(item.check.id, {
         checkId: item.check.id,
         checkVersion: item.check.version,
@@ -255,17 +235,6 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
     }
     const durationMs = Math.max(0, ports.clock.now().getTime() - started);
 
-    // Emitted here rather than in the results loop below, so the line lands when the
-    // check actually finished. The results are re-sorted into routing order before
-    // they are returned — a log built from them would report a chronology that never
-    // happened, and this log's only job is to say what happened when.
-    emit({
-      kind: "check-finished",
-      detail: `\`${item.check.id}\` (v${item.check.version}) ${outcome.outcome.status}`,
-      check: item.check.id,
-      status: outcome.outcome.status,
-      ms: durationMs,
-    });
 
     return {
       checkId: item.check.id,

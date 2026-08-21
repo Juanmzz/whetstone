@@ -87,5 +87,4 @@ concurrent code, and the run that proved it cost $4.45.
 | `.wst/memory/signals.jsonl` | Append-only observations, the retro's input | yes, `merge=union` |
 | `.wst/memory/decisions.md` | Decisions by anchor id | yes |
 | `.wst/memory/retro-log.md` | What each retro read and changed | yes |
-| `.wst/events.jsonl` | What a gate run did, per machine | no — disposable |
 | `.wst/receipts/` | Which check passed on which input | no — a cache |

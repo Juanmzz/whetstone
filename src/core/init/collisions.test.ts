@@ -87,25 +87,14 @@ describe("collisionsIn — what --force may never take", () => {
   const plan = {
     files: [
       { path: ".wst/memory/signals.jsonl", contents: "" },
-      { path: ".wst/events.jsonl", contents: "" },
+      { path: ".wst/memory/retro-log.md", contents: "" },
       { path: ".wst/constitution.md", contents: "x" },
     ],
     copies: [],
   };
 
-  it("protects the event log where it actually lives", () => {
-    // `.wst/events.jsonl`, not `.wst/memory/events.jsonl`. The first version
-    // named the latter, so it guarded a path nothing writes.
-    const [found] = collisionsIn(
-      { files: [{ path: ".wst/events.jsonl", contents: "" }], copies: [] },
-      [".wst/events.jsonl"],
-    );
-
-    expect(found?.forceable).toBe(false);
-  });
-
   it("marks the append-only logs as unforceable", () => {
-    const found = collisionsIn(plan, [".wst/memory/signals.jsonl", ".wst/events.jsonl"]);
+    const found = collisionsIn(plan, [".wst/memory/signals.jsonl", ".wst/memory/retro-log.md"]);
 
     expect(found.map((c) => c.path)).toHaveLength(2);
     for (const c of found) expect(c.forceable).toBe(false);
