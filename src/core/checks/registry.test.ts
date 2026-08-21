@@ -56,6 +56,7 @@ const check = (over: Record<string, unknown> = {}) => ({
   origin: [],
   version: 1,
   enabled: true,
+  skippable: true,
   body: "",
   ...over,
 });

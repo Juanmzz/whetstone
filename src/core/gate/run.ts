@@ -201,7 +201,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
       receipt = null;
     }
 
-    if (shouldSkip(receipt, item.inputHash).skip) {
+    if (item.check.skippable && shouldSkip(receipt, item.inputHash).skip) {
       results.set(item.check.id, {
         checkId: item.check.id,
         checkVersion: item.check.version,
@@ -279,6 +279,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
   const receiptErrors: ReceiptError[] = [];
   for (const item of toRun) {
     if (item.hashedFiles === null) continue; // no describable input, no receipt
+    if (!item.check.skippable) continue; // nothing will ever read it
     if (results.get(item.check.id)?.outcome.status !== "pass") continue;
 
     try {

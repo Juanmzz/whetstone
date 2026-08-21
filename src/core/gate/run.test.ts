@@ -19,6 +19,7 @@ function det(over: Partial<LoadedCheck> = {}): LoadedCheck {
     include: ["src/**/*.ts"],
     exclude: [],
     enabled: true,
+    skippable: true,
     version: 1,
     origin: [],
     command: "npm run typecheck",
@@ -377,6 +378,33 @@ describe("rule 4 — a receipt skip is a skip, and it is honest", () => {
     expect(h.ran).toEqual([]);
     expect(run.verdict.skipped).toEqual(["typecheck"]);
     expect(run.verdict.results[0]?.outcome).toEqual({ status: "skipped", reason: "receipt" });
+  });
+
+  it("runs a check that declares itself unskippable, receipt or not", async () => {
+    // A receipt proves "this check passed on these file contents". That proof only
+    // holds for a check whose answer is a function of the contents. One that reads
+    // `WST_GATE_RANGE` answers a different question per range, and the range is not
+    // in the hash, so the receipt would authorise a skip it never earned.
+    const h = harness({ stored: { typecheck: receiptFor() } });
+
+    const run = await runGate(
+      { routing: routing(), registry: buildRegistry([det({ skippable: false })]), files: FILES },
+      h.ports,
+    );
+
+    expect(h.ran).toEqual(["typecheck"]);
+    expect(run.verdict.skipped).toEqual([]);
+  });
+
+  it("mints no receipt for an unskippable check, since nothing may read it", async () => {
+    const h = harness();
+
+    await runGate(
+      { routing: routing(), registry: buildRegistry([det({ skippable: false })]), files: FILES },
+      h.ports,
+    );
+
+    expect(h.written).toEqual([]);
   });
 
   it("passes when EVERY check was skipped by a receipt — correct, not a hole", async () => {

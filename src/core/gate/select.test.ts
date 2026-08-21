@@ -14,6 +14,7 @@ function check(over: Partial<LoadedCheck> = {}): LoadedCheck {
     include: ["src/**/*.ts"],
     exclude: [],
     enabled: true,
+    skippable: true,
     version: 1,
     origin: [],
     command: "npm run typecheck",

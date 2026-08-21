@@ -56,6 +56,15 @@ const BaseCheck = z.strictObject({
   include: z.array(z.string()).min(1),
   exclude: z.array(z.string()).default([]),
   enabled: z.boolean().default(true),
+  /**
+   * Whether a receipt may stand in for running this check.
+   *
+   * A receipt proves "this check passed on these file contents", so it is only
+   * evidence for a check whose answer is a function of those contents. One that
+   * reads `WST_GATE_RANGE` answers a different question per range, and the range
+   * is not in the hash.
+   */
+  skippable: z.boolean().default(true),
   /** Bumped when behaviour changes — part of the receipt's input hash. */
   version: z.number().int().min(1).default(1),
   /** Signals / ADRs that earned this check. Empty means unearned. */
