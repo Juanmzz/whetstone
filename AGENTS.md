@@ -91,7 +91,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 24 ADRs · 55 signals · 7 commands
+## Status — branch `main` · 26 ADRs · 56 signals · 7 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 

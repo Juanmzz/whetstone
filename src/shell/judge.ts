@@ -9,6 +9,7 @@
 import type { WstConfig } from "../core/config/schema.js";
 import type { LlmJudge } from "../core/ports.js";
 import { createClaudeJudge } from "./claude.js";
+import { createGeminiJudge } from "./gemini.js";
 import { loadConfig } from "./config.js";
 
 /** The adapter the config asks for. */
@@ -16,6 +17,8 @@ export function judgeFor(config: WstConfig): LlmJudge {
   switch (config.agent) {
     case "claude":
       return createClaudeJudge();
+    case "gemini":
+      return createGeminiJudge();
   }
 }
 

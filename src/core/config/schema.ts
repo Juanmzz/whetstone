@@ -13,11 +13,12 @@ import { z } from "zod";
 /**
  * Which adapter runs `llm` checks.
  *
- * One value ships. A second arrives with its own adapter, its own measured
- * invocation — none of `claude -p`'s flags transfer — and its own calibration,
- * since a receipt is bound to the model that earned it.
+ * Each has its own adapter and its own measured invocation: none of `claude -p`'s
+ * flags transfer, and Gemini takes no schema flag at all. Each also earns its own
+ * calibration, since a receipt binds the model. They report side by side and never
+ * vote (adr-0026).
  */
-export const AGENTS = ["claude"] as const;
+export const AGENTS = ["claude", "gemini"] as const;
 export type Agent = (typeof AGENTS)[number];
 
 /**
