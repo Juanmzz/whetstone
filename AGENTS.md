@@ -49,7 +49,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run` �
 | `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`; `proposals/` holds a retro's draft until the log records it |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
-| `src/shell/` | Thin adapters: git, claude, treehouse, sdd, signals, events, receipts, plugin |
+| `src/shell/` | Thin adapters: git, claude, sdd, signals, events, receipts, plugin |
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
 | `.claude/hooks/` | Emitter output compiled from `.wst/`. Hand-edits are drift. |
@@ -110,8 +110,9 @@ built under that waiver and removed by ADR-0009.
 - **54 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
   `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
-- **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
-  re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
+- **`correctness`** is an `llm` check at `warn`. Measured 2026-08-20 on claude 2.1.237: 98/100
+  correct, **zero wrong verdicts**, two runs the harness never got an answer out of. The bar is
+  unanimity per fixture and an errored run costs the fixture its pass, so it stays capped.
 
 ### Known weaknesses, stated plainly
 
@@ -125,7 +126,8 @@ built under that waiver and removed by ADR-0009.
   Before it, CI emitted `sig-70ad13db` on an ephemeral runner and it evaporated. The gap was
   never "the gate does not fail"; it was that where the gate really runs, nothing persisted
   what it observed.
-- **The lens is uncalibrated at v4**, so the differentiator is advisory.
+- **The lens is capped at `warn` by harness failures, not by judgment.** Two calls in 100 never
+  returned. The differentiator stays advisory until they stop, which is a retry problem.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
 - **Unowned:** ADR-0006's updater is decided and unbuilt, with nobody on it; no skill owns subprocess-exit-code

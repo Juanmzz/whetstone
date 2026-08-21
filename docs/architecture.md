@@ -58,9 +58,8 @@ once on any amendment to the rules. Neither signature is automatable; `wst retro
 never applies, and `wst signal` is a command for a person to type.
 
 The boundary in one line: **Whetstone decides whether work is acceptable; the harness produces
-it.** Whetstone leases worktrees through treehouse, talks to GitHub through `gh`, and executes
-and judges through `claude`. It is not a fleet manager, not a spec framework, not a memory
-server.
+it.** Whetstone talks to GitHub through `gh`, and executes and judges through `claude`. It is
+not a fleet manager, not a spec framework, not a memory server.
 
 ## The commands
 
@@ -115,7 +114,7 @@ src/
     calibration/      receipts that grant a lens its blocking authority
     receipts/ events/ signals/ retro/ init/ dispatch/ status/ history/
     orchestrate/      policy that drives ports passed AS PARAMETERS
-  shell/              IMPERATIVE. thin adapters: git, claude, treehouse, sdd,
+  shell/              IMPERATIVE. thin adapters: git, claude, sdd,
                       signals, events, receipts, calibration, retro, jsonl, plugin
 ```
 

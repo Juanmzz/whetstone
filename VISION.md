@@ -76,9 +76,10 @@ The loop: **use → record → distill → amend.** That is the moat.
   the same port. Which verbs that port carries is a question for `MemoryPort`, not for this page.
 - **Not autonomous self-modification.** Every amendment to a rule passes a human gate. The value is
   *auditable* evolution, not unsupervised drift.
-- **Not a fleet manager.** Whetstone takes *light* orchestration — triage, plan gate, fan-out, gate,
-  PR — and delegates everything commodity: worktrees to `treehouse`, GitHub to `gh`, execution and
-  judgment to `claude`. It does not schedule, supervise, or scale an agent fleet.
+- **Not a fleet manager.** Whetstone triages a change and gates it. It does not brief, dispatch,
+  schedule, supervise or scale an agent fleet; execution and judgment go to `claude`, GitHub to
+  `gh`. It gates work from any source, which is more than it could reach if it launched the work
+  itself.
 - **Not tied to Claude Code.** Files-first design means any agent that reads markdown can consume
   it, and the LLM boundary is one port with swappable adapters. Claude Code gets first-class
   support (hooks, commands).
