@@ -6,7 +6,7 @@
   "model": "sonnet",
   "runtime": {
     "name": "claude",
-    "version": "2.1.234"
+    "version": "2.1.237"
   },
   "runs": 10,
   "results": [
@@ -50,7 +50,7 @@
         "fail",
         "fail",
         "fail",
-        "fail",
+        "errored",
         "fail",
         "fail",
         "fail",
@@ -128,14 +128,14 @@
       "got": [
         "pass",
         "pass",
+        "pass",
         "errored",
         "pass",
-        "fail",
         "pass",
         "pass",
-        "fail",
         "pass",
-        "fail"
+        "pass",
+        "pass"
       ]
     },
     {
@@ -172,5 +172,5 @@
     }
   ],
   "verdict": "failed",
-  "measuredAt": "2026-08-18T13:47:48.154Z"
+  "measuredAt": "2026-08-20T07:08:55.722Z"
 }

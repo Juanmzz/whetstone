@@ -12,7 +12,9 @@ the friction it hits, the checks a project needs grow from what actually went wr
 each carrying a receipt for why it exists.
 
 > **Status: alpha (v0.5.0).** The gate runs on this repo's own changes. The judgment
-> tier is not done: the review lens is uncalibrated, so it may only warn.
+> tier is measured but not earned: the review lens returned 98 correct verdicts out of
+> 100 and got none wrong, and is still capped at `warn` because two runs never came
+> back at all. A lens that cannot answer cannot gate.
 > [AGENTS.md](./AGENTS.md) carries the current numbers and
 > [what is still weak](./AGENTS.md#known-weaknesses-stated-plainly) — checked by a gate
 > check, so this file does not repeat them.
@@ -29,12 +31,14 @@ full of rules is merely advisory.
 
 ```
 wst init    → interview the project, generate .wst/
-wst plan    → declared paths → tier → what will judge it, and what nothing covers
-wst prepare → lease a worktree → branch → write the charter → stop
+   ↓          the work happens: any agent, or a person. .wst/ is in the repo
 wst gate    → select checks → skip what receipts prove unchanged → pass or block
-wst events  → read the log back: what a run did, and how it ended
-wst retro   → cluster signals → propose changes → a human approves
+wst signal  → a human records the friction the run hit
+wst retro   → cluster signals → propose changes → a human approves → back to .wst/
 ```
+
+`status`, `check`, `triage` and `events` read that machinery back; none of them decide
+anything.
 
 ## Reading further
 
@@ -46,9 +50,7 @@ wst retro   → cluster signals → propose changes → a human approves
   what each decision ruled out. There is no roadmap: this project has changed shape
   twice, and a milestone list is what keeps claiming the old one.
 
-**Not bundled:** `wst prepare` needs
-[`treehouse`](https://github.com/kunchenguid/treehouse) for worktree isolation, and
-`llm` checks need the `claude` CLI.
+**Not bundled:** `llm` checks need the `claude` CLI. Nothing else.
 
 **Not this:** a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers),
 a memory server (memory is an interface; files are the default), or a fleet manager.

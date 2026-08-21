@@ -236,16 +236,16 @@ describe("runtime state the target repo must never commit", () => {
       expect(attributes).toMatch(/^memory\/signals\.jsonl\s+merge=union$/m);
     });
 
-    it("claims union for nothing else, since it is only sound for append-only files", () => {
-      // `decisions.md` is the tempting second entry and would be WRONG: two
-      // workers computing "the next ADR is 0011" both write adr-0011, and union
-      // would merge two records that share an id rather than conflict on them.
+    it("claims union only for the files nothing rewrites in place", () => {
+      // `decisions.md` would be WRONG: two workers computing "the next ADR is
+      // 0011" both write adr-0011, and union merges them instead of conflicting.
       const claims = attributes
         .split("\n")
         .filter((line) => line.includes("merge=union"))
         .map((line) => line.split(/\s+/)[0]);
 
-      expect(claims).toEqual(["memory/signals.jsonl"]);
+      expect(claims).toEqual(["memory/signals.jsonl", "memory/retro-log.md"]);
+      expect(claims).not.toContain("memory/decisions.md");
     });
 
     it("uses no em-dash, same as every other page init writes into a target repo", () => {
@@ -253,18 +253,14 @@ describe("runtime state the target repo must never commit", () => {
     });
   });
 
-  describe("renderRootGitignoreStanza — .wst-charter.md and .wst-lane", () => {
-    it("ignores both files `wst prepare` writes into a leased worktree", () => {
-      expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-charter.md", ".wst-lane"]);
-      const stanza = renderRootGitignoreStanza();
-      expect(stanza).toContain(".wst-charter.md");
-      expect(stanza).toContain(".wst-lane");
+  describe("renderRootGitignoreStanza — .wst-lane", () => {
+    it("ignores the lane file a worker writes at the worktree root", () => {
+      expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-lane"]);
+      expect(renderRootGitignoreStanza()).toContain(".wst-lane");
     });
 
-    it("can render only the entries missing from a .gitignore that already exists", () => {
-      const stanza = renderRootGitignoreStanza([".wst-lane"]);
-      expect(stanza).toContain(".wst-lane");
-      expect(stanza).not.toContain(".wst-charter.md");
+    it("renders only what it is given, so init can append just what is missing", () => {
+      expect(renderRootGitignoreStanza([])).not.toContain(".wst-lane");
     });
 
     it("uses no em-dash", () => {

@@ -24,7 +24,7 @@ and the other is drift.
 
 | Deterministic — the engine | LLM — judgment only |
 |---|---|
-| triage classification · check selection · `wst plan` · running deterministic checks · enforcing the gate · receipt hashing · the event log · signal collection and clustering · emitting hooks | `llm` checks · proposing a new check (human-gated) |
+| triage classification · check selection · running deterministic checks · enforcing the gate · receipt hashing · the event log · signal collection and clustering · emitting hooks | `llm` checks · proposing a new check (human-gated) |
 
 Frugality is about VERIFICATION, not execution. The agent doing the work costs what it costs;
 Whetstone verifies frugally, triage-gated.
@@ -34,17 +34,14 @@ Whetstone verifies frugally, triage-gated.
 ```mermaid
 flowchart TB
   defs[/".wst/ — constitution · triage · checks · skills"/]:::wst
-  plan["wst plan<br/>predicted tier · which checks judge it · what nothing covers"]:::wst
-  sign1{{"a human approves the plan"}}:::human
-  prep["wst prepare<br/>lease a worktree · branch · write the charter"]:::wst
-  work["the work happens<br/>Claude Code, another agent, or a person"]:::harness
+  work["the work happens<br/>Claude Code, another agent, or a person<br/>oriented by reading .wst/"]:::harness
   push["git push · CI"]:::harness
   gate["wst gate<br/>deterministic checks · calibrated lens · receipts"]:::wst
   sig[("signals.jsonl · events log")]:::wst
   retro["wst retro<br/>cluster signals · propose amendments"]:::wst
   sign2{{"a human accepts an amendment"}}:::human
 
-  defs --> plan --> sign1 --> prep --> work --> push --> gate
+  defs --> work --> push --> gate
   gate -->|blocks| work
   gate --> sig --> retro --> sign2 --> defs
   defs -.reads.-> gate
@@ -61,9 +58,8 @@ once on any amendment to the rules. Neither signature is automatable; `wst retro
 never applies, and `wst signal` is a command for a person to type.
 
 The boundary in one line: **Whetstone decides whether work is acceptable; the harness produces
-it.** Whetstone leases worktrees through treehouse, talks to GitHub through `gh`, and executes
-and judges through `claude`. It is not a fleet manager, not a spec framework, not a memory
-server.
+it.** Whetstone talks to GitHub through `gh`, and executes and judges through `claude`. It is
+not a fleet manager, not a spec framework, not a memory server.
 
 ## The commands
 
@@ -72,10 +68,8 @@ server.
 | `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
 | `wst check` | list the registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |
-| `wst plan` | read a plan's declared `paths:` → predicted tier, blocking and advisory checks, and which paths nothing covers. No LLM. Never blocks |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals and events |
 | `wst events` | read the log `gate` writes: a run's timeline, per-check duration, how it ended. Writes nothing |
-| `wst prepare <task>` | lease a worktree, branch it, write the charter from the live registry — then stop |
 | `wst signal` | record an observation in `memory/signals.jsonl`. For a human to type |
 | `wst retro` | cluster signals, propose rule changes, never apply them |
 | `wst init` | interview a repo and generate its `.wst/` |
@@ -95,7 +89,7 @@ When this page says "layer" it means a stage below, never an import level.
 | 0 | **Definition** — `.wst/` | Per-project source of truth: constitution, triage rules, check registry, skills, memory |
 | 1 | **Apply** — `wst init` | Interview a repo, generate its `.wst/`. Reads declared facts; asks about everything else |
 | 2 | **Triage** | Classify a change by glob → tier → which checks run |
-| 3 | **Execution seam** | `wst plan` reports what will judge a change before it starts; `wst prepare` injects the charter and stops. The seam injects; it does not execute |
+| 3 | **Execution seam** | Nothing. A worker orients itself by reading `.wst/`, which travels with the repo. Whetstone does not brief, dispatch or execute (ADR-0023) |
 | 4 | **Verification gate** | Deterministic checks always, a calibrated lens when the tier earns it. Receipts skip what already passed |
 | 5 | **Self-sharpening** — `wst retro` | Signals → clusters → proposed amendments → a human accepts → `.wst/` changes |
 
@@ -120,7 +114,7 @@ src/
     calibration/      receipts that grant a lens its blocking authority
     receipts/ events/ signals/ retro/ init/ dispatch/ status/ history/
     orchestrate/      policy that drives ports passed AS PARAMETERS
-  shell/              IMPERATIVE. thin adapters: git, claude, treehouse, sdd,
+  shell/              IMPERATIVE. thin adapters: git, claude, sdd,
                       signals, events, receipts, calibration, retro, jsonl, plugin
 ```
 
@@ -149,28 +143,6 @@ nothing is not a pass, and "no checks ran" never shares a message with "all chec
 
 Include globs are matched with `node:path`'s `matchesGlob` against repo-relative paths. `**`
 does not cross a dot-leading segment, so a path under `.wst/` names it explicitly.
-
-## The plan `wst plan` reads
-
-Markdown with YAML frontmatter. `paths:` is the machine-readable half; the body is prose the
-engine never reads.
-
-```markdown
----
-intent: one line, what this change is for   # optional; echoed, never interpreted
-paths:                                      # required, a list, repo-relative
-  - src/core/plan/preview.ts
-  - README.md
----
-The approach a human iterated on. Not read by the engine.
-```
-
-An absolute path, or one climbing out with `..`, is REJECTED rather than classified: no triage
-glob can match it, and the `light` fallback means "unrecognised", not "trivial". The command
-reads a file argument, or stdin when given none.
-
-The tier is a prediction from what a plan declares about itself. `wst gate` classifies the real
-diff.
 
 ## The judge
 

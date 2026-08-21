@@ -231,7 +231,7 @@ The constraint is the decision and the name is its consequence: if `.wst` collid
 something equally established, only the name changes.
 
 ### adr-0013 — `wst plan` is the front door, reads a plan, and never blocks
-`accepted` · 2026-08-12
+`superseded by adr-0023` · 2026-08-12
 
 Rejected: the README's design — a step inside `wst run`, for critical changes only. Its host
 was being removed, and gating on criticality inverts the value: the moment a plan is worth
@@ -250,7 +250,7 @@ Reversal: if the predicted tier diverges often enough that nobody reads it, dele
 than tune it.
 
 ### adr-0014 — split `wst run`: keep the briefing, drop the dispatcher
-`accepted` · 2026-08-12 · signals: sig-0041
+`superseded by adr-0023` · 2026-08-12 · signals: sig-0041
 
 Rejected: executing adr-0011's "remove `wst run`" literally. That argument is about
 commoditised dispatch, so it reaches `shell/crewmate.ts` and not `core/dispatch/charter.ts` —
@@ -532,3 +532,36 @@ source nobody parses is worse than no declaration: a reader edits it and expects
 
 What survives from adr-0005: the emitter-as-compiler shape for everything it still compiles,
 and the refusal to build Whetstone *as* a vendor plugin.
+
+### adr-0023 — cut `plan` and `prepare`: the definition travels, so nothing needs to carry it
+`accepted` · 2026-08-20
+
+Supersedes adr-0013 and adr-0014. Both built a seam between a human's intent and the work:
+one predicting what would judge a change before it existed, the other writing a briefing into
+a leased worktree. Neither survives the question of who reads them. `.wst/` is committed and
+travels with the repo, so any worker that can read markdown already has the rules; a charter
+is a second copy of them, and a second copy drifts from the first.
+
+Rejected, and it is the strongest argument against this: that `prepare` is the only place
+standards reach an agent BEFORE it writes code, and without it Whetstone becomes a post-facto
+gate that an agent discovers only by failing, burning tokens in trial and error. Refused
+because the premise is wrong about how a coding agent takes rules — it reads the workspace,
+and `.wst/` is in the workspace. The briefing solved a problem that `init` writing the
+definition into the repo had already solved.
+
+Rejected: keeping `plan` for the one thing it alone answered, "which of the paths I intend to
+touch does nothing cover". adr-0021 gave the gate an `uncovered` outcome, which reports the
+same fact where it can act on it rather than where it can only predict it.
+
+Rejected: cutting `check` and `triage` in the same breath, on the ground that they hold zero
+exclusive engine code. They are 122 lines of wiring over functions the gate calls anyway, and
+they are the only way to ask "what will judge this file" without running the gate. Deleting
+them saves no engine and removes the diagnostic.
+
+Deferred, NOT rejected: `events`. Cutting the reader means stopping the gate from writing the
+log, which is surgery on the one command everything else depends on. It is a separate change
+with a separate blast radius.
+
+Cost accepted: `assertWorktreeAt` goes with `prepare`. It was the guard `sig-82dec46b` earned
+— a destructive command asking where it is standing — and it had no other caller. Anything
+that later runs git against a directory it did not open must bring it back.

@@ -30,19 +30,15 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
 | `wst check` | the check registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |
-| `wst plan` | read a plan's declared `paths:` → predicted tier → which checks will judge it, split blocking/advisory, and which paths **nothing** covers. Reads, never authors; no LLM; **never blocks** (ADR-0013) |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst events` | read the log `gate` writes: a run's timeline, which check took how long, how it ended. Reads only — no LLM, no verdict, writes nothing |
-| `wst prepare <task>` | lease a worktree, branch it, write the charter built from the live registry — then stop. Dispatches nothing, waits for nothing, and the lease is yours (ADR-0014) |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
 | `wst init` | interview a repo and generate its `.wst/` |
 
 Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
-record signals; for when you are testing the gate itself) · `prepare --dry-run` (print the charter,
-lease nothing) · `retro --dry-run` · `plan --json` (the full triage reason, untruncated) ·
-`events --list` (every run, newest first) · `events --follow` (tail a run in progress). The plan
-format is in `docs/architecture.md`.
+record signals; for when you are testing the gate itself) · `retro --dry-run` ·
+`events --list` (every run, newest first) · `events --follow` (tail a run in progress).
 
 ## Where things live
 
@@ -53,7 +49,7 @@ format is in `docs/architecture.md`.
 | `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`; `proposals/` holds a retro's draft until the log records it |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
-| `src/shell/` | Thin adapters: git, claude, treehouse, sdd, signals, events, receipts, plugin |
+| `src/shell/` | Thin adapters: git, claude, sdd, signals, events, receipts, plugin |
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
 | `.claude/hooks/` | Emitter output compiled from `.wst/`. Hand-edits are drift. |
@@ -86,7 +82,8 @@ format is in `docs/architecture.md`.
    what to think of it — is a serious bug. A hermetic judge cannot resolve a path, so everything
    it must judge is inlined (delegation D7). The other half of this pair, `shell/crewmate.ts`,
    is gone (ADR-0014): a crewmate now runs in a session a human opens, charged by construction,
-   and the charter `wst prepare` leaves in the worktree is what orients it.
+   and `.wst/` is what orients it. `wst prepare`, which used to write that briefing, is gone
+   too (ADR-0023).
 10. **Isolate a negative control.** When you break something on purpose to prove a check catches
     it, that defect must be the ONLY uncommitted change, and use `--no-emit`. Twice now it has
     contaminated something else: real work (`sig-0025`) and the evidence log (`sig-0026`).
@@ -96,7 +93,7 @@ format is in `docs/architecture.md`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 22 ADRs · 54 signals · 10 commands
+## Status — branch `main` · 23 ADRs · 55 signals · 8 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -104,17 +101,18 @@ ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-000
 `init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
 built under that waiver and removed by ADR-0009.
 
-- **The loop is closed and self-hosting.** `wst gate` verifies this repo's own changes and now
-  writes its own signals; `wst run` dispatched a crewmate whose work was gated before a human saw
-  it — that command is now `wst prepare` and gates nothing (ADR-0014), so enforcement on a
-  crewmate's work is the push and CI; `wst retro` has run three times, producing amendments
-  across seven of the eight skills, each carrying the signals that earned it. The pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the
-  full gate on every PR.
-- **54 signals**, 27 with `resolved_by`. Three retros. Seven of eight skills amended:
+- **The loop is closed and self-hosting.** `wst gate` verifies this repo's own changes and
+  writes its own signals; `wst retro` has run four times, producing amendments across seven of
+  the eight skills, each carrying the signals that earned it. Enforcement on any worker's
+  changes is the push and CI: the pre-push hook is armed (`core.hooksPath=.githooks`) and CI
+  runs the full gate on every PR. ADR-0023 cut `plan` and `prepare`; what a worker needs to
+  know is in `.wst/`, which it can already read.
+- **54 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
   `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
-- **`correctness`** is an agent-lens at `warn`, `uncalibrated` at lens v4. It may not block until
-  re-measured unfiltered. v3 failed the bar on false positives, which is the system working.
+- **`correctness`** is an `llm` check at `warn`. Measured 2026-08-20 on claude 2.1.237: 98/100
+  correct, **zero wrong verdicts**, two runs the harness never got an answer out of. The bar is
+  unanimity per fixture and an errored run costs the fixture its pass, so it stays capped.
 
 ### Known weaknesses, stated plainly
 
@@ -128,7 +126,8 @@ built under that waiver and removed by ADR-0009.
   Before it, CI emitted `sig-70ad13db` on an ephemeral runner and it evaporated. The gap was
   never "the gate does not fail"; it was that where the gate really runs, nothing persisted
   what it observed.
-- **The lens is uncalibrated at v4**, so the differentiator is advisory.
+- **The lens is capped at `warn` by harness failures, not by judgment.** Two calls in 100 never
+  returned. The differentiator stays advisory until they stop, which is a retry problem.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
 - **Unowned:** ADR-0006's updater is decided and unbuilt, with nobody on it; no skill owns subprocess-exit-code
