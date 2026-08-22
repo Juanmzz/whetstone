@@ -99,3 +99,42 @@ describe("the lane guard is the lanes file, compiled", () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe("the plugin the marketplace ships", () => {
+  it("declares the version the engine does, so an install says what it installed", async () => {
+    // They drifted: 0.5.0 against 0.5.0-alpha. `wst status` reports plugin state and
+    // would have called a stale install current.
+    const plugin = JSON.parse(
+      await readFile(join(repoRoot, "plugin", ".claude-plugin", "plugin.json"), "utf-8"),
+    ) as { version: string };
+    const pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf-8")) as {
+      version: string;
+    };
+
+    expect(plugin.version).toBe(pkg.version);
+  });
+
+  it("names every hook file it registers", async () => {
+    const hooks = JSON.parse(
+      await readFile(join(repoRoot, "plugin", "hooks", "hooks.json"), "utf-8"),
+    ) as { hooks: Record<string, { hooks: { command: string }[] }[]> };
+
+    for (const entries of Object.values(hooks.hooks)) {
+      for (const entry of entries) {
+        for (const hook of entry.hooks) {
+          const file = hook.command.replace("${CLAUDE_PLUGIN_ROOT}/", "");
+          await expect(readFile(join(repoRoot, "plugin", file), "utf-8")).resolves.toBeTruthy();
+        }
+      }
+    }
+  });
+
+  it("tells an agent about `wst update` rather than to stop at an existing .wst/", async () => {
+    // The line said "STOP and say so. `init` is not re-init" — true, and the reason
+    // an agent had nothing to offer a repo that already had one.
+    const skill = await readFile(join(repoRoot, "plugin", "skills", "init", "SKILL.md"), "utf-8");
+
+    expect(skill).toContain("wst update");
+    expect(skill).toContain("wst opinion");
+  });
+});
