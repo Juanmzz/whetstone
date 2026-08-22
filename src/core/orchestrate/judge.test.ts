@@ -100,6 +100,33 @@ describe("judgeWithRetry", () => {
     expect(result.error?.detail).toMatch(/ENOENT/);
   });
 
+  it("retries a spawn that failed for any reason other than a missing binary", async () => {
+    // One attempt was all it got: the loop returned on the first throw.
+    let calls = 0;
+    const invoke = vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) throw new Error("Command failed: claude -p");
+      return shot({ verdict: "pass", reason: "fine" });
+    }) as SingleShot;
+
+    const result = await judgeWithRetry({ ...req, maxAttempts: 3 }, invoke);
+
+    expect(result.ok).toBe(true);
+    expect(calls).toBe(2);
+  });
+
+  it("does NOT retry a missing binary, which will answer the same way forever", async () => {
+    const missing = Object.assign(new Error("spawn claude ENOENT"), { code: "ENOENT" });
+    const invoke = vi.fn(async () => {
+      throw missing;
+    }) as SingleShot;
+
+    const result = await judgeWithRetry({ ...req, maxAttempts: 3 }, invoke);
+
+    expect(result.error?.kind).toBe("spawn");
+    expect(invoke).toHaveBeenCalledOnce();
+  });
+
   it("stops immediately when the caller aborts", async () => {
     const controller = new AbortController();
     controller.abort();

@@ -77,8 +77,13 @@ export async function judgeWithRetry<S extends ZodType>(
       shot = await invoke(req, attempt);
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);
-      attempts.push({ n: attempt, outcome: "fail", reason: detail, costUsd: 0, durationMs: 0 });
-      return failWith({ kind: "spawn", detail });
+      // A binary that is not there will not be there next time. Anything else is
+      // the process failing to start once, which says nothing about the lens.
+      const terminal =
+        (cause as { code?: unknown }).code === "ENOENT" || attempt >= maxAttempts;
+      attempts.push({ n: attempt, outcome: terminal ? "fail" : "retry", reason: detail, costUsd: 0, durationMs: 0 });
+      if (terminal) return failWith({ kind: "spawn", detail });
+      continue;
     }
 
     // Retries are not free — meter every attempt, not just the last.
