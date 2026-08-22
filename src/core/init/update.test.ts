@@ -25,6 +25,7 @@ const base = (files: Record<string, string>): RecordedBase => ({
     strictPaths: [],
     stack: null,
     conventions: [],
+    opinions: [],
   },
   files,
 });

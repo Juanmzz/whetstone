@@ -13,6 +13,7 @@ import { runGate } from "./commands/gate.js";
 import { runRetro } from "./commands/retro.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
+import { runOpinion } from "./commands/opinion.js";
 import { runUpdate } from "./commands/update.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 import { DEFINITION_DIR } from "./core/paths.js";
@@ -152,6 +153,14 @@ program
       });
     },
   );
+
+program
+  .command("opinion")
+  .argument("[id]", "which opinion to run — omit for the list and what earned each")
+  .description("run a rule Whetstone offers that no repo declares")
+  .action(async (id: string | undefined) => {
+    process.exitCode = await runOpinion(id);
+  });
 
 program
   .command("update")

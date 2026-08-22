@@ -156,10 +156,18 @@ describe("a risk flag must carry evidence or it does not count", () => {
 });
 
 describe("proposalToAnswers", () => {
+  it("selects no opinion, because a model may not answer that question", () => {
+    // An opinion is written on a human yes and on nothing else (adr-0025). A draft
+    // that arrived with one pre-selected would be the model deciding, and the
+    // review step exists precisely so it does not.
+    expect(proposalToAnswers(proposal()).opinions).toEqual([]);
+  });
+
   it("produces answers a strict AnswersSchema will accept — no reasoning leaks in", () => {
     const answers = proposalToAnswers(proposal());
     expect(Object.keys(answers).sort()).toEqual([
       "conventions",
+      "opinions",
       "purpose",
       "risk",
       "sourcePaths",

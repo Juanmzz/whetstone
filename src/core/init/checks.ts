@@ -4,6 +4,7 @@
 
 import type { Check } from "../checks/schema.js";
 import { DEFINITION_DIR } from "../paths.js";
+import { opinionById } from "../opinions/index.js";
 import { yamlBlock, yamlList, yamlString, type GeneratedFile } from "./artifact.js";
 import type { StackFacts } from "./detect.js";
 
@@ -20,6 +21,8 @@ export interface SeedChecksOptions {
   readonly agentLens?: boolean;
   /** What the caller ASKED for. `block` is clamped — see rule 2 above. */
   readonly agentLensSeverity?: Check["severity"];
+  /** Ids the human said yes to. An id nobody ships is ignored, never written. */
+  readonly opinions?: readonly string[];
 }
 
 interface Draft {
@@ -33,6 +36,8 @@ interface Draft {
   readonly command?: string;
   /** Omitted means enabled. Written only to turn a check OFF, with the reason in the body. */
   readonly enabled?: false;
+  /** Written only to REFUSE a receipt, where the answer depends on the range. */
+  readonly skippable?: false;
   readonly reviewLens?: string;
   readonly calibrationDate?: string;
   readonly body: string;
@@ -53,6 +58,7 @@ function render(draft: Draft): GeneratedFile {
   }
   if (draft.command !== undefined) lines.push(`command: ${yamlString(draft.command)}`);
   if (draft.enabled === false) lines.push("enabled: false");
+  if (draft.skippable === false) lines.push("skippable: false");
   if (draft.reviewLens !== undefined) {
     lines.push(`review_lens: ${yamlBlock(draft.reviewLens)}`);
   }
@@ -168,6 +174,27 @@ export function seedChecks(
 
   if (options.agentLens === true) {
     drafts.push(agentLensDraft(options));
+  }
+
+  // Opinions LAST, and only the ones named. An id nobody ships is dropped rather
+  // than written: a check whose runner does not exist fails on every run, for a
+  // reason that has nothing to do with the code it judges.
+  for (const id of options.opinions ?? []) {
+    const opinion = opinionById(id);
+    if (opinion === null) continue;
+    drafts.push({
+      id: opinion.id,
+      description: opinion.title,
+      kind: "deterministic",
+      // Earned somewhere else. Promote it once it has caught something here, the
+      // same way `test` waits for its first green gate.
+      severity: "warn",
+      tiers: ["strict", "light"],
+      include,
+      command: opinion.command,
+      ...(opinion.skippable ? {} : { skippable: false as const }),
+      body: `${opinion.body}\n\n**Why it exists:** ${opinion.friction} (${opinion.origin.join(", ")})`,
+    });
   }
 
   return drafts.map(render);

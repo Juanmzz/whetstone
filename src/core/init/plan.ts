@@ -102,6 +102,7 @@ export function planInit(input: InitPlanInput): InitPlan {
   const checkFiles = seedChecks(stack, {
     date,
     include: sourcePaths,
+    opinions: input.answers.opinions,
     ...(options.seedAgentLens === true ? { agentLens: true } : {}),
   });
 

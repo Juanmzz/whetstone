@@ -1,3 +1,4 @@
+import { OPINIONS } from "../opinions/index.js";
 import { describe, expect, it } from "vitest";
 import {
   NO_RISK,
@@ -22,11 +23,12 @@ const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   strictPaths: [],
   stack: null,
   conventions: [],
+  opinions: [],
   ...over,
 });
 
 describe("buildInterview — everything not declared on disk is asked", () => {
-  it("asks the six questions the repo cannot answer about itself", () => {
+  it("asks the seven questions the repo cannot answer about itself", () => {
     const ids = buildInterview().map((q) => q.id);
     expect(ids).toEqual([
       "purpose",
@@ -35,6 +37,7 @@ describe("buildInterview — everything not declared on disk is asked", () => {
       "strict-paths",
       "stack",
       "conventions",
+      "opinions",
     ]);
   });
 
@@ -45,8 +48,21 @@ describe("buildInterview — everything not declared on disk is asked", () => {
    * answer — but it is still a question that did not exist before, so the ceiling
    * stays a ceiling.
    */
-  it("stays under the over-asking ceiling — at most six questions, ever", () => {
-    expect(buildInterview().length).toBeLessThanOrEqual(6);
+  it("stays under the over-asking ceiling — at most seven questions, ever", () => {
+    expect(buildInterview().length).toBeLessThanOrEqual(7);
+  });
+
+  it("asks about every opinion in ONE question, so the ceiling holds as they grow", () => {
+    // adr-0025 accepted "one question per opinion". One multi-select costs less and
+    // keeps the count at seven however many are shipped.
+    const opinions = buildInterview().filter((q) => q.id === "opinions");
+
+    expect(opinions).toHaveLength(1);
+    expect(opinions[0]?.options.length).toBe(OPINIONS.length);
+  });
+
+  it("offers no opinion pre-selected, which is what `never seed one unasked` means", () => {
+    expect(buildInterview().find((q) => q.id === "opinions")?.defaultAnswer).toBeNull();
   });
 
   it("asks about conventions even for a repo whose commits all look conventional", () => {
