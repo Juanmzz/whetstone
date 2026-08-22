@@ -31,9 +31,10 @@ import {
   type LensVerdict,
   type CheckRun,
 } from "../core/gate/outcomes.js";
+import type { Agent } from "../core/config/schema.js";
 import type { JudgeResult, LlmJudge } from "../core/ports.js";
 import { classify, route } from "../core/triage/index.js";
-import { resolveJudge } from "../shell/judge.js";
+import { resolveJudges } from "../shell/judge.js";
 import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { readReceipt, writeReceipt } from "../shell/receipts.js";
 import {
@@ -202,7 +203,8 @@ export function createDistrustfulReceiptStore(): ReceiptStore {
 export function createCheckRunner(deps: {
   readonly cwd: string;
   readonly range: string;
-  readonly judge: LlmJudge;
+  /** The judge a check names, or the configured one when it names none. */
+  readonly judgeFor: (agent: Agent | undefined) => LlmJudge;
   readonly routing: Routing;
   readonly maxLensUsd: number;
   readonly maxLensTotalUsd: number;
@@ -266,7 +268,7 @@ export function createCheckRunner(deps: {
         });
         continue;
       }
-      const result = (await deps.judge.judge({
+      const result = (await deps.judgeFor(check.agent).judge({
         lens: check.review_lens,
         prompt: `Review this diff.\n\n${chunk.diff}`,
         schema: LensVerdictSchema,
@@ -408,7 +410,7 @@ export async function runGate(
       runCheck: withProgress(createCheckRunner({
         cwd: repoRoot,
         range,
-        judge: await resolveJudge(definitionRoot),
+        judgeFor: await resolveJudges(definitionRoot),
         routing,
         maxLensUsd: opts.maxLensUsd ?? DEFAULT_MAX_LENS_USD,
         maxLensTotalUsd: opts.maxLensTotalUsd ?? DEFAULT_MAX_LENS_TOTAL_USD,

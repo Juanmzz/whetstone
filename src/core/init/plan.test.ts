@@ -34,6 +34,7 @@ const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   strictPaths: [],
   stack: "TypeScript on Node.",
   conventions: [],
+  opinions: [],
   ...over,
 });
 
@@ -278,5 +279,50 @@ describe("planInit — notes", () => {
     const notes = plan({ answers: MONEY }).notes.join("\n");
     expect(notes).toMatch(/pnpm-lock\.yaml/);
     expect(notes).toMatch(/package\.json scripts/);
+  });
+});
+
+describe("opinions (adr-0025)", () => {
+  const withOpinions = (opinions: readonly string[]): InitPlan =>
+    plan({ answers: answers({ opinions: [...opinions] }) });
+
+  const paths = (p: InitPlan): string[] => p.files.map((f) => f.path);
+
+  it("writes nothing extra when nobody said yes", () => {
+    expect(paths(withOpinions([])).filter((p) => p.includes("comment-density"))).toEqual([]);
+  });
+
+  it("writes the check when the answer names it", () => {
+    expect(paths(withOpinions(["comment-density"]))).toContain(".wst/checks/comment-density.md");
+  });
+
+  it("seeds it at warn, since it was earned somewhere else", () => {
+    const file = withOpinions(["comment-density"]).files.find((f) =>
+      f.path.endsWith("comment-density.md"),
+    );
+
+    expect(file?.contents).toContain("severity: warn");
+    expect(file?.contents).not.toContain("severity: block");
+  });
+
+  it("names a command the target repo has, not a script nobody wrote", () => {
+    const file = withOpinions(["comment-density"]).files.find((f) =>
+      f.path.endsWith("comment-density.md"),
+    );
+
+    expect(file?.contents).toContain("wst opinion comment-density");
+    expect(file?.contents).not.toContain("npm run");
+  });
+
+  it("refuses a receipt, because its answer depends on the range", () => {
+    const file = withOpinions(["comment-density"]).files.find((f) =>
+      f.path.endsWith("comment-density.md"),
+    );
+
+    expect(file?.contents).toContain("skippable: false");
+  });
+
+  it("ignores an id nobody ships rather than writing a check that cannot run", () => {
+    expect(paths(withOpinions(["not-a-thing"])).filter((p) => p.includes("not-a-thing"))).toEqual([]);
   });
 });

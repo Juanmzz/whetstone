@@ -544,9 +544,13 @@ output and nothing else. And an outcome is now asserted through what the gate pr
 than through a record of it, which is a weaker test of the same guarantee.
 
 ### adr-0025 — `init` may propose an opinion, but never seed one unasked
-`proposed` · 2026-08-21 · signals: sig-4a2610fb, sig-ea119c62
+`accepted` · 2026-08-21 · signals: sig-4a2610fb, sig-ea119c62
 
-*Not in force. `init` asks its six questions and offers no opinion among them.*
+*In force since 2026-08-22. The interview asks a seventh question, nothing is
+pre-selected, and a model may not answer it.*
+
+*Cost paid down rather than up: this entry accepted "one question per opinion". One
+multi-select costs less and holds the count at seven however many ship.*
 
 adr-0016 left `init` reading only what a repo DECLARES: its scripts, its lockfile, whether
 test files exist. That rule was written against inference -- a table guessing a language from
@@ -580,10 +584,11 @@ is dead weight in the payload. Six questions was already the number adr-0016 set
 this reopens that budget.
 
 ### adr-0026 — two judges report, they do not vote
-`proposed` · 2026-08-21
+`accepted` · 2026-08-21
 
-*Half in force. A second adapter exists and `agent:` selects it; what does not exist
-is a second `llm` check, so no two judges have yet reported on anything.*
+*In force since 2026-08-22: a check carries its own `agent:`, and the gate resolves a
+judge per check. Whether a repo runs two is its own choice; the rule for how they
+coexist is enforced.*
 
 `LlmJudge` had one adapter, which made vendor-agnosticism a claim rather than a seam. A second
 adapter raises a question one adapter never had to answer: what the gate does when the judges

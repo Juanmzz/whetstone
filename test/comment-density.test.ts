@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { addedLines, commentLines, removedCommentIn } from "../scripts/check-comment-density.js";
+import { addedLines, commentLines, removedCommentIn } from "../src/core/opinions/comment-density.js";
 
 const src = (...lines: string[]): string => lines.join("\n");
 

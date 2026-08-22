@@ -20,6 +20,7 @@ const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   strictPaths: [],
   stack: null,
   conventions: [],
+  opinions: [],
   ...over,
 });
 

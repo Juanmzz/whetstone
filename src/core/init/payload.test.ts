@@ -277,6 +277,7 @@ describe("renderAgentsMd", () => {
     strictPaths: [{ glob: "src/billing/**", reason: "moves money" }],
     stack: null,
     conventions: [],
+    opinions: [],
   });
 
   const agents = renderAgentsMd({

@@ -370,7 +370,7 @@ describe("createCheckRunner", () => {
     createCheckRunner({
       cwd: dir,
       range,
-      judge,
+      judgeFor: () => judge,
       routing,
       maxLensUsd: 0.5,
       maxLensTotalUsd,
@@ -442,12 +442,55 @@ describe("createCheckRunner", () => {
     expect(outcome.outcome.detail).toMatch(/could not read the diff/);
   });
 
+  it("runs each lens through the judge its own check names (adr-0026)", async () => {
+    // Two judges REPORT, they do not vote — which is only expressible if a check
+    // can say which one runs it. One global `agent:` gives every lens the same
+    // judge, and the second verdict never exists to disagree.
+    const asked: string[] = [];
+    const naming = (name: string): LlmJudge => ({
+      judge: (async () => {
+        asked.push(name);
+        return {
+          ok: true,
+          value: { verdict: "pass", reason: "fine" },
+          attempts: [],
+          raw: "",
+          costUsd: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          durationMs: 0,
+          sessionId: null,
+        };
+      }) as unknown as LlmJudge["judge"],
+      describe: async () => ({ name, version: null }),
+    });
+
+    const dir = await repo();
+    const run = createCheckRunner({
+      cwd: dir,
+      range: "HEAD",
+      judgeFor: (agent) => naming(agent ?? "default"),
+      routing,
+      maxLensUsd: 0.5,
+      maxLensTotalUsd: 3,
+      noLens: false,
+      timeoutMs: 30_000,
+    });
+    const changed = [{ path: "src/app.ts", status: "modified" as const }];
+
+    await run({ ...lensCheck, id: "lens-a", agent: "claude" }, changed);
+    await run({ ...lensCheck, id: "lens-b", agent: "gemini" }, changed);
+    await run(lensCheck, changed);
+
+    expect(asked).toEqual(["claude", "gemini", "default"]);
+  });
+
   it("skips a lens under --no-lens instead of reporting it unreviewed-but-fine", async () => {
     const dir = await repo();
     const outcome = await createCheckRunner({
       cwd: dir,
       range: "HEAD",
-      judge: judgeCosting(0.01),
+      judgeFor: () => judgeCosting(0.01),
       routing,
       maxLensUsd: 0.5,
       maxLensTotalUsd: 3,
