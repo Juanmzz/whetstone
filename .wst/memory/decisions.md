@@ -580,10 +580,11 @@ is dead weight in the payload. Six questions was already the number adr-0016 set
 this reopens that budget.
 
 ### adr-0026 — two judges report, they do not vote
-`proposed` · 2026-08-21
+`accepted` · 2026-08-21
 
-*Half in force. A second adapter exists and `agent:` selects it; what does not exist
-is a second `llm` check, so no two judges have yet reported on anything.*
+*In force since 2026-08-22: a check carries its own `agent:`, and the gate resolves a
+judge per check. Whether a repo runs two is its own choice; the rule for how they
+coexist is enforced.*
 
 `LlmJudge` had one adapter, which made vendor-agnosticism a claim rather than a seam. A second
 adapter raises a question one adapter never had to answer: what the gate does when the judges

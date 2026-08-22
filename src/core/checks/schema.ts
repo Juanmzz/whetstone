@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { AGENTS } from "../config/schema.js";
 
 export const TIERS = ["strict", "light", "off"] as const;
 /** Triage tier. Exported as a type so triage/ and gate/ share one definition. */
@@ -75,6 +76,14 @@ const BaseCheck = z.strictObject({
   command: z.string().min(1).optional(),
   /** Required when kind === "llm". Appended to the system prompt. */
   review_lens: z.string().min(1).optional(),
+  /**
+   * Which judge runs this lens. Absent means the one `wst.yaml` selects.
+   *
+   * Two judges report side by side and never vote (adr-0026), which is only
+   * expressible per check: one global agent gives every lens the same judge, and
+   * the second verdict never exists to disagree with the first.
+   */
+  agent: z.enum(AGENTS).optional(),
   calibration: CalibrationSchema.optional(),
 });
 

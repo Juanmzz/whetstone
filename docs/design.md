@@ -39,12 +39,23 @@ tiers: [strict, light]           # which triage tiers it applies to
 include: ["src/**/*.ts", "tsconfig.json"]
 exclude: []
 command: npm run typecheck       # deterministic only
+agent: gemini                    # llm only; omit for the one wst.yaml selects
+skippable: false                 # omit unless the answer depends on the range
 origin: [adr-0008]               # what earned this check
 version: 2
 ---
 ```
 
-Four fields carry more weight than they look:
+Six fields carry more weight than they look:
+
+**`agent`** names the judge for an `llm` check. Two judges report side by side as two
+checks and never vote (adr-0026): AND multiplies false positives, OR lets a change find
+the laxer judge, and a merged verdict has no single lens hash to bind a calibration to.
+Omitted, a lens runs on whatever `wst.yaml` selects.
+
+**`skippable: false`** refuses a receipt. A receipt proves a check passed on these file
+CONTENTS, which is evidence only for a check whose answer is a function of them; one
+that reads `WST_GATE_RANGE` answers a different question per range.
 
 **`kind`** says who executes. `deterministic` runs a command and reads its exit
 code. `llm` sends the diff to a model. `method` is prose an agent follows and
