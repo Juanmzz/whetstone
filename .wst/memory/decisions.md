@@ -116,6 +116,11 @@ the table — after a Wizard-of-Oz run proves it, not before.
 ### adr-0006 — update by 3-way merge against a recorded base
 `accepted` · 2026-07-13
 
+*Half in force since 2026-08-22. `init` records the base and `wst update` reports what
+changed against it; nothing merges yet. This entry's own reversal clause — "fall back to
+reporting drift and letting a human re-copy" — is what the report half is, so the merge is
+earned by a report that proves it is needed rather than assumed.*
+
 Rejected: reference/extends models (ESLint shareable configs, Terraform modules, git
 submodules). Each needs a live dependency inside the target repo, which breaks the
 self-contained payload. Rejected as anti-models: eject (one-way copy, no path back) and

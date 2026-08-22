@@ -30,15 +30,17 @@ full of rules is merely advisory.
 ## The shape of it
 
 ```
-wst init    → interview the project, generate .wst/
+wst init    → interview the project, generate .wst/, record a base beside it
    ↓          the work happens: any agent, or a person. .wst/ is in the repo
 wst gate    → select checks → skip what receipts prove unchanged → pass or block
 wst signal  → a human records the friction the run hit
 wst retro   → cluster signals → propose changes → a human approves → back to .wst/
 ```
 
-`status`, `check`, `triage` and `events` read that machinery back; none of them decide
-anything.
+`wst update` re-plans from that base and reports what changed since — what you edited by
+hand, what a newer Whetstone would write differently. It writes nothing.
+
+`status`, `check` and `triage` read the machinery back; none of them decide anything.
 
 ## Reading further
 

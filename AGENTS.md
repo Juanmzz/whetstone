@@ -33,7 +33,8 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
-| `wst init` | interview a repo and generate its `.wst/` |
+| `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
+| `wst update` | what changed since `init` wrote this repo — drifted, outdated, missing. Reports, never writes |
 
 Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
 record signals; for when you are testing the gate itself) · `retro --dry-run`.
@@ -91,7 +92,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 26 ADRs · 56 signals · 7 commands
+## Status — branch `main` · 26 ADRs · 56 signals · 8 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -128,7 +129,7 @@ built under that waiver and removed by ADR-0009.
   returned. The differentiator stays advisory until they stop, which is a retry problem.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
-- **Unowned:** ADR-0006's updater is decided and unbuilt, with nobody on it; no skill owns
+- **Unowned:** ADR-0006's merge half is still unbuilt (`wst update` reports, nothing merges); no skill owns
   subprocess-exit-code conventions (a retro proposal was declined for want of a home);
   **four of the eight checks are Whetstone-only** — `adr-refs`, `docs-fresh`, `provenance` and
   `skill-shape` enforce this repo's documentation discipline, `init` seeds none of them, and

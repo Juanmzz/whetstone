@@ -13,6 +13,7 @@ import { runGate } from "./commands/gate.js";
 import { runRetro } from "./commands/retro.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
+import { runUpdate } from "./commands/update.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 import { DEFINITION_DIR } from "./core/paths.js";
 import { createRequire } from "node:module";
@@ -151,6 +152,14 @@ program
       });
     },
   );
+
+program
+  .command("update")
+  .description("what changed since init wrote this repo — reports, never writes")
+  .option("--json", "print the verdicts as JSON")
+  .action(async (opts: { json?: boolean }) => {
+    process.exitCode = await runUpdate({ ...(opts.json !== undefined ? { json: opts.json } : {}) });
+  });
 
 program
   .command("init")
