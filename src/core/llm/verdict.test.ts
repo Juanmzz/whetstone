@@ -154,6 +154,28 @@ describe("interpretEnvelope", () => {
     expect(out).toMatchObject({ kind: "fail", error: { kind: "max-turns" } });
   });
 
+  it("RETRIES a structured-output exhaustion, which is transient and costs nothing to redo", () => {
+    // Fired once in 100 calibration runs, on a fixture that answered correctly the
+    // other nine times.
+    const out = interpretEnvelope(
+      envelope({ is_error: true, subtype: "error_max_structured_output_retries" }),
+      LensVerdict,
+      { attempt: 1, maxAttempts: 3 },
+    );
+
+    expect(out.kind).toBe("retry");
+  });
+
+  it("gives up on a structured-output exhaustion once the attempts are spent", () => {
+    const out = interpretEnvelope(
+      envelope({ is_error: true, subtype: "error_max_structured_output_retries" }),
+      LensVerdict,
+      { attempt: 3, maxAttempts: 3 },
+    );
+
+    expect(out).toMatchObject({ kind: "fail", error: { kind: "invalid-output" } });
+  });
+
   it("does not retry a hard error even with attempts remaining", () => {
     const out = interpretEnvelope(
       envelope({ is_error: true, subtype: "error_max_budget" }),

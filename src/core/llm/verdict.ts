@@ -154,13 +154,14 @@ export function interpretEnvelope<S extends ZodType>(
 
   const env = raw as Record<string, unknown>;
 
-  // Hard errors are never retried here — the caller decides whether a fresh
-  // invocation makes sense. Retrying a budget stop just burns more budget.
   if (env["is_error"] === true) {
-    return {
-      kind: "fail",
-      error: classifyHardError(env["subtype"], String(env["subtype"] ?? "unknown error")),
-    };
+    const subtype = String(env["subtype"] ?? "unknown error");
+    // A fresh invocation is a fresh sampling, which a budget stop or an auth
+    // failure is not.
+    if (subtype.includes("structured_output")) {
+      return retryOrGiveUp(`the judge could not produce a valid answer: ${subtype}`);
+    }
+    return { kind: "fail", error: classifyHardError(env["subtype"], subtype) };
   }
 
   const structured = env["structured_output"];
