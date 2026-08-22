@@ -14,7 +14,13 @@ how much ceremony every future change buys.
 wst status
 ```
 
-If `.wst/` already exists, STOP and say so. `init` is not re-init.
+If `.wst/` already exists, do NOT run `init` — it is not re-init, and it refuses
+anyway. Run `wst update` instead: it re-plans from the answers the repo recorded and
+reports what drifted, what a newer Whetstone writes differently, and what is gone. It
+writes nothing, so reading it costs nothing.
+
+If there is no `.wst/base.json`, `update` says so and stops. That repo predates the
+recorded base; there is nothing to compare against and guessing would be worse.
 
 Then look at what the repo already has, because it changes which flags you need:
 
@@ -33,6 +39,16 @@ wst init
 This writes nothing. It prints what it detected and the three questions the repo
 cannot answer. Read the detection out loud to the user — if the test or typecheck
 command is wrong, everything downstream is wrong.
+
+## 2b. Offer the opinions, and let them say no
+
+The interview's last question lists rules no repo declares, each with the friction that
+earned it somewhere else. `wst opinion` prints them.
+
+Read them out and let the human choose. **Nothing is pre-selected, and you may not
+answer this one for them** — a draft arriving with an opinion chosen is the model
+deciding what a project owes. Whatever they pick is seeded at `warn`: it was earned
+elsewhere, and it earns `block` here by catching something here.
 
 ## 3. Draft the answers, then argue about them
 
@@ -172,6 +188,11 @@ Then commit only Whetstone's own files, never `-A`:
 ```bash
 git add .wst .claude AGENTS.md CLAUDE.md
 ```
+
+## 7. Tell them how to check back
+
+`wst update` is how they see, later, what they changed and what a newer Whetstone would
+write. Say it once here; it is the command nobody thinks to look for.
 
 ## What not to do
 
