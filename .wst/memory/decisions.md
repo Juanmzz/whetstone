@@ -377,95 +377,43 @@ record, and the full files should come back.
 
 *Not in force. `init` still renders every file it writes.*
 
+*Compacted 2026-08-22 (adr-0019): the measurement breakdown, the enumerated minimum, and the
+two origin-payload measurements are dropped. Full text in git.*
+
 **The measurement first, because it reverses the reason this was raised.** `init` was asked to
 shrink by moving generation to the model. Split by who can legitimately author each file, only
-248 lines are judgment — the constitution's prose, `AGENTS.md`, the *reasons* on each triage
-rule, and the seed checks' prose. The other 301 are contract: the signal schema, the decision
-page's format, `triage.yaml`, `wst.yaml`. A paraphrased schema is the same defect adr-0016
-named about a paraphrased test command, so those cannot move. Keeping skeletons for the
-no-judge path costs ~40 of the 248 back, and a payload proposal needs a schema, a prompt and
-validation — about 100 lines, on `propose.ts`'s existing shape. **Net: roughly 108 lines.**
+248 lines are judgment; the other 301 are contract. **Net: roughly 108 lines.**
 
 So this is not a size decision, and arguing it as one is how it gets accepted for the wrong
 reason and reversed on the first inconvenience. It is a decision about **who authors
 judgment**: a template that says "a bug here is expensive" the same way in every repo is a
 template nobody reads, and it cannot be amended from evidence.
 
-- **Rejected: cutting the renderers for the line count.** The measurement above. 108 lines is
-  not worth a dependency on a model, and the honest response to "make `init` smaller" is that
-  `init` is not carrying much dead code — two unused exports and a barrel.
-- **Rejected: letting the judge write everything, contract files included.** This is
-  adr-0016's second objection and it still stands, unchanged: an agent asked for the test
-  command may paraphrase it, and a paraphrased command is a check that runs the wrong thing.
-  The same argument covers the signal schema and the decision page's format, which are read by
-  code that will not tolerate a synonym.
-- **Rejected: leaving `init` unusable without a judge.** This is adr-0016's *first* objection,
-  and it is the one this answers rather than dismisses. Without a judge, `init` degrades to a
-  minimum. One run against a real repo Whetstone did not own says what belongs in it:
-
-  **`triage.yaml`, and `wst.yaml` only once something reads it.** Triage classified that repo's
-  real diff correctly; everything else hangs off it.
-  `wst.yaml` was in this list until it was checked: it is written by `plan.ts:141` and **read by
-  nothing** — not a command, not an adapter, not a hook. Its only other readers are two asserts
-  in its own test. So the file that declares which skills are active is consumed by nothing, in
-  every mode, which is a stronger version of the field report's §B and independent of it. It
-  belongs in the minimum when it has a consumer, and is an example of the problem until then.
-
-  **One or two deterministic checks, seeded at `warn` with the note saying why.** Two of the
-  three checks seeded there were actively wrong: `lint` ran `eslint --fix`, a check that
-  rewrites the tree while judging it, and `test` blocked on a suite that opens a real database
-  — red on every machine that has not started one.
-  A blocking check that is red everywhere is a check people route around, and a routed check
-  stops catching the real findings too. **The presence of a script is not evidence the suite
-  passes.**
-
-  **`memory/signals.jsonl` and `memory/decisions.md`, genuinely empty** — a format with no
-  content. An empty file says "this is where what you earn goes". A seeded example says
-  "you already earned this", and that is false.
-
-  **Not the eight skills.** Under `--definitions-only` they are structurally unreachable, and
-  a repo that already has its own calibrated ones gets two sources of truth with no way to tell
-  which is inert. Not `patterns.md`, `retro-log.md` or `out-of-scope/README.md` either — they
-  are containers for knowledge a new repo does not have, and reading them empty teaches the
-  form without the reason, which is adr-0005's named trap.
-
-  A blank a human fills beats a template's confident wrong answer, which is adr-0016's own
-  accepted cost — and that run is the cost arriving.
+- **Rejected: cutting the renderers for the line count.** 108 lines is not worth a dependency
+  on a model.
+- **Rejected: letting the judge write everything, contract files included.** An agent asked for
+  the test command may paraphrase it, and a paraphrased command is a check that runs the wrong
+  thing. The same argument covers the signal schema and the decision page's format, which are
+  read by code that will not tolerate a synonym.
+- **Rejected: leaving `init` unusable without a judge.** Without a judge it degrades to a
+  minimum: `triage.yaml`, one or two deterministic checks seeded at `warn`, and genuinely empty
+  memory. Not the eight skills. **A blank a human fills beats a template's confident wrong
+  answer**, which is adr-0016's own accepted cost.
 - **Rejected: shipping the rules as always-on payload — and this one was RUN, not reasoned.**
-  The mature workspace Whetstone generalises spent five weeks with a stitched `CLAUDE.md`: 807
-  lines always in context, a 40-line base plus eight overlays. It reversed. Six weeks later it
-  was 161 lines in three files injected by a session hook — **80% less** — with everything else
-  loaded by trigger. The commit that made the big cut names its criterion, and the criterion is
-  the transferable part: **conditionality, not importance.** What always applies stays injected;
-  what sometimes applies is loaded when it applies. An emitter can apply that rule with no model
-  at all, which is exactly the constraint here.
-
-  So `init` writing eight skills into a target repo is Whetstone paying the cost of that peak
-  without the benefit it at least had — nothing reaches them under `--definitions-only`.
-
-- **Rejected: treating the origin payload as transferable.** Two measurements against that
-  workspace, and together they are the concrete form of adr-0005's warning:
-
-  Whetstone's `xreview` **was adopted from a skill the origin never accepted** — it lives there
-  on an unmerged branch to this day. Whetstone has since amended its copy twice by retro, so it
-  grew rules on top of something that repo never adopted.
-
-  The origin's TDD skill requires implementation to land in commits SEPARATE from the test
-  commit, written to stop an agent weakening tests to reach green. Whetstone's hard rule 4
-  forbids exactly that: one commit per coherent change, with the red output quoted in the body.
-  **Same concern, opposite mechanisms**, each earned in its own repo. A payload is not a thing
-  you copy; it is a thing a project earns.
-
+  The workspace Whetstone generalises spent five weeks with 807 lines always in context and
+  reversed to 161 loaded by trigger, **80% less**. The criterion is the transferable part:
+  **conditionality, not importance.**
+- **Rejected: treating the origin payload as transferable.** **A payload is not a thing you
+  copy; it is a thing a project earns.**
 - **Rejected: keeping both paths — templates when there is no judge, the judge otherwise.** Two
   ways to produce one artifact, drifting, which is the defect class this repo has found six
   times. The minimum is deliberately NOT a smaller template: it is blanks.
 - **Rejected: the judge writes the payload and `init` trusts it.** The engine keeps the
-  manifest (what must exist), reference closure, the collision check, and the loaders — and
-  refuses a draft that fails any of them. That refusal is the whole reason this is safe, and it
-  is why it had to wait until `selfcontained` audited the copied files rather than skipping them.
+  manifest, reference closure, the collision check and the loaders, and refuses a draft that
+  fails any of them.
 
 Cost accepted: `init` gains a second mode, and the two produce different-quality payloads from
-the same repo. Stated plainly rather than hidden behind a flag name.
+the same repo.
 
 Reversal: if the drafted payload needs as much human editing as the blanks did, the judge was
 adding a step and not judgment — delete the mode and keep the minimum.
