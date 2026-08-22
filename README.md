@@ -62,7 +62,9 @@ npm install
 npm test          # no network, no token cost
 npm run typecheck
 npm run build && node dist/cli.js status
-npm run calibrate # spends real tokens: measures llm verdict stability
+npm run calibrate # spends real tokens: measures one llm check's stability
+                  #   -- --check <id> to measure another; the judge and the
+                  #   fixtures come from what that check declares
 ```
 
 `src/core/` is pure and strictly TDD'd; `src/shell/` holds thin adapters. A test

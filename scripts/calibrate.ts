@@ -21,13 +21,14 @@
  * does not belong here; a fixture nobody remembered to declare must not be silently
  * skipped, so an undeclared diff is a hard error rather than a warning.
  *
- *   npm run calibrate  [-- --runs 10 --model sonnet --filter race]
+ *   npm run calibrate  [-- --check correctness --runs 10 --model sonnet --filter race]
  */
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { createClaudeJudge } from "../src/shell/claude.js";
+import { judgeFor } from "../src/shell/judge.js";
+import { DEFAULT_CONFIG, type Agent } from "../src/core/config/schema.js";
 import { definitionRoot, loadRegistry } from "../src/shell/sdd.js";
 import { DEFINITION_DIR } from "../src/core/paths.js";
 import { renderSlices, slicesOf } from "../src/core/calibration/slice.js";
@@ -46,14 +47,21 @@ const LensVerdict = z.object({
  * integrity hole: if the two drift you calibrate one lens and ship another, and the
  * recorded `calibration:` block then vouches for text that never ran.
  */
-async function loadLens(repoRoot: string, checkId: string): Promise<string> {
+async function loadLens(
+  repoRoot: string,
+  checkId: string,
+): Promise<{ lens: string; agent: Agent; fixtures: string }> {
   const registry = await loadRegistry(definitionRoot(repoRoot));
   const check = registry.byId.get(checkId);
   if (!check) throw new Error(`no check "${checkId}" in ${DEFINITION_DIR}/checks/`);
   if (check.kind !== "llm" || check.review_lens === undefined) {
     throw new Error(`check "${checkId}" is not an llm check — nothing to calibrate`);
   }
-  return check.review_lens;
+  const fixtures = check.calibration?.fixtures;
+  if (fixtures === undefined) {
+    throw new Error(`check "${checkId}" declares no \`calibration.fixtures\` — nothing to measure it against`);
+  }
+  return { lens: check.review_lens, agent: check.agent ?? DEFAULT_CONFIG.agent, fixtures };
 }
 
 const Manifest = z.object({
@@ -76,9 +84,14 @@ function arg(flag: string, fallback: string): string {
 }
 
 const RUNS = Number(arg("--runs", "10"));
-const CHECK_ID = "correctness";
+
 const MODEL = arg("--model", "sonnet") as "haiku" | "sonnet" | "opus";
 const FILTER = arg("--filter", "");
+/**
+ * WHICH check, not which judge. The judge comes from what the check declares, so a
+ * receipt can never claim one judge's result for a check another one runs.
+ */
+const CHECK_ID = arg("--check", "correctness");
 const CONCURRENCY = 4;
 
 async function pool<T, R>(items: T[], limit: number, fn: (t: T, i: number) => Promise<R>) {
@@ -157,17 +170,18 @@ async function fixtureFiles(dir: string): Promise<FixtureFile[]> {
 }
 
 async function main() {
-  const judge = createClaudeJudge();
-  const { version } = await judge.describe();
   const repoRoot = join(import.meta.dirname, "..");
-  const LENS = await loadLens(repoRoot, "correctness");
-  const dir = join(repoRoot, "test", "fixtures", "lens-correctness");
+  const { lens: LENS, agent, fixtures: fixtureDir } = await loadLens(repoRoot, CHECK_ID);
+  const judge = judgeFor({ ...DEFAULT_CONFIG, agent });
+  const { name, version } = await judge.describe();
+  // Declared by the check, not assumed: a second lens measures against its own set.
+  const dir = join(repoRoot, fixtureDir);
   const fixtures = await loadFixtures(dir);
 
   if (fixtures.length === 0) throw new Error(`no fixtures matched --filter ${FILTER}`);
 
   console.log(
-    `calibrating — claude ${version ?? "?"} · model ${MODEL} · ` +
+    `calibrating — ${name} ${version ?? "?"} · model ${MODEL} · ` +
       `${fixtures.length} fixtures × ${RUNS} runs = ${fixtures.length * RUNS} calls\n`,
   );
 
@@ -305,7 +319,7 @@ async function main() {
     lens: LENS,
     fixtures: await fixtureFiles(dir),
     model: MODEL,
-    runtime: { name: "claude", version: version ?? "unknown" },
+    runtime: { name, version: version ?? "unknown" },
     results: outcomes.map((o) => ({
       fixture: o.fixture.file,
       expected: o.fixture.expect,
