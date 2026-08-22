@@ -71,7 +71,8 @@ not a fleet manager, not a spec framework, not a memory server.
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst signal` | record an observation in `memory/signals.jsonl`. For a human to type |
 | `wst retro` | cluster signals, propose rule changes, never apply them |
-| `wst init` | interview a repo and generate its `.wst/` |
+| `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
+| `wst update` | re-plan from the recorded answers and report what changed: drifted, outdated, missing, new, orphan. Writes nothing |
 
 Flags that change what runs: `gate --no-lens` (deterministic only — what the pre-push hook
 runs) · `gate --no-emit` (record no signals; for verifying the gate itself) · `gate --tier` ·

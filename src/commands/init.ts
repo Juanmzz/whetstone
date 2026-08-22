@@ -5,6 +5,8 @@
  */
 
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { createRequire } from "node:module";
 import { chmod, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -25,6 +27,9 @@ import { judgeFor } from "../shell/judge.js";
 import { DEFAULT_CONFIG } from "../core/config/schema.js";
 import { exists } from "../shell/fs.js";
 import {
+  AnswersSchema,
+  BASE_FILE,
+  renderBase,
   MAX_FILES,
   NO_RISK,
   ROOT_GITIGNORE_ENTRIES,
@@ -139,7 +144,7 @@ async function git(args: string[], cwd: string): Promise<string | null> {
   }
 }
 
-async function gatherFacts(root: string): Promise<RepoFacts> {
+export async function gatherFacts(root: string): Promise<RepoFacts> {
   const [files, packageJson, log, shortlog] = await Promise.all([
     listFiles(root),
     readPackageJson(root),
@@ -167,27 +172,6 @@ async function gatherFacts(root: string): Promise<RepoFacts> {
  * with a hole in it — the exact outcome `validateAnswers` exists to prevent, one
  * layer too late to catch it.
  */
-const AnswersSchema = z.strictObject({
-  purpose: z.string(),
-  risk: z
-    .strictObject({
-      money: z.boolean().default(false),
-      personalData: z.boolean().default(false),
-      productionData: z.boolean().default(false),
-      authn: z.boolean().default(false),
-      safetyCritical: z.boolean().default(false),
-      note: z.string().nullable().default(null),
-    })
-    .default(NO_RISK),
-  // Defaulted, not required: an answers file written before these two questions
-  // existed still parses, and lands on the same blank a skipped question does.
-  sourcePaths: z.array(z.string()).default([]),
-  strictPaths: z
-    .array(z.strictObject({ glob: z.string(), reason: z.string() }))
-    .default([]),
-  stack: z.string().nullable().default(null),
-  conventions: z.array(z.string()).default([]),
-});
 
 const RISK_KEYS = ["money", "personalData", "productionData", "authn", "safetyCritical"] as const;
 
@@ -308,7 +292,7 @@ const PACKAGE_NAME = "whetstone";
  * result — a published package without its payload — and produces "not audited",
  * which is a violation, not a pass.
  */
-async function readSkills(payloadRoot: string | null): Promise<ReadonlyMap<string, string>> {
+export async function readSkills(payloadRoot: string | null): Promise<ReadonlyMap<string, string>> {
   const texts = new Map<string, string>();
   if (payloadRoot === null) return texts;
   for (const copy of skillCopies()) {
@@ -321,7 +305,7 @@ async function readSkills(payloadRoot: string | null): Promise<ReadonlyMap<strin
   return texts;
 }
 
-async function findPayloadRoot(): Promise<string | null> {
+export async function findPayloadRoot(): Promise<string | null> {
   let dir = import.meta.dirname;
   for (;;) {
     // Reached this package's own root? Answer from here, and never look higher.
@@ -427,6 +411,38 @@ async function proposeAnswers(
   console.log(`\nwrote ${outPath} ($${result.costUsd.toFixed(4)})`);
   console.log(`  Edit it, then: wst init --answers ${outPath}`);
   return 0;
+}
+
+/**
+ * What `wst update` compares against later: the answers, and a hash per file.
+ *
+ * Committed, not runtime state. `renderWstGitignore` must never learn about it —
+ * a base only one machine has answers a question only that machine can ask.
+ */
+/** The same number `wst --version` prints: what wrote this base. */
+const VERSION = (createRequire(import.meta.url)("../../package.json") as { version: string }).version;
+
+const sha256 = (text: string): string =>
+  createHash("sha256").update(text, "utf8").digest("hex");
+
+async function writeBase(
+  plan: InitPlan,
+  answers: InterviewAnswers,
+  root: string,
+): Promise<void> {
+  const files: Record<string, string> = {};
+  for (const file of plan.files) files[file.path] = sha256(file.contents);
+  for (const copy of plan.copies) {
+    if (copy.contents !== undefined) files[copy.to] = sha256(copy.contents);
+  }
+
+  const target = join(root, DEFINITION_DIR, BASE_FILE);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(
+    target,
+    renderBase({ version: VERSION, generatedAt: new Date().toISOString().slice(0, 10), answers, files }),
+    "utf-8",
+  );
 }
 
 async function writePlan(plan: InitPlan, root: string): Promise<void> {
@@ -609,6 +625,9 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   try {
     await writePlan(plan, root);
     await ensureRootGitignored(root);
+    // LAST, and only on success. A base written before the files it describes
+    // would survive a crash and claim hashes for content nobody wrote.
+    await writeBase(plan, answers, root);
   } catch (cause) {
     console.error(`\nwrite failed: ${(cause as Error).message}`);
     return 1;

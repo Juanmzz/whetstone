@@ -6,6 +6,7 @@
  * file-extension table inside `detect.ts`, both removed by adr-0016.
  */
 
+import { z } from "zod";
 import { DEFINITION_DIR } from "../paths.js";
 
 export type QuestionId =
@@ -250,3 +251,30 @@ export function validateAnswers(answers: InterviewAnswers): readonly string[] {
 
   return errors;
 }
+
+/**
+ * `InterviewAnswers` as data on disk. Read by `--answers`, and by the base a
+ * repo records so `wst update` knows what it was asked.
+ */
+export const AnswersSchema = z.strictObject({
+  purpose: z.string(),
+  risk: z
+    .strictObject({
+      money: z.boolean().default(false),
+      personalData: z.boolean().default(false),
+      productionData: z.boolean().default(false),
+      authn: z.boolean().default(false),
+      safetyCritical: z.boolean().default(false),
+      note: z.string().nullable().default(null),
+    })
+    .default(NO_RISK),
+  // Defaulted, not required: an answers file written before these two questions
+  // existed still parses, and lands on the same blank a skipped question does.
+  sourcePaths: z.array(z.string()).default([]),
+  strictPaths: z
+    .array(z.strictObject({ glob: z.string(), reason: z.string() }))
+    .default([]),
+  stack: z.string().nullable().default(null),
+  conventions: z.array(z.string()).default([]),
+});
+
