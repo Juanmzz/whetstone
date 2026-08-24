@@ -4,6 +4,9 @@ Both need credentials this VPS does not have. Run them from the repo root, on `m
 
 ---
 
+## Run 2 first. It is two minutes and five cents, and it validates a path that has
+## never executed.
+
 ## 1. Re-measure the lens — the one that decides
 
 ```bash
@@ -36,8 +39,13 @@ differentiator a linter cannot supply.
 **If it fails with `harness 0/100`**, it is genuinely the lens, known for the first
 time. That is a publishable answer too — it ships at `warn` and the README says so.
 
-**If `harness` is still above 0**, the retry did not cover that failure mode. Send me
-the `!` lines; they name the error kind.
+**If `harness` is still above 0**, the retry did not cover that failure mode. The
+receipt now records WHICH error each one was, so `.wst/checks/correctness.calibration.json`
+answers that without the console.
+
+For the record, the two from 2026-08-20 were `error_max_structured_output_retries` and a
+non-`ENOENT` `spawn` — both kinds the retry now covers. That is why the estimate is what
+it is, and until this run it rested on a console log rather than on an artifact.
 
 Do not edit a fixture to make it pass. The bar was recorded before the first run so it
 could not be fitted to the result, and that is the only reason it means anything.
@@ -70,6 +78,7 @@ If it errors, the line starting `!` names the kind. `spawn` means the flags are 
 `invalid-output` means the response came back in a shape the parser did not expect,
 and pasting the raw stdout is enough for me to fix it.
 
-The receipt it writes will say `runtime: { name: "gemini" }`. **Do not commit it** —
-it would claim a gemini result for a check that runs on claude. `git checkout` the
-check file and delete the receipt if one lands.
+**No receipt is written.** A `--filter` run measures a subset and returns before
+recording one (`scripts/calibrate.ts:304`), so the 2026-08-20 measurement is not at
+risk. The guard was already there; an earlier version of this file said otherwise and
+was wrong.

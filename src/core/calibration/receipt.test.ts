@@ -236,3 +236,42 @@ describe("a passing receipt must have looked hard enough", () => {
     expect(enough(2).runs).toBe(2);
   });
 });
+
+describe("what an errored run leaves behind", () => {
+  const base = {
+    checkId: "correctness",
+    lens: "Review this diff.",
+    fixtures: [{ path: "a.diff", expected: "pass" as const, hash: "h" }],
+    model: "sonnet",
+    runtime: { name: "claude", version: "2.1.237" },
+    at: new Date("2026-08-24T00:00:00Z"),
+  };
+
+  it("records WHICH error, so a later reader can tell if a retry would cover it", () => {
+    const receipt = recordCalibration({
+      ...base,
+      results: [{ fixture: "a.diff", expected: "pass", got: ["pass", "errored"], errors: ["spawn"] }],
+    });
+
+    expect(receipt.results[0]?.errors).toEqual(["spawn"]);
+    // The loader parses what is on disk, and a strict schema rejects an unknown key.
+    expect(CalibrationReceiptSchema.safeParse(JSON.parse(JSON.stringify(receipt))).success).toBe(true);
+  });
+
+  it("parses a receipt written before errors were recorded", () => {
+    const older = {
+      format: 1,
+      checkId: "correctness",
+      lensHash: "a".repeat(64),
+      fixturesHash: "b".repeat(64),
+      model: "sonnet",
+      runtime: { name: "claude", version: "2.1.234" },
+      runs: 2,
+      results: [{ fixture: "a.diff", expected: "pass", got: ["pass", "errored"] }],
+      verdict: "failed",
+      measuredAt: "2026-08-20T13:47:48.154Z",
+    };
+
+    expect(CalibrationReceiptSchema.safeParse(older).success).toBe(true);
+  });
+});

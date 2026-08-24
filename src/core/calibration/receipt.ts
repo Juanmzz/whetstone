@@ -20,6 +20,8 @@ const ResultSchema = z.strictObject({
   expected: z.enum(["pass", "fail"]),
   /** One entry per run, in order. */
   got: z.array(OUTCOME),
+  /** The kind of each errored run. Optional: every receipt on disk predates it. */
+  errors: z.array(z.string().min(1)).optional(),
 });
 
 export type CalibrationResult = z.infer<typeof ResultSchema>;

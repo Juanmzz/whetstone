@@ -143,6 +143,8 @@ interface Outcome {
   spread: string;
   /** Raw per-run outcome, in order. The receipt records these, not a score. */
   verdicts: readonly ("pass" | "fail" | "errored")[];
+  /** Which error each errored run was. */
+  errorKinds: readonly string[];
   /** What the lens said on the runs it got wrong. Not in the receipt. */
   wrongReasons: readonly string[];
 }
@@ -226,6 +228,7 @@ async function main() {
     outcomes.push({
       fixture, correct, errors, flipped, unanimous, spread, wrongReasons,
       verdicts: verdicts.map((v) => (v === "pass" ? "pass" : v === "fail" ? "fail" : "errored")),
+      errorKinds: verdicts.filter((v) => v.startsWith("ERROR:")).map((v) => v.slice("ERROR:".length)),
     });
 
     const mark = correct === RUNS ? "ok  " : "MISS";
@@ -324,6 +327,7 @@ async function main() {
       fixture: o.fixture.file,
       expected: o.fixture.expect,
       got: [...o.verdicts],
+      ...(o.errorKinds.length > 0 ? { errors: [...o.errorKinds] } : {}),
     })),
     at: new Date(),
   });
