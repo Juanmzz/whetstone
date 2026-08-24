@@ -129,9 +129,10 @@ built under that waiver and removed by ADR-0009.
   returned. The differentiator stays advisory until they stop, which is a retry problem.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
-- **Unowned:** ADR-0006's merge half is still unbuilt (`wst update` reports, nothing merges); no skill owns
+- **Unowned:** `npm run check:in-force` lists what is decided and not yet true of the
+  code, so this line no longer keeps it by hand. Beyond that: no skill owns
   subprocess-exit-code conventions (a retro proposal was declined for want of a home);
-  **four of the eight checks are Whetstone-only** — `adr-refs`, `docs-fresh`, `provenance` and
+  **five of the nine checks are Whetstone-only** — `adr-refs`, `docs-fresh`, `in-force`, `provenance` and
   `skill-shape` enforce this repo's documentation discipline, `init` seeds none of them, and
   nobody has asked what each last caught; and nothing says what the signal log does after two
   years of appending.

@@ -29,13 +29,25 @@ const ANCHOR = /^### (adr-(\d{4}))\s*(?:[—–]|:)\s+(\S.*)$/;
  *     `accepted` · 2026-08-09
  *     `superseded by adr-0019` · 2026-07-14 · rules: retro.md
  */
-const META = /^`(proposed|accepted|superseded by adr-\d{4})` · (\d{4}-\d{2}-\d{2})(?: · .+)?$/;
+const META = /^`(proposed|accepted|superseded by adr-\d{4})` · (\d{4}-\d{2}-\d{2})((?: · .+)?)$/;
+
+/**
+ * A decision taken and not yet true of the code.
+ *
+ * `accepted` says what was decided; it has never said whether anything implements
+ * it. adr-0006 read `accepted` for six weeks while nothing merged.
+ */
+const UNBUILT = /(?:^|\s·\s)unbuilt(?:\s|$)/;
 
 export interface DecisionEntry {
   readonly id: string;
   readonly title: string;
   readonly status: string;
   readonly date: string;
+  /** Decided, and not fully true of the code. The entry says how much. */
+  readonly unbuilt: boolean;
+  /** Everything under the meta line, up to the next anchor. */
+  readonly body: string;
   /** 1-indexed line of the heading. */
   readonly line: number;
 }
@@ -103,7 +115,21 @@ export function parseDecisions(page: string): {
       });
     }
 
-    entries.push({ id, title, status: meta?.[1] ?? "", date: meta?.[2] ?? "", line: at });
+    // Up to the next anchor at the same level, so a caller can compare the marker
+    // against what the prose claims.
+    const rest = lines.slice(index + 2);
+    const until = rest.findIndex((l) => l.startsWith("### "));
+    const body = (until < 0 ? rest : rest.slice(0, until)).join("\n").trim();
+
+    entries.push({
+      id,
+      title,
+      status: meta?.[1] ?? "",
+      date: meta?.[2] ?? "",
+      unbuilt: UNBUILT.test(meta?.[3] ?? ""),
+      body,
+      line: at,
+    });
   });
 
   return { entries, problems };

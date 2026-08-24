@@ -40,8 +40,8 @@ describe("parseDecisions", () => {
 
     expect(problems).toEqual([]);
     expect(entries).toEqual([
-      { id: "adr-0001", title: "memory is an interface", status: "accepted", date: "2026-07-02", line: 7 },
-      { id: "adr-0002", title: "the definition directory is the source", status: "proposed", date: "2026-07-06", line: 12 },
+      { id: "adr-0001", title: "memory is an interface", status: "accepted", date: "2026-07-02", unbuilt: false, body: "Rejected: something.", line: 7 },
+      { id: "adr-0002", title: "the definition directory is the source", status: "proposed", date: "2026-07-06", unbuilt: false, body: "Rejected: something.", line: 12 },
     ]);
   });
 
@@ -136,5 +136,42 @@ describe("parseDecisions", () => {
 
     expect(entries).toEqual([]);
     expect(problems).toEqual([]);
+  });
+});
+
+describe("a decision that admits it is not in force", () => {
+  const page = (meta: string, body = ""): string =>
+    `### adr-0001 — a decision\n${meta}\n\n${body}\n`;
+
+  it("reads the marker the meta line carries", () => {
+    const [entry] = parseDecisions(page("`accepted` · 2026-01-01 · unbuilt")).entries;
+
+    expect(entry?.unbuilt).toBe(true);
+  });
+
+  it("says false when the line does not carry it", () => {
+    const [entry] = parseDecisions(page("`accepted` · 2026-01-01")).entries;
+
+    expect(entry?.unbuilt).toBe(false);
+  });
+
+  it("keeps reading the fields that come with it", () => {
+    // The marker sits in the same tail as `signals:` and `rules:`, so adding one
+    // must not cost the others.
+    const [entry] = parseDecisions(
+      page("`accepted` · 2026-01-01 · unbuilt · signals: sig-0001"),
+    ).entries;
+
+    expect(entry?.status).toBe("accepted");
+    expect(entry?.date).toBe("2026-01-01");
+    expect(entry?.unbuilt).toBe(true);
+  });
+
+  it("hands back the body, so a caller can compare the marker against the prose", () => {
+    const [entry] = parseDecisions(
+      page("`accepted` · 2026-01-01", "*Not in force. Nothing implements it.*"),
+    ).entries;
+
+    expect(entry?.body).toContain("Not in force");
   });
 });
