@@ -114,7 +114,7 @@ Reversal: if per-vendor compilation proves unworkable at the code tier, vendor-l
 the table — after a Wizard-of-Oz run proves it, not before.
 
 ### adr-0006 — update by 3-way merge against a recorded base
-`accepted` · 2026-07-13
+`accepted` · 2026-07-13 · unbuilt
 
 *Half in force since 2026-08-22. `init` records the base and `wst update` reports what
 changed against it; nothing merges yet. This entry's own reversal clause — "fall back to
