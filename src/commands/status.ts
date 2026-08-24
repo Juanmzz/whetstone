@@ -42,7 +42,7 @@ async function hooksPath(cwd: string): Promise<string | null> {
  *
  * Untracked files do not propagate into git worktrees, so an uncommitted `.wst/` is
  * present here and absent in every worktree cut from here — which silently disables
- * the plugin's hooks in exactly the places `wst prepare` sends work (sig-0044).
+ * the plugin's hooks in exactly the places work happens (sig-0044).
  */
 async function definitionTracked(cwd: string): Promise<boolean> {
   try {

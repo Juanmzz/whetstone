@@ -431,3 +431,20 @@ describe("activeSkills — what AGENTS.md lists", () => {
     expect(rendered).not.toMatch(/dispatch\.md` — \w/);
   });
 });
+
+describe("what init writes into a repo it does not own", () => {
+  it("names no command that does not exist", () => {
+    // The stanza described `wst prepare` and a charter for two days after
+    // adr-0023 removed both. init was writing prose about a missing command into
+    // somebody else's repo.
+    const written = [
+      renderRootGitignoreStanza(),
+      renderWstGitignore(),
+      renderWstGitattributes(),
+    ].join("\n");
+
+    for (const gone of ["wst prepare", "wst plan", "wst events", "charter"]) {
+      expect(written).not.toContain(gone);
+    }
+  });
+});

@@ -184,8 +184,8 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     } else if (!facts.plugin.definitionTracked) {
       warnings.push(
         `\`${DEFINITION_DIR}/\` is not tracked by git. Untracked files do not propagate into worktrees, ` +
-          `so the plugin is inert in every worktree cut from this repo — including the ones ` +
-          `\`wst prepare\` leases. Commit \`${DEFINITION_DIR}/\` to fix it`,
+          `so the plugin is inert in every worktree cut from this repo. ` +
+          `Commit \`${DEFINITION_DIR}/\` to fix it`,
       );
     }
   }
