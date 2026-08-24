@@ -106,7 +106,7 @@ built under that waiver and removed by ADR-0009.
   changes is the push and CI: the pre-push hook is armed (`core.hooksPath=.githooks`) and CI
   runs the full gate on every PR. ADR-0023 cut `plan` and `prepare`; what a worker needs to
   know is in `.wst/`, which it can already read.
-- **54 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
+- **58 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
   `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an `llm` check at `warn`. Measured 2026-08-20 on claude 2.1.237: 98/100
@@ -115,16 +115,14 @@ built under that waiver and removed by ADR-0009.
 
 ### Known weaknesses, stated plainly
 
-- **47 of 53 signals are hand-authored prose.** One carries a `source` (`sig-82dec46b`, typed by
-  the human about an incident that actually happened). **`sig-a9ff00c4` was the first to carry
-  `source: "gate"`** — written on 2026-08-14 when `docs-fresh` blocked a change that added an ADR
-  without updating this line. Two more followed on 2026-08-15 (`sig-6f2d2b95`, `sig-5c2d6751`),
-  and they are the first the gate wrote about a failure nobody staged: the test suite could not
-  write to `/tmp`, and the count those signals invalidated was caught by `docs-fresh` on the
-  next push.
-  Before it, CI emitted `sig-70ad13db` on an ephemeral runner and it evaporated. The gap was
-  never "the gate does not fail"; it was that where the gate really runs, nothing persisted
-  what it observed.
+- **Most signals are still hand-authored.** Of 58: 45 predate the `source` field, 7 are `cli`,
+  1 is `human`, and **5 were written by the gate about its own blocks**. The first was
+  `sig-a9ff00c4` on 2026-08-14, when `docs-fresh` blocked a change that added an ADR and left
+  this line behind. Before that, CI emitted one on an ephemeral runner and it evaporated: the
+  gap was never "the gate does not fail", it was that where the gate really runs, nothing
+  persisted what it observed.
+  The machine-written five are the loop's only input nobody had to remember to type, and
+  that number is the one to watch.
 - **The lens is capped at `warn` by harness failures, not by judgment.** Two calls in 100 never
   returned. The differentiator stays advisory until they stop, which is a retry problem.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample

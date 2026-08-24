@@ -11,13 +11,12 @@ so it does not depend on an agent choosing to cooperate. And because the tool re
 the friction it hits, the checks a project needs grow from what actually went wrong —
 each carrying a receipt for why it exists.
 
-> **Status: alpha (v0.5.0).** The gate runs on this repo's own changes. The judgment
-> tier is measured but not earned: the review lens returned 98 correct verdicts out of
-> 100 and got none wrong, and is still capped at `warn` because two runs never came
-> back at all. A lens that cannot answer cannot gate.
-> [AGENTS.md](./AGENTS.md) carries the current numbers and
-> [what is still weak](./AGENTS.md#known-weaknesses-stated-plainly) — checked by a gate
-> check, so this file does not repeat them.
+> **Status: alpha.** The gate runs on this repo's every push and PR.
+>
+> **The judgment tier is advisory.** The review lens is capped at `warn`, so everything
+> that can block here today is something a linter could also have caught.
+> [AGENTS.md](./AGENTS.md) says why, and carries the numbers — checked by a gate check,
+> so this file does not repeat them.
 
 ## Why
 
@@ -41,6 +40,8 @@ wst retro   → cluster signals → propose changes → a human approves → bac
 hand, what a newer Whetstone would write differently. It writes nothing.
 
 `status`, `check` and `triage` read the machinery back; none of them decide anything.
+`wst opinion` lists the rules Whetstone offers that no repo declares, and the friction that
+earned each. `init` asks before writing any of them, and never writes one unasked.
 
 ## Reading further
 
@@ -49,7 +50,8 @@ hand, what a newer Whetstone would write differently. It writes nothing.
 - **[`docs/design.md`](./docs/design.md)** — where to read about each part, and the
   anatomy of a check file.
 
-**Not bundled:** `llm` checks need the `claude` CLI. Nothing else.
+**Not bundled:** an `llm` check needs the `claude` or `gemini` CLI, whichever it names.
+Nothing else.
 
 **Not this:** a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers),
 a memory server (memory is an interface; files are the default), or a fleet manager.
@@ -63,8 +65,7 @@ npm test          # no network, no token cost
 npm run typecheck
 npm run build && node dist/cli.js status
 npm run calibrate # spends real tokens: measures one llm check's stability
-                  #   -- --check <id> to measure another; the judge and the
-                  #   fixtures come from what that check declares
+                  #   `-- --check <id>` picks which
 ```
 
 `src/core/` is pure and strictly TDD'd; `src/shell/` holds thin adapters. A test
