@@ -410,7 +410,7 @@ receipts/
 /**
  * `.wst/.gitattributes` — how git must merge the files two workers append to at once.
  *
- * `wst prepare` exists to put N workers on one repository. `memory/signals.jsonl`
+ * N workers on one repository. `memory/signals.jsonl`
  * is append-only and committed on purpose, so every pair of concurrent workers
  * writes a new last line and git reports a conflict it cannot resolve: it sees two
  * edits to one region and cannot know the records are independent. Measured three
@@ -471,10 +471,10 @@ export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([".wst-la
 export function renderRootGitignoreStanza(
   entries: readonly string[] = ROOT_GITIGNORE_ENTRIES,
 ): string {
-  return `# Per-worktree state \`wst prepare\` writes into a leased worktree: the charter
-# and the lane marker. Both belong to the worktree, not the branch, so a
-# committed one would scope every clone to a single task, and a formatter's
-# --check step would fail on a file nobody meant to check in.
+  return `# The lane a worker is confined to, written at the root of ITS worktree.
+# It belongs to the worktree and not to the branch: committed, it would scope
+# every clone to one lane, and a formatter's --check step would fail on a file
+# nobody meant to check in.
 ${entries.join("\n")}
 `;
 }

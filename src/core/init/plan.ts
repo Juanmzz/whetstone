@@ -140,7 +140,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     // NOT covered here on purpose: it is committed, deliberately.
     { path: `${DEFINITION_DIR}/.gitignore`, contents: renderWstGitignore() },
     // How git merges the one committed page every worker appends to at once.
-    // `wst prepare` hands out N worktrees; without this, every second worker
+    // N worktrees on one repository; without this, every second worker
     // conflicts on the last line of the signal log.
     { path: `${DEFINITION_DIR}/.gitattributes`, contents: renderWstGitattributes() },
     ...checkFiles,
