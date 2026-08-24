@@ -13,7 +13,7 @@ import {
   renderDecisionsMd,
   renderWstGitignore,
   renderWstGitattributes,
-  CLAUDE_MD,
+  VENDOR_POINTERS,
   MEMORY_README,
   OUT_OF_SCOPE_README,
   activeSkills,
@@ -184,9 +184,8 @@ export function planInit(input: InitPlanInput): InitPlan {
         ),
       }),
     },
-    // NOT a copy of AGENTS.md. Claude Code reads only CLAUDE.md but honours the
-    // native `@path` import, so one source of truth costs one line here.
-    { path: "CLAUDE.md", contents: CLAUDE_MD },
+    // NOT copies of AGENTS.md: a pointer, so there is one source of truth.
+    ...Object.entries(VENDOR_POINTERS).map(([path, contents]) => ({ path, contents })),
   ];
   if (options.definitionsOnly !== true) files.push(...vendorFiles);
 
