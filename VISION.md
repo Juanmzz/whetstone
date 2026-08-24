@@ -58,12 +58,15 @@ The loop: **use → record → distill → amend.** That is the moat.
 ```
 .wst/
   constitution.md          # project governance
-  architecture.md          # how the engine is built
-  triage-rules.md          # risk classification for changes
+  triage.yaml              # risk classification, read by the engine
+  triage-rules.md          # the same rules as documentation
+  wst.yaml                 # which judge, which memory backend
+  base.json                # what init wrote, so update can say what changed
   checks/                  # the check registry — one file per check
   memory/
     decisions.md           # every decision, by anchor id — what it ruled out, and why
     signals.jsonl          # append-only structured signal log
+    retro-log.md           # what each retro proposed, and what was accepted
   skills/                  # versioned workflow rules, each with a changelog
 ```
 
@@ -71,9 +74,12 @@ The loop: **use → record → distill → amend.** That is the moat.
 
 - **Not another spec-driven framework.** It composes with Spec Kit, BMAD, Superpowers, or a bare
   `CLAUDE.md`. It owns the definition-and-verification layer, not your spec format.
-- **Not a memory server.** Memory is an interface, not a product. The default backend is plain files
-  in git. Engram, sqlite+embeddings, or any MCP memory server plug in as optional adapters behind
-  the same port. Which verbs that port carries is a question for `MemoryPort`, not for this page.
+- **Not a memory server.** Memory is an interface, not a product. **One backend ships: plain files
+  in git**, and a second arrives when something needs what a file cannot give. Measured here at 58
+  signals: the retro's clustering carries on the rule a signal implicates, which a string match
+  over a file answers exactly. A semantic backend would improve the other axis, which is the one
+  that does not decide anything. Which verbs the port carries is a question for `MemoryPort`, not
+  for this page.
 - **Not autonomous self-modification.** Every amendment to a rule passes a human gate. The value is
   *auditable* evolution, not unsupervised drift.
 - **Not a fleet manager.** Whetstone triages a change and gates it. It does not brief, dispatch,
@@ -84,12 +90,14 @@ The loop: **use → record → distill → amend.** That is the moat.
   it, and the LLM boundary is one port with swappable adapters. Claude Code gets first-class
   support (hooks, commands).
 
-> **Changed 2026-08-07 ([ADR-0008](./.wst/memory/decisions.md#adr-0008)).** This
-> section previously read *"it owns the feedback loop, not the forward workflow"* and disclaimed
-> orchestration outright. Whetstone now conducts the task end to end (`init → run → gate → PR →
-> retro`), because a gate that cannot dispatch or annotate is only half a verification layer. The
-> boundary that replaced it is *"not a fleet manager"*, above. The spec-framework and memory-server
-> non-goals are unchanged and remain enforcement policy.
+> **Changed 2026-08-07 ([ADR-0008](./.wst/memory/decisions.md#adr-0008)), and reversed since.**
+> This section once disclaimed orchestration outright, then briefly claimed the opposite: that
+> Whetstone conducts a task end to end, because a gate that cannot dispatch or annotate is only
+> half a verification layer. Both halves of that are gone. Annotation was deleted by
+> [ADR-0009](./.wst/memory/decisions.md#adr-0009) and dispatch by
+> [ADR-0023](./.wst/memory/decisions.md#adr-0023): the definition travels with the repo, so
+> nothing needs to carry it, and the exit code is the only channel this owns. The boundary that
+> stands is *"not a fleet manager"*, above.
 
 ## Design principles
 
@@ -133,8 +141,9 @@ amendments upstream — the same machinery in three directions.
 
 **Later / explicitly deferred**
 Distribution (`npx wst`, optional plugin). Then semantic search backends, multi-repo/org-level
-memory, non-Claude adapters, and a library of battle-tested paths that `init` can recommend from
-rather than generating each project from scratch.
+memory, and a library of battle-tested paths that `init` can recommend from rather than
+generating each project from scratch. A second judge adapter is no longer deferred: `gemini`
+ships, and a check names which judge runs it.
 
 ## Contribution model
 
