@@ -73,10 +73,12 @@ not a fleet manager, not a spec framework, not a memory server.
 | `wst retro` | cluster signals, propose rule changes, never apply them |
 | `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
 | `wst update` | re-plan from the recorded answers and report what changed: drifted, outdated, missing, new, orphan. Writes nothing |
+| `wst opinion` | run a rule Whetstone offers that no repo declares; bare, it lists them and the friction that earned each |
 
 Flags that change what runs: `gate --no-lens` (deterministic only — what the pre-push hook
 runs) · `gate --no-emit` (record no signals; for verifying the gate itself) · `gate --tier` ·
-`prepare --dry-run` · `retro --dry-run` · `plan --json` · `events --list` · `events --follow`.
+`retro --dry-run` · `init --definitions-only` (write `.wst/` and no vendor file, for a repo
+another harness already owns) · `update --json`.
 
 ## The layers
 
