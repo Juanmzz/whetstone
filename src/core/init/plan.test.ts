@@ -52,10 +52,10 @@ const at = (p: InitPlan, path: string): string | undefined =>
 describe("planInit — what a typical TypeScript repo gets", () => {
   const p = plan({ answers: MONEY });
 
-  it("writes the whole .wst/ substrate plus the two vendor files, and nothing else", () => {
+  it("writes the whole .wst/ substrate plus one front door per harness, and nothing else", () => {
     // No `.claude/` (ADR-0010). This list IS the contract with a target repo: every
-    // path here is one somebody else has to live with, and the two that are not
-    // `.wst/` are the ones that collide.
+    // path here is one somebody else has to live with, and the ones outside `.wst/`
+    // are the ones that collide.
     expect(p.files.map((f) => f.path).sort()).toEqual(
       [
         ".wst/.gitattributes",
@@ -75,6 +75,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
         ".wst/wst.yaml",
         "AGENTS.md",
         "CLAUDE.md",
+        "GEMINI.md",
       ].sort(),
     );
   });
@@ -324,5 +325,29 @@ describe("opinions (adr-0025)", () => {
 
   it("ignores an id nobody ships rather than writing a check that cannot run", () => {
     expect(paths(withOpinions(["not-a-thing"])).filter((p) => p.includes("not-a-thing"))).toEqual([]);
+  });
+});
+
+describe("the harnesses a bootstrapped repo is legible to", () => {
+  const vendor = (p: InitPlan): string[] =>
+    p.files.map((f) => f.path).filter((path) => /\.md$/.test(path) && !path.includes("/"));
+
+  it("writes a front door for every harness that reads a different file", () => {
+    // Gemini CLI reads GEMINI.md and nothing else. A repo with only the other two
+    // is invisible to it.
+    expect(vendor(plan()).sort()).toEqual(["AGENTS.md", "CLAUDE.md", "GEMINI.md"]);
+  });
+
+  it("points each at the one source rather than copying it", () => {
+    const p = plan();
+    for (const path of ["CLAUDE.md", "GEMINI.md"]) {
+      const contents = p.files.find((f) => f.path === path)?.contents ?? "";
+      expect(contents.trim()).toBe("@AGENTS.md");
+    }
+  });
+
+  it("writes none of them under --definitions-only", () => {
+    // A repo another harness already owns keeps its own front door.
+    expect(vendor(plan({ options: { definitionsOnly: true } }))).toEqual([]);
   });
 });

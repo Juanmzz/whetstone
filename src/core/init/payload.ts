@@ -377,8 +377,13 @@ three months? If not, the commit message is enough.
 `;
 }
 
-export const CLAUDE_MD = `@AGENTS.md
-`;
+/** One line per harness that reads a file of its own. Both honour `@path`. */
+export const VENDOR_POINTERS: Readonly<Record<string, string>> = Object.freeze({
+  "CLAUDE.md": "@AGENTS.md\n",
+  "GEMINI.md": "@AGENTS.md\n",
+});
+
+export const CLAUDE_MD = VENDOR_POINTERS["CLAUDE.md"] ?? "";
 
 /**
  * `.wst/.gitignore` — per-machine runtime state `init` writes but that a clone

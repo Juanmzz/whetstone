@@ -33,6 +33,7 @@ export {
   renderWstGitignore,
   renderWstGitattributes,
   CLAUDE_MD,
+  VENDOR_POINTERS,
   MEMORY_README,
   ROOT_GITIGNORE_ENTRIES,
   SKILL_FILES,
