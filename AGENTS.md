@@ -36,7 +36,8 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
 | `wst update` | what changed since `init` wrote this repo — drifted, outdated, missing. Reports, never writes |
 
-Useful flags: `gate --no-lens` (fast, free, what the hook runs) · `gate --no-emit` (do not
+Useful flags: `gate --no-lens` (skip llm checks) · `gate --fast` (skip whatever declares
+itself slow — 6s against 50s here) · `gate --no-emit` (do not
 record signals; for when you are testing the gate itself) · `retro --dry-run`.
 
 ## Where things live

@@ -18,6 +18,7 @@ import { dedupe, signalsFromGate } from "../core/signals/emit.js";
 import { appendSignals } from "../shell/signals.js";
 import { resolveMemory } from "../shell/memory.js";
 import { checkEnv } from "../core/gate/env.js";
+import { fastOnly } from "../core/gate/select.js";
 import {
   runGate as executeGate,
   type CheckRunner,
@@ -69,6 +70,8 @@ export interface GateOptions {
    * lens belongs where a human is not waiting on it.
    */
   readonly noLens?: boolean;
+  /** Run only the checks that can answer while somebody is waiting. */
+  readonly fast?: boolean;
   /** Suppress signal emission. For dry runs and tests, not for normal use. */
   readonly noEmit?: boolean;
   /**
@@ -395,7 +398,10 @@ export async function runGate(
   // enforcement channel, so a gate routing from built-in defaults would make the
   // project's own triage rules decorative exactly where they matter.
   const triage = classify(files, rules.rules, rules.origin);
-  const routing = route(opts.tier ?? triage.tier, registry.active);
+  // Routed from the subset, not filtered after: an excluded check never reaches
+  // the verdict, so `--fast` reports what it ran.
+  const eligible = opts.fast === true ? fastOnly(registry.active) : registry.active;
+  const routing = route(opts.tier ?? triage.tier, eligible);
 
   const run = await executeGate(
     { routing, registry, files },
