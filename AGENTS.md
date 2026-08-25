@@ -15,7 +15,7 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 ## Read first
 
-1. **`docs/architecture.md`**: the single statement of what is true now: the three parts, the
+1. **`docs/architecture.md`** states what is true now: the three parts, the
    loop, the layers, FCIS, the check registry, the measured `claude -p` invocation.
 2. **`.wst/constitution.md`**: governance and the seven non-negotiables.
 3. **`.wst/triage-rules.md`**: which discipline a change earns. Read BEFORE editing.
@@ -108,7 +108,7 @@ built under that waiver and removed by ADR-0009.
   runs the full gate on every PR. ADR-0023 cut `plan` and `prepare`; what a worker needs to
   know is in `.wst/`, which it can already read.
 - **58 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
-  `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
+  `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v4, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an `llm` check at `warn`. Measured 2026-08-20 on claude 2.1.237: 98/100
   correct, **zero wrong verdicts**, two runs the harness never got an answer out of. The bar is
