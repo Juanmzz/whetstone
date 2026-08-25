@@ -18,7 +18,7 @@ Whetstone's central claim about itself is that every rule here was earned by som
 that went wrong. The evidence is a set of edges spread across four kinds of file: a
 signal names the rule it implicates, a check names the decision it rests on, a decision
 names the one it supersedes. Nothing read two of them together, so nothing noticed when
-they stopped agreeing — and one pair had.
+they stopped agreeing, and one pair had.
 
 **Derived, never stored.** adr-0001 refused the memory product: no embeddings, no
 database, no index. That ruling is about *storing* a graph. This parses files the gate
@@ -26,8 +26,8 @@ already reads, holds the result for one process, and writes nothing. If the deri
 ever disagrees with the files, the files win.
 
 **One rule, deliberately.** A check's `origin:` is a declared field with a single
-meaning, so "it names a superseded decision" is a fact. A tempting second rule — a skill
-citing a signal that does not cite it back — was written, measured and removed: run
+meaning, so "it names a superseded decision" is a fact. A tempting second rule, a skill
+citing a signal that does not cite it back, was written, measured and removed: run
 against this repo it reported eight problems and exactly one was real. `lazy.md` cites
 five signals as EXAMPLES of the pattern its rule describes, and `tdd-discipline.md`
 cites two ids from another repo's log, saying so in the same sentence. A check that is
@@ -42,7 +42,7 @@ worth recording. Both are judgment. Whether `skill-shape` still rests on a decis
 was retired is a fact.
 
 **When it fails:** repoint `origin:` at the decision that supersedes the old one, or at
-the one that actually governs the check now. It caught its own first case that way —
+the one that actually governs the check now. It caught its own first case that way:
 `skill-shape` cited adr-0007, superseded by adr-0019.
 
 Deterministic checks may block freely (constitution non-negotiable 7).

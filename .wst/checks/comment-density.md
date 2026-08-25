@@ -15,7 +15,7 @@ version: 1
 ---
 
 The rule is that comments are brief and confined to what the code cannot say on its
-own. It was stated twice, applied by hand once — `src/` went from 36% comment to 30% —
+own. It was stated twice and applied by hand once (`src/` went from 36% comment to 30%),
 and was back at 33% two days later on a branch written by the same person who applied
 it. Nothing held it. That is `sig-4a2610fb`.
 
