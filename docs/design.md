@@ -41,6 +41,7 @@ exclude: []
 command: npm run typecheck       # deterministic only
 agent: gemini                    # llm only; omit for the one wst.yaml selects
 skippable: false                 # omit unless the answer depends on the range
+slow: true                       # omit unless it is too slow to answer while someone waits
 origin: [adr-0008]               # what earned this check
 version: 2
 ---

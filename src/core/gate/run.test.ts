@@ -20,6 +20,7 @@ function det(over: Partial<LoadedCheck> = {}): LoadedCheck {
     exclude: [],
     enabled: true,
     skippable: true,
+    slow: false,
     version: 1,
     origin: [],
     command: "npm run typecheck",

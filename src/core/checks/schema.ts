@@ -66,6 +66,8 @@ const BaseCheck = z.strictObject({
    * is not in the hash.
    */
   skippable: z.boolean().default(true),
+  /** Too slow to answer while somebody waits. Absent means cheap. */
+  slow: z.boolean().default(false),
   /** Bumped when behaviour changes — part of the receipt's input hash. */
   version: z.number().int().min(1).default(1),
   /** Signals / ADRs that earned this check. Empty means unearned. */

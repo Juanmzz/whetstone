@@ -13,6 +13,7 @@ const check = (id: string, tiers: readonly Tier[], enabled = true): Check => ({
   exclude: [],
   enabled,
   skippable: true,
+  slow: false,
   version: 1,
   origin: [],
 });

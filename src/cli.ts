@@ -74,8 +74,9 @@ program
   .option("--tier <tier>", "provisional triage tier override")
   .option("--json", "print the verdict as JSON")
   .option("--no-lens", "skip llm checks (fast and free; for the pre-push hook)")
+  .option("--fast", "run only the checks that do not declare themselves slow")
   .option("--no-emit", "do not record signals — for verifying the gate itself")
-  .action(async (opts: { range?: string; tier?: string; json?: boolean; lens?: boolean; emit?: boolean }) => {
+  .action(async (opts: { range?: string; tier?: string; json?: boolean; lens?: boolean; emit?: boolean; fast?: boolean }) => {
     // Validate rather than cast: an unrecognised --tier must be rejected loudly.
     // Silently coercing it would let `--tier=stict` run the gate at the wrong
     // discipline while reporting success.
@@ -95,6 +96,7 @@ program
       ...(opts.json !== undefined ? { json: opts.json } : {}),
       ...(opts.lens === false ? { noLens: true } : {}),
       ...(opts.emit === false ? { noEmit: true } : {}),
+      ...(opts.fast === true ? { fast: true } : {}),
     });
   });
 

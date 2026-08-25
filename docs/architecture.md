@@ -76,7 +76,8 @@ not a fleet manager, not a spec framework, not a memory server.
 | `wst opinion` | run a rule Whetstone offers that no repo declares; bare, it lists them and the friction that earned each |
 
 Flags that change what runs: `gate --no-lens` (deterministic only — what the pre-push hook
-runs) · `gate --no-emit` (record no signals; for verifying the gate itself) · `gate --tier` ·
+runs) · `gate --fast` (skip whatever declares itself slow) · `gate --no-emit` (record no
+signals; for verifying the gate itself) · `gate --tier` ·
 `retro --dry-run` · `init --definitions-only` (write `.wst/` and no vendor file, for a repo
 another harness already owns) · `update --json`.
 

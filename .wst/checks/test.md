@@ -15,6 +15,7 @@ include:
   - ".githooks/**"
   - ".claude/hooks/**"
 command: npm test
+slow: true
 origin: [adr-0008, sig-0005, sig-0006]
 version: 3
 ---
@@ -55,3 +56,8 @@ signals came from tests catching real defects that looked like test problems:
   of HTML/JSX.
 
 Deleting or skipping the assertion would have shipped both.
+
+**v3: `slow: true`.** It is 45 seconds of a 50-second gate. `gate --fast` skips it, which
+is what makes a gate usable at a commit or when an agent stops rather than only at the
+push, by which time the work has compounded. Nothing else changes: the push and CI still
+run it, and it still blocks there.

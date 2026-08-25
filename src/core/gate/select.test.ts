@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRegistry, type LoadedCheck } from "../checks/registry.js";
 import type { Routing } from "../contracts.js";
 import type { ChangedFile } from "../diff/parse.js";
-import { matchFiles, selectChecks } from "./select.js";
+import { fastOnly, matchFiles, selectChecks } from "./select.js";
 
 function check(over: Partial<LoadedCheck> = {}): LoadedCheck {
   return {
@@ -15,6 +15,7 @@ function check(over: Partial<LoadedCheck> = {}): LoadedCheck {
     exclude: [],
     enabled: true,
     skippable: true,
+    slow: false,
     version: 1,
     origin: [],
     command: "npm run typecheck",
@@ -195,5 +196,23 @@ describe("selectChecks", () => {
 
   it("leaves declined empty when every check is enabled", () => {
     expect(selectChecks(routing(), buildRegistry([check()]), FILES).declined).toEqual([]);
+  });
+});
+
+describe("selecting only the checks that are cheap", () => {
+  const cheap = check({ id: "typecheck" });
+  const dear = check({ id: "test", slow: true });
+
+  it("keeps a check that says nothing about its cost", () => {
+    // Silence is not a claim: a check nobody classified stays in a fast run.
+    expect(fastOnly([cheap, dear]).map((c) => c.id)).toContain("typecheck");
+  });
+
+  it("drops a check that declares itself slow", () => {
+    expect(fastOnly([cheap, dear]).map((c) => c.id)).not.toContain("test");
+  });
+
+  it("changes nothing when nothing is slow", () => {
+    expect(fastOnly([cheap]).map((c) => c.id)).toEqual(["typecheck"]);
   });
 });

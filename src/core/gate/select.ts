@@ -155,3 +155,8 @@ export function selectChecks(
 
   return { selected, excluded, missingFromRegistry, unmatched, declined };
 }
+
+/** The checks that can answer while somebody is waiting. */
+export function fastOnly(checks: readonly LoadedCheck[]): readonly LoadedCheck[] {
+  return checks.filter((check) => !check.slow);
+}

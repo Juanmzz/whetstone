@@ -352,6 +352,7 @@ describe("createCheckRunner", () => {
     exclude: [],
     enabled: true,
     skippable: true,
+    slow: false,
     version: 1,
     origin: [],
     review_lens: "Review this diff.",
