@@ -283,7 +283,10 @@ function printPlan(plan: InitPlan, root: string): void {
  * which looks exactly like a correct bootstrap. So the walk is bounded by the
  * package.json that declares this package, and never crosses a node_modules boundary.
  */
-const PACKAGE_NAME = "whetstone";
+/** Checked against package.json by `test/payload-root.test.ts`: a rename here
+ * that misses the manifest makes `init` copy no skills and say so only in an
+ * exit code. */
+export const PACKAGE_NAME = "@juanmzz/whetstone";
 
 /**
  * Whetstone's own skills, keyed by their `from` path.

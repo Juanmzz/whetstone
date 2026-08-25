@@ -91,7 +91,7 @@ if (hit !== undefined) {
         hookEventName: "PreToolUse",
         additionalContext:
           `STRICT-TIER EDIT (${rel}, matched \`${hit}\`). Per .wst/triage-rules.md this ` +
-          `path ships with full TDD — RED first — and a fresh-context review. ` +
+          `path ships with full TDD, RED first, and a fresh-context review. ` +
           `Write the failing test before the implementation.`,
       },
     }),
