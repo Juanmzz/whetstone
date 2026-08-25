@@ -14,6 +14,7 @@ import { runRetro } from "./commands/retro.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
 import { runOpinion } from "./commands/opinion.js";
+import { runConfig } from "./commands/config.js";
 import { runUpdate } from "./commands/update.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 import { DEFINITION_DIR } from "./core/paths.js";
@@ -162,6 +163,13 @@ program
   .description("run a rule Whetstone offers that no repo declares")
   .action(async (id: string | undefined) => {
     process.exitCode = await runOpinion(id);
+  });
+
+program
+  .command("config")
+  .description(`edit ${DEFINITION_DIR}/wst.yaml: which judge runs llm checks, which skills are active`)
+  .action(async () => {
+    process.exitCode = await runConfig(process.cwd());
   });
 
 program

@@ -36,6 +36,9 @@ wst retro   → cluster signals → propose changes → a human approves → bac
 `wst update` re-plans from that base and reports what changed since: what you edited by
 hand, what a newer Whetstone would write differently. It writes nothing.
 
+`wst config` edits `.wst/wst.yaml` in a terminal: which judge runs `llm` checks, which
+skills are active.
+
 `status`, `check` and `triage` read the machinery back; none of them decide anything.
 `wst opinion` lists the rules Whetstone offers that no repo declares, and the friction that
 earned each. `init` asks before writing any of them, and never writes one unasked.

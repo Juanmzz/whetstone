@@ -1,0 +1,91 @@
+/**
+ * `wst config`: edit `.wst/wst.yaml` without opening it.
+ *
+ * The judge key has meant something since adr-0026 and the only way to set it
+ * was a text editor, so the second adapter was reachable in principle and not
+ * in practice.
+ */
+
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { editConfig } from "../core/config/edit.js";
+import { parseConfig } from "../core/config/schema.js";
+import { DEFINITION_DIR } from "../core/paths.js";
+import { initialState, press, render, type SkillState } from "../core/tui/model.js";
+import { CONFIG_FILE } from "../shell/config.js";
+import { createGitAdapter } from "../shell/git.js";
+import { paint, rawKeys, restore } from "../shell/tui.js";
+import { parse as parseYaml } from "yaml";
+
+/** Every skill the config mentions, active or commented out. */
+function skillsIn(text: string, active: readonly string[]): readonly SkillState[] {
+  const on = new Set(active);
+  const ids: string[] = [];
+  for (const line of text.split("\n")) {
+    const m = /^\s*(?:#\s*)?-\s*(skills\/\S+)\s*$/.exec(line);
+    if (m?.[1] !== undefined) ids.push(m[1]);
+  }
+  return ids.map((id) => ({ id, active: on.has(id) }));
+}
+
+export async function runConfig(cwd: string): Promise<number> {
+  const root = await createGitAdapter(cwd).repoRoot();
+  if (root === null) {
+    console.error("not inside a git repository; wst.yaml lives in one, so it needs one");
+    return 1;
+  }
+
+  const path = join(root, DEFINITION_DIR, CONFIG_FILE);
+  let text: string;
+  try {
+    text = await readFile(path, "utf-8");
+  } catch {
+    console.error(`no ${DEFINITION_DIR}/${CONFIG_FILE}; run \`wst init\` first`);
+    return 1;
+  }
+
+  const raw: unknown = parseYaml(text);
+  const config = parseConfig(raw);
+  const declared = (raw as { skills?: unknown }).skills;
+  const active = Array.isArray(declared) ? declared.filter((s) => typeof s === "string") : [];
+
+  let state = initialState({ agent: config.agent, skills: skillsIn(text, active) });
+
+  if (!process.stdin.isTTY) {
+    // Printing the screen is the honest degradation: it says what the settings
+    // are, and says why it cannot take a keypress.
+    console.log(render(state).slice(0, -2).join("\n"));
+    console.error("\nnot a terminal, so nothing can be selected. Edit the file directly.");
+    return 1;
+  }
+
+  const keys = rawKeys(process.stdin, () => {
+    keys.close();
+    restore(process.stdout);
+    process.exit(130);
+  });
+
+  try {
+    for (;;) {
+      paint(process.stdout, render(state));
+      const result = press(state, await keys.next());
+      state = result.state;
+
+      if (result.action.kind === "quit") return 0;
+      if (result.action.kind === "save") {
+        const next = editConfig(text, {
+          agent: result.action.agent,
+          skills: result.action.skills,
+        });
+        await writeFile(path, next, "utf-8");
+        keys.close();
+        restore(process.stdout);
+        console.log(`wrote ${DEFINITION_DIR}/${CONFIG_FILE}`);
+        return 0;
+      }
+    }
+  } finally {
+    keys.close();
+    restore(process.stdout);
+  }
+}
