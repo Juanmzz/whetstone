@@ -22,7 +22,7 @@ and the other is drift.
 - **The LLM = judgment only.** `llm` checks, and proposing a new check. `src/core/`
   never calls one.
 
-| Deterministic — the engine | LLM — judgment only |
+| Deterministic: the engine | LLM: judgment only |
 |---|---|
 | triage classification · check selection · running deterministic checks · enforcing the gate · receipt hashing · signal collection and clustering · emitting hooks | `llm` checks · proposing a new check (human-gated) |
 
@@ -33,7 +33,7 @@ Whetstone verifies frugally, triage-gated.
 
 ```mermaid
 flowchart TB
-  defs[/".wst/ — constitution · triage · checks · skills"/]:::wst
+  defs[/".wst/ · constitution · triage · checks · skills"/]:::wst
   work["the work happens<br/>Claude Code, another agent, or a person<br/>oriented by reading .wst/"]:::harness
   push["git push · CI"]:::harness
   gate["wst gate<br/>deterministic checks · calibrated lens · receipts"]:::wst
@@ -53,7 +53,7 @@ flowchart TB
 
 **Whetstone** (solid blue) owns the definition, the prediction, the charter, the gate, the log
 and the retro. **The harness** (dashed grey) owns execution and transport: the agent or person
-who writes the code, git, the forge, CI. **A human** (amber) signs twice — once on the plan,
+who writes the code, git, the forge, CI. **A human** (amber) signs twice: once on the plan,
 once on any amendment to the rules. Neither signature is automatable; `wst retro` proposes and
 never applies, and `wst signal` is a command for a person to type.
 
@@ -75,7 +75,7 @@ not a fleet manager, not a spec framework, not a memory server.
 | `wst update` | re-plan from the recorded answers and report what changed: drifted, outdated, missing, new, orphan. Writes nothing |
 | `wst opinion` | run a rule Whetstone offers that no repo declares; bare, it lists them and the friction that earned each |
 
-Flags that change what runs: `gate --no-lens` (deterministic only — what the pre-push hook
+Flags that change what runs: `gate --no-lens` (deterministic only, which is what the pre-push hook
 runs) · `gate --fast` (skip whatever declares itself slow) · `gate --no-emit` (record no
 signals; for verifying the gate itself) · `gate --tier` ·
 `retro --dry-run` · `init --definitions-only` (write `.wst/` and no vendor file, for a repo
@@ -84,22 +84,22 @@ another harness already owns) · `update --json`.
 ## The layers
 
 These are the six **product** stages, numbered by when they happen to a change. The code
-has its own dependency depth — seven levels of imports — and the two do not line up.
+has its own dependency depth, seven levels of imports, and the two do not line up.
 When this page says "layer" it means a stage below, never an import level.
 
 | # | Stage | What it does |
 |---|---|---|
-| 0 | **Definition** — `.wst/` | Per-project source of truth: constitution, triage rules, check registry, skills, memory |
-| 1 | **Apply** — `wst init` | Interview a repo, generate its `.wst/`. Reads declared facts; asks about everything else |
+| 0 | **Definition**, `.wst/` | Per-project source of truth: constitution, triage rules, check registry, skills, memory |
+| 1 | **Apply**, `wst init` | Interview a repo, generate its `.wst/`. Reads declared facts; asks about everything else |
 | 2 | **Triage** | Classify a change by glob → tier → which checks run |
 | 3 | **Execution seam** | Nothing. A worker orients itself by reading `.wst/`, which travels with the repo. Whetstone does not brief, dispatch or execute (ADR-0023) |
 | 4 | **Verification gate** | Deterministic checks always, a calibrated lens when the tier earns it. Receipts skip what already passed |
-| 5 | **Self-sharpening** — `wst retro` | Signals → clusters → proposed amendments → a human accepts → `.wst/` changes |
+| 5 | **Self-sharpening**, `wst retro` | Signals → clusters → proposed amendments → a human accepts → `.wst/` changes |
 
 Cross-cutting: **memory** (`.wst/memory/`, files backend) and **receipts** (skip re-work,
 audit, tamper-guard).
 
-## FCIS — functional core, imperative shell
+## FCIS: functional core, imperative shell
 
 ```
 src/
@@ -136,12 +136,12 @@ One file per check in `.wst/checks/`, YAML frontmatter plus prose. `id`, `kind`
 
 **A judgment check earns its `block` at parse time.** An `llm` declaring
 `severity: block` without a passing calibration receipt does not load. Authority comes from
-`<id>.calibration.json`, whose hashes the loader recomputes — not from a hand-typed field. The
+`<id>.calibration.json`, whose hashes the loader recomputes, not from a hand-typed field. The
 bar is 10/10 correct and unanimous on a known-good and a known-bad fixture, zero flips.
 Deterministic checks block freely.
 
-**Only a real check failure blocks.** A check that could not RUN — spawn, budget, timeout,
-auth, invalid output — is the gate being broken and reports `errored`. A run that verified
+**Only a real check failure blocks.** A check that could not RUN (spawn, budget, timeout,
+auth, invalid output) is the gate being broken and reports `errored`. A run that verified
 nothing is not a pass, and "no checks ran" never shares a message with "all checks passed".
 
 Include globs are matched with `node:path`'s `matchesGlob` against repo-relative paths. `**`
@@ -150,7 +150,7 @@ does not cross a dot-leading segment, so a path under `.wst/` names it explicitl
 ## The judge
 
 One port, `LlmJudge`. Agnosticism is multiple adapters behind it, and `agent:` in `wst.yaml`
-selects one — read by `shell/judge.ts`, which is the only place that names a vendor.
+selects one, read by `shell/judge.ts`, which is the only place that names a vendor.
 The core never knows the model. Today one adapter ships: `shell/claude.ts`, which shells out to
 `claude -p` and uses the Max subscription rather than an API key.
 
@@ -163,7 +163,7 @@ claude -p --output-format json --json-schema '<schema>' --append-system-prompt '
   --tools "" --model <haiku|sonnet|opus> [--max-budget-usd N]
 ```
 
-The prompt goes on **stdin** — diffs exceed argv limits.
+The prompt goes on **stdin**, because diffs exceed argv limits.
 
 - **Hermeticity is what makes the judge trustworthy and affordable.** The flags strip the
   target repo's MCP servers, hooks, plugins, skills and output styles, so a repo cannot tell
@@ -188,7 +188,7 @@ The prompt goes on **stdin** — diffs exceed argv limits.
 |---|---|
 | `.wst/memory/decisions.md` | Every decision, by anchor id. What was ruled out, and why |
 | `.wst/memory/signals.jsonl` | Append-only observations. The retro's input |
-| `.wst/memory/retro-log.md` | What a retro concluded. A proposal under `proposals/` is transient — deleted once the log records the decision (adr-0017) |
+| `.wst/memory/retro-log.md` | What a retro concluded. A proposal under `proposals/` is transient, deleted once the log records the decision (adr-0017) |
 | `.wst/memory/out-of-scope/` | What was deliberately refused, so it is not re-proposed |
 | `.wst/checks/*.calibration.json` | The receipt that grants a lens blocking authority |
 | `docs/lanes.yaml` | Lane ownership. `.claude/hooks/lane-guard.mjs` is compiled from it |

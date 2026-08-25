@@ -60,7 +60,7 @@ that reads `WST_GATE_RANGE` answers a different question per range.
 
 **`kind`** says who executes. `deterministic` runs a command and reads its exit
 code. `llm` sends the diff to a model. `method` is prose an agent follows and
-the gate runs nothing — it reports `declared` and can never block.
+the gate runs nothing: it reports `declared` and can never block.
 
 **`include`** is what invalidates the receipt. It must name everything the
 command *reads*, not everything it is *about*: when it names less, a receipt
@@ -71,7 +71,7 @@ repository for exactly this reason.
 **`version`** is part of the receipt's input hash. Change the check's behaviour,
 bump it, and every receipt earned under the old behaviour stops matching.
 
-**`origin`** is what earned the check — a decision or the signals from real
+**`origin`** is what earned the check: a decision, or the signals from real
 friction. Non-negotiable 4: a check with nothing behind it is a guess. This is
 the field that keeps the registry from filling with plausible ideas.
 
@@ -83,7 +83,7 @@ bar is 10 of 10 correct and unanimous across known-good and known-bad fixtures,
 with zero flips.
 
 The receipt binds to the fixture set, the lens text, the **model** and the
-runtime — so editing the prompt, or switching adapters, invalidates the
+runtime, so editing the prompt or switching adapters invalidates the
 authority rather than silently carrying it over.
 
 `scripts/calibrate.ts` measures it. A failure is a result: this repo's own
@@ -99,4 +99,4 @@ concurrent code, and the run that proved it cost $4.45.
 | `.wst/memory/signals.jsonl` | Append-only observations, the retro's input | yes, `merge=union` |
 | `.wst/memory/decisions.md` | Decisions by anchor id | yes |
 | `.wst/memory/retro-log.md` | What each retro read and changed | yes |
-| `.wst/receipts/` | Which check passed on which input | no — a cache |
+| `.wst/receipts/` | Which check passed on which input | no, it is a cache |
