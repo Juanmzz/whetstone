@@ -61,7 +61,7 @@ export async function runUpdate(
   const raw = await readFile(join(root, DEFINITION_DIR, BASE_FILE), "utf-8").catch(() => null);
   if (raw === null) {
     console.error(
-      `no ${DEFINITION_DIR}/${BASE_FILE} — this repo was bootstrapped before wst recorded one,\n` +
+      `no ${DEFINITION_DIR}/${BASE_FILE}: this repo was bootstrapped before wst recorded one,\n` +
         `or by hand. There is nothing to compare against, and guessing would be worse.`,
     );
     return EXIT_NO_BASE;
@@ -101,9 +101,9 @@ export async function runUpdate(
     return 0;
   }
 
-  console.log(`${banner()}\n\nupdate — ${root}`);
+  console.log(`${banner()}\n\nupdate: ${root}`);
   console.log(`  recorded by wst ${base.version} on ${base.generatedAt}\n`);
   console.log(renderUpdate(verdicts));
-  console.log(`\n  Reporting only — nothing was written. Re-copy what you want by hand.`);
+  console.log(`\n  Reporting only: nothing was written. Re-copy what you want by hand.`);
   return 0;
 }

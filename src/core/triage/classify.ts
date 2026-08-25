@@ -21,7 +21,7 @@ export type TriageMatch = TriageResult["matches"][number];
  */
 export const FALLBACK_TIER: Tier = "light";
 export const FALLBACK_REASON =
-  `no rule matched — default tier per ${DEFINITION_DIR}/triage-rules.md (an unrecognised path is not evidence of triviality)`;
+  `no rule matched: default tier per ${DEFINITION_DIR}/triage-rules.md (an unrecognised path is not evidence of triviality)`;
 
 /**
  * The tier of a diff with no files. The maximum over an empty set is the bottom
@@ -67,7 +67,7 @@ function classifyFile(file: ChangedFile, rules: readonly TriageRule[]): TriageMa
       return {
         file,
         tier: onOldPath.tier,
-        reason: `${onOldPath.reason} — escalated by the pre-rename path ${file.oldPath}`,
+        reason: `${onOldPath.reason}: escalated by the pre-rename path ${file.oldPath}`,
       };
     }
   }
@@ -93,7 +93,7 @@ export function classify(
       tier: EMPTY_DIFF_TIER,
       matches: [],
       rulesSource,
-      reason: `${EMPTY_DIFF_TIER} — no files changed; nothing to gate`,
+      reason: `${EMPTY_DIFF_TIER}: no files changed; nothing to gate`,
     };
   }
 
@@ -115,6 +115,6 @@ export function classify(
     tier,
     matches,
     rulesSource,
-    reason: `${tier} — ${atTier} of ${matches.length} ${noun}; ${driver.file.path}: ${driver.reason}`,
+    reason: `${tier}, ${atTier} of ${matches.length} ${noun}; ${driver.file.path}: ${driver.reason}`,
   };
 }

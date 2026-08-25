@@ -5,10 +5,10 @@ status: active
 ---
 # Lazy = efficient, not careless
 
-The best code is the code never written. This is the **proactive** stance — applied
+The best code is the code never written. This is the **proactive** stance, applied
 *before* you write, not the reactive cleanup pass that follows after.
 
-## The ladder — stop at the first rung that holds
+## The ladder: stop at the first rung that holds
 
 Read the task and the code it touches FIRST (trace the real flow end to end), then climb:
 
@@ -24,21 +24,21 @@ Read the task and the code it touches FIRST (trace the real flow end to end), th
 7. [L7] **Only then:** the minimum code that works.
 
 Two rungs work → take the higher one and move on. The first lazy solution that works is
-the right one — *once you actually understand what the change has to touch.*
+the right one, *once you actually understand what the change has to touch.*
 
 ## Rules
 
 - [L8] **No unrequested abstractions:** no interface with one implementation, no factory
-  for one product, no config for a value that never changes. No scaffolding "for later" —
+  for one product, no config for a value that never changes. No scaffolding "for later",
   later can scaffold for itself.
-- [L9] **Deletion over addition.** Fewest files. Shortest working diff — but only after you
+- [L9] **Deletion over addition.** Fewest files. Shortest working diff, but only after you
   understand the problem (the smallest change in the wrong place is a second bug, not
   laziness).
 - [L10] **Bug fix = root cause, not symptom.** Grep every caller of the function you're about
   to touch; one guard in the shared function is a smaller, more correct diff than a guard in
   each caller.
 - [L11] **Mark a deliberate simplification with a plain why-comment** naming the ceiling +
-  upgrade path — this IS the "comment the why" discipline, NOT a traceability tag (no
+  upgrade path. This IS the "comment the why" discipline, NOT a traceability tag (no
   prefixes): `// global lock for now; per-account locks if throughput matters`.
 
 - [L12] **Reuse before adding: find the first implementation before writing the second.**
@@ -49,10 +49,10 @@ the right one — *once you actually understand what the change has to touch.*
   `sig-0012` (`calibrate.ts` kept its own copy of the review lens, so a receipt certified a
   prompt that never ran), `sig-0028` (the receipt hash computed in two places until
   `identityOf` made it one), `sig-0030` (`hooksPath === '.githooks'` decided inside a
-  command instead of core — the same note records a duplicated check runner as the finding
+  command instead of core. The same note records a duplicated check runner as the finding
   before it), `sig-4b3339fb` (that `.githooks` literal spelled a second time, drifting from
   the absolute path git had actually stored). When a second copy is genuinely unavoidable,
-  one side owns the fact and the other derives from it — "must stay in sync" is a wish.
+  one side owns the fact and the other derives from it. "Must stay in sync" is a wish.
   **Not machine-checkable:** a script finds duplicated text, and none of those five looked
   like the original.
 
@@ -61,7 +61,7 @@ the right one — *once you actually understand what the change has to touch.*
 The constitution's risk profile names the domains where correctness is non-negotiable; never
 simplify away correctness at trust boundaries, error handling that prevents data loss,
 security, or accessibility in those domains. WHICH domains are non-negotiable is set by the
-project's constitution and triage rules, not hard-coded here. Example — a payment system's
+project's constitution and triage rules, not hard-coded here. Example: a payment system's
 constitution might name money handling (integer cents, see `tdd-discipline.md`) and
 auth/multi-tenant filtering as such domains. Another project's list might be different
 entirely. "Lazy" stops exactly where the constitution says correctness begins.
@@ -69,7 +69,7 @@ entirely. "Lazy" stops exactly where the constitution says correctness begins.
 ## Output
 
 Code first. Then at most one line: `skipped: <X>, add when <Y>.` If the explanation is
-longer than the code, delete the explanation — prose defending a simplification is just
+longer than the code, delete the explanation. Prose defending a simplification is just
 complexity smuggled back in.
 
 ## Changelog

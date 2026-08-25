@@ -1,6 +1,6 @@
 ---
 id: docs-fresh
-description: The counts in AGENTS.md's status block match the repo — decisions, signals, registered commands.
+description: The counts in AGENTS.md's status block match the repo, for decisions, signals and registered commands.
 kind: deterministic
 severity: block
 tiers: [strict, light]
@@ -15,7 +15,7 @@ version: 4
 ---
 
 `AGENTS.md` carries a warning saying it has gone stale four times, calls the drift
-structural rather than careless — and then went stale a fifth time, claiming 581 tests
+structural rather than careless, and then went stale a fifth time, claiming 581 tests
 and branch `engine-skeleton` while `main` had 884 and eight more ADRs. A warning about
 staleness is not a defence against it.
 
@@ -34,7 +34,7 @@ the change that made the claim false, not on the change that admits it.
 The signal log was missing from that list for as long as the argument above has been
 written down, and it is the counted file that changes most: appending a signal made the
 block false and fired nothing, so the failure surfaced later, on an unrelated change
-that had not caused it. That happened twice on 2026-08-14 — once from this gate's own
+that had not caused it. That happened twice on 2026-08-14: once from this gate's own
 emitter, which appended `sig-a9ff00c4` and left the count it invalidated behind.
 `test/docs-fresh.test.ts` now fails if any counted source drops out of `include`.
 
@@ -43,11 +43,11 @@ files in a directory, so the count became a count of `### adr-NNNN` anchors on o
 and the glob became that page. `adr-refs` is what keeps those anchors well-formed and
 unique.
 
-It caught an error on its first run — a hand-written "11 commands" against 10
+It caught an error on its first run: a hand-written "11 commands" against 10
 registrations, because `--help` lists `help` and the registry does not.
 
 **v4 (retro-0004):** `npm run fix:docs` writes the counts. Two gate-blocked signals a day
-apart — `sig-a9ff00c4` and `sig-5c2d6751` — are the same root cause recurring, and the
+apart, `sig-a9ff00c4` and `sig-5c2d6751`, are the same root cause recurring, and the
 version had already bumped once between them, which says a reminder is not the fix for
 mechanical bookkeeping. The gate still only CHECKS: a fix running inside it would rewrite
 the tree after the commit it was judging already existed, and in CI would write to a

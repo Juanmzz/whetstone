@@ -22,22 +22,22 @@ version: 2
 
 Decision ids are references, not decoration. A check's `origin:` names them, comments
 cite them to say why code is shaped the way it is, and prose points at them
-everywhere — 238 citations across 191 tracked files at the time this landed.
+everywhere: 238 citations across 191 tracked files at the time this landed.
 
 Folding the nineteen per-file ADRs into one page (adr-0019) changed what a citation
-resolves to: an anchor, not a filename. Both failures are silent — a citation of a
+resolves to: an anchor, not a filename. Both failures are silent, since a citation of a
 decision that has no anchor reads exactly like one that does, and a markdown link into
 the old directory renders as a link and 404s.
 
 **This replaces `adr-shape`,** which validated per-file frontmatter and sections. One
 rule survives the fold: every entry carries a `status`, because that is how a decision
 is amended (adr-0007, inherited by adr-0019) and it is what a retro flips. The rest is
-addressability — anchors well-formed, unique and sequential, every cited id landing on
+addressability: anchors well-formed, unique and sequential, every cited id landing on
 one.
 
 **`include` spells out the dotted directories.** `node:path`'s `matchesGlob` will not
 let `**` cross a dot-leading segment, so `.github/**`, `.githooks/**` and `.claude/**`
-each need their own line — and without them the check went blind to
+each need their own line, and without them the check went blind to
 `.github/workflows/gate.yml`, which cites adr-0009. `test/adr-refs.test.ts` fails if a
 directory holding a citation drops out of this list.
 

@@ -343,7 +343,7 @@ export async function runGate(
   const git = createGitAdapter(cwd);
   const repoRoot = await git.repoRoot();
   if (repoRoot === null) {
-    console.error("not inside a git repository — the gate reads a diff, so it needs one");
+    console.error("not inside a git repository: the gate reads a diff, so it needs one");
     return EXIT_MISCONFIGURED;
   }
   const range = opts.range ?? DEFAULT_RANGE;
@@ -473,7 +473,7 @@ export async function runGate(
   }
   if (signalError !== null) {
     console.error(
-      `\n  ⚠ no signals were recorded for this run — ${signalError}\n` +
+      `\n  ⚠ no signals were recorded for this run: ${signalError}\n` +
         `    The verdict above still stands; only the bookkeeping was skipped.`,
     );
   }

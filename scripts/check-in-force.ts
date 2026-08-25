@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   if (drifted.length > 0) {
     console.error(`${PAGE}: a decision says it is not in force and the meta line does not.\n`);
     for (const e of drifted) {
-      console.error(`  ${e.id} (line ${String(e.line)}) — ${e.title}`);
+      console.error(`  ${e.id} (line ${String(e.line)}): ${e.title}`);
     }
     console.error(`\nAdd \` · unbuilt\` after the date, so this is a fact and not a paragraph.`);
     process.exit(1);

@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   if (edges.length === 0) {
     // Reported, not passed: a check that was selected and examined nothing is the
     // same "verified nothing" the gate refuses to dress up as a pass.
-    console.error("no provenance edges found — nothing was verified");
+    console.error("no provenance edges found: nothing was verified");
     process.exit(1);
   }
 

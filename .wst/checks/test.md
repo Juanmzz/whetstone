@@ -24,17 +24,17 @@ version: 3
 
 `include` is what invalidates this check's receipt. When it names less than the command
 actually reads, a receipt keeps matching after something that changes the answer has
-changed — and the gate skips a check that would now fail. Demonstrated: editing a
+changed, and the gate skips a check that would now fail. Demonstrated: editing a
 repo-root file broke the suite, the receipt still matched, and `wst gate` printed
 `passed` and exited 0.
 
-Nine test files read the repository outside `src/` and `test/` — `definition-dir` walks
+Nine test files read the repository outside `src/` and `test/`: `definition-dir` walks
 `docs/`, `plugin/`, `scripts/`, `.githooks/` and enumerates every root file;
 `architecture` greps `src/`; `lane-guard` compares `.claude/hooks/` against `.wst/`;
 `triage-defaults` and `signal-log` read `.wst/`. So the honest `include` is all of them.
 
 This costs almost nothing in practice: a change under `src/` already matched. What it
-adds is running the suite on documentation and `.wst/` changes — which is exactly where
+adds is running the suite on documentation and `.wst/` changes, which is exactly where
 those nine files assert, and exactly where the old `include` reported a verified pass it
 had not earned.
 
@@ -46,13 +46,13 @@ honest wide `include` beats a narrow one that lies.
 Version bumped 2 → 3 so receipts minted against the narrower `include` are re-earned.
 
 The default suite must stay free and offline. Live LLM tests are gated behind
-`WST_LIVE_LLM=1` — a suite that costs money per run is a suite people stop running.
+`WST_LIVE_LLM=1`; a suite that costs money per run is a suite people stop running.
 
 **When it fails:** read the failure before touching the test. Two of this project's own
 signals came from tests catching real defects that looked like test problems:
 
-- `sig-0005` — a payload that passed schema validation while carrying tool-call markup.
-- `sig-0006` — a contamination guard so eager it would have rejected legitimate reviews
+- `sig-0005`: a payload that passed schema validation while carrying tool-call markup.
+- `sig-0006`: a contamination guard so eager it would have rejected legitimate reviews
   of HTML/JSX.
 
 Deleting or skipping the assertion would have shipped both.

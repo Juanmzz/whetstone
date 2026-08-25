@@ -6,34 +6,34 @@ status: active
 # TDD discipline
 
 Match the rigor of the test loop to the risk of the change. The change's risk class is set
-by the project's triage rules, which operationalize the constitution's risk profile — not
+by the project's triage rules, which operationalize the constitution's risk profile, not
 guessed per file.
 
 ## Levels
 
-- **strict** — critical paths: RED → GREEN → TRIANGULATE → REFACTOR, full cycle.
-- **light** — standard non-critical: one failing happy-path test before implementation.
-- **off** — trivial: no tests required; still flag any subtle logic discovered.
+- **strict** (critical paths): RED → GREEN → TRIANGULATE → REFACTOR, full cycle.
+- **light** (standard non-critical): one failing happy-path test before implementation.
+- **off** (trivial): no tests required; still flag any subtle logic discovered.
 
 Which paths are `strict` is set by the project's triage rules, operationalizing the
-constitution's risk profile — not by this skill. A change that touches a strict path uses
+constitution's risk profile, not by this skill. A change that touches a strict path uses
 strict TDD regardless of how small it looks.
 
 ## Rules
 
-1. [TD1] **RED** — failing test BEFORE implementation. Must fail for the right reason (a
+1. [TD1] **RED**: failing test BEFORE implementation. Must fail for the right reason (a
    logical assertion, not a compile error). Keep the red output: it is the evidence the
    commit will carry.
-2. [TD2] **GREEN** — minimum code to pass. No extras, no cleanup. **One commit per coherent
-   change, not one per phase** — RED and GREEN land together, with the red output quoted in
+2. [TD2] **GREEN**: minimum code to pass. No extras, no cleanup. **One commit per coherent
+   change, not one per phase.** RED and GREEN land together, with the red output quoted in
    the commit body. Splitting them writes a commit whose suite is red by construction, which
    cannot be bisected across or reverted as a unit, and it proves nothing the quoted output
    does not: the discipline is that the test was written first and failed for the right
    reason, not that the failure got its own SHA.
-3. [TD3] **TRIANGULATE** *(strict only)* — a second test with semantically different data
+3. [TD3] **TRIANGULATE** *(strict only)*: a second test with semantically different data
    (boundary, edge case, alternate path) to kill hardcoded implementations. If it fails,
    return to GREEN.
-4. [TD4] **REFACTOR** — clean up with the tests as a safety net. No new behavior; tests stay
+4. [TD4] **REFACTOR**: clean up with the tests as a safety net. No new behavior; tests stay
    green throughout.
 5. [TD5] Test names describe behavior, not implementation.
    - Good: `"returns zero commission when amount is below the minimum threshold"`
@@ -45,7 +45,7 @@ strict TDD regardless of how small it looks.
    the test is meant to guard. Assert a property through its real consumer, not a proxy that can
    pass for the wrong reason (e.g. an equality check that treats `NaN` as equal). Corollary: on
    delegated or generated code, a fresh-context review of the real path is the load-bearing gate
-   — agents systematically green-light the happy fixture.
+   Agents systematically green-light the happy fixture.
 7. [TD7] **A guard is not trusted until it is proven in BOTH directions.** Testing what a
    guard *rejects* proves nothing about what it *accepts*. Every blocking guard, validator or
    filter needs a paired false-positive test: one case it must reject, and one legitimate case
@@ -59,7 +59,7 @@ strict TDD regardless of how small it looks.
      intended. A no-op patch produces a green run that looks exactly like a broken guard.
 
 8. [TD8] **A claim about the system is a hypothesis until a test would fail if it were false.**
-   "Hermetic", "enforced by the schema", "the payload is self-contained" — each is an
+   "Hermetic", "enforced by the schema", "the payload is self-contained": each is an
    assertion about behaviour, and prose asserting it is not evidence. Probe it: a test
    that inverts the property and goes red is the only thing that separates a guarantee
    from an intention. The same applies to a stub justified as "does not exist yet", a
@@ -67,7 +67,7 @@ strict TDD regardless of how small it looks.
    another tool.
 
 9. [TD9] **Arrange / Act / Assert, visibly separated.** Three blocks with a blank line
-   between them, and ONE act per test — a second thing to exercise is a second test. When
+   between them, and ONE act per test, because a second thing to exercise is a second test. When
    setup, exercise and assertions run together as one undivided block, a reader cannot tell
    which line is the behaviour under test and which lines only prepare it, so an assertion
    aimed at the wrong subject reads as fine. This is a shape rule, checkable by eye in a
@@ -77,7 +77,7 @@ strict TDD regardless of how small it looks.
 
 The constitution's risk profile names the domains where correctness is non-negotiable; the
 project's triage rules turn that into a strict classification, mandatory regardless of how
-small the change looks. Example — a payment system's constitution might name money handling
+small the change looks. Example: a payment system's constitution might name money handling
 as such a domain:
 
 - integer arithmetic (cents, not floats): `1050` = $10.50, never `10.50`;
@@ -86,14 +86,14 @@ as such a domain:
 - a money function without triangulation is INCOMPLETE.
 
 This is an ILLUSTRATION, not a core rule. Another project's strict path might be auth,
-migrations, or a safety-critical calculation. Whetstone does not hard-code the domain — the
+migrations, or a safety-critical calculation. Whetstone does not hard-code the domain. The
 project's constitution names it, and the project's triage rules classify changes against it.
 
 ## Test infrastructure
 
 Per-project specifics (runner, paths, fakes, fixtures, E2E/golden paths) live in the
 project's own config (`CLAUDE.md` / `AGENTS.md`), not here. Cross-cutting E2E suites run in
-CI or pre-release — they are NOT part of the per-change TDD loop.
+CI or pre-release. They are NOT part of the per-change TDD loop.
 
 ## Changelog
 

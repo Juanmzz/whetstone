@@ -121,14 +121,14 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   const warnings: string[] = [];
 
   if (facts.repoRoot === null) {
-    problems.push("not inside a git repository — Whetstone is git-native by design");
+    problems.push("not inside a git repository: Whetstone is git-native by design");
   }
   if (!facts.definitionPresent) {
-    problems.push(`no ${DEFINITION_DIR}/ directory — run \`wst init\` to create one`);
+    problems.push(`no ${DEFINITION_DIR}/ directory: run \`wst init\` to create one`);
   }
   if (facts.judge.version === null) {
     problems.push(
-      `\`${facts.judge.name}\` not found on PATH — llm checks cannot run without it`,
+      `\`${facts.judge.name}\` not found on PATH: llm checks cannot run without it`,
     );
   }
 
@@ -145,7 +145,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
       // someone is not `status`'s call. It reports; the human decides.
       warnings.push(
         `the pre-push gate is not active, and \`${configuredPath}\` already owns ` +
-          `core.hooksPath — git allows only one, so arming Whetstone would disable it. ` +
+          `core.hooksPath: git allows only one, so arming Whetstone would disable it. ` +
           `Chain the gate from the existing hook, or move deliberately; status will not ` +
           `hand you a command that disarms something you set up on purpose`,
       );
@@ -154,11 +154,11 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
       // anything had been configured it would now be gone. Never suggest it.
       warnings.push(
         `the pre-push gate is not active, and there is no \`${WHETSTONE_HOOKS_PATH}/\` ` +
-          `directory to point git at — create the hook first, then arm it`,
+          `directory to point git at: create the hook first, then arm it`,
       );
     } else {
       warnings.push(
-        `the pre-push gate is not active — run \`git config core.hooksPath ${WHETSTONE_HOOKS_PATH}\``,
+        `the pre-push gate is not active: run \`git config core.hooksPath ${WHETSTONE_HOOKS_PATH}\``,
       );
     }
   }
@@ -168,7 +168,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   if (facts.plugin.install === "disabled") {
     warnings.push(
       `the Whetstone plugin is installed but DISABLED, so neither the strict-path guard ` +
-        `nor the gate-on-stop hook will fire — enable it, or uninstall it so status stops ` +
+        `nor the gate-on-stop hook will fire: enable it, or uninstall it so status stops ` +
         `reporting it`,
     );
   }
@@ -213,12 +213,12 @@ function pluginRow(plugin: PluginFacts): string {
     case "absent":
       return "not installed";
     case "disabled":
-      return "installed but DISABLED — its hooks will not fire";
+      return "installed but DISABLED: its hooks will not fire";
     case "unknown":
       return "unknown (could not ask the harness)";
     case "enabled": {
       const inert = pluginInertReason(plugin);
-      return inert === null ? "loaded — hooks active here" : `loaded, but INERT here: ${inert}`;
+      return inert === null ? "loaded, hooks active here" : `loaded, but INERT here: ${inert}`;
     }
   }
 }
@@ -233,7 +233,7 @@ export function renderStatusReport(
 
   const { facts } = report;
   const lines = [
-    "whetstone — status",
+    "whetstone status",
     "",
     `  repo      ${facts.repoRoot ?? "(not a git repository)"}`,
     `  branch    ${facts.branch ?? "(none)"}`,

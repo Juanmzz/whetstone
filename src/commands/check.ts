@@ -38,7 +38,7 @@ export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()):
   }
 
   if (registry.all.length === 0) {
-    console.log(`no checks registered — add files under ${DEFINITION_DIR}/checks/<id>.md`);
+    console.log(`no checks registered: add files under ${DEFINITION_DIR}/checks/<id>.md`);
     return 0;
   }
 

@@ -31,7 +31,7 @@ const program = new Command();
 
 program
   .name("wst")
-  .description("Whetstone — a self-sharpening standards layer for AI coding agents")
+  .description("Whetstone: a self-sharpening standards layer for AI coding agents")
   .version(VERSION)
   // Only on the bare `wst`, where a human is looking at the tool rather than at a
   // result. Commander prints this above the usage text.
@@ -75,13 +75,13 @@ program
   .option("--json", "print the verdict as JSON")
   .option("--no-lens", "skip llm checks (fast and free; for the pre-push hook)")
   .option("--fast", "run only the checks that do not declare themselves slow")
-  .option("--no-emit", "do not record signals — for verifying the gate itself")
+  .option("--no-emit", "do not record signals; for verifying the gate itself")
   .action(async (opts: { range?: string; tier?: string; json?: boolean; lens?: boolean; emit?: boolean; fast?: boolean }) => {
     // Validate rather than cast: an unrecognised --tier must be rejected loudly.
     // Silently coercing it would let `--tier=stict` run the gate at the wrong
     // discipline while reporting success.
     if (opts.tier !== undefined && !(TIERS as readonly string[]).includes(opts.tier)) {
-      console.error(`unknown tier "${opts.tier}" — expected one of: ${TIERS.join(", ")}`);
+      console.error(`unknown tier "${opts.tier}". Expected one of: ${TIERS.join(", ")}`);
       process.exitCode = 1;
       return;
     }
@@ -103,7 +103,7 @@ program
 program
   .command("retro")
   .description("cluster new signals and propose rule changes (human-gated, never applied)")
-  .option("--dry-run", "cluster only — no LLM calls, nothing written")
+  .option("--dry-run", "cluster only: no LLM calls, nothing written")
   .option("--model <model>", "model for the proposal step")
   .option("--json", "the proposals as data, for the agent that presents them")
   .action(async (opts: { dryRun?: boolean; model?: "haiku" | "sonnet" | "opus"; json?: boolean }) => {
@@ -114,7 +114,7 @@ program
 // other route into `signals.jsonl` is the engine recording what it observed.
 program
   .command("signal")
-  .argument("<type>", "kebab-case type, e.g. triage-miss — the retro clusters on it")
+  .argument("<type>", "kebab-case type, e.g. triage-miss; the retro clusters on it")
   .argument("<detail...>", "one or two sentences a reader can reconstruct the event from")
   .description(`record an observation in ${DEFINITION_DIR}/memory/signals.jsonl (you are the human gate)`)
   // The defaults come from `commands/signal.ts` rather than being written out
@@ -132,7 +132,7 @@ program
   // observation, in an APPEND-ONLY file that may not be edited to fix it.
   .option(
     "-r, --rule <path>",
-    "skill file this implicates, e.g. skills/recording.md — repeat for more",
+    "skill file this implicates, e.g. skills/recording.md; repeat for more",
     (value: string, previous: string[] | undefined) => [...(previous ?? []), value],
   )
   .option("--dry-run", "print the line that would be appended, write nothing")
@@ -158,7 +158,7 @@ program
 
 program
   .command("opinion")
-  .argument("[id]", "which opinion to run — omit for the list and what earned each")
+  .argument("[id]", "which opinion to run; omit for the list and what earned each")
   .description("run a rule Whetstone offers that no repo declares")
   .action(async (id: string | undefined) => {
     process.exitCode = await runOpinion(id);
@@ -166,7 +166,7 @@ program
 
 program
   .command("update")
-  .description("what changed since init wrote this repo — reports, never writes")
+  .description("what changed since init wrote this repo: reports, never writes")
   .option("--json", "print the verdicts as JSON")
   .action(async (opts: { json?: boolean }) => {
     process.exitCode = await runUpdate({ ...(opts.json !== undefined ? { json: opts.json } : {}) });
@@ -178,13 +178,13 @@ program
   .option("--answers <file>", "JSON file of interview answers")
   .option("--purpose <text>", "one-line project purpose")
   .option("--risk <flags>", "comma-separated: money,personalData,productionData,authn,safetyCritical")
-  .option("--source <glob...>", "where this project's code lives — scopes the checks and the triage rules")
+  .option("--source <glob...>", "where this project's code lives: scopes the checks and the triage rules")
   .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
   .option("--stack <text>", "what the project is built with, for the constitution")
-  .option("--propose", "draft the answers with the judge — you edit and sign (one model call)")
+  .option("--propose", "draft the answers with the judge: you edit and sign (one model call)")
   .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
   .option("--llm", "also seed an uncalibrated review lens (capped at warn)")
-  .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else — no AGENTS.md, no CLAUDE.md`)
+  .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else: no AGENTS.md, no CLAUDE.md`)
   .option("--force", "overwrite existing files, listing them first")
   .option("--dry-run", "show the plan, write nothing")
   .option("--json", "print the plan as JSON")

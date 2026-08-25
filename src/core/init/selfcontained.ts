@@ -27,7 +27,7 @@ interface DenyRule {
 const DENY: readonly DenyRule[] = [
   {
     pattern: /docs\/[A-Za-z0-9_.-]+\.md/g,
-    why: "a file under Whetstone's own `docs/` — it does not exist in a bootstrapped repo",
+    why: "a file under Whetstone's own `docs/`: it does not exist in a bootstrapped repo",
   },
   {
     pattern: /\bOPEN_QUESTIONS\.md\b/g,
@@ -46,7 +46,7 @@ const DENY: readonly DenyRule[] = [
     pattern: /\b[Aa][Dd][Rr]-(?!0000\b)\d{4}\b/g,
     why:
       "a decision id from WHETSTONE's record. A bootstrapped repo's decision page starts " +
-      "empty, so the citation resolves to nothing — state the rule instead of pointing at it",
+      "empty, so the citation resolves to nothing: state the rule instead of pointing at it",
   },
   {
     pattern: /\bSPEC\s*§\s*[\d.]+/g,
@@ -63,7 +63,7 @@ const DENY: readonly DenyRule[] = [
   {
     pattern: /(?<![\w/])(?:retro|init)\.md\b/g,
     why:
-      "the Wizard-of-Oz playbooks live in Whetstone, not in the target repo — describe the " +
+      "the Wizard-of-Oz playbooks live in Whetstone, not in the target repo: describe the " +
       "procedure inline instead of linking to it",
   },
   {

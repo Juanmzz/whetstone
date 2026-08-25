@@ -19,7 +19,7 @@ export interface SeedChecksOptions {
   readonly include: readonly string[];
   /** Seed a starter review lens. Off by default: apparatus is earned, not sprayed. */
   readonly agentLens?: boolean;
-  /** What the caller ASKED for. `block` is clamped — see rule 2 above. */
+  /** What the caller ASKED for. `block` is clamped; see rule 2 above. */
   readonly agentLensSeverity?: Check["severity"];
   /** Ids the human said yes to. An id nobody ships is ignored, never written. */
   readonly opinions?: readonly string[];
@@ -102,7 +102,7 @@ export function seedChecks(
       include,
       command: stack.commands.typecheck,
       body:
-        "Seeded by \`wst init\` from the command this repo already declares — not from a " +
+        "Seeded by \`wst init\` from the command this repo already declares, not from a " +
         "guess about what it might use.\n\n" +
         "A deterministic check may block freely: there is no ambiguity about whether the " +
         "compiler succeeded, so a failure here is never a matter of taste.\n\n" +
@@ -128,9 +128,9 @@ export function seedChecks(
           ? "Held at `warn` because **`init` has not seen this suite pass.** Test files exist, " +
             "which is not the same thing: a suite can need a database, a fixture server or an " +
             "env var that nobody has here. **Promote it to `block` after the first green " +
-            "gate** — that run is the evidence this seeding cannot have.\n\n"
+            "gate.** That run is the evidence this seeding cannot have.\n\n"
           : "Held at `warn` because no test files were found at init. **Promote it to " +
-            "`block` after the first green gate** — a blocking check over an empty " +
+            "`block` after the first green gate.** A blocking check over an empty " +
             "suite proves nothing and trains everyone to ignore it.\n\n") +
         "**When it fails:** read the failure before touching the test. Deleting, skipping " +
         "or loosening an assertion to get green is the one move this check exists to make " +
@@ -158,13 +158,13 @@ export function seedChecks(
           ? "**Seeded OFF: this command rewrites the tree it is judging.** The script " +
             "carries a write flag (`--fix`, `--write`, `-w`), so running it inside the gate " +
             "reports on a file that no longer matches what the author wrote, and hides the " +
-            "finding it was meant to surface. `init` cannot strip the flag — it lives in " +
+            "finding it was meant to surface. `init` cannot strip the flag, which lives in " +
             "this repo's own script.\n\n" +
             "**To turn it on:** point `command:` at a read-only invocation (`eslint .` " +
             "rather than `eslint --fix .`), then delete `enabled: false`.\n\n"
           : "") +
         "Held at `warn` deliberately. Lint rules encode taste as well as correctness, and a " +
-        "gate that blocks a merge over a formatting preference gets routed around — after " +
+        "gate that blocks a merge over a formatting preference gets routed around, after " +
         "which it stops catching the real findings too. Promote it once the ruleset is one " +
         "the team actually agrees with.\n\n" +
         "**When it fails:** fix it, or delete the rule. A permanently-warning check is " +
@@ -227,7 +227,7 @@ function agentLensDraft(options: SeedChecksOptions): Draft {
       "",
       "First identify the CONTRACT the changed code is meant to satisfy: its doc comment,",
       "type signature, error semantics, and any documented post-condition. Judge the change",
-      "against that contract — not against how you would have written it.",
+      "against that contract, not against how you would have written it.",
       "",
       "A verdict of 'fail' requires you to name a CONCRETE input, value, or interleaving",
       "that produces observably wrong behaviour under that contract. State it in your",
@@ -240,15 +240,15 @@ function agentLensDraft(options: SeedChecksOptions): Draft {
       "Judge only the change itself, not the surrounding file.",
     ].join("\n"),
     body:
-      "Seeded by `wst init` as a starting point, and **uncalibrated** — nothing has measured " +
+      "Seeded by `wst init` as a starting point, and **uncalibrated**: nothing has measured " +
       "whether this lens agrees with itself, let alone with you.\n\n" +
       "**Why it cannot block.** A judgment check earns its `block` by being correct AND " +
       "unanimous across repeated runs on a known-good and a known-bad example. A fresh repo " +
       "has run it zero times, so the honest severity is `warn`. The failure mode that matters " +
-      "is not a missed bug — it is crying wolf on correct work, because that is what gets the " +
+      "is not a missed bug; it is crying wolf on correct work, because that is what gets the " +
       "gate routed around, and a routed-around gate has negative value.\n\n" +
       "**When it fails:** read the named input. If the lens cannot point at a concrete value " +
-      "that misbehaves, the lens is wrong, not the code — record that, because a pattern of " +
+      "that misbehaves, the lens is wrong, not the code. Record that, because a pattern of " +
       "false positives is the evidence that retires this check or rewrites its prompt.",
   };
 }

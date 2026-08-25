@@ -1,4 +1,4 @@
-# Whetstone — agent orientation
+# Whetstone: agent orientation
 
 > **Keep this file thin.** Per ADR-0002 the content lives in `.wst/` and vendor files render
 > from it. If you are about to explain architecture here, put it in `docs/architecture.md` and
@@ -15,13 +15,13 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 ## Read first
 
-1. **`docs/architecture.md`** — the single statement of what is true now: the three parts, the
+1. **`docs/architecture.md`** states what is true now: the three parts, the
    loop, the layers, FCIS, the check registry, the measured `claude -p` invocation.
-2. **`.wst/constitution.md`** — governance and the seven non-negotiables.
-3. **`.wst/triage-rules.md`** — which discipline a change earns. Read BEFORE editing.
-4. **`.wst/memory/decisions.md`** — every decision by anchor id, carrying what it ruled out.
+2. **`.wst/constitution.md`**: governance and the seven non-negotiables.
+3. **`.wst/triage-rules.md`**: which discipline a change earns. Read BEFORE editing.
+4. **`.wst/memory/decisions.md`**: every decision by anchor id, carrying what it ruled out.
    Open it when you are about to change one, not to learn how the system works.
-5. **`docs/PARALLEL.md`** + **`docs/lanes.yaml`** — if you are a crewmate in a lane.
+5. **`docs/PARALLEL.md`** + **`docs/lanes.yaml`**, if you are a crewmate in a lane.
 
 ## The commands
 
@@ -31,13 +31,13 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst check` | the check registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
-| `wst signal` | record an observation in `signals.jsonl`. **For the human to type** — it IS the [RC3] gate; an agent still proposes and waits |
+| `wst signal` | record an observation in `signals.jsonl`. **For the human to type**. It IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
 | `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
-| `wst update` | what changed since `init` wrote this repo — drifted, outdated, missing. Reports, never writes |
+| `wst update` | what changed since `init` wrote this repo: drifted, outdated, missing. Reports, never writes |
 
 Useful flags: `gate --no-lens` (skip llm checks) · `gate --fast` (skip whatever declares
-itself slow — 6s against 50s here) · `gate --no-emit` (do not
+itself slow, 6s against 50s here) · `gate --no-emit` (do not
 record signals; for when you are testing the gate itself) · `retro --dry-run`.
 
 ## Where things live
@@ -57,29 +57,29 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 ## Hard rules
 
 1. **`core/` never imports `shell/`,** and never calls an LLM. Enforced by `test/architecture.test.ts`.
-2. **A judgment check earns its `block`** — enforced by the SCHEMA. An `agent-lens` declaring
+2. **A judgment check earns its `block`**, enforced by the SCHEMA. An `agent-lens` declaring
    `severity: block` without a passing calibration receipt will not load.
 3. **Only a real check failure may block.** A check that could not RUN (spawn, budget, timeout,
    auth, invalid output) is the gate being broken, not a verdict. Never merge the two, and never
    let "no checks ran" share a message with "all checks passed".
-4. **Strict tier = full TDD, RED first** — `src/core/**` and anything propagating to
+4. **Strict tier = full TDD, RED first** for `src/core/**` and anything propagating to
    bootstrapped projects. RED first is the discipline; **separate RED and GREEN commits are
    not.** One commit per coherent change, with the red output quoted in the commit body as
    the evidence the test came first ([TD1]/[TD2]).
 5. **Lane boundaries are enforced, not requested.** `lane-guard.mjs` DENIES out-of-lane writes.
-   If it blocks you, the split is wrong — say so rather than working around it.
+   If it blocks you, the split is wrong. Say so rather than working around it.
 6. **Decisions change by status, never by rewrite** (ADR-0007, as ADR-0019 inherits it), and live
-   as anchors in `.wst/memory/decisions.md` — one entry, carrying what it ruled out, its status
+   as anchors in `.wst/memory/decisions.md`: one entry, carrying what it ruled out, its status
    and its date. A change with no seriously weighed alternative is a commit message, not a
    decision (ADR-0017). Compacting an entry is selecting, not editing (ADR-0019); the full text
    is in git (`git log --diff-filter=D -- .wst/memory/decisions/`).
 7. **The payload must be self-contained.** Anything `init` writes into a target repo may not
-   reference Whetstone's own files — it dangles there (ADR-0004). Enforced by a reference-closure
+   reference Whetstone's own files, which dangle there (ADR-0004). Enforced by a reference-closure
    check that refuses to emit a plan naming a path it does not create.
-8. **Ground API claims against the docs before writing code** — prefer Context7.
+8. **Ground API claims against the docs before writing code.** Prefer Context7.
 9. **Judge = hermetic.** `shell/claude.ts` strips the target repo's MCP, hooks and `AGENTS.md` so
-   a repo cannot hijack its own reviewer. A charged judge — one the repo under review can tell
-   what to think of it — is a serious bug. A hermetic judge cannot resolve a path, so everything
+   a repo cannot hijack its own reviewer. A charged judge, one the repo under review can tell
+   what to think of it, is a serious bug. A hermetic judge cannot resolve a path, so everything
    it must judge is inlined (delegation D7). The other half of this pair, `shell/crewmate.ts`,
    is gone (ADR-0014): a crewmate now runs in a session a human opens, charged by construction,
    and `.wst/` is what orients it. `wst prepare`, which used to write that briefing, is gone
@@ -93,7 +93,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status — branch `main` · 26 ADRs · 58 signals · 9 commands
+## Status: branch `main` · 26 ADRs · 58 signals · 9 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -108,7 +108,7 @@ built under that waiver and removed by ADR-0009.
   runs the full gate on every PR. ADR-0023 cut `plan` and `prepare`; what a worker needs to
   know is in `.wst/`, which it can already read.
 - **58 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
-  `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v3, `voice` v2,
+  `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v4, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an `llm` check at `warn`. Measured 2026-08-20 on claude 2.1.237: 98/100
   correct, **zero wrong verdicts**, two runs the harness never got an answer out of. The bar is
@@ -131,7 +131,7 @@ built under that waiver and removed by ADR-0009.
 - **Unowned:** `npm run check:in-force` lists what is decided and not yet true of the
   code, so this line no longer keeps it by hand. Beyond that: no skill owns
   subprocess-exit-code conventions (a retro proposal was declined for want of a home);
-  **five of the nine checks are Whetstone-only** — `adr-refs`, `docs-fresh`, `in-force`, `provenance` and
+  **five of the nine checks are Whetstone-only**: `adr-refs`, `docs-fresh`, `in-force`, `provenance` and
   `skill-shape` enforce this repo's documentation discipline, `init` seeds none of them, and
   nobody has asked what each last caught; and nothing says what the signal log does after two
   years of appending.

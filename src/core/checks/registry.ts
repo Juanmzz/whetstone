@@ -75,7 +75,7 @@ export function parseCheckFile(
     raw = parseYaml(yamlText);
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    throw new Error(`${filename}: frontmatter is not valid YAML — ${detail}`);
+    throw new Error(`${filename}: frontmatter is not valid YAML: ${detail}`);
   }
 
   const parsed = CheckSchema.safeParse(raw);
@@ -110,7 +110,7 @@ export function parseCheckFile(
     if (!decision.ok) {
       throw new Error(
         `${filename}: llm "${parsed.data.id}" declares severity: block but has not ` +
-          `earned it — ${decision.reason}`,
+          `earned it: ${decision.reason}`,
       );
     }
   }
@@ -123,7 +123,7 @@ export function buildRegistry(checks: readonly LoadedCheck[]): Registry {
   for (const check of checks) {
     if (byId.has(check.id)) {
       throw new Error(
-        `duplicate check id "${check.id}" — ids must be unique across ${DEFINITION_DIR}/checks/`,
+        `duplicate check id "${check.id}": ids must be unique across ${DEFINITION_DIR}/checks/`,
       );
     }
     byId.set(check.id, check);

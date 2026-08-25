@@ -69,7 +69,7 @@ export function interpretCommandResult(result: CommandResult): CheckOutcome {
   if (result.exitCode === null) {
     return {
       status: "errored",
-      detail: "the check produced no exit status — nothing was observed to pass or fail",
+      detail: "the check produced no exit status: nothing was observed to pass or fail",
     };
   }
 

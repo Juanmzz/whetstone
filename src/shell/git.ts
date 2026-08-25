@@ -87,7 +87,7 @@ export function createGitAdapter(cwd: string = process.cwd()): GitPort {
       // THROWS on a range git rejected, rather than reporting an empty diff.
       const out = await git(["diff", "--name-status", range], cwd);
       if (out === null) {
-        throw new Error(`git could not read the range \`${range}\` — check that it exists`);
+        throw new Error(`git could not read the range \`${range}\`: check that it exists`);
       }
       return out;
     },

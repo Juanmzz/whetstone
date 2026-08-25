@@ -1,10 +1,10 @@
-# Triage rules — the machine-readable form of the table in .wst/triage-rules.md.
+# Triage rules: the machine-readable form of the table in .wst/triage-rules.md.
 # That table is the SOURCE (ADR-0005); this file is compiled from it by hand for
 # now. Change the table first, never the reverse.
 #
 # ORDER IS PRECEDENCE. Classification is FIRST-MATCH-WINS per file, so a broad
 # rule placed above a narrow one silently demotes everything the narrow one was
-# written to catch — and the failure is invisible, because the change still gets
+# written to catch: and the failure is invisible, because the change still gets
 # *a* tier, just the wrong one. Most specific first.
 #
 # The tier of a whole CHANGE is the MAXIMUM across the files it touches: one
@@ -19,12 +19,12 @@
 version: 1
 
 rules:
-  # ── strict — full TDD: RED, GREEN, TRIANGULATE, REFACTOR ───────────────────
+  # ── strict: full TDD: RED, GREEN, TRIANGULATE, REFACTOR ───────────────────
 
   - glob: "src/core/**"
     tier: strict
     reason: >-
-      The deterministic engine — triage, check selection, receipts, the gate
+      The deterministic engine: triage, check selection, receipts, the gate
       verdict, the LLM verdict contract. A bug here silently mis-gates every
       change in every project that runs Whetstone.
 
@@ -42,7 +42,7 @@ rules:
       allows the wrong writes in every project it is installed into, and it
       fails open, which looks like working.
 
-  # ── off — no ceremony ──────────────────────────────────────────────────────
+  # ── off: no ceremony ──────────────────────────────────────────────────────
   # Only the retro log is expressible as a path. The rest of the `off` row in
   # .wst/triage-rules.md (typos, formatting, changelog lines) is about CONTENT,
   # which a path-glob engine cannot see; those changes land at `light` and are
@@ -55,7 +55,7 @@ rules:
       An append-only record of retros that already happened. Nothing downstream
       reads it as a rule, so an error in it cannot mis-gate anything.
 
-  # ── light — reasoned before merge, no test ceremony ────────────────────────
+  # ── light: reasoned before merge, no test ceremony ────────────────────────
 
   - glob: "src/shell/**"
     tier: light
@@ -67,7 +67,7 @@ rules:
   - glob: "src/commands/**"
     tier: light
     reason: >-
-      Composition roots — build the adapters, call the core, print. Decisions
+      Composition roots: build the adapters, call the core, print. Decisions
       belong in core/, which is strict; a decision found here is a design bug
       before it is a testing one.
 
@@ -80,8 +80,8 @@ rules:
   - glob: ".wst/memory/decisions.md"
     tier: light
     reason: >-
-      The decision record. Accepted text is never rewritten (ADR-0019) — it is
-      superseded, or compacted by selection — so the risk lives in the decision
+      The decision record. Accepted text is never rewritten (ADR-0019): it is
+      superseded, or compacted by selection: so the risk lives in the decision
       itself, not in the prose.
 
   - glob: "{README,VISION,AGENTS,CLAUDE}.md"

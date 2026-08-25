@@ -43,7 +43,7 @@ export class SignalLogParseError extends Error {
   readonly line: number;
 
   constructor(line: number, why: string) {
-    super(`signals.jsonl:${line} ${why} — fix line ${line} before running again`);
+    super(`signals.jsonl:${line} ${why}: fix line ${line} before running again`);
     this.name = "SignalLogParseError";
     this.line = line;
   }

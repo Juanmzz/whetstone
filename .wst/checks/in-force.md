@@ -26,7 +26,7 @@ prose is terse and fine, the prose without the marker is the drift.
 marker there would be noise.
 
 **What it prints when it passes:** every entry carrying the marker. That list is the
-one `AGENTS.md` used to keep by hand, which is the same failure one layer up — a claim
+one `AGENTS.md` used to keep by hand, which is the same failure one layer up: a claim
 nobody can check is decoration.
 
 **When it fails:** add ` · unbuilt` after the date. The meta line already accepts extra

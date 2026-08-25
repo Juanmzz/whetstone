@@ -58,7 +58,7 @@ export function signalsSince(
     // were already accepted, or already rejected — and a human who sees the same
     // rejected proposal twice stops reading proposals.
     throw new Error(
-      `retro cursor "${cursor}" is not in signals.jsonl — the log was edited, or the ` +
+      `retro cursor "${cursor}" is not in signals.jsonl: the log was edited, or the ` +
         `cursor is corrupt. Resolve by hand before running the retro.`,
     );
   }

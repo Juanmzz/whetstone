@@ -73,7 +73,7 @@ function field(tag: string, value: string | undefined): string {
 export function canonicalInput(files: readonly HashedFile[], check: CheckIdentity): string {
   if (!Number.isInteger(check.version) || check.version < 1) {
     throw new Error(
-      `check version must be a positive integer, got ${String(check.version)} — ` +
+      `check version must be a positive integer, got ${String(check.version)}: ` +
         `a receipt bound to a nonsense version is worse than no receipt`,
     );
   }
@@ -86,7 +86,7 @@ export function canonicalInput(files: readonly HashedFile[], check: CheckIdentit
   const entries = sorted.map((file) => {
     if (seen.has(file.path)) {
       throw new Error(
-        `duplicate path in receipt input: "${file.path}" — two content hashes for one ` +
+        `duplicate path in receipt input: "${file.path}": two content hashes for one ` +
           `file means the caller is confused, and hashing it anyway would mint a ` +
           `receipt that looks authoritative and is not`,
       );

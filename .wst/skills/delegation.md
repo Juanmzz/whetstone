@@ -14,7 +14,7 @@ Does this inflate the agent's context without need? If yes → delegate. If no �
 ## Rules
 
 1. [D1] Delegate exploration when understanding requires reading 4+ files.
-2. [D2] Delegate the write — or run a fresh review before completion — when implementation
+2. [D2] Delegate the write, or run a fresh review before completion, when implementation
    touches 2+ non-trivial files.
 3. [D3] Before any commit/push/PR after code changes, run a fresh-context review, unless the
    diff is trivial docs/text.
@@ -22,16 +22,16 @@ Does this inflate the agent's context without need? If yes → delegate. If no �
    stop, run a fresh audit, then continue.
 5. [D5] After roughly 20 tool calls / 5 exploratory reads / 2 non-mechanical edits without
    delegation, pause and delegate.
-6. [D6] Use fresh context for adversarial review of diffs, conflicts, and PR readiness — the
+6. [D6] Use fresh context for adversarial review of diffs, conflicts, and PR readiness. The
    value is independent judgment, not token saving.
 7. [D7] Every sub-agent prompt must carry: task scope (what to do and NOT do), artifact
-   references as ids/paths (not full content — the sub-agent fetches them itself), the
+   references as ids/paths (not full content, since the sub-agent fetches them itself), the
    rule-file paths to load first, and an instruction to record discoveries/decisions to the
    memory substrate before returning.
    - **Paths only work for a delegate that HAS tools.** The rule above assumes the sub-agent
-     can fetch what you point at. A HERMETIC delegate — no filesystem, no tools, which is the
-     right shape for a judge, since a repo must not be able to instruct its own reviewer —
-     cannot resolve a path at all. For one of those, everything it must judge has to be INLINED
+     can fetch what you point at. A HERMETIC delegate, with no filesystem and no tools, is the
+     right shape for a judge, since a repo must not be able to instruct its own reviewer, and
+     it cannot resolve a path at all. For one of those, everything it must judge has to be INLINED
      as full content. Handing a hermetic judge a path is handing it nothing, and it will answer
      anyway: confidently, about a file it never saw.
 8. [D8] **Verify a delegate's work against the base you dispatched from.** Capture the base
@@ -45,21 +45,21 @@ Does this inflate the agent's context without need? If yes → delegate. If no �
      work gets reported as verified.
    - **The EXIT CODE carries the same obligation as the message.** A run whose prose says
      "nothing was verified" and whose number says 0 is lying to whichever reader consumes
-     the number — and a hook, a CI step and an agent all consume the number. Derive both
+     the number, and a hook, a CI step and an agent all consume the number. Derive both
      from one decision, or they will drift: this project fixed that divergence twice in the
      same file, because the first fix shared half the predicate.
 
-## Inline vs delegate — quick table
+## Inline vs delegate: quick table
 
 | Action                                            | Inline | Delegate             |
 | ------------------------------------------------- | ------ | -------------------- |
-| Read to decide/verify (1–3 files)                 | yes    | —                    |
-| Read to explore/understand (4+ files)             | —      | yes                  |
-| Read as preparation for writing                   | —      | yes (with the write) |
-| Write atomic (one file, mechanical, known change) | yes    | —                    |
-| Write with analysis (multiple files, new logic)   | —      | yes                  |
-| Bash for state (git status, gh)                   | yes    | —                    |
-| Bash for execution (test, build, install)         | —      | yes                  |
+| Read to decide/verify (1–3 files)                 | yes    | no                   |
+| Read to explore/understand (4+ files)             | no     | yes                  |
+| Read as preparation for writing                   | no     | yes (with the write) |
+| Write atomic (one file, mechanical, known change) | yes    | no                   |
+| Write with analysis (multiple files, new logic)   | no     | yes                  |
+| Bash for state (git status, gh)                   | yes    | no                   |
+| Bash for execution (test, build, install)         | no     | yes                  |
 
 ## Anti-patterns
 
@@ -77,7 +77,7 @@ reads. Fresh means fresh.
 ## Notes
 
 - Async delegation when work can proceed without blocking; sync only when the result is
-  needed before the next action. Sub-agent results are not persisted automatically —
+  needed before the next action. Sub-agent results are not persisted automatically, so
   summarize the handoff (in conversation or the memory substrate) before continuing.
 - Parallel writers only with isolated worktrees + explicit approval; otherwise a single
   writer thread.

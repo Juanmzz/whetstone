@@ -1,5 +1,5 @@
 ---
-description: Bootstrap Whetstone in this repo — detect the stack, agree on what a bug costs here, and write .wst/. Use when the user asks to set up, install or initialise Whetstone, or when a repo has no .wst/ directory and they want the gate.
+description: Bootstrap Whetstone in this repo: detect the stack, agree on what a bug costs here, and write .wst/. Use when the user asks to set up, install or initialise Whetstone, or when a repo has no .wst/ directory and they want the gate.
 ---
 
 # Initialising Whetstone in a repository
@@ -14,7 +14,7 @@ how much ceremony every future change buys.
 wst status
 ```
 
-If `.wst/` already exists, do NOT run `init` — it is not re-init, and it refuses
+If `.wst/` already exists, do NOT run `init`. It is not re-init, and it refuses
 anyway. Run `wst update` instead: it re-plans from the answers the repo recorded and
 reports what drifted, what a newer Whetstone writes differently, and what is gone. It
 writes nothing, so reading it costs nothing.
@@ -37,7 +37,7 @@ wst init
 ```
 
 This writes nothing. It prints what it detected and the three questions the repo
-cannot answer. Read the detection out loud to the user — if the test or typecheck
+cannot answer. Read the detection out loud to the user: if the test or typecheck
 command is wrong, everything downstream is wrong.
 
 ## 2b. Offer the opinions, and let them say no
@@ -46,7 +46,7 @@ The interview's last question lists rules no repo declares, each with the fricti
 earned it somewhere else. `wst opinion` prints them.
 
 Read them out and let the human choose. **Nothing is pre-selected, and you may not
-answer this one for them** — a draft arriving with an opinion chosen is the model
+answer this one for them.** A draft arriving with an opinion chosen is the model
 deciding what a project owes. Whatever they pick is seeded at `warn`: it was earned
 elsewhere, and it earns `block` here by catching something here.
 
@@ -70,7 +70,7 @@ Ask directly: *"if this broke silently for a week, what would it cost you?"*
 
 For `strictPaths`, keep it to two or three. A strict path means full TDD, every time,
 forever. Each one needs a reason that would still make sense to somebody deciding
-whether to RETIRE the rule in a year — if you cannot write that sentence, the path
+whether to RETIRE the rule in a year. If you cannot write that sentence, the path
 does not earn it.
 
 Edit `.wst-answers.json` to match what they actually said.
@@ -91,11 +91,11 @@ The gate is the only part that does not depend on an agent cooperating, so it is
 part worth getting right.
 
 **`wst gate` with no `--range` compares the working tree to HEAD.** At pre-push time the
-tree is clean, so it finds zero files, reports INCOMPLETE and exits 2 — blocking every
+tree is clean, so it finds zero files, reports INCOMPLETE and exits 2, blocking every
 push regardless of content. The hook has to derive the range from what git is pushing.
 
 Write this file. With husky, put it in `.husky/pre-push`; with no hook manager, put it in
-`.githooks/pre-push`, `chmod +x` it, and then — **only if nothing else owns the setting** —
+`.githooks/pre-push`, `chmod +x` it, and then, **only if nothing else owns the setting**,
 `git config core.hooksPath .githooks`. If `.husky/` exists, git allows one value and
 setting it disarms husky.
 
@@ -137,7 +137,7 @@ done
 exit 0
 ```
 
-Three things in there are not decoration. `|| code=$?` keeps the real exit code — `if !
+Three things in there are not decoration. `|| code=$?` keeps the real exit code; `if !
 cmd` would reset it to 0 and make the branch below unreachable. Exit 2 gets its own
 sentence because "the gate broke" and "your change is bad" may never share a message.
 And `command -v wst` means a teammate who has not installed it is not blocked by a tool
@@ -147,7 +147,7 @@ they do not have.
 
 An e2e check that starts a dev server is the one kind that can pass **against the wrong
 code**. Playwright's `reuseExistingServer: true` attaches to whatever is already
-listening, and a port does not know which checkout started it — so a gate run in one
+listening, and a port does not know which checkout started it, so a gate run in one
 worktree can verify another's tree and report green. That is worse than a broken check,
 because it is indistinguishable from a working one.
 
@@ -170,7 +170,7 @@ export default defineConfig({
 ```
 
 `WST_GATE_CWD` is the checkout being verified. `WST_GATE_PORT_OFFSET` is a number in
-[0, 1000) derived from that path — stable per checkout, different between them.
+[0, 1000) derived from that path, stable per checkout, different between them.
 
 Say this out loud when you seed an e2e check. A repo that skips it gets a check that
 sometimes lies, and nothing will tell them.

@@ -144,7 +144,7 @@ export function detectStack(facts: RepoFacts): StackFacts {
     }
     if (packageManager === null && facts.packageJson !== null) {
       packageManager = "npm";
-      note("package manager: npm (no lockfile — assumed)", "package.json");
+      note("package manager: npm (no lockfile: assumed)", "package.json");
     }
   }
   // Not a guess at a language: `go.mod` and `Cargo.toml` each name their own

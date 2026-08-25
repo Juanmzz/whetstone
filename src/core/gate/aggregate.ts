@@ -20,7 +20,7 @@ export function aggregate(results: readonly CheckResult[]): GateVerdict {
     // is quietly wrong is worse than one that stops, because it is trusted.
     if (seen.has(result.checkId)) {
       throw new Error(
-        `duplicate result for check "${result.checkId}" — a check produces exactly one ` +
+        `duplicate result for check "${result.checkId}": a check produces exactly one ` +
           `result per gate run, and aggregating two would make the verdict depend on order`,
       );
     }
@@ -60,7 +60,7 @@ export function aggregate(results: readonly CheckResult[]): GateVerdict {
       default: {
         const unhandled: never = result.outcome;
         throw new Error(
-          `unhandled check outcome ${JSON.stringify(unhandled)} — a new outcome must ` +
+          `unhandled check outcome ${JSON.stringify(unhandled)}: a new outcome must ` +
             `say what it means for the verdict rather than falling through it`,
         );
       }
