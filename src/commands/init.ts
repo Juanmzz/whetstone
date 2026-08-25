@@ -15,6 +15,7 @@ import { banner } from "../banner.js";
 import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
+import { stagePaths } from "../core/init/stage.js";
 import {
   ProposalSchema,
   buildProposalPrompt,
@@ -636,7 +637,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
 
   const written = plan.files.length + (payloadRoot === null ? 0 : plan.copies.length);
   console.log(`\nwrote ${written} files. Review them, then commit:`);
-  console.log(`  git add ${DEFINITION_DIR} .claude AGENTS.md CLAUDE.md`);
+  console.log(`  git add ${stagePaths(plan).join(" ")}`);
   console.log('  git commit -m "chore: bootstrap the agent workflow"');
   return payloadRoot === null ? 1 : 0;
 }
