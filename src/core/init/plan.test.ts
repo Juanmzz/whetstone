@@ -58,6 +58,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
     // are the ones that collide.
     expect(p.files.map((f) => f.path).sort()).toEqual(
       [
+        ".githooks/pre-push",
         ".wst/.gitattributes",
         ".wst/.gitignore",
         ".wst/checks/lint.md",

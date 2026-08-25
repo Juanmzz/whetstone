@@ -57,7 +57,7 @@ try {
     JSON.stringify({
       decision: "block",
       reason:
-        `The Whetstone gate BLOCKED this change. This is not advisory — the work is not ` +
+        `The Whetstone gate BLOCKED this change. This is not advisory; the work is not ` +
         `done until it passes.\n\n${out}\n\n` +
         `Fix the failing check and run \`wst gate --no-lens --no-emit\` yourself to confirm. ` +
         `Do not weaken or skip the check to make it pass; if the check itself is wrong, ` +

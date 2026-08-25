@@ -93,7 +93,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status: branch `main` · 26 ADRs · 58 signals · 9 commands
+## Status: branch `main` · 26 ADRs · 59 signals · 9 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -116,13 +116,13 @@ built under that waiver and removed by ADR-0009.
 
 ### Known weaknesses, stated plainly
 
-- **Most signals are still hand-authored.** Of 58: 45 predate the `source` field, 7 are `cli`,
-  1 is `human`, and **5 were written by the gate about its own blocks**. The first was
+- **Most signals are still hand-authored.** Of 59: 45 predate the `source` field, 7 are `cli`,
+  1 is `human`, and **6 were written by the gate about its own blocks**. The first was
   `sig-a9ff00c4` on 2026-08-14, when `docs-fresh` blocked a change that added an ADR and left
   this line behind. Before that, CI emitted one on an ephemeral runner and it evaporated: the
   gap was never "the gate does not fail", it was that where the gate really runs, nothing
   persisted what it observed.
-  The machine-written five are the loop's only input nobody had to remember to type, and
+  The machine-written six are the loop's only input nobody had to remember to type, and
   that number is the one to watch.
 - **The lens is capped at `warn` by harness failures, not by judgment.** Two calls in 100 never
   returned. The differentiator stays advisory until they stop, which is a retry problem.
