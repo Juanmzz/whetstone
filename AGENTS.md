@@ -34,6 +34,7 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type**. It IS the [RC3] gate; an agent still proposes and waits |
 | `wst retro` | cluster signals → propose rule changes → **never applies them** |
 | `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
+| `wst config` | edit `.wst/wst.yaml` in a terminal: which judge runs llm checks, which skills are active |
 | `wst update` | what changed since `init` wrote this repo: drifted, outdated, missing. Reports, never writes |
 
 Useful flags: `gate --no-lens` (skip llm checks) · `gate --fast` (skip whatever declares
@@ -93,7 +94,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status: branch `main` · 26 ADRs · 59 signals · 9 commands
+## Status: branch `main` · 26 ADRs · 59 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
