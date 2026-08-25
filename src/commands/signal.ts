@@ -68,7 +68,7 @@ export async function runSignal(
   const git = createGitAdapter(cwd);
   const repoRoot = await git.repoRoot();
   if (repoRoot === null) {
-    console.error("not inside a git repository — the signal log lives in one, so it needs one");
+    console.error("not inside a git repository: the signal log lives in one, so it needs one");
     return EXIT_MISCONFIGURED;
   }
 
@@ -89,7 +89,7 @@ export async function runSignal(
   );
 
   if (!result.ok) {
-    console.error("nothing was written — the observation is not yet a signal:");
+    console.error("nothing was written, the observation is not yet a signal:");
     for (const error of result.errors) console.error(`  · ${error}`);
     return EXIT_NOT_RECORDED;
   }
@@ -106,7 +106,7 @@ export async function runSignal(
   try {
     root = await resolveDefinitionRoot(repoRoot);
     if (!(await exists(root))) {
-      throw new Error(`no ${DEFINITION_DIR}/ in ${repoRoot} — run \`wst init\` first`);
+      throw new Error(`no ${DEFINITION_DIR}/ in ${repoRoot}: run \`wst init\` first`);
     }
   } catch (cause) {
     console.error((cause as Error).message);
@@ -124,7 +124,7 @@ export async function runSignal(
     // redirect or a paste can still save it.
     console.error(`could not write the signal: ${(cause as Error).message}`);
     console.error(
-      `the observation, so it is not lost — append this line to ${DEFINITION_DIR}/memory/signals.jsonl:`,
+      `the observation, so it is not lost. Append this line to ${DEFINITION_DIR}/memory/signals.jsonl:`,
     );
     console.log(line);
     return EXIT_NOT_RECORDED;

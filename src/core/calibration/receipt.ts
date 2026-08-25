@@ -77,7 +77,7 @@ export const CalibrationReceiptSchema = Shape.superRefine((r, ctx) => {
       code: "custom",
       path: ["verdict"],
       message:
-        `verdict "${r.verdict}" does not follow from these results — a calibration ` +
+        `verdict "${r.verdict}" does not follow from these results: a calibration ` +
         `receipt records what happened; it does not get to disagree with it`,
     });
   }
@@ -145,7 +145,7 @@ export function recordCalibration(input: CalibrationInput): CalibrationReceipt {
   const missing = input.fixtures.filter((f) => !covered.has(f.path)).map((f) => f.path);
   if (missing.length > 0) {
     throw new Error(
-      `refusing to mint a calibration receipt: no result for fixture(s) ${missing.join(", ")} — ` +
+      `refusing to mint a calibration receipt: no result for fixture(s) ${missing.join(", ")}: ` +
         `a receipt that covers part of the set would vouch for the whole of it`,
     );
   }
@@ -153,7 +153,7 @@ export function recordCalibration(input: CalibrationInput): CalibrationReceipt {
   const runs = Math.min(...input.results.map((r) => r.got.length));
   if (runs < 1) {
     throw new Error(
-      "refusing to mint a calibration receipt with zero runs — nothing was measured",
+      "refusing to mint a calibration receipt with zero runs: nothing was measured",
     );
   }
 
@@ -190,7 +190,7 @@ export function blockAuthority(
   if (receipt === null || receipt === undefined) {
     return {
       ok: false,
-      reason: "no calibration receipt — run `npm run calibrate`, or drop it to `warn`",
+      reason: "no calibration receipt: run `npm run calibrate`, or drop it to `warn`",
     };
   }
   if (receipt.lensHash !== lensHash(lens)) {
@@ -198,14 +198,14 @@ export function blockAuthority(
       ok: false,
       reason:
         "the lens text changed since it was measured, so the receipt describes a " +
-        "different prompt — re-measure it",
+        "different prompt: re-measure it",
     };
   }
   if (receipt.fixturesHash !== currentFixturesHash) {
     return {
       ok: false,
       reason:
-        "the fixture set changed since it was measured — the receipt describes a " +
+        "the fixture set changed since it was measured: the receipt describes a " +
         "different measurement",
     };
   }

@@ -194,7 +194,7 @@ function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
     const idx = entry.indexOf(":");
     if (idx === -1) {
       throw new Error(
-        `--strict "${entry}" has no reason. Use "<glob>:<why it earns full TDD>" — a rule ` +
+        `--strict "${entry}" has no reason. Use "<glob>:<why it earns full TDD>": a rule ` +
           `that cannot say why it exists cannot be reviewed, and therefore cannot be retired.`,
       );
     }
@@ -228,7 +228,7 @@ async function loadAnswers(opts: InitOptions, cwd: string): Promise<InterviewAns
 function printDetection(stack: ReturnType<typeof detectStack>): void {
   console.log(`\nread from this repo`);
   if (stack.evidence.length === 0) {
-    console.log("  nothing — no manifest, no lockfile, no tests");
+    console.log("  nothing: no manifest, no lockfile, no tests");
     return;
   }
   for (const line of stack.evidence) console.log(`  ${line}`);
@@ -379,7 +379,7 @@ async function proposeAnswers(
   root: string,
   outPath: string,
 ): Promise<number> {
-  console.log(`${banner()}\n\ninit --propose — ${root}`);
+  console.log(`${banner()}\n\ninit --propose: ${root}`);
   printDetection(stack);
   console.log("\nasking the judge to draft the answers...\n");
 
@@ -527,7 +527,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   }
 
   if (answers === null) {
-    console.log(`${banner()}\n\ninit — ${root}`);
+    console.log(`${banner()}\n\ninit: ${root}`);
     printDetection(stack);
     printQuestions();
     if (await judgeAvailable()) {
@@ -577,7 +577,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
-  console.log(`${banner()}\n\ninit — ${root}`);
+  console.log(`${banner()}\n\ninit: ${root}`);
   printDetection(plan.stack);
   printPlan(plan, root);
 

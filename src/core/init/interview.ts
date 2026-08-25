@@ -88,11 +88,11 @@ export interface InterviewAnswers {
 }
 
 const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
-  ["money", "money — payments, balances, pricing, billing"],
-  ["personalData", "personal data — PII, health, identity documents"],
-  ["productionData", "production data — live customer records, destructive migrations"],
-  ["authn", "auth — authentication, authorisation, secrets, access control"],
-  ["safetyCritical", "safety-critical — physical control, medical, anything that can hurt someone"],
+  ["money", "money: payments, balances, pricing, billing"],
+  ["personalData", "personal data: PII, health, identity documents"],
+  ["productionData", "production data: live customer records, destructive migrations"],
+  ["authn", "auth: authentication, authorisation, secrets, access control"],
+  ["safetyCritical", "safety-critical: physical control, medical, anything that can hurt someone"],
 ];
 
 /**
@@ -130,7 +130,7 @@ export function buildInterview(): readonly InitQuestion[] {
         "Where does this project's code live? One glob per source root " +
         "(`src/**`, or `apps/*/src/**` for a monorepo).",
       why:
-        "A directory called `src` is a convention, not a declaration — and the repo that " +
+        "A directory called `src` is a convention, not a declaration, and the repo that " +
         "calls it `services/` is invisible to any list of names. These globs become the " +
         "`light` triage rules and the `include` of every seeded check, so a wrong one puts " +
         "the gate over the wrong files.",
@@ -153,7 +153,7 @@ export function buildInterview(): readonly InitQuestion[] {
     {
       id: "stack",
       prompt:
-        "What is this project built with? Language, runtime, framework, where it runs — " +
+        "What is this project built with? Language, runtime, framework, where it runs. " +
         "the two lines a new contributor needs.",
       why:
         "A repo declares its scripts and its package manager, and `init` reads both. What " +
@@ -188,7 +188,7 @@ export function buildInterview(): readonly InitQuestion[] {
       "guesses this interview exists to avoid. One question however many ship, so the count " +
       "does not grow with the catalogue.",
     kind: "flags",
-    options: OPINIONS.map((o) => ({ value: o.id, label: `${o.title} — ${o.friction}` })),
+    options: OPINIONS.map((o) => ({ value: o.id, label: `${o.title}: ${o.friction}` })),
     defaultAnswer: null,
   });
 
@@ -228,14 +228,14 @@ export function validateAnswers(answers: InterviewAnswers): readonly string[] {
   const errors: string[] = [];
 
   if (answers.purpose.trim().length === 0) {
-    errors.push("purpose is blank — the constitution would ship with a hole where its intent goes");
+    errors.push("purpose is blank; the constitution would ship with a hole where its intent goes");
   }
 
   if (riskIsElevated(answers.risk) && answers.strictPaths.length === 0) {
     const hits = RISK_LABELS.filter(([key]) => answers.risk[key] === true).map(([key]) => key);
     errors.push(
       `risk profile declares ${hits.join(", ")} but names no strict path. An elevated risk ` +
-        `profile that maps to nothing concrete is a comment, not a rule — name the paths ` +
+        `profile that maps to nothing concrete is a comment, not a rule. Name the paths ` +
         `where that risk actually lives.`,
     );
   }
@@ -252,7 +252,7 @@ export function validateAnswers(answers: InterviewAnswers): readonly string[] {
   const seen = new Set<string>();
   for (const path of answers.strictPaths) {
     if (path.glob.trim().length === 0) {
-      errors.push("a strict path has a blank glob — a rule that matches nothing is dead weight");
+      errors.push("a strict path has a blank glob; a rule that matches nothing is dead weight");
       continue;
     }
     if (path.reason.trim().length === 0) {
@@ -263,7 +263,7 @@ export function validateAnswers(answers: InterviewAnswers): readonly string[] {
     }
     if (seen.has(path.glob.trim())) {
       errors.push(
-        `duplicate strict glob "${path.glob.trim()}" — triage is first-match-wins, so the ` +
+        `duplicate strict glob "${path.glob.trim()}": triage is first-match-wins, so the ` +
           `second one can never fire. Merge them, or narrow one.`,
       );
     }

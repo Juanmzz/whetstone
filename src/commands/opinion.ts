@@ -70,15 +70,15 @@ async function commentDensity(cwd: string): Promise<number> {
   switch (verdict.kind) {
     case "net-reduction":
       console.error(
-        `comment density: ${String(verdict.added)} added, ${String(verdict.removed)} removed over ${range} — net reduction`,
+        `comment density: ${String(verdict.added)} added, ${String(verdict.removed)} removed over ${range}: net reduction`,
       );
       return 0;
     case "too-few":
-      console.error(`comment density: ${String(verdict.total)} added lines over ${range} — too few to judge`);
+      console.error(`comment density: ${String(verdict.total)} added lines over ${range}: too few to judge`);
       return 0;
     case "under":
       console.error(
-        `${String(verdict.percent)}% of ${String(verdict.total)} added .ts lines over ${range} are comment — under the ${String(MAX_PERCENT)}% ceiling`,
+        `${String(verdict.percent)}% of ${String(verdict.total)} added .ts lines over ${range} are comment: under the ${String(MAX_PERCENT)}% ceiling`,
       );
       return 0;
     case "over":
@@ -112,7 +112,7 @@ export async function runOpinion(id: string | undefined, cwd: string = process.c
       return commentDensity(cwd);
     default:
       // Reachable only if the catalogue gains an entry and this switch does not.
-      console.error(`"${id}" is listed but has no runner — that is a bug in wst, not in this repo.`);
+      console.error(`"${id}" is listed but has no runner: that is a bug in wst, not in this repo.`);
       return EXIT_UNKNOWN;
   }
 }

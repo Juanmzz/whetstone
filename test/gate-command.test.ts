@@ -234,7 +234,7 @@ describe("--no-lens", () => {
     const dir = await repo({ checks: { "lens.md": LENS_CHECK } });
     await runGate({ range: "HEAD", noLens: true }, dir);
 
-    expect(stdout()).toMatch(/skipped\s+lens\s+— disabled/);
+    expect(stdout()).toMatch(/skipped\s+lens\s+\(disabled/);
     expect(stdout()).not.toMatch(/pass\s+lens/);
   });
 
@@ -298,7 +298,7 @@ describe("receipts", () => {
 
     out.length = 0;
     expect(await runGate({ range: "HEAD", noLens: true }, dir)).toBe(0);
-    expect(stdout()).toMatch(/skipped\s+green\s+— receipt/);
+    expect(stdout()).toMatch(/skipped\s+green\s+\(receipt/);
   });
 
   it("honours none of them under --no-receipts, and mints none either", async () => {

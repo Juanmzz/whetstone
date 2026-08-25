@@ -49,29 +49,29 @@ export function validateRecommendation(
   // 1. Every cited signal must be REAL. This is the anti-poisoning check.
   if (rec.citedSignals.length === 0) {
     reasons.push(
-      "cites no signals — a rule with a receipt is earned, a rule without one is a guess",
+      "cites no signals: a rule with a receipt is earned, a rule without one is a guess",
     );
   }
   for (const id of rec.citedSignals) {
     if (!known.has(id)) {
-      reasons.push(`cites ${id}, which is not in signals.jsonl — the evidence does not exist`);
+      reasons.push(`cites ${id}, which is not in signals.jsonl: the evidence does not exist`);
     }
   }
   const seen = new Set<string>();
   for (const id of rec.citedSignals) {
-    if (seen.has(id)) reasons.push(`cites ${id} more than once — duplicate citations inflate the evidence`);
+    if (seen.has(id)) reasons.push(`cites ${id} more than once: duplicate citations inflate the evidence`);
     seen.add(id);
   }
 
   // 2. Blast radius. The retro may only change `.wst/`, and never the constitution.
   if (NEVER_TOUCH.includes(rec.target)) {
     reasons.push(
-      `targets ${rec.target}, which the retro never amends — the constitution is human-owned`,
+      `targets ${rec.target}, which the retro never amends: the constitution is human-owned`,
     );
   }
   if (!rec.target.startsWith(`${DEFINITION_DIR}/`)) {
     reasons.push(
-      `targets ${rec.target}, which is outside ${DEFINITION_DIR}/ — the retro amends rules, not code`,
+      `targets ${rec.target}, which is outside ${DEFINITION_DIR}/: the retro amends rules, not code`,
     );
   }
 
@@ -79,12 +79,12 @@ export function validateRecommendation(
   const PLACEHOLDER = /^\s*(placeholder|tbd|todo|n\/a)\b/i;
   const MIN_RATIONALE = 60;
 
-  if (rec.rationale.trim() === "") reasons.push("has no rationale — it cannot be reviewed");
+  if (rec.rationale.trim() === "") reasons.push("has no rationale: it cannot be reviewed");
   else if (PLACEHOLDER.test(rec.rationale)) {
-    reasons.push("its rationale is a placeholder — the proposer had nothing to say");
+    reasons.push("its rationale is a placeholder: the proposer had nothing to say");
   } else if (rec.rationale.trim().length < MIN_RATIONALE) {
     reasons.push(
-      `its rationale is ${rec.rationale.trim().length} chars — too thin to review; a rule ` +
+      `its rationale is ${rec.rationale.trim().length} chars: too thin to review; a rule ` +
         `nobody can evaluate cannot be approved`,
     );
   }
@@ -98,7 +98,7 @@ export function validateRecommendation(
 /** Renders a validated recommendation for the human gate. */
 export function renderProposal(rec: Recommendation, n: number): string {
   return [
-    `### Proposal ${n} — ${rec.kind}: ${rec.target}`,
+    `### Proposal ${n}, ${rec.kind}: ${rec.target}`,
     ``,
     `**${rec.summary}**`,
     ``,

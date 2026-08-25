@@ -103,7 +103,7 @@ export function parseDecisions(page: string): {
     if (n !== previous + 1) {
       // Ids are sequential. A gap is a decision that went missing; a step backwards
       // is a page a reader cannot scan.
-      problems.push({ line: at, why: `${id} follows ${pad(previous)} — expected ${pad(previous + 1)}` });
+      problems.push({ line: at, why: `${id} follows ${pad(previous)}: expected ${pad(previous + 1)}` });
     }
     previous = n;
 
@@ -111,7 +111,7 @@ export function parseDecisions(page: string): {
     if (meta === null) {
       problems.push({
         line: at + 1,
-        why: `${id} has no meta line — expected \`` + "`accepted` · YYYY-MM-DD" + `\`, found: ${(lines[index + 1] ?? "").trim() || "(blank)"}`,
+        why: `${id} has no meta line, expected \`` + "`accepted` · YYYY-MM-DD" + `\`, found: ${(lines[index + 1] ?? "").trim() || "(blank)"}`,
       });
     }
 

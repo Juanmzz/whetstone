@@ -65,7 +65,7 @@ export interface Selection {
 function assertUsableGlob(pattern: string, checkId: string, field: "include" | "exclude"): void {
   if (pattern.trim() === "") {
     throw new Error(
-      `check "${checkId}" declares an empty glob in \`${field}\` — an empty pattern matches ` +
+      `check "${checkId}" declares an empty glob in \`${field}\`: an empty pattern matches ` +
         `nothing, which would silently disable the check rather than fail loudly`,
     );
   }

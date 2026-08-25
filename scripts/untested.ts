@@ -135,7 +135,7 @@ async function main(): Promise<void> {
 
   const scanned = `${commits.length} commit${commits.length === 1 ? "" : "s"} (${spec.join(" ")})`;
   if (found.length === 0) {
-    console.log(`untested: ${scanned} — every strict module that arrived brought a test.`);
+    console.log(`untested: ${scanned}: every strict module that arrived brought a test.`);
     return;
   }
 

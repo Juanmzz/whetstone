@@ -53,6 +53,6 @@ export function parseConfig(raw: unknown): WstConfig {
   const issue = parsed.error.issues[0];
   const at = issue?.path.join(".");
   throw new Error(
-    `wst.yaml: ${at === undefined || at === "" ? "config" : at} — ${issue?.message ?? "invalid"}`,
+    `wst.yaml: ${at === undefined || at === "" ? "config" : at}: ${issue?.message ?? "invalid"}`,
   );
 }

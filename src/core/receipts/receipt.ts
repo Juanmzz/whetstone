@@ -60,7 +60,7 @@ export interface PassInput {
  */
 export function recordPass(input: PassInput): Receipt {
   if (!CHECK_ID.test(input.checkId)) {
-    throw new Error(`invalid check id "${input.checkId}" — must be kebab-case`);
+    throw new Error(`invalid check id "${input.checkId}": must be kebab-case`);
   }
   return {
     format: RECEIPT_FORMAT,
@@ -149,7 +149,7 @@ export function parseReceipt(raw: unknown): ParsedReceipt {
 export function receiptFileName(checkId: string): string {
   if (!CHECK_ID.test(checkId)) {
     throw new Error(
-      `refusing to build a receipt path from "${checkId}" — a check id must be kebab-case`,
+      `refusing to build a receipt path from "${checkId}": a check id must be kebab-case`,
     );
   }
   return `${checkId}.json`;

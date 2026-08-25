@@ -71,7 +71,7 @@ function check(file: string, text: string): Problem[] {
 async function main(): Promise<void> {
   const names = (await readdir(SKILLS)).filter((n) => n.endsWith(".md")).sort();
   if (names.length === 0) {
-    console.error(`${SKILLS} holds no skills — nothing was verified`);
+    console.error(`${SKILLS} holds no skills: nothing was verified`);
     process.exit(1);
   }
 

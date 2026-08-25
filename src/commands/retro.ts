@@ -48,7 +48,7 @@ const LENS = [
   "Prefer the SMALLEST apparatus that fixes it: a rule beats a hook beats a command",
   "beats a whole new skill. Prefer curating a proven solution over generating a new one.",
   "",
-  `\`target\` MUST be a path under ${DEFINITION_DIR}/ — a skill, a hook, or an ADR. You may NEVER`,
+  `\`target\` MUST be a path under ${DEFINITION_DIR}/: a skill, a hook, or an ADR. You may NEVER`,
   `target ${DEFINITION_DIR}/constitution.md; the constitution is human-owned.`,
   "",
   "`citedSignals` MUST list only signal ids that appear in the cluster you were given.",
@@ -56,7 +56,7 @@ const LENS = [
   "earns the rule; a rule without one is a guess.",
   "",
   "Address the ROOT CAUSE, not the symptom. If the cluster does not justify a change,",
-  "say so in the rationale and propose the smallest possible amendment anyway — the",
+  "say so in the rationale and propose the smallest possible amendment anyway: the",
   "human will reject it, and that is a valid outcome.",
 ].join("\n");
 
@@ -89,13 +89,13 @@ async function describeCluster(
       const body = await readFile(join(definitionRoot, rel), "utf-8");
       parts.push(
         "",
-        `CURRENT CONTENT of ${DEFINITION_DIR}/${rel} — amend THIS text, and do not restate a rule it`,
+        `CURRENT CONTENT of ${DEFINITION_DIR}/${rel}: amend THIS text, and do not restate a rule it`,
         `already contains:`,
         "",
         body.slice(0, 6000),
       );
     } catch {
-      parts.push("", `(${DEFINITION_DIR}/${rel} could not be read — propose against the skill list above.)`);
+      parts.push("", `(${DEFINITION_DIR}/${rel} could not be read: propose against the skill list above.)`);
     }
   }
   return parts.join("\n");
@@ -128,7 +128,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
     return 1;
   }
 
-  console.log(`whetstone — retro\n`);
+  console.log(`whetstone: retro\n`);
   console.log(`  signals   ${all.length} total · ${fresh.length} since ${cursor ?? "the beginning"}`);
 
   if (fresh.length === 0) {
@@ -199,7 +199,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   if (rejected.length > 0) {
     lines.push(`## Dropped by the anti-poisoning gate`, ``);
     for (const { rec, reasons } of rejected) {
-      lines.push(`- **${rec.target}** — ${reasons.join("; ")}`);
+      lines.push(`- **${rec.target}**: ${reasons.join("; ")}`);
     }
     lines.push(``);
   }

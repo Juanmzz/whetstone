@@ -93,10 +93,10 @@ async function main(): Promise<void> {
   if (missing.length > 0 || wrong.length > 0) {
     console.error(`${AGENTS} status line:\n  ${status}\n`);
     for (const c of missing) {
-      console.error(`  claims no ${c.label} count — the repo has ${c.actual}`);
+      console.error(`  claims no ${c.label} count: the repo has ${c.actual}`);
     }
     for (const c of wrong) {
-      console.error(`  claims ${String(c.claimed)} ${c.label} — the repo has ${c.actual}`);
+      console.error(`  claims ${String(c.claimed)} ${c.label}: the repo has ${c.actual}`);
     }
 
     // A count the line never names has no place to be written back to, so `--fix`
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
     if (fix && missing.length === 0) {
       const fixed = rewrite(status, claims);
       await writeFile(AGENTS, agents.replace(status, () => fixed), "utf-8");
-      console.error(`\nfixed — ${AGENTS} now says ${adrs} ADRs, ${signals} signals, ${commands} commands`);
+      console.error(`\nfixed: ${AGENTS} now says ${adrs} ADRs, ${signals} signals, ${commands} commands`);
       return;
     }
 
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.error(`${AGENTS} status: ${adrs} ADRs, ${signals} signals, ${commands} commands — all match`);
+  console.error(`${AGENTS} status: ${adrs} ADRs, ${signals} signals, ${commands} commands: all match`);
 }
 
 await main();

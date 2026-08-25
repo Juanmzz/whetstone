@@ -59,7 +59,7 @@ const STAKES: readonly (readonly [RegExp, string])[] = [
   [/^\.claude\/hooks\//, "an existing hook of the same name is replaced"],
   [
     under("memory/(signals|events)\\.jsonl"),
-    "an append-only log. `init` seeds it empty, so writing it would take every line already there — and a correction is appended, never overwritten",
+    "an append-only log. `init` seeds it empty, so writing it would take every line already there: and a correction is appended, never overwritten",
   ],
   [under("memory/decisions.md"), "the decision record. This is the record of WHY, and nothing else holds it"],
   [under("memory/"), "recorded memory: signals, retro history, patterns"],
@@ -120,7 +120,7 @@ export function renderCollisions(collisions: readonly Collision[]): string {
     ...collisions.flatMap((c) => [`  ${c.path}`, `      ${c.stake}`]),
     "",
     "  Nothing has been written. Commit or move these files, or pass --force to",
-    "  overwrite them knowingly — --force lists them again before it writes.",
+    "  overwrite them knowingly: --force lists them again before it writes.",
   ];
   return lines.join("\n");
 }

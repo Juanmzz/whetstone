@@ -93,7 +93,7 @@ export function parseBase(raw: unknown): RecordedBase {
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     throw new Error(
-      `base.json is not a recorded base: ${first?.path.join(".") ?? "?"} — ${first?.message ?? "invalid"}`,
+      `base.json is not a recorded base: ${first?.path.join(".") ?? "?"}: ${first?.message ?? "invalid"}`,
     );
   }
   return parsed.data;
@@ -105,7 +105,7 @@ export function renderBase(base: RecordedBase): string {
 
 /** What each disposition means to somebody deciding what to do about it. */
 const MEANING: Readonly<Record<Disposition, string>> = {
-  drifted: "edited here since init — regenerating would lose that",
+  drifted: "edited here since init: regenerating would lose that",
   outdated: "untouched, and this version writes it differently",
   missing: "recorded, and no longer on disk",
   new: "this version writes it, and your base predates it",
@@ -125,7 +125,7 @@ export function renderUpdate(verdicts: readonly FileVerdict[]): string {
       lines.push(`  ${String(group.length)} file(s) are as init left them`);
       continue;
     }
-    lines.push(`  ${disposition} — ${MEANING[disposition]}`);
+    lines.push(`  ${disposition}: ${MEANING[disposition]}`);
     for (const v of group) lines.push(`    ${v.path}`);
   }
   if (lines.length === 0) lines.push("  nothing to compare: the base records no files");

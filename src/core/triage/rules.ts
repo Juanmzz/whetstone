@@ -21,7 +21,7 @@ const nonBlank = (field: string, why: string) =>
   z
     .string(`${field} must be a string`)
     .transform((s) => s.trim())
-    .refine((s) => s.length > 0, { message: `${field} must not be blank — ${why}` });
+    .refine((s) => s.length > 0, { message: `${field} must not be blank: ${why}` });
 
 const RuleSchema = z.strictObject({
   glob: nonBlank("glob", "a rule that matches nothing is dead weight in a first-match-wins list"),
@@ -36,7 +36,7 @@ const DocumentSchema = z.strictObject({
   version: z.literal(TRIAGE_RULES_FORMAT, `version must be ${TRIAGE_RULES_FORMAT}`),
   rules: z
     .array(RuleSchema)
-    .min(1, "a triage document with no rules classifies nothing — delete the file instead"),
+    .min(1, "a triage document with no rules classifies nothing: delete the file instead"),
 });
 
 /**
@@ -54,7 +54,7 @@ export function parseTriageRules(
     raw = parseYaml(text);
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    throw new Error(`${source}: not valid YAML — ${detail}`);
+    throw new Error(`${source}: not valid YAML: ${detail}`);
   }
 
   const parsed = DocumentSchema.safeParse(raw);
@@ -74,7 +74,7 @@ export function parseTriageRules(
   for (const rule of parsed.data.rules) {
     if (seen.has(rule.glob)) {
       throw new Error(
-        `${source}: duplicate glob ${JSON.stringify(rule.glob)} — under first-match-wins the ` +
+        `${source}: duplicate glob ${JSON.stringify(rule.glob)}: under first-match-wins the ` +
           `later rule can never fire, so it is dead. Merge them, or narrow one.`,
       );
     }
@@ -89,13 +89,13 @@ export function parseTriageRules(
  * `.wst/triage-rules.md` — that file is the source (ADR-0005), this is its
  * machine-readable form. Change the table first, never the reverse.
  */
-export const DEFAULT_RULES_YAML = `# Triage rules — the machine-readable form of the table in ${DEFINITION_DIR}/triage-rules.md.
+export const DEFAULT_RULES_YAML = `# Triage rules: the machine-readable form of the table in ${DEFINITION_DIR}/triage-rules.md.
 # That table is the SOURCE (ADR-0005); this file is compiled from it by hand for
 # now. Change the table first, never the reverse.
 #
 # ORDER IS PRECEDENCE. Classification is FIRST-MATCH-WINS per file, so a broad
 # rule placed above a narrow one silently demotes everything the narrow one was
-# written to catch — and the failure is invisible, because the change still gets
+# written to catch: and the failure is invisible, because the change still gets
 # *a* tier, just the wrong one. Most specific first.
 #
 # The tier of a whole CHANGE is the MAXIMUM across the files it touches: one
@@ -110,12 +110,12 @@ export const DEFAULT_RULES_YAML = `# Triage rules — the machine-readable form 
 version: 1
 
 rules:
-  # ── strict — full TDD: RED, GREEN, TRIANGULATE, REFACTOR ───────────────────
+  # ── strict: full TDD: RED, GREEN, TRIANGULATE, REFACTOR ───────────────────
 
   - glob: "src/core/**"
     tier: strict
     reason: >-
-      The deterministic engine — triage, check selection, receipts, the gate
+      The deterministic engine: triage, check selection, receipts, the gate
       verdict, the LLM verdict contract. A bug here silently mis-gates every
       change in every project that runs Whetstone.
 
@@ -133,7 +133,7 @@ rules:
       allows the wrong writes in every project it is installed into, and it
       fails open, which looks like working.
 
-  # ── off — no ceremony ──────────────────────────────────────────────────────
+  # ── off: no ceremony ──────────────────────────────────────────────────────
   # Only the retro log is expressible as a path. The rest of the \`off\` row in
   # ${DEFINITION_DIR}/triage-rules.md (typos, formatting, changelog lines) is about CONTENT,
   # which a path-glob engine cannot see; those changes land at \`light\` and are
@@ -146,7 +146,7 @@ rules:
       An append-only record of retros that already happened. Nothing downstream
       reads it as a rule, so an error in it cannot mis-gate anything.
 
-  # ── light — reasoned before merge, no test ceremony ────────────────────────
+  # ── light: reasoned before merge, no test ceremony ────────────────────────
 
   - glob: "src/shell/**"
     tier: light
@@ -158,7 +158,7 @@ rules:
   - glob: "src/commands/**"
     tier: light
     reason: >-
-      Composition roots — build the adapters, call the core, print. Decisions
+      Composition roots: build the adapters, call the core, print. Decisions
       belong in core/, which is strict; a decision found here is a design bug
       before it is a testing one.
 
@@ -171,8 +171,8 @@ rules:
   - glob: "${DEFINITION_DIR}/memory/decisions.md"
     tier: light
     reason: >-
-      The decision record. Accepted text is never rewritten (ADR-0019) — it is
-      superseded, or compacted by selection — so the risk lives in the decision
+      The decision record. Accepted text is never rewritten (ADR-0019): it is
+      superseded, or compacted by selection: so the risk lives in the decision
       itself, not in the prose.
 
   - glob: "{README,VISION,AGENTS,CLAUDE}.md"

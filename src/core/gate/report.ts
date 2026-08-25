@@ -123,19 +123,19 @@ function statusLine(result: CheckResult): string {
     case "fail":
       return `  ${result.severity === "block" ? "FAIL" : "warn"}     ${id} (${result.durationMs}ms)`;
     case "errored":
-      return `  errored  ${id} — could not run`;
+      return `  errored  ${id} (could not run)`;
     case "skipped":
-      return `  skipped  ${id} — ${result.outcome.reason}`;
+      return `  skipped  ${id} (${result.outcome.reason})`;
     case "declared":
       // Its own word, never `pass` and never `skipped`. The gate did not run it
       // and never could; whoever does the work does (adr-0018).
-      return `  declared ${id} — a method, for you to run. Not verified here`;
+      return `  declared ${id} (a method, for you to run. Not verified here)`;
   }
 }
 
 export function renderGateRun(run: GateRun): string {
   const { verdict, selection } = run;
-  const lines: string[] = ["whetstone — gate", ""];
+  const lines: string[] = ["whetstone gate", ""];
 
   for (const result of verdict.results) lines.push(statusLine(result));
 
@@ -155,7 +155,7 @@ export function renderGateRun(run: GateRun): string {
 
   switch (outcomeOf(verdict, selection)) {
     case "blocked":
-      lines.push(`  BLOCKED — ${verdict.blocking.length} check(s) failed:`);
+      lines.push(`  BLOCKED. ${verdict.blocking.length} check(s) failed:`);
       for (const result of verdict.results) {
         if (result.outcome.status === "fail" && verdict.blocking.includes(result.checkId)) {
           lines.push(`    ${result.checkId}`, indent(result.outcome.detail));
@@ -165,13 +165,13 @@ export function renderGateRun(run: GateRun): string {
     case "incomplete":
       // Something tried to run and broke. Hard rule 3 forbids this sharing a
       // sentence with `passed`, and the exit code says the same (2).
-      lines.push("  INCOMPLETE — a check never ran, so this change is unverified");
+      lines.push("  INCOMPLETE: a check never ran, so this change is unverified");
       break;
     case "uncovered":
       // Exits 0, so the WORDS are the whole of the honesty. It must never read
       // as a pass, and it must name what is missing rather than what failed:
       // there is no failure here and no edit that would fix one (adr-0021).
-      lines.push("  UNCOVERED — no check applied, so nothing about this change was verified");
+      lines.push("  UNCOVERED: no check applied, so nothing about this change was verified");
       break;
     case "passed":
       lines.push("  passed");
@@ -179,7 +179,7 @@ export function renderGateRun(run: GateRun): string {
   }
 
   if (verdict.warnings.length > 0) {
-    lines.push("", `  warnings (advisory — these never block):`);
+    lines.push("", `  warnings (advisory, these never block):`);
     for (const result of verdict.results) {
       if (result.outcome.status === "fail" && verdict.warnings.includes(result.checkId)) {
         lines.push(`    ${result.checkId}`, indent(result.outcome.detail));
@@ -193,7 +193,7 @@ export function renderGateRun(run: GateRun): string {
     // the gate. They are also not successes: this change was not fully verified.
     lines.push(
       "",
-      "  the gate could not run every check — this change was NOT fully verified:",
+      "  the gate could not run every check. This change was NOT fully verified:",
     );
     for (const result of verdict.results) {
       if (result.outcome.status === "errored") {

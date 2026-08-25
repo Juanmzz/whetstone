@@ -85,7 +85,7 @@ const invokeClaude: SingleShot = async (req, _attempt): Promise<RawInvocation> =
       JSON.parse(partial); // only trust it if it is actually a complete envelope
       stdout = partial;
     } catch {
-      throw cause; // a genuine spawn failure — no envelope to classify from
+      throw cause; // a genuine spawn failure: no envelope to classify from
     }
   }
 

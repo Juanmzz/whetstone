@@ -119,7 +119,7 @@ async function main(): Promise<void> {
         if (!known.has(id)) problems.push({ where: at, why: `cites ${id}, which has no anchor in ${PAGE}` });
       }
       if (DEAD_LINK.some((dead) => dead.test(line))) {
-        problems.push({ where: at, why: `names a decision FILE, which no longer exists — cite the id, or link \`${PAGE}#adr-NNNN\`` });
+        problems.push({ where: at, why: `names a decision FILE, which no longer exists: cite the id, or link \`${PAGE}#adr-NNNN\`` });
       }
     });
   }

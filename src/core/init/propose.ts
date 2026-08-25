@@ -29,7 +29,7 @@ export const ProposalSchema = z.object({
   sourcePaths: z
     .array(z.string())
     .describe(
-      "Globs where this project's own code lives, read off the file list — `src/**`, or " +
+      "Globs where this project's own code lives, read off the file list: `src/**`, or " +
         "`apps/*/src/**` for a monorepo. Not tests, not docs, not build output.",
     ),
   risk: z
@@ -135,7 +135,7 @@ export function buildProposalPrompt(
     `You are drafting the definition of a software project so its owner can correct it.`,
     ``,
     `You cannot access this repository. Everything known about it is below. Do not`,
-    `refer to anything that is not listed — if the evidence is not here, say so instead`,
+    `refer to anything that is not listed: if the evidence is not here, say so instead`,
     `of assuming. A confident answer about a file you were not shown is worse than no`,
     `answer, because nobody can tell the two apart.`,
     ``,
@@ -157,28 +157,28 @@ export function buildProposalPrompt(
     bullets("files", facts.files),
     `## What to produce`,
     ``,
-    `1. **purpose** — what this project is FOR, not what it contains. One or two`,
+    `1. **purpose**: what this project is FOR, not what it contains. One or two`,
     `   sentences. Cite which files or commits led you there.`,
     ``,
-    `2. **stack** — what it is built with: language, runtime, framework, where it`,
+    `2. **stack**: what it is built with, meaning language, runtime, framework, where it`,
     `   runs. Two lines at most, from the files and dependencies above. Say`,
     `   "unclear from what I was shown" rather than picking the likeliest ecosystem.`,
     ``,
-    `3. **sourcePaths** — globs covering where this project's OWN code lives, read`,
+    `3. **sourcePaths**: globs covering where this project's OWN code lives, read`,
     `   off the file list. \`src/**\`, or \`apps/*/src/**\` when the packages sit under`,
     `   one parent. Exclude tests, docs, config and build output. These become the`,
     `   scope of every check the gate runs, so a glob that is too wide makes the`,
     `   gate judge files nobody meant it to, and one that is too narrow leaves real`,
     `   code unwatched.`,
     ``,
-    `4. **risk** — where a bug is expensive. Include a flag ONLY if you can point at`,
+    `4. **risk**: where a bug is expensive. Include a flag ONLY if you can point at`,
     `   a listed path that justifies it, and put those paths in citedPaths. A flag`,
     `   with no cited path is discarded before the owner sees it, so an unjustified`,
     `   guess costs you the finding. Omit flags that do not apply rather than`,
     `   listing them. Be specific in \`why\`: "webhook handler has no idempotency key,`,
     `   so a retry double-charges" beats "handles payments".`,
     ``,
-    `5. **strictPaths** — paths that must never ship without full TDD and review.`,
+    `5. **strictPaths**: paths that must never ship without full TDD and review.`,
     `   Few or none. Each needs a reason that would still make sense to someone`,
     `   deciding whether to RETIRE the rule in a year.`,
     ``,
@@ -200,7 +200,7 @@ export function renderProposal(proposal: Proposal): string {
     ``,
     `source paths`,
     ...(proposal.sourcePaths.length === 0
-      ? [`  none named — no check will be seeded, since one would have nothing to judge`]
+      ? [`  none named: no check will be seeded, since one would have nothing to judge`]
       : proposal.sourcePaths.map((glob) => `  ${glob}`)),
     ``,
     `risk`,
@@ -208,7 +208,7 @@ export function renderProposal(proposal: Proposal): string {
 
   const kept = proposal.risk.filter((r) => r.citedPaths.length > 0);
   if (kept.length === 0) {
-    lines.push(`  nothing flagged — a bug here costs a reviewer's patience and no more`);
+    lines.push(`  nothing flagged: a bug here costs a reviewer's patience and no more`);
   }
   for (const entry of kept) {
     lines.push(`  ${entry.flag}`);
@@ -234,7 +234,7 @@ export function renderProposal(proposal: Proposal): string {
 
   lines.push(
     ``,
-    `This is a DRAFT. The risk answer especially is yours to confirm — it decides how`,
+    `This is a DRAFT. The risk answer especially is yours to confirm: it decides how`,
     `much ceremony this project buys, and it is a statement about what you are willing`,
     `to lose, which is not something a model can read off your code. Edit the file,`,
     `then run \`wst init --answers <file>\`.`,

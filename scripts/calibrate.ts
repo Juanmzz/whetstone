@@ -55,11 +55,11 @@ async function loadLens(
   const check = registry.byId.get(checkId);
   if (!check) throw new Error(`no check "${checkId}" in ${DEFINITION_DIR}/checks/`);
   if (check.kind !== "llm" || check.review_lens === undefined) {
-    throw new Error(`check "${checkId}" is not an llm check — nothing to calibrate`);
+    throw new Error(`check "${checkId}" is not an llm check: nothing to calibrate`);
   }
   const fixtures = check.calibration?.fixtures;
   if (fixtures === undefined) {
-    throw new Error(`check "${checkId}" declares no \`calibration.fixtures\` — nothing to measure it against`);
+    throw new Error(`check "${checkId}" declares no \`calibration.fixtures\`: nothing to measure it against`);
   }
   return { lens: check.review_lens, agent: check.agent ?? DEFAULT_CONFIG.agent, fixtures };
 }
@@ -124,7 +124,7 @@ async function loadFixtures(dir: string): Promise<Fixture[]> {
       undeclared.length > 0 ? `undeclared in manifest.json: ${undeclared.join(", ")}` : "",
       missing.length > 0 ? `declared but absent: ${missing.join(", ")}` : "",
     ].filter(Boolean);
-    throw new Error(`fixture set is inconsistent — ${parts.join("; ")}`);
+    throw new Error(`fixture set is inconsistent: ${parts.join("; ")}`);
   }
 
   const ordered = onDisk.map((f) => manifest.fixtures.find((m) => m.file === f)!);
@@ -158,7 +158,7 @@ interface Outcome {
  */
 async function fixtureFiles(dir: string): Promise<FixtureFile[]> {
   if ((await hashFixtureDir(dir)) === null) {
-    throw new Error(`refusing to mint a receipt: ${dir} does not hash — fix the manifest first`);
+    throw new Error(`refusing to mint a receipt: ${dir} does not hash: fix the manifest first`);
   }
   const manifest = Manifest.parse(JSON.parse(await readFile(join(dir, "manifest.json"), "utf-8")));
   const { createHash } = await import("node:crypto");
@@ -183,7 +183,7 @@ async function main() {
   if (fixtures.length === 0) throw new Error(`no fixtures matched --filter ${FILTER}`);
 
   console.log(
-    `calibrating — ${name} ${version ?? "?"} · model ${MODEL} · ` +
+    `calibrating: ${name} ${version ?? "?"} · model ${MODEL} · ` +
       `${fixtures.length} fixtures × ${RUNS} runs = ${fixtures.length * RUNS} calls\n`,
   );
 
@@ -306,7 +306,7 @@ async function main() {
   // promotion verdict requires the whole fixture set.
   if (FILTER) {
     console.log(
-      `\n  PARTIAL — filtered to "${FILTER}" (${fixtures.length} of the fixture set). ` +
+      `\n  PARTIAL: filtered to "${FILTER}" (${fixtures.length} of the fixture set). ` +
         `\n  A filtered run diagnoses; it cannot promote. Run unfiltered to decide severity.`,
     );
     process.exitCode = failed.length === 0 ? 0 : 1;
@@ -334,13 +334,13 @@ async function main() {
   const receiptPath = join(definitionRoot(repoRoot), "checks", receiptName(CHECK_ID));
   await writeFile(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf-8");
   console.log(
-    `\n  wrote ${DEFINITION_DIR}/checks/${receiptName(CHECK_ID)} — verdict: ${receipt.verdict}`,
+    `\n  wrote ${DEFINITION_DIR}/checks/${receiptName(CHECK_ID)}, verdict: ${receipt.verdict}`,
   );
 
   console.log(
     receipt.verdict === "passed"
-      ? "  PASS — this lens may now be declared `severity: block`."
-      : "  FAIL — this lens is capped at `warn`/`annotate` (ADR-0008).",
+      ? "  PASS, this lens may now be declared `severity: block`."
+      : "  FAIL: this lens is capped at `warn`/`annotate` (ADR-0008).",
   );
   process.exitCode = failed.length === 0 ? 0 : 1;
 }

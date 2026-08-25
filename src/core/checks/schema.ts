@@ -99,7 +99,7 @@ export const CheckSchema = BaseCheck.superRefine((check, ctx) => {
       ctx.addIssue({
         code: "custom",
         path: ["severity"],
-        message: `a method check may only be \`annotate\` — the gate cannot enforce it, and a method claiming \`${check.severity}\` promises a verdict nothing produces`,
+        message: `a method check may only be \`annotate\`: the gate cannot enforce it, and a method claiming \`${check.severity}\` promises a verdict nothing produces`,
       });
     }
     for (const field of ["command", "review_lens"] as const) {
@@ -107,7 +107,7 @@ export const CheckSchema = BaseCheck.superRefine((check, ctx) => {
         ctx.addIssue({
           code: "custom",
           path: [field],
-          message: `a method check must not declare \`${field}\` — a method is prose an agent follows, and declaring one makes it a different kind wearing this name`,
+          message: `a method check must not declare \`${field}\`: a method is prose an agent follows, and declaring one makes it a different kind wearing this name`,
         });
       }
     }
@@ -122,7 +122,7 @@ export const CheckSchema = BaseCheck.superRefine((check, ctx) => {
       ctx.addIssue({
         code: "custom",
         path: ["review_lens"],
-        message: "a deterministic check must not declare `review_lens` — pick one kind",
+        message: "a deterministic check must not declare `review_lens`: pick one kind",
       });
     }
     return;
@@ -136,7 +136,7 @@ export const CheckSchema = BaseCheck.superRefine((check, ctx) => {
     ctx.addIssue({
       code: "custom",
       path: ["command"],
-      message: "an llm check must not declare `command` — pick one kind",
+      message: "an llm check must not declare `command`: pick one kind",
     });
   }
 

@@ -127,7 +127,7 @@ export async function runGate(input: GateInput, ports: GatePorts): Promise<GateR
       outcome: {
         status: "errored",
         detail:
-          `routing selected check "${checkId}", which is not in the registry — ` +
+          `routing selected check "${checkId}", which is not in the registry. ` +
           `the gate is misconfigured, so this change was not verified against it`,
       },
       durationMs: 0,

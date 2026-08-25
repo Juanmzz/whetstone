@@ -101,22 +101,22 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
 
   if (!TYPE.test(type)) {
     errors.push(
-      `type "${input.type}" is not kebab-case (e.g. \`triage-miss\`) — the retro clusters on it verbatim`,
+      `type "${input.type}" is not kebab-case (e.g. \`triage-miss\`): the retro clusters on it verbatim`,
     );
   }
   if (phase === "") {
-    errors.push("phase is empty — say where it happened (init, plan, apply, verify, review, …)");
+    errors.push("phase is empty: say where it happened (init, plan, apply, verify, review, …)");
   }
   if (!isSeverity(severity)) {
     errors.push(`severity "${input.severity}" is not one of ${SEVERITIES.join("/")}`);
   }
   if (detail === "") {
-    errors.push("detail is empty — a signal nobody can reconstruct the event from is not evidence");
+    errors.push("detail is empty: a signal nobody can reconstruct the event from is not evidence");
   }
   for (const rule of rules) {
     if (!RULE.test(rule)) {
       errors.push(
-        `rule "${rule}" is not a ${DEFINITION_DIR}-relative markdown path (e.g. \`skills/recording.md\`) — ` +
+        `rule "${rule}" is not a ${DEFINITION_DIR}-relative markdown path (e.g. \`skills/recording.md\`): ` +
           `the retro reads it as a path and clusters on it verbatim`,
       );
     }

@@ -25,7 +25,7 @@ export const SKILL_FILES: readonly string[] = Object.freeze([
 const SKILL_BLURBS: Readonly<Record<string, string>> = {
   "delegation.md": "inline vs delegate to a fresh-context sub-agent",
   "tdd-discipline.md": "how much test rigor each triage tier buys",
-  "doc-locations.md": "where a new `.md` belongs — team-shared vs personal",
+  "doc-locations.md": "where a new `.md` belongs: team-shared vs personal",
   "token-economy.md": "keep context lean across sessions and sub-agents",
   "recording.md": "what to save to memory, when, and who confirms the write",
   "voice.md": "how the agent engages you: anti-pleaser, verify before agreeing",
@@ -57,7 +57,7 @@ export function payloadSkill(text: string): string {
   return (
     `${text.slice(0, at)}\n## Changelog\n\n` +
     `- v${version} (init): copied from the Whetstone payload. Entries below this one are ` +
-    `this project's own — what changed, and the signals that earned it.\n`
+    `this project's own: what changed, and the signals that earned it.\n`
   );
 }
 
@@ -115,13 +115,13 @@ export function renderWstYaml(input: WstYamlInput): string {
     `  namespace: ${JSON.stringify(input.namespace)}`,
     "retro:",
     "  suggest_after: 5        # signals",
-    "skills:                   # ACTIVE skills — the emitter references only these",
+    "skills:                   # ACTIVE skills; the emitter references only these",
     ...input.skills.map((s) => `  - ${s}`),
   ];
 
   if (inactive.length > 0) {
     lines.push(
-      "  # Inactive for this project. The file is on disk either way — uncomment to enable.",
+      "  # Inactive for this project. The file is on disk either way; uncomment to enable.",
       ...inactive.map((s) => `  # - ${s}`),
     );
   }
@@ -152,7 +152,7 @@ export interface ConstitutionInput {
 function stackSection(detected: StackFacts, declared: string | null): string {
   const stated =
     declared === null || declared.trim().length === 0
-      ? "**Not stated.** `wst init` reads what this repo declares — its scripts, its lockfile —\n" +
+      ? "**Not stated.** `wst init` reads what this repo declares, its scripts and its lockfile,\n" +
         "and it does not guess what the code is written in. Fill this in; nothing downstream\n" +
         "depends on it, and a reader does."
       : declared.trim();
@@ -176,7 +176,7 @@ export function renderConstitution(input: ConstitutionInput): string {
       ? input.conventions.map((c) => `- ${c}`).join("\n")
       : [
           "- Code, configuration and comments in English.",
-          "- Commit style not yet established — pick one and record it here.",
+          "- Commit style not yet established. Pick one and record it here.",
         ].join("\n");
 
   return `---
@@ -184,7 +184,7 @@ id: constitution
 generated: ${input.date}
 status: active
 ---
-# ${input.repoName} — constitution
+# ${input.repoName}: constitution
 
 Governance for this project. Every other file under \`${DEFINITION_DIR}/\` is calibrated against it.
 
@@ -203,7 +203,7 @@ ${renderRiskProfile(input.risk)}
 
 ## Non-negotiables
 
-1. Every rule in this repo carries a receipt — the signal or decision that created it.
+1. Every rule in this repo carries a receipt: the signal or decision that created it.
    A rule nobody can trace is a rule nobody can retire.
 2. State that matters is plain text in git. No rule depends on a server being up.
 3. A judgment check earns its \`block\`. A deterministic check may block freely; a check
@@ -222,14 +222,14 @@ ${conventions}
 `;
 }
 
-/** The memory schema, restated in full — the first of the two consequences above. */
-export const MEMORY_README = `# Memory — how to log
+/** The memory schema, restated in full: the first of the two consequences above. */
+export const MEMORY_README = `# Memory: how to log
 
 This directory is the project's memory. It is plain text in git, it is append-only,
 and it is the input to every retro. **Everything an agent needs in order to log
-correctly is written down here** — there is nothing to look up elsewhere.
+correctly is written down here.** There is nothing to look up elsewhere.
 
-## \`signals.jsonl\` — append-only, one JSON object per line
+## \`signals.jsonl\`: append-only, one JSON object per line
 
 A signal is a moment the agent went off-track and got corrected, or a near-miss. Log
 the small ones too; that is the point. A retro over five sharp signals produces a real
@@ -243,13 +243,13 @@ rule, a retro over none produces a plausible one.
 | \`phase\` | yes | \`init\` \\| \`triage\` \\| \`plan\` \\| \`apply\` \\| \`verify\` \\| \`review\` \\| \`other\` |
 | \`severity\` | yes | \`low\` \\| \`medium\` \\| \`high\` |
 | \`detail\` | yes | one or two sentences a human can reconstruct the event from |
-| \`branch\` | no | the git branch it happened on — the unit of work. Read from git, never guessed from a ticket id. Omit it rather than writing \`null\` |
+| \`branch\` | no | the git branch it happened on, which is the unit of work. Read from git, never guessed from a ticket id. Omit it rather than writing \`null\` |
 | \`rule_affected\` | no | skill file(s) implicated, e.g. \`["skills/delegation.md"]\` |
 | \`supersedes\` | no | id of an earlier entry this one corrects |
 | \`resolved_by\` | no | filled by the retro: the amendment that addressed this signal |
 
 **Never edit or delete a line.** A correction is a NEW entry carrying \`supersedes\`.
-The one exception is \`resolved_by\`, which the retro may set on an existing line — it
+The one exception is \`resolved_by\`, which the retro may set on an existing line. It
 records which amendment answered the signal, not what happened.
 
 Example:
@@ -258,18 +258,18 @@ Example:
 {"id":"sig-0001","ts":"2026-01-15T14:30:00Z","type":"wrong-cwd","phase":"apply","severity":"high","detail":"Sub-agent ran a destructive command at the repo root instead of the package directory.","branch":"feat/import-csv","rule_affected":["skills/delegation.md"]}
 \`\`\`
 
-## \`decisions.md\` — one anchored entry per decision
+## \`decisions.md\`: one anchored entry per decision
 
-\`### adr-NNNN — the decision\`, then a meta line carrying status, date and any signals
+\`### adr-NNNN: the decision\`, then a meta line carrying status, date and any signals
 that earned it, then **what was rejected and why**. That last part is the reason the
 record exists: a rejected option leaves no commit, so git cannot reconstruct it. The
 page itself says the rest.
 
-**Accepted text is never rewritten.** A decision that turned out wrong is superseded —
+**Accepted text is never rewritten.** A decision that turned out wrong is superseded:
 its status moves, its prose stays. The value of the record is that it shows what was
 believed at the time, and editing it destroys exactly that.
 
-## \`out-of-scope/\` — what was deliberately refused
+## \`out-of-scope/\`: what was deliberately refused
 
 One file per capability this project was asked for and decided not to build. A
 refusal that lives only in memory gets re-proposed every few months with the
@@ -279,14 +279,14 @@ until something is actually refused; the directory's own README has the form.
 
 ## \`patterns.md\` and \`retro-log.md\`
 
-\`patterns.md\` holds distilled recurring patterns — the output of a retro, not raw
+\`patterns.md\` holds distilled recurring patterns: the output of a retro, not raw
 observation. \`retro-log.md\` records that a retro happened, which signals it read, and
 what it changed, so the next one knows where to start.
 
 ## The loop
 
 Signals are data; decisions are prose. Both feed the retro: read the new signals,
-cluster them, and decide what apparatus each cluster earns — amend a rule, add a check,
+cluster them, and decide what apparatus each cluster earns: amend a rule, add a check,
 retire one that never fires. **The analysis is automatic; the write is not.** A human
 confirms every change to a rule, because a tool that can silently rewrite the standard
 it enforces against you is not a standard.
@@ -309,21 +309,21 @@ export const OUT_OF_SCOPE_README = `# Out of scope
 Things this project was asked for and decided NOT to build.
 
 A refusal that lives only in someone's memory gets re-proposed every few months,
-and the argument gets re-derived from scratch every time — usually worse, because
+and the argument gets re-derived from scratch every time, usually worse, because
 the pressure that produced the original answer is no longer in the room. This
 directory is where a "no" keeps its reasoning.
 
 One file per refusal, \`kebab-case-name.md\`, and each one states four things:
 
-1. **What was asked** — the capability, in the words of whoever wanted it. Not a
+1. **What was asked**: the capability, in the words of whoever wanted it. Not a
    strawman: if the request cannot be stated in a form its author would recognise,
    it has not been understood well enough to refuse.
-2. **Why it is out of scope** — the reasoning, at the time, with the constraint or
+2. **Why it is out of scope**: the reasoning, at the time, with the constraint or
    the tradeoff that decided it.
-3. **What escape hatches already exist** — how someone who needs this can get it
+3. **What escape hatches already exist**: how someone who needs this can get it
    today. A refusal with no alternative is usually a missing feature wearing a
    decision's clothes.
-4. **The request that prompted it** — the date and the context, so a reader can
+4. **The request that prompted it**: the date and the context, so a reader can
    tell a one-off from a pattern. The fourth time the same thing is asked for, the
    answer probably deserves revisiting.
 
@@ -505,7 +505,7 @@ export function renderAgentsMd(input: AgentsMdInput): string {
     .map((path) => {
       const name = path.split("/").pop() ?? path;
       const blurb = SKILL_BLURBS[name];
-      return `- \`${DEFINITION_DIR}/${path}\`${blurb === undefined ? "" : ` — ${blurb}`}`;
+      return `- \`${DEFINITION_DIR}/${path}\`${blurb === undefined ? "" : `: ${blurb}`}`;
     })
     .join("\n");
 
@@ -514,9 +514,9 @@ export function renderAgentsMd(input: AgentsMdInput): string {
       ? `The gate runs: ${input.checkIds.map((id) => `\`${id}\``).join(", ")}. Each one is a\n` +
         `file under \`${DEFINITION_DIR}/checks/\` explaining what it is for and what to do when it fails.`
       : `No checks are registered yet. Add one under \`${DEFINITION_DIR}/checks/<id>.md\` when a class of\n` +
-        "mistake proves worth catching automatically — not before.";
+        "mistake proves worth catching automatically, not before.";
 
-  return `# ${input.repoName} — agent workflow
+  return `# ${input.repoName}: agent workflow
 
 > **GENERATED from \`${DEFINITION_DIR}/\`. Do not edit by hand.** Everything below is a rendering of
 > files under \`${DEFINITION_DIR}/\`, which is the source of truth. Editing \`AGENTS.md\` changes nothing
@@ -549,12 +549,12 @@ ${skills}
 
 This is the part that makes the rest improve rather than rot.
 
-- **Something goes wrong** — the agent takes a wrong turn and gets corrected, or nearly
-  does — append a line to \`${DEFINITION_DIR}/memory/signals.jsonl\`. The schema is in
+- **Something goes wrong.** The agent takes a wrong turn and gets corrected, or nearly
+  does. Append a line to \`${DEFINITION_DIR}/memory/signals.jsonl\`. The schema is in
   \`${DEFINITION_DIR}/memory/README.md\`. Log the small ones; they are the ones that reveal patterns.
-- **A decision gets made** — add an entry to \`${DEFINITION_DIR}/memory/decisions.md\`, following
+- **A decision gets made.** Add an entry to \`${DEFINITION_DIR}/memory/decisions.md\`, following
   the shape that page describes.
-- **Periodically** — run a retro: read the signals logged since the last one, cluster
+- **Periodically**, run a retro: read the signals logged since the last one, cluster
   them, and decide what each cluster earns (amend a triage rule, add or retire a check,
   sharpen a skill). Record the outcome in \`${DEFINITION_DIR}/memory/retro-log.md\`.
 

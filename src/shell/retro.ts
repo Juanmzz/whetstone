@@ -84,7 +84,7 @@ export async function writeProposals(
   try {
     await access(path);
     throw new Error(
-      `${path} already exists — a retro proposal was never applied, or the id collided. ` +
+      `${path} already exists: a retro proposal was never applied, or the id collided. ` +
         `Move it aside before running again.`,
     );
   } catch (cause) {

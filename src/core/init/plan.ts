@@ -152,7 +152,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     {
       path: `${DEFINITION_DIR}/memory/patterns.md`,
       contents:
-        "# Patterns\n\nRecurring patterns distilled by a retro. Empty until one has run —" +
+        "# Patterns\n\nRecurring patterns distilled by a retro. Empty until one has run," +
         "\nthis file holds conclusions, not observations.\n",
     },
     {
@@ -199,7 +199,7 @@ export function planInit(input: InitPlanInput): InitPlan {
   if (checkFiles.length === 0 && sourcePaths.length === 0) {
     notes.push(
       "no checks were seeded: no source path was named, so a check would have nothing to " +
-        "put in its `include` but `**` — which covers build output and vendored code and " +
+        "put in its `include` but `**`: which covers build output and vendored code and " +
         "still misses every dotfile. Re-run naming where the code lives, or add a check " +
         `under \`${DEFINITION_DIR}/checks/\` by hand.`,
     );
@@ -207,7 +207,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     notes.push(
       "no checks were seeded: this repo declares no test, typecheck or lint command that " +
         "is certain to exist. A check whose command cannot run reports `errored` on every " +
-        "change, which reads as a broken gate — so nothing was invented. Add one under " +
+        "change, which reads as a broken gate, so nothing was invented. Add one under " +
         `\`${DEFINITION_DIR}/checks/\` once the project has a runner.`,
     );
   }
@@ -227,7 +227,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     // A note, not a violation: the audit could not run on these, which is not the
     // same as their being clean, and not the same as their being broken.
     notes.push(
-      `${String(unaudited.length)} copied file(s) were NOT audited for self-containment — ` +
+      `${String(unaudited.length)} copied file(s) were NOT audited for self-containment: ` +
         `their text could not be read: ${unaudited.join(", ")}`,
     );
   }
