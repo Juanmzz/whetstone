@@ -29,7 +29,8 @@ import { join } from "node:path";
 import { z } from "zod";
 import { judgeFor } from "../src/shell/judge.js";
 import { DEFAULT_CONFIG, type Agent } from "../src/core/config/schema.js";
-import { definitionRoot, loadRegistry } from "../src/shell/sdd.js";
+import { definitionRoot } from "../src/shell/sdd.js";
+import { parseLensUnderTest } from "../src/core/checks/lens.js";
 import { DEFINITION_DIR } from "../src/core/paths.js";
 import { renderSlices, slicesOf } from "../src/core/calibration/slice.js";
 import { hashFixtureDir, receiptName } from "../src/shell/calibration.js";
@@ -51,17 +52,15 @@ async function loadLens(
   repoRoot: string,
   checkId: string,
 ): Promise<{ lens: string; agent: Agent; fixtures: string }> {
-  const registry = await loadRegistry(definitionRoot(repoRoot));
-  const check = registry.byId.get(checkId);
-  if (!check) throw new Error(`no check "${checkId}" in ${DEFINITION_DIR}/checks/`);
-  if (check.kind !== "llm" || check.review_lens === undefined) {
-    throw new Error(`check "${checkId}" is not an llm check: nothing to calibrate`);
+  const file = join(definitionRoot(repoRoot), "checks", `${checkId}.md`);
+  let contents: string;
+  try {
+    contents = await readFile(file, "utf-8");
+  } catch {
+    throw new Error(`no check "${checkId}" in ${DEFINITION_DIR}/checks/`);
   }
-  const fixtures = check.calibration?.fixtures;
-  if (fixtures === undefined) {
-    throw new Error(`check "${checkId}" declares no \`calibration.fixtures\`: nothing to measure it against`);
-  }
-  return { lens: check.review_lens, agent: check.agent ?? DEFAULT_CONFIG.agent, fixtures };
+  const lens = parseLensUnderTest(`${checkId}.md`, contents);
+  return { lens: lens.lens, agent: lens.agent ?? DEFAULT_CONFIG.agent, fixtures: lens.fixtures };
 }
 
 const Manifest = z.object({

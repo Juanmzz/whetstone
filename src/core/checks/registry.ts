@@ -63,6 +63,38 @@ export function parseCheckFile(
   contents: string,
   evidence?: CalibrationEvidence,
 ): LoadedCheck {
+  const { check, body } = parseDefinition(filename, contents);
+
+  // NON-NEGOTIABLE 2, and the only place it is decided. An `llm` may hold
+  // `block` only when a receipt describes THIS prompt against THESE fixtures and
+  // passed. `blockAuthority` denies on every ambiguity, including the absent
+  // evidence a forgetful caller produces.
+  if (check.kind === "llm" && check.severity === "block") {
+    const decision = blockAuthority(
+      check.review_lens ?? "",
+      evidence?.receipt ?? null,
+      evidence?.currentFixturesHash ?? "",
+    );
+    if (!decision.ok) {
+      throw new Error(
+        `${filename}: llm "${check.id}" declares severity: block but has not ` +
+          `earned it: ${decision.reason}`,
+      );
+    }
+  }
+
+  return { ...check, body };
+}
+
+/**
+ * Frontmatter to a validated `Check`, WITHOUT deciding authority. Two callers:
+ * `parseCheckFile` adds the decision, `parseLensUnderTest` returns something
+ * that is not a `Check`.
+ */
+export function parseDefinition(
+  filename: string,
+  contents: string,
+): { check: Check; body: string } {
   const match = FRONTMATTER.exec(contents);
   if (match === null) {
     throw new Error(`${filename}: missing YAML frontmatter (expected a leading --- block)`);
@@ -97,25 +129,7 @@ export function parseCheckFile(
     );
   }
 
-  // NON-NEGOTIABLE 2, and the only place it is decided. An `llm` may hold
-  // `block` only when a receipt describes THIS prompt against THESE fixtures and
-  // passed. `blockAuthority` denies on every ambiguity, including the absent
-  // evidence a forgetful caller produces.
-  if (parsed.data.kind === "llm" && parsed.data.severity === "block") {
-    const decision = blockAuthority(
-      parsed.data.review_lens ?? "",
-      evidence?.receipt ?? null,
-      evidence?.currentFixturesHash ?? "",
-    );
-    if (!decision.ok) {
-      throw new Error(
-        `${filename}: llm "${parsed.data.id}" declares severity: block but has not ` +
-          `earned it: ${decision.reason}`,
-      );
-    }
-  }
-
-  return { ...parsed.data, body: body.trim() };
+  return { check: parsed.data, body: body.trim() };
 }
 
 export function buildRegistry(checks: readonly LoadedCheck[]): Registry {
