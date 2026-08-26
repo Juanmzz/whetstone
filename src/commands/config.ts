@@ -8,6 +8,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { MARK } from "../banner.js";
 import { editConfig } from "../core/config/edit.js";
 import { parseConfig } from "../core/config/schema.js";
 import { DEFINITION_DIR } from "../core/paths.js";
@@ -67,7 +68,9 @@ export async function runConfig(cwd: string): Promise<number> {
 
   try {
     for (;;) {
-      paint(process.stdout, render(state));
+      // Menu only: the skills list plus the mark is exactly a default terminal.
+      const screen = render(state);
+      paint(process.stdout, state.view.kind === "menu" ? [...MARK, "", ...screen] : screen);
       const result = press(state, await keys.next());
       state = result.state;
 
