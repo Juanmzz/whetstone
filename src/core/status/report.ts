@@ -8,10 +8,11 @@
  */
 
 import { resolve } from "node:path";
+import { judgeWarning, validatedVersionFor } from "../config/deprecations.js";
+import type { Agent } from "../config/schema.js";
 import { DEFINITION_DIR } from "../paths.js";
 
-/** The `claude` build the adapter's flag set was measured against. */
-export const VALIDATED_JUDGE_VERSION = "2.1.224";
+export { VALIDATED_JUDGE_VERSION } from "../config/deprecations.js";
 
 export interface StatusFacts {
   readonly repoRoot: string | null;
@@ -190,10 +191,14 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     }
   }
 
-  if (facts.judge.version !== null && facts.judge.version !== VALIDATED_JUDGE_VERSION) {
+  const retired = judgeWarning(facts.judge.name as Agent);
+  if (retired !== null) warnings.push(retired);
+
+  const validated = validatedVersionFor(facts.judge.name as Agent);
+  if (facts.judge.version !== null && validated !== null && facts.judge.version !== validated) {
     warnings.push(
       `${facts.judge.name} ${facts.judge.version} differs from the version the adapter was ` +
-        `validated against (${VALIDATED_JUDGE_VERSION}); re-run \`npm run calibrate\` if verdicts look wrong`,
+        `validated against (${validated}); re-run \`npm run calibrate\` if verdicts look wrong`,
     );
   }
 
