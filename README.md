@@ -36,9 +36,43 @@ wst retro   → cluster signals → propose changes → a human approves → bac
 `wst update` re-plans from that base and reports what changed since: what you edited by
 hand, what a newer Whetstone would write differently. It writes nothing.
 
+`wst config` edits `.wst/wst.yaml` in a terminal: which judge runs `llm` checks, which
+skills are active.
+
 `status`, `check` and `triage` read the machinery back; none of them decide anything.
 `wst opinion` lists the rules Whetstone offers that no repo declares, and the friction that
 earned each. `init` asks before writing any of them, and never writes one unasked.
+
+## Install
+
+```bash
+npm install -g @juanmzz/whetstone     # the `wst` binary
+cd your-repo
+wst init                              # interview the repo, write .wst/
+wst status                            # what is armed, and what is not
+```
+
+Node 22 or newer. `init` writes nothing without showing you the plan first, and
+`--dry-run` shows it without writing at all.
+
+Arming the gate is a separate, deliberate step, because it changes what `git push`
+does:
+
+```bash
+git config core.hooksPath .githooks    # only if nothing else owns the setting
+```
+
+**Claude Code users** get the session-side half as a plugin: the gate runs when the
+agent stops, and a strict-path edit warns at the moment it happens. It ships in the
+same package.
+
+```
+/plugin marketplace add Juanmzz/whetstone
+/plugin install whetstone
+```
+
+The plugin is convenience, not enforcement. What actually gates a change is the exit
+code, at push and in CI, whether or not an agent cooperates.
 
 ## Reading further
 

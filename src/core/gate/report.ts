@@ -27,11 +27,15 @@ function lostGating(verdict: GateVerdict): boolean {
  * A receipt skip counts: it means this exact input passed already. "Nothing matched"
  * and "nothing needed re-running" are different facts, and collapsing them would
  * make the cache look like a hole.
+ *
+ * A `fail` counts: the check ran. A blocking one never reaches here, since
+ * `blocked` is decided first.
  */
 function verifiedSomething(verdict: GateVerdict): boolean {
   return verdict.results.some(
     (r) =>
       r.outcome.status === "pass" ||
+      r.outcome.status === "fail" ||
       (r.outcome.status === "skipped" && r.outcome.reason === "receipt"),
   );
 }

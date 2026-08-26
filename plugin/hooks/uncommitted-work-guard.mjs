@@ -72,7 +72,7 @@ const reason =
   `This discards uncommitted work in ${dirty.length} file(s): ${files.join(", ")}${more}.\n` +
   (saved === null
     ? "A snapshot could not be taken, so anything discarded here is gone."
-    : `A snapshot was taken first — recover with:\n` +
+    : `A snapshot was taken first. Recover with:\n` +
       `  git show refs/wst/autosave:<path>        # one file\n` +
       `  git stash apply refs/wst/autosave        # everything (${saved})`);
 
