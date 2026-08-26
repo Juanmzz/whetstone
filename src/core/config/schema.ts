@@ -14,11 +14,14 @@ import { z } from "zod";
  * Which adapter runs `llm` checks.
  *
  * Each has its own adapter and its own measured invocation: none of `claude -p`'s
- * flags transfer, and Gemini takes no schema flag at all. Each also earns its own
- * calibration, since a receipt binds the model. They report side by side and never
- * vote (adr-0026).
+ * flags transfer. Each also earns its own calibration, since a receipt binds the
+ * model. They report side by side and never vote (adr-0026).
+ *
+ * `antigravity` (`agy`) supersedes `gemini`, which stopped serving individual
+ * accounts on 2026-06-18; see `deprecations.ts`. It is the closer of the two to
+ * `claude -p`, because it takes a schema flag and Gemini never did.
  */
-export const AGENTS = ["claude", "gemini"] as const;
+export const AGENTS = ["claude", "antigravity", "gemini"] as const;
 export type Agent = (typeof AGENTS)[number];
 
 /**

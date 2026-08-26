@@ -46,7 +46,7 @@ describe("the judge picker", () => {
 
   it("changes the judge and marks the state dirty", () => {
     const picked = at(JUDGE, ["down", "return"]);
-    expect(picked.agent).toBe("gemini");
+    expect(picked.agent).toBe("antigravity");
     expect(picked.dirty).toBe(true);
   });
 
@@ -93,7 +93,7 @@ describe("leaving", () => {
     const saved = press(at(dirty, ["s"]), "").action;
     expect(press(dirty, "s").action).toEqual({
       kind: "save",
-      agent: "gemini",
+      agent: "antigravity",
       skills: ["skills/delegation.md", "skills/lazy.md"],
     });
     void saved;
