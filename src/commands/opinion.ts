@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import {
   addedLines,
+  addedLinesOfNewFile,
   commentLines,
   judgeDensity,
   removedCommentIn,
@@ -46,6 +47,16 @@ async function commentDensity(cwd: string): Promise<number> {
   const end = endOf(range);
   const diff = await git(["diff", "--unified=0", range, "--", "*.ts"], cwd);
   const touched = addedLines(diff);
+
+  // A file git has not seen appears in no diff, so the check was blind to the
+  // one place bloat is most likely. Only meaningful against the working tree.
+  if (end === null) {
+    const listed = await git(["ls-files", "--others", "--exclude-standard", "--", "*.ts"], cwd);
+    for (const path of listed.split("\n").filter((p) => p !== "")) {
+      const text = await readFile(join(cwd, path), "utf-8").catch(() => "");
+      if (text !== "") touched.set(path, addedLinesOfNewFile(text));
+    }
+  }
 
   let comment = 0;
   let code = 0;
