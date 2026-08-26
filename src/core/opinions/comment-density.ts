@@ -136,3 +136,10 @@ export function judgeDensity(d: Density): DensityVerdict {
   const percent = Math.round((100 * d.comment) / total);
   return percent > MAX_PERCENT ? { kind: "over", percent, total } : { kind: "under", percent, total };
 }
+
+/** Every line of a file git has never seen. PURE. */
+export function addedLinesOfNewFile(text: string): number[] {
+  const lines = text.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  return lines.map((_, i) => i + 1);
+}
