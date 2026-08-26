@@ -11,9 +11,9 @@ so it does not depend on an agent choosing to cooperate. And because the tool re
 the friction it hits, the checks a project needs grow from what actually went wrong.
 Each one carries a receipt for why it exists.
 
-> **Status: alpha.** The gate runs on this repo's every push and PR. The review lens
-> is still capped at `warn`, so nothing that needs judgment can block yet.
-> [AGENTS.md](./AGENTS.md) carries the numbers and says why.
+> **Status: alpha.** The gate runs on this repo's every push and PR, and the review lens
+> now blocks: it measured 100 of 100 correct across ten fixtures before it earned that.
+> [AGENTS.md](./AGENTS.md) carries the numbers.
 
 ## Why
 

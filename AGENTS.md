@@ -94,7 +94,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status: branch `main` · 26 ADRs · 59 signals · 10 commands
+## Status: branch `main` · 27 ADRs · 61 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 
@@ -108,25 +108,28 @@ built under that waiver and removed by ADR-0009.
   changes is the push and CI: the pre-push hook is armed (`core.hooksPath=.githooks`) and CI
   runs the full gate on every PR. ADR-0023 cut `plan` and `prepare`; what a worker needs to
   know is in `.wst/`, which it can already read.
-- **58 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
+- **61 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
   `tdd-discipline` v7, `delegation` v4, `xreview` v3, `doc-locations` v4, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
-- **`correctness`** is an `llm` check at `warn`. Measured 2026-08-20 on claude 2.1.237: 98/100
-  correct, **zero wrong verdicts**, two runs the harness never got an answer out of. The bar is
-  unanimity per fixture and an errored run costs the fixture its pass, so it stays capped.
+- **`correctness` blocks.** Measured 2026-08-25 on claude 2.1.245: 100/100, unanimous on all
+  ten fixtures, zero harness errors, $2.97. adr-0027 promoted it. The two unreturned calls of
+  2026-08-20 did not reproduce and are still undiagnosed, so the result is a pass and not an
+  explanation. The receipt binds the prompt, the fixtures, the model and the runtime: change
+  any one and the authority lapses rather than carrying over.
 
 ### Known weaknesses, stated plainly
 
-- **Most signals are still hand-authored.** Of 59: 45 predate the `source` field, 7 are `cli`,
-  1 is `human`, and **6 were written by the gate about its own blocks**. The first was
+- **Most signals are still hand-authored.** Of 61: 45 predate the `source` field, 8 are `cli`,
+  2 are `human`, and **6 were written by the gate about its own blocks**. The first was
   `sig-a9ff00c4` on 2026-08-14, when `docs-fresh` blocked a change that added an ADR and left
   this line behind. Before that, CI emitted one on an ephemeral runner and it evaporated: the
   gap was never "the gate does not fail", it was that where the gate really runs, nothing
   persisted what it observed.
   The machine-written six are the loop's only input nobody had to remember to type, and
   that number is the one to watch.
-- **The lens is capped at `warn` by harness failures, not by judgment.** Two calls in 100 never
-  returned. The differentiator stays advisory until they stop, which is a retry problem.
+- **The block is one measurement old, and it has never fired.** The promoting change touches no
+  `src/**/*.ts`, so the lens did not run in its own CI. The first real test is the next PR that
+  touches code.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
 - **Unowned:** `npm run check:in-force` lists what is decided and not yet true of the
