@@ -1,10 +1,8 @@
 /**
- * Judges that stopped serving, and what replaced them. PURE.
+ * Judges that were removed, and what a config still naming one should hear. PURE.
  *
- * A judge listed in the schema reads as one you can pick. Saying nothing about
- * one that no longer answers hands most people a reviewer that cannot run, and
- * the failure arrives as a spawn error at gate time rather than at the moment
- * they chose it.
+ * Keyed by plain string on purpose: a retired judge is by definition no longer an
+ * `Agent`, so typing it as one is a contradiction the compiler catches.
  */
 
 import type { Agent } from "./schema.js";
@@ -12,28 +10,27 @@ import type { Agent } from "./schema.js";
 interface Retirement {
   /** When it stopped serving, ISO. */
   readonly on: string;
-  /** Who is unaffected, so a licensed repo is not scared off it. */
-  readonly stillServes: string;
-  readonly successor: string;
+  readonly why: string;
+  readonly use: Agent;
 }
 
-export const RETIRED_JUDGES: Readonly<Partial<Record<Agent, Retirement>>> = Object.freeze({
+export const RETIRED_JUDGES: Readonly<Record<string, Retirement>> = Object.freeze({
   gemini: {
     on: "2026-06-18",
-    stillServes: "Gemini Code Assist Standard and Enterprise licences",
-    successor: "Antigravity CLI",
+    why: "Gemini CLI stopped serving individual accounts and Google moved to Antigravity",
+    use: "antigravity",
   },
 });
 
-export function judgeWarning(agent: Agent): string | null {
-  const retired = RETIRED_JUDGES[agent];
-  if (retired === undefined) return null;
-  return (
-    `\`${agent}\` stopped serving individual accounts on ${retired.on}; ` +
-    `${retired.stillServes} carry on. Google's successor is ${retired.successor}, ` +
-    `which Whetstone has no adapter for yet: writing one against undocumented ` +
-    `flags is the guess hard rule 8 forbids.`
-  );
+export function retirementOf(name: string): Retirement | null {
+  return RETIRED_JUDGES[name] ?? null;
+}
+
+/** The message a config naming a removed judge gets instead of an enum error. */
+export function retirementMessage(name: string): string | null {
+  const gone = retirementOf(name);
+  if (gone === null) return null;
+  return `agent: \`${name}\` was removed. ${gone.why} on ${gone.on}. Use \`${gone.use}\` (the \`agy\` CLI).`;
 }
 
 /** The build each adapter's flag set was measured against. */

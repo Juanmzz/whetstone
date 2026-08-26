@@ -1,41 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { AGENTS } from "./schema.js";
-import {
-  RETIRED_JUDGES,
-  VALIDATED_JUDGE_VERSION,
-  judgeWarning,
-  validatedVersionFor,
-} from "./deprecations.js";
+import { RETIRED_JUDGES, VALIDATED_JUDGE_VERSION, retirementOf, validatedVersionFor } from "./deprecations.js";
+import { AGENTS, parseConfig } from "./schema.js";
 
-describe("judgeWarning", () => {
-  it("says nothing about a judge that still serves", () => {
-    expect(judgeWarning("claude")).toBeNull();
+describe("retirementOf", () => {
+  it("says nothing about a judge that still ships", () => {
+    expect(retirementOf("claude")).toBeNull();
+    expect(retirementOf("antigravity")).toBeNull();
   });
 
-  it("warns that gemini stopped serving individual accounts, with the date", () => {
-    // Google moved Gemini CLI to Antigravity CLI. On 2026-06-18 it stopped
-    // serving AI Pro, Ultra and free Code Assist; only Standard and Enterprise
-    // licences carry on. Offering it as a judge without saying so hands most
-    // people a reviewer that cannot run.
-    const warning = judgeWarning("gemini");
-
-    expect(warning).toContain("2026-06-18");
-    expect(warning).toMatch(/antigravity/i);
+  it("recognises gemini, whose adapter was deleted", () => {
+    expect(retirementOf("gemini")).not.toBeNull();
   });
 
-  it("names the tiers that still work, so a licensed repo is not scared off it", () => {
-    expect(judgeWarning("gemini")).toMatch(/standard|enterprise/i);
+  it("names no judge the schema still offers", () => {
+    // An entry for a selectable agent would fire on a working config.
+    for (const id of Object.keys(RETIRED_JUDGES)) expect(AGENTS).not.toContain(id);
+  });
+});
+
+describe("parseConfig on a retired judge", () => {
+  it("explains what happened instead of listing valid enum members", () => {
+    // A repo bootstrapped before the deletion still says `agent: gemini`. A raw
+    // zod error tells it the value is wrong and not why, nor what to use.
+    expect(() => parseConfig({ agent: "gemini" })).toThrow(/2026-06-18/);
   });
 
-  it("covers every retired judge with an entry", () => {
-    for (const id of Object.keys(RETIRED_JUDGES)) {
-      expect(judgeWarning(id as (typeof AGENTS)[number])).not.toBeNull();
-    }
+  it("names the replacement, so the fix is in the error", () => {
+    expect(() => parseConfig({ agent: "gemini" })).toThrow(/antigravity/);
   });
 
-  it("only retires judges the schema actually offers", () => {
-    // An entry for an agent nobody can select is a warning nobody can trigger.
-    for (const id of Object.keys(RETIRED_JUDGES)) expect(AGENTS).toContain(id);
+  it("still refuses a value nobody ever offered, without inventing a story", () => {
+    expect(() => parseConfig({ agent: "llama" })).toThrow();
+    expect(() => parseConfig({ agent: "llama" })).not.toThrow(/2026-06-18/);
+  });
+
+  it("leaves a working config alone", () => {
+    expect(parseConfig({ agent: "antigravity" }).agent).toBe("antigravity");
   });
 });
 
@@ -45,9 +45,8 @@ describe("validatedVersionFor", () => {
   });
 
   it("returns nothing for a judge nobody measured", () => {
-    // The constant described `claude` and was compared against whatever judge
-    // was configured, so a gemini repo was told 0.56.0 differs from 2.1.224.
-    // Two vendors, one version line: the comparison was never meaningful.
-    expect(validatedVersionFor("gemini")).toBeNull();
+    // The constant described claude and was compared against whatever judge was
+    // configured, so a repo on another vendor was told its version differed.
+    expect(validatedVersionFor("antigravity")).toBeNull();
   });
 });

@@ -18,17 +18,17 @@ skills:                   # ACTIVE skills; the emitter references only these
 
 describe("editConfig — a surgical edit, never a re-render", () => {
   it("switches the judge in place", () => {
-    expect(editConfig(FILE, { agent: "gemini" })).toContain("agent: gemini");
+    expect(editConfig(FILE, { agent: "antigravity" })).toContain("agent: antigravity");
   });
 
   it("keeps the comment that sat beside the value it changed", () => {
     // A re-render would drop it, and the comment is what tells the next reader
     // what the key is for.
-    expect(editConfig(FILE, { agent: "gemini" })).toContain("# which adapter runs llm checks");
+    expect(editConfig(FILE, { agent: "antigravity" })).toContain("# which adapter runs llm checks");
   });
 
   it("preserves every key it was not asked to change", () => {
-    const out = editConfig(FILE, { agent: "gemini" });
+    const out = editConfig(FILE, { agent: "antigravity" });
     for (const line of ["version: 0", "backend: files", 'namespace: "acme"', "suggest_after: 5"]) {
       expect(out).toContain(line);
     }
@@ -59,7 +59,7 @@ describe("editConfig — a surgical edit, never a re-render", () => {
   it("refuses a file with no agent key rather than inventing one", () => {
     // Appending a key to a file whose shape we did not parse is how an edit
     // lands in the wrong block.
-    expect(() => editConfig("version: 0\n", { agent: "gemini" })).toThrow(/agent/);
+    expect(() => editConfig("version: 0\n", { agent: "antigravity" })).toThrow(/agent/);
   });
 
   it("refuses a skill it cannot find a line for", () => {

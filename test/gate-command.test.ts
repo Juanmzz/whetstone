@@ -480,10 +480,10 @@ describe("createCheckRunner", () => {
     const changed = [{ path: "src/app.ts", status: "modified" as const }];
 
     await run({ ...lensCheck, id: "lens-a", agent: "claude" }, changed);
-    await run({ ...lensCheck, id: "lens-b", agent: "gemini" }, changed);
+    await run({ ...lensCheck, id: "lens-b", agent: "antigravity" }, changed);
     await run(lensCheck, changed);
 
-    expect(asked).toEqual(["claude", "gemini", "default"]);
+    expect(asked).toEqual(["claude", "antigravity", "default"]);
   });
 
   it("skips a lens under --no-lens instead of reporting it unreviewed-but-fine", async () => {

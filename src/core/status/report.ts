@@ -8,7 +8,7 @@
  */
 
 import { resolve } from "node:path";
-import { judgeWarning, validatedVersionFor } from "../config/deprecations.js";
+import { validatedVersionFor } from "../config/deprecations.js";
 import type { Agent } from "../config/schema.js";
 import { DEFINITION_DIR } from "../paths.js";
 
@@ -190,9 +190,6 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
       );
     }
   }
-
-  const retired = judgeWarning(facts.judge.name as Agent);
-  if (retired !== null) warnings.push(retired);
 
   const validated = validatedVersionFor(facts.judge.name as Agent);
   if (facts.judge.version !== null && validated !== null && facts.judge.version !== validated) {

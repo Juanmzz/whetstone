@@ -46,8 +46,8 @@ describe("parseLensUnderTest — the door calibration goes through", () => {
 
   it("names the judge the check declares, and leaves it absent when it does not", () => {
     expect(parseLensUnderTest("correctness.md", BLOCKING_LENS).agent).toBeUndefined();
-    const withAgent = BLOCKING_LENS.replace("kind: llm", "kind: llm\nagent: gemini");
-    expect(parseLensUnderTest("correctness.md", withAgent).agent).toBe("gemini");
+    const withAgent = BLOCKING_LENS.replace("kind: llm", "kind: llm\nagent: antigravity");
+    expect(parseLensUnderTest("correctness.md", withAgent).agent).toBe("antigravity");
   });
 
   it("refuses a check that is not an llm, because there is no lens to measure", () => {
