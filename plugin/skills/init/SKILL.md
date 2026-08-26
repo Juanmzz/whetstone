@@ -88,60 +88,31 @@ are files somebody wrote by hand. Either use `--definitions-only`, or stop and a
 ## 5. Arm the gate, correctly
 
 The gate is the only part that does not depend on an agent cooperating, so it is the
-part worth getting right.
+part worth getting right. **`wst init` already wrote `.githooks/pre-push`.** Do not
+write it again; read it, and arm it.
 
-**`wst gate` with no `--range` compares the working tree to HEAD.** At pre-push time the
-tree is clean, so it finds zero files, reports INCOMPLETE and exits 2, blocking every
-push regardless of content. The hook has to derive the range from what git is pushing.
-
-Write this file. With husky, put it in `.husky/pre-push`; with no hook manager, put it in
-`.githooks/pre-push`, `chmod +x` it, and then, **only if nothing else owns the setting**,
-`git config core.hooksPath .githooks`. If `.husky/` exists, git allows one value and
-setting it disarms husky.
+Arming is deliberately not `init`'s to do, because `core.hooksPath` takes ONE value:
 
 ```sh
-#!/bin/sh
-# Whetstone gate. Deterministic checks only: a hook that costs money and fifty
-# seconds on every push gets bypassed with --no-verify, and a routed-around gate
-# is worth less than no gate. The review lens belongs in CI.
-ZERO="0000000000000000000000000000000000000000"
-command -v wst >/dev/null 2>&1 || exit 0   # not installed here: never block on that
-
-# git feeds one line per ref: <local ref> <local sha> <remote ref> <remote sha>
-while read -r _lref lsha _rref rsha; do
-  [ "$lsha" = "$ZERO" ] && continue        # branch deletion, nothing to gate
-  case "$_lref" in refs/tags/*) continue;; esac   # a tag has no diff to gate
-
-  if [ "$rsha" = "$ZERO" ]; then
-    # New branch: the remote has no history for it. Gating against the all-zero
-    # sha would diff the whole repository and time out on a branch's first push.
-    base="$(git merge-base "$lsha" refs/remotes/origin/HEAD 2>/dev/null \
-         || git merge-base "$lsha" origin/main 2>/dev/null || echo "")"
-    [ -z "$base" ] && exit 0
-    range="$base..$lsha"
-  else
-    range="$rsha..$lsha"
-  fi
-
-  code=0
-  wst gate --no-lens --range "$range" || code=$?
-  if [ "$code" -ne 0 ]; then
-    if [ "$code" -eq 2 ]; then
-      echo "whetstone: a required check could not run, so this was NOT verified." >&2
-    else
-      echo "whetstone: a required check failed. Fix it, or push with --no-verify." >&2
-    fi
-    exit 1
-  fi
-done
-exit 0
+git config core.hooksPath .githooks
 ```
 
-Three things in there are not decoration. `|| code=$?` keeps the real exit code; `if !
-cmd` would reset it to 0 and make the branch below unreachable. Exit 2 gets its own
-sentence because "the gate broke" and "your change is bad" may never share a message.
-And `command -v wst` means a teammate who has not installed it is not blocked by a tool
-they do not have.
+**Only if nothing else owns that setting.** Run `git config core.hooksPath` first. If it
+already points at `.husky/_`, setting it disarms husky, and a repo that loses its
+existing hooks to gain this one is worse off. In that case leave the setting alone and
+add a `.husky/pre-push` that calls the same thing:
+
+```sh
+base="$(git merge-base origin/main HEAD 2>/dev/null)"
+if [ -n "$base" ]; then
+  wst gate --no-lens --range "$base..HEAD" || exit 1
+else
+  wst gate --no-lens || exit 1
+fi
+```
+
+`wst status` reports whether the gate is armed, and says which of the two situations
+you are in rather than guessing.
 
 ## 5b. If they have end-to-end tests, wire the ports
 
