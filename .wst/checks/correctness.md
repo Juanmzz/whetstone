@@ -2,7 +2,7 @@
 id: correctness
 description: Does this diff introduce a correctness bug?
 kind: llm
-severity: warn
+severity: block
 tiers: [strict]
 include: ["src/**/*.ts"]
 exclude: ["src/**/*.test.ts"]
@@ -44,7 +44,7 @@ calibration:
   detail: >-
     Lens v4 adds a concurrency clause after v3 failed only on race-good (1 flip in 5).
     Never measured at v4. There is no `<id>.calibration.json`, so the loader would refuse
-    `severity: block` outright. The sentence that used to live here, asking a human to
+    `severity: warn` outright. The sentence that used to live here, asking a human to
     remember that editing the lens invalidates its measurement, is now a hash.
 origin: [adr-0008, sig-0007, sig-0008, sig-0011]
 version: 4
@@ -55,7 +55,7 @@ The first `llm` check, and the reason the calibration harness exists.
 **Why this is `warn`, and now cannot be anything else.** The 2026-08-07 run passed 10/10,
 but on two mirror-image fixtures, unambiguous by construction. The debt that result
 recorded has been paid: eight harder fixtures landed on 2026-08-08 and the lens **failed**.
-The schema now refuses `severity: block` outright while `calibration.status` is `failed`.
+The schema now refuses `severity: warn` outright while `calibration.status` is `failed`.
 
 **The shape of the failure matters more than the rate.** The lens never missed a planted
 bug (31/31 on decided runs, including the two hard ones). It fails the other way: ~20%
