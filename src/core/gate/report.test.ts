@@ -429,3 +429,29 @@ describe("a method check in a run", () => {
     expect(text).toMatch(/declared/i);
   });
 });
+
+describe("outcomeOf — a check that ran and failed at warn", () => {
+  const warned = [result("test", "warn", { status: "fail", detail: "> exit 1" })];
+
+  it("is not uncovered: a check applied, ran, and had something to say", () => {
+    expect(outcomeOf(aggregate(warned), coverage())).toBe("passed");
+  });
+
+  it("still exits 0, because a warning never blocks", () => {
+    expect(exitCodeFor(aggregate(warned), coverage())).toBe(EXIT_PASS);
+  });
+
+  it("never claims nothing was verified", () => {
+    expect(renderGateRun(gateRun(warned))).not.toContain("nothing about this change was verified");
+  });
+
+  it("does not swallow a blocking failure alongside it", () => {
+    const mixed = [...warned, result("typecheck", "block", { status: "fail", detail: "TS2345" })];
+    expect(outcomeOf(aggregate(mixed), coverage())).toBe("blocked");
+  });
+
+  it("still reports incomplete when a blocking check could not run", () => {
+    const mixed = [...warned, result("lens", "block", { status: "errored", detail: "spawn failed" })];
+    expect(outcomeOf(aggregate(mixed), coverage())).toBe("incomplete");
+  });
+});

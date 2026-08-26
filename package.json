@@ -1,8 +1,29 @@
 {
-  "name": "whetstone",
+  "name": "@juanmzz/whetstone",
   "version": "0.5.0-alpha",
-  "description": "A self-sharpening standards layer for AI coding agents \u2014 git-native, files-first.",
+  "description": "A self-sharpening standards layer for AI coding agents — git-native, files-first.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Juanmzz/whetstone.git"
+  },
+  "homepage": "https://github.com/Juanmzz/whetstone#readme",
+  "bugs": {
+    "url": "https://github.com/Juanmzz/whetstone/issues"
+  },
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "code-review",
+    "gate",
+    "tdd",
+    "claude",
+    "llm",
+    "ci"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "wst": "./dist/cli.js"
@@ -10,7 +31,12 @@
   "engines": {
     "node": ">=22"
   },
-  "files": ["dist", ".wst/skills", "plugin", ".claude-plugin"],
+  "files": [
+    "dist",
+    ".wst/skills",
+    "plugin",
+    ".claude-plugin"
+  ],
   "scripts": {
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",

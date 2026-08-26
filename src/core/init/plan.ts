@@ -4,6 +4,7 @@
 
 import type { TriageRule } from "../contracts.js";
 import { DEFINITION_DIR } from "../paths.js";
+import { PRE_PUSH_PATH, renderPrePushHook } from "./hook.js";
 import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 import { seedChecks } from "./checks.js";
@@ -188,6 +189,19 @@ export function planInit(input: InitPlanInput): InitPlan {
     ...Object.entries(VENDOR_POINTERS).map(([path, contents]) => ({ path, contents })),
   ];
   if (options.definitionsOnly !== true) files.push(...vendorFiles);
+
+  // The hook is the enforcement surface, and it is the one thing `init` used to
+  // leave out: the script lived only in the Claude Code skill, so a repo
+  // bootstrapped any other way had nothing to arm. Arming stays the human's,
+  // because `core.hooksPath` takes ONE value and setting it disarms husky.
+  if (options.definitionsOnly !== true) {
+    files.push({ path: PRE_PUSH_PATH, contents: renderPrePushHook(), executable: true });
+    notes.push(
+      `wrote ${PRE_PUSH_PATH}. It does nothing until you arm it: ` +
+        `\`git config core.hooksPath .githooks\`, and only if nothing else owns that setting ` +
+        `(husky does).`,
+    );
+  }
 
   // No `.claude/` any more (ADR-0010). `init` writes DEFINITIONS; the editor hook is
   // the plugin's, which reads `.wst/triage.yaml` at run time rather than baking the

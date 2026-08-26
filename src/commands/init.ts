@@ -283,7 +283,10 @@ function printPlan(plan: InitPlan, root: string): void {
  * which looks exactly like a correct bootstrap. So the walk is bounded by the
  * package.json that declares this package, and never crosses a node_modules boundary.
  */
-const PACKAGE_NAME = "whetstone";
+/** Checked against package.json by `test/payload-root.test.ts`: a rename here
+ * that misses the manifest makes `init` copy no skills and say so only in an
+ * exit code. */
+export const PACKAGE_NAME = "@juanmzz/whetstone";
 
 /**
  * Whetstone's own skills, keyed by their `from` path.
@@ -550,9 +553,13 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   // ships. Only `--force` re-renders AGENTS.md, and until now that re-render
   // listed the eight shipped names — so a skill written by hand after init was
   // invisible to every agent that read the file.
+  // `undefined` when there is no directory yet, which is every first init.
+  // Collapsing that into `[]` told `activeSkills` the directory had been read
+  // and was empty, and every bootstrapped repo got a config declaring all eight
+  // skills INACTIVE while the files sat beside it.
   const presentSkills = await readdir(join(root, DEFINITION_DIR, "skills"))
     .then((names) => names.filter((n) => n.endsWith(".md")).sort().map((n) => `skills/${n}`))
-    .catch(() => [] as string[]);
+    .catch(() => undefined);
 
   let plan: InitPlan;
   try {
@@ -561,7 +568,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       answers,
       clock: { now: () => new Date() },
       skillTexts,
-      presentSkills,
+      ...(presentSkills === undefined ? {} : { presentSkills }),
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
