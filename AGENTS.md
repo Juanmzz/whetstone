@@ -65,8 +65,8 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
    let "no checks ran" share a message with "all checks passed".
 4. **Strict tier = full TDD, RED first** for `src/core/**` and anything propagating to
    bootstrapped projects. RED first is the discipline; **separate RED and GREEN commits are
-   not.** One commit per coherent change, with the red output quoted in the commit body as
-   the evidence the test came first ([TD1]/[TD2]).
+   not.** One commit per coherent change ([TD1]/[TD2]). Do not quote the red output in the
+   body: it is a claim nothing can check, and tdd-discipline v7 dropped it.
 5. **Lane boundaries are enforced, not requested.** `lane-guard.mjs` DENIES out-of-lane writes.
    If it blocks you, the split is wrong. Say so rather than working around it.
 6. **Decisions change by status, never by rewrite** (ADR-0007, as ADR-0019 inherits it), and live
@@ -109,7 +109,7 @@ built under that waiver and removed by ADR-0009.
   runs the full gate on every PR. ADR-0023 cut `plan` and `prepare`; what a worker needs to
   know is in `.wst/`, which it can already read.
 - **58 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
-  `tdd-discipline` v6, `delegation` v4, `xreview` v3, `doc-locations` v4, `voice` v2,
+  `tdd-discipline` v7, `delegation` v4, `xreview` v3, `doc-locations` v4, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
 - **`correctness`** is an `llm` check at `warn`. Measured 2026-08-20 on claude 2.1.237: 98/100
   correct, **zero wrong verdicts**, two runs the harness never got an answer out of. The bar is
