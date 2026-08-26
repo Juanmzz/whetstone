@@ -7,9 +7,10 @@ name: gate
 # NOTE ON THE REVIEW LENS: `claude` is not authenticated here, so the agent-lens
 # check cannot run. That is deliberately NOT papered over. The gate reports it as
 # `errored` (the gate being broken) rather than `fail` (the change being bad), and
-# exits 2 only if a BLOCKING check could not run. `correctness` is at severity
-# warn, so CI still passes and the PR says plainly that the lens did not run.
-# Wiring an ANTHROPIC_API_KEY secret would change that, at a cost per PR.
+# exits 2 only if a BLOCKING check could not run. adr-0027 promoted `correctness`
+# to `block`, so an unauthenticated runner now makes CI exit 2 on any change the
+# lens covers, which is `src/**/*.ts`. That is the honest reading of hard rule 3
+# and it is also a bill: wiring an ANTHROPIC_API_KEY secret is what clears it.
 
 on:
   pull_request:

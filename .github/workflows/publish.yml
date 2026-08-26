@@ -1,0 +1,65 @@
+name: publish
+
+# Releases are cut from a TAG, never from a push to main: publishing is
+# irreversible on npm (a version number is spent forever), so it takes a
+# deliberate act rather than a merge.
+#
+# NO NPM_TOKEN. Trusted publishing exchanges a short-lived OIDC credential that
+# cannot be exfiltrated or replayed, and npm attaches provenance on its own. A
+# token in a secret is the thing two supply-chain worms used this year.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  # The whole mechanism. Without it there is no OIDC token to exchange.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
+      # Trusted publishing needs 11.5.1 or later; the runner's bundled npm is older.
+      - name: Use an npm that speaks OIDC
+        run: npm install -g npm@latest
+
+      - name: Install
+        run: npm ci
+
+      # A tag that disagrees with package.json publishes a version nobody asked
+      # for, under a name that says otherwise. Fail here, loudly, not there.
+      - name: The tag and the manifest must agree
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "tag v$tag does not match package.json $pkg" >&2
+            exit 1
+          fi
+          echo "publishing $pkg"
+
+      # NOT `wst gate`: the gate judges a DIFF, and a tag has no range. What a
+      # release needs proved is that the suite passes on exactly these bytes,
+      # which is a different question with a different command.
+      - name: Prove the tree, not a diff
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+
+      # Deliberately no NODE_AUTH_TOKEN: setting one makes npm take the legacy
+      # token path and silently skip OIDC.
+      - name: Publish
+        run: npm publish
