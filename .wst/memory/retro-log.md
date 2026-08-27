@@ -46,7 +46,7 @@ hand the human five duplicates. The first run produced three proposals whose ent
 the word "placeholder". The second, after fixes, produced five substantive ones. Worth
 remembering the next time this output looks authoritative.
 
-**Prior retros:** Retro 0001–0002 ran on the Two Way Invoice Sync take-home, external to this
+**Prior retros:** Retro 0001–0002 ran on the invoice-sync-engine project, external to this
 repo, and produced TD6. This is the first retro on Whetstone's own signals, and the first run
 by code rather than by hand — N=2 for the loop, N=1 for the engine.
 

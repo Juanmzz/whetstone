@@ -133,9 +133,9 @@ CI or pre-release. They are NOT part of the per-change TDD loop.
   convenience-seeded fixture must not be the only path tested; assert through the real consumer,
   not a proxy that can pass for the wrong reason; on delegated/generated code a fresh-context
   review of the real path is load-bearing. **First earned receipt** — contributed upstream from
-  the Two Way Invoice Sync dogfood (Retro 0002), where a fresh-context review caught a real
+  the invoice-sync-engine dogfood (Retro 0002), where a fresh-context review caught a real
   (usually money-correctness) bug in EVERY delegated phase, root cause always "tests green for
-  the wrong reason" (Two Way Invoice Sync signals `sig-0006` NaN-via-toEqual and `sig-0009` the
+  the wrong reason" (invoice-sync-engine signals `sig-0006` NaN-via-toEqual and `sig-0009` the
   meta-pattern — external to this repo's own log, cited via the contribution direction, not
   seeded here). The loop's contribution direction working: a real project's signals amended the
   canonical skill.
