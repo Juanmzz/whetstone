@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { addedLines, commentLines, removedCommentIn } from "../src/core/opinions/comment-density.js";
+import {
+  addedLines,
+  addedLinesOfNewFile,
+  commentLines,
+  removedCommentIn,
+} from "../src/core/opinions/comment-density.js";
 
 const src = (...lines: string[]): string => lines.join("\n");
 
@@ -81,5 +86,28 @@ describe("a deleted file", () => {
 
   it("contributes no added lines", () => {
     expect(addedLines(diff).get("gone.ts")).toBeUndefined();
+  });
+});
+
+/**
+ * `git diff` never lists a file git has not seen, so `comment-density` was blind
+ * to a brand-new file: the one place comment bloat is most likely, because the
+ * header essay gets written when the module is created.
+ */
+describe("addedLinesOfNewFile", () => {
+  it("counts every line, because git has seen none of them", () => {
+    expect(addedLinesOfNewFile(src("// one", "const a = 1;", "const b = 2;"))).toEqual([1, 2, 3]);
+  });
+
+  it("ignores the empty string a trailing newline leaves behind", () => {
+    expect(addedLinesOfNewFile("const a = 1;\n")).toEqual([1]);
+  });
+
+  it("keeps blank lines in the middle, which the caller filters by content", () => {
+    expect(addedLinesOfNewFile(src("const a = 1;", "", "const b = 2;"))).toEqual([1, 2, 3]);
+  });
+
+  it("returns nothing for an empty file", () => {
+    expect(addedLinesOfNewFile("")).toEqual([]);
   });
 });

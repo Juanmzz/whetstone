@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 6
+version: 7
 status: active
 ---
 # TDD discipline
@@ -22,14 +22,13 @@ strict TDD regardless of how small it looks.
 ## Rules
 
 1. [TD1] **RED**: failing test BEFORE implementation. Must fail for the right reason (a
-   logical assertion, not a compile error). Keep the red output: it is the evidence the
-   commit will carry.
+   logical assertion, not a compile error). Read the failure before writing the fix: a test
+   that failed for the wrong reason proves nothing about the one you are about to make pass.
 2. [TD2] **GREEN**: minimum code to pass. No extras, no cleanup. **One commit per coherent
-   change, not one per phase.** RED and GREEN land together, with the red output quoted in
-   the commit body. Splitting them writes a commit whose suite is red by construction, which
-   cannot be bisected across or reverted as a unit, and it proves nothing the quoted output
-   does not: the discipline is that the test was written first and failed for the right
-   reason, not that the failure got its own SHA.
+   change, not one per phase.** RED and GREEN land together. Splitting them writes a commit
+   whose suite is red by construction, which cannot be bisected across or reverted as a
+   unit, and the discipline is that the test was written first, not that the failure got its
+   own SHA.
 3. [TD3] **TRIANGULATE** *(strict only)*: a second test with semantically different data
    (boundary, edge case, alternate path) to kill hardcoded implementations. If it fails,
    return to GREEN.
@@ -96,6 +95,13 @@ project's own config (`CLAUDE.md` / `AGENTS.md`), not here. Cross-cutting E2E su
 CI or pre-release. They are NOT part of the per-change TDD loop.
 
 ## Changelog
+
+- v7 (2026-08-26, owner decision): dropped the requirement to quote the red output in the
+  commit body. v5 added it as "the evidence the test came first", and it is evidence
+  nothing can check: the line is typed by hand and no reader can tell it from one written
+  without ever running the suite. A claim with no receipt is the shape this project exists
+  to distrust, and it was costing every commit body several lines to make one. RED first is
+  unchanged; only the ceremony around reporting it is gone.
 
 - v6 (2026-08-14, owner decision): added [TD9] — Arrange / Act / Assert, visibly separated,
   one act per test. Judgment, not machine-checkable: the shape is legible by eye in a diff
