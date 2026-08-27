@@ -54,6 +54,21 @@ describe("honingFrames", () => {
     expect(honingFrames([])).toEqual([[]]);
   });
 
+  it("crosses the other way at the end, because honing alternates direction", () => {
+    // Two along the long axis, then one across the narrow one. Repeating a
+    // single direction is not what sharpening looks like.
+    const cutting = frames.filter((f) => f.join("").includes("▒"));
+    const lean = (frame: string[]): number => {
+      const marks = frame.flatMap((r) => (r.includes("▒") ? [r.indexOf("▒")] : []));
+      return marks.length < 2 ? 0 : Math.sign(marks.at(-1)! - marks[0]!);
+    };
+
+    // The strokes along the stone's length run one way; the last one runs the
+    // other. Same direction twice is not honing.
+    expect(lean(cutting[0]!)).not.toBe(0);
+    expect(lean(cutting.at(-1)!)).toBe(-lean(cutting[0]!));
+  });
+
   it("passes more than once, because one stroke does not hone anything", () => {
     const cutting = frames.filter((f) => f.join("").includes("▒"));
 
