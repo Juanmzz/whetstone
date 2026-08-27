@@ -10,7 +10,9 @@ import { promisify } from "node:util";
 import { join } from "node:path";
 import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { exists } from "../shell/fs.js";
-import { definitionRoot } from "../shell/sdd.js";
+import { readFile } from "node:fs/promises";
+import { binariesFor } from "../core/checks/tools.js";
+import { definitionRoot, loadRegistry } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { resolveJudge } from "../shell/judge.js";
 import { describePlugin, pluginHookRoot } from "../shell/plugin.js";
@@ -57,6 +59,53 @@ async function isRepo(cwd: string): Promise<boolean> {
   return (await createGitAdapter(cwd).repoRoot()) !== null;
 }
 
+
+/**
+ * Binaries a registered check would need and that are not here.
+ *
+ * Resolved against `node_modules/.bin` first, because a devDependency is on
+ * PATH only while npm is running the script.
+ */
+async function missingTools(
+  root: string,
+): Promise<readonly { checkId: string; binary: string }[]> {
+  let scripts: Record<string, string> = {};
+  try {
+    const pkg: unknown = JSON.parse(await readFile(join(root, "package.json"), "utf-8"));
+    const declared = (pkg as { scripts?: unknown }).scripts;
+    if (declared !== null && typeof declared === "object") scripts = declared as Record<string, string>;
+  } catch {
+    // No manifest is normal; it only means no scripts to follow.
+  }
+
+  let registry;
+  try {
+    registry = await loadRegistry(definitionRoot(root));
+  } catch {
+    return [];
+  }
+
+  const gaps: { checkId: string; binary: string }[] = [];
+  for (const check of registry.active) {
+    if (check.kind !== "deterministic" || check.command === undefined) continue;
+    for (const binary of binariesFor(check.command, scripts)) {
+      if (await resolves(binary, root)) continue;
+      gaps.push({ checkId: check.id, binary });
+    }
+  }
+  return gaps;
+}
+
+async function resolves(binary: string, root: string): Promise<boolean> {
+  if (await exists(join(root, "node_modules", ".bin", binary))) return true;
+  try {
+    await promisify(execFile)("sh", ["-c", `command -v ${binary}`], { timeout: 5000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function runStatus(
   cwd: string = process.cwd(),
   options: { readonly quiet?: boolean; readonly json?: boolean } = {},
@@ -85,6 +134,7 @@ export async function runStatus(
       definitionTracked: await definitionTracked(repoRoot ?? cwd),
     },
     nodeVersion: process.version,
+    missingTools: await missingTools(repoRoot ?? cwd),
   });
 
   // `--json` for the reader that is not a person. The init skill tells an agent to

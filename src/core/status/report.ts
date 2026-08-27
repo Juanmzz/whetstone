@@ -30,6 +30,12 @@ export interface StatusFacts {
   readonly nodeVersion: string;
   readonly hooks: HookFacts;
   readonly plugin: PluginFacts;
+  /**
+   * Binaries a registered check would need and that are not on this machine.
+   * A check whose tool is missing does not fail: it ERRORS, which reads as the
+   * gate being broken rather than as a repo missing a dependency.
+   */
+  readonly missingTools?: readonly { readonly checkId: string; readonly binary: string }[];
 }
 
 /**
@@ -189,6 +195,13 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
           `Commit \`${DEFINITION_DIR}/\` to fix it`,
       );
     }
+  }
+
+  for (const gap of facts.missingTools ?? []) {
+    warnings.push(
+      `\`${gap.checkId}\` runs \`${gap.binary}\`, which is not on PATH here: it will report ` +
+        `errored rather than fail, and that reads as the gate being broken`,
+    );
   }
 
   const validated = validatedVersionFor(facts.judge.name as Agent);
