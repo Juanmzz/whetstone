@@ -1,8 +1,10 @@
 /**
- * `wst opinion <id>` — run one of the rules Whetstone offers and no repo declares.
+ * `wst check run <id>` — run a check whose logic Whetstone ships rather than
+ * shells out for.
  *
- * It exists so a seeded check can name something the target repo already has.
- * `npm run check:comments` names a script nobody wrote there (adr-0025).
+ * It exists so a seeded check can name a command the target repo already has.
+ * `npm run check:comments` names a script nobody wrote there (adr-0025), and the
+ * binary that wrote the check file is the one thing it can count on being there.
  */
 
 import { execFile } from "node:child_process";
@@ -16,9 +18,13 @@ import {
   judgeDensity,
   removedCommentIn,
   MAX_PERCENT,
-} from "../core/opinions/comment-density.js";
-import { OPINIONS, opinionById } from "../core/opinions/index.js";
+} from "../core/checks/comment-density.js";
 import { gitEnv } from "../shell/git.js";
+
+/** The ids `wst check run` answers to. One entry, one runner, no catalogue. */
+const RUNNERS: Readonly<Record<string, (cwd: string) => Promise<number>>> = {
+  "comment-density": commentDensity,
+};
 
 const exec = promisify(execFile);
 
@@ -102,28 +108,23 @@ async function commentDensity(cwd: string): Promise<number> {
   }
 }
 
-export async function runOpinion(id: string | undefined, cwd: string = process.cwd()): Promise<number> {
-  if (id === undefined) {
-    console.error("what Whetstone has an opinion about, and why:\n");
-    for (const o of OPINIONS) {
-      console.error(`  ${o.id}`);
-      console.error(`    ${o.title}`);
-      console.error(`    ${o.friction} (${o.origin.join(", ")})\n`);
-    }
-    return 0;
-  }
+export async function runShippedCheck(
+  id: string | undefined,
+  cwd: string = process.cwd(),
+): Promise<number> {
+  const ids = Object.keys(RUNNERS);
 
-  if (opinionById(id) === null) {
-    console.error(`no opinion "${id}". Run \`wst opinion\` for the list.`);
+  if (id === undefined) {
+    console.error(`which check to run: ${ids.join(", ")}`);
     return EXIT_UNKNOWN;
   }
 
-  switch (id) {
-    case "comment-density":
-      return commentDensity(cwd);
-    default:
-      // Reachable only if the catalogue gains an entry and this switch does not.
-      console.error(`"${id}" is listed but has no runner: that is a bug in wst, not in this repo.`);
-      return EXIT_UNKNOWN;
+  const runner = RUNNERS[id];
+  if (runner === undefined) {
+    console.error(`\`wst check run\` has no runner for "${id}". It has: ${ids.join(", ")}.`);
+    console.error(`A check with a \`command:\` of its own is run by \`wst gate\`, not by this.`);
+    return EXIT_UNKNOWN;
   }
+
+  return runner(cwd);
 }

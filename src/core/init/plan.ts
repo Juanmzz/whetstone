@@ -103,7 +103,6 @@ export function planInit(input: InitPlanInput): InitPlan {
   const checkFiles = seedChecks(stack, {
     date,
     include: sourcePaths,
-    opinions: input.answers.opinions,
     ...(options.seedAgentLens === true ? { agentLens: true } : {}),
   });
 
@@ -118,7 +117,6 @@ export function planInit(input: InitPlanInput): InitPlan {
     date,
     purpose: input.answers.purpose,
     risk: input.answers.risk,
-    conventions: input.answers.conventions,
     detected: stack,
     declared: input.answers.stack,
   });

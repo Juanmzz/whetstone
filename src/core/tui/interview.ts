@@ -1,9 +1,9 @@
 /**
  * `wst init`'s interview, as a state machine. PURE.
  *
- * It printed seven questions and told you to re-run with flags, which is a
- * printed form rather than an interview. Two of the questions are multi-select
- * and two are lists, so answering them on a command line means nested quoting.
+ * It printed its questions and told you to re-run with flags, which is a printed
+ * form rather than an interview. One of them is multi-select and two are lists,
+ * so answering them on a command line means nested quoting.
  */
 
 import {
@@ -94,8 +94,6 @@ export function answersOf(s: InterviewState): InterviewAnswers {
     sourcePaths: f("source-paths").lines,
     strictPaths: strict,
     stack: stack === "" ? null : stack,
-    conventions: f("conventions").lines,
-    opinions: f("opinions").picked,
   };
 }
 

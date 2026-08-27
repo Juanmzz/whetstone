@@ -37,7 +37,7 @@ describe("seedChecks — round-trips through the real registry loader", () => {
     const checks = load(seedChecks(tsRepo, seeded));
     expect(checks.length).toBeGreaterThan(0);
     const registry = buildRegistry(checks);
-    expect(registry.active.length).toBe(checks.length);
+    expect(registry.all.length).toBe(checks.length);
   });
 
   it("writes every file under .wst/checks/<id>.md so the id matches the filename stem", () => {
@@ -48,7 +48,7 @@ describe("seedChecks — round-trips through the real registry loader", () => {
 
   it("seeds typecheck, test and lint for a TS repo that declares all three scripts", () => {
     const ids = load(seedChecks(tsRepo, seeded)).map((c) => c.id).sort();
-    expect(ids).toEqual(["lint", "test", "typecheck"]);
+    expect(ids).toEqual(["comment-density", "lint", "test", "typecheck"]);
   });
 
   it("bakes in the DETECTED command, not a guess", () => {
@@ -157,8 +157,11 @@ describe("seedChecks — check bodies", () => {
     }
   });
 
-  it("marks the seeded checks as unearned, so the retro can replace them with real receipts", () => {
+  it("marks a check read off this repo as unearned, so a retro can give it a real receipt", () => {
+    // Empty `origin` is the schema's word for "nothing here asked for this". A
+    // check derived from a declared script is exactly that.
     for (const check of load(seedChecks(tsRepo, seeded))) {
+      if (check.id === "comment-density") continue;
       expect(check.origin).toEqual([]);
       expect(check.body).toMatch(/seeded/i);
     }
@@ -212,5 +215,61 @@ describe("seedChecks — what init may not assume about a repo's own scripts", (
 
     expect(lint).not.toContain("enabled: false");
     expect(lint).toContain("severity: warn");
+  });
+});
+
+/**
+ * adr-0030. The category `opinion` is gone; what it named is a check whose
+ * `origin` says it was earned somewhere else, and it arrives switched off.
+ */
+describe("seedChecks — the check Whetstone brings", () => {
+  const file = (over: Partial<Parameters<typeof seedChecks>[1]> = {}) =>
+    seedChecks(tsRepo, { ...seeded, ...over }).find((f) => f.path.endsWith("comment-density.md"));
+
+  it("carries the signal that earned it, not an empty origin", () => {
+    expect(file()?.contents).toContain(`origin: ["sig-4a2610fb"]`);
+  });
+
+  it("arrives disabled, so no repo gains a check it never asked to be judged by", () => {
+    expect(file()?.contents).toContain("enabled: false");
+  });
+
+  it("says on the page that it is off and what turns it on", () => {
+    const contents = file()?.contents ?? "";
+    expect(contents).toMatch(/enabled: false/);
+    expect(contents).toMatch(/delete `enabled: false`/i);
+  });
+
+  it("names a command the target repo has, not a script nobody wrote there", () => {
+    // The blocker adr-0025 hit: `npm run check:comments` names nothing in a repo
+    // Whetstone did not write, so the seeded check fails on every run.
+    expect(file()?.contents).toContain("wst check run comment-density");
+    expect(file()?.contents).not.toContain("npm run check");
+  });
+
+  it("refuses a receipt, because its answer depends on the range and not on a file", () => {
+    expect(file()?.contents).toContain("skippable: false");
+  });
+
+  it("cites no decision id, which would dangle in a repo that has none of ours", () => {
+    // ADR-0004. A signal id is a label beside its own description and survives;
+    // a decision id is a pointer a reader is expected to follow.
+    expect(file()?.contents).not.toMatch(/\badr-\d{4}\b/i);
+  });
+
+  it("uses no em-dash, same as every other page init writes into a target repo", () => {
+    expect(file()?.contents).not.toContain("\u2014");
+  });
+
+  it("is not seeded where no typecheck script was declared, since it reads .ts only", () => {
+    const noTs = detectStack(
+      facts({
+        files: ["package.json", "src/app.js"],
+        packageJson: { scripts: { test: "vitest run" } },
+      }),
+    );
+    expect(seedChecks(noTs, seeded).map((f) => f.path)).not.toContain(
+      ".wst/checks/comment-density.md",
+    );
   });
 });

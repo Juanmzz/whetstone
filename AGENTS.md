@@ -28,7 +28,7 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 | | |
 |---|---|
 | `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
-| `wst check` | the check registry; refuses to load an uncalibrated blocking lens |
+| `wst check` | the check registry; refuses to load an uncalibrated blocking lens. `check run <id>` runs one whose logic ships with `wst` |
 | `wst triage` | classify a diff → tier → which checks apply |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst signal` | record an observation in `signals.jsonl`. **For the human to type**. It IS the [RC3] gate; an agent still proposes and waits |
@@ -94,7 +94,7 @@ record signals; for when you are testing the gate itself) · `retro --dry-run`.
 Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram namespace is
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
-## Status: branch `main` · 29 ADRs · 61 signals · 10 commands
+## Status: branch `main` · 30 ADRs · 61 signals · 10 commands
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
 

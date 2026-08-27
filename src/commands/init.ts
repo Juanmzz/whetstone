@@ -212,8 +212,6 @@ function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
     sourcePaths: opts.source ?? [],
     strictPaths,
     stack: opts.stack ?? null,
-    conventions: [],
-    opinions: [],
   };
 }
 

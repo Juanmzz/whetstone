@@ -13,7 +13,7 @@ import { runGate } from "./commands/gate.js";
 import { runRetro } from "./commands/retro.js";
 import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js";
 import { runInit } from "./commands/init.js";
-import { runOpinion } from "./commands/opinion.js";
+import { runShippedCheck } from "./commands/run.js";
 import { runConfig } from "./commands/config.js";
 import { runUpdate } from "./commands/update.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
@@ -50,13 +50,23 @@ program
     });
   });
 
-program
+const check = program
   .command("check")
   .description(`list the check registry from ${DEFINITION_DIR}/checks/`)
   .option("--json", "print the compiled index as JSON")
   .option("--compile", `write ${DEFINITION_DIR}/checks/_index.json`)
   .action(async (opts: { json?: boolean; compile?: boolean }) => {
     process.exitCode = await runCheck(opts);
+  });
+
+// A subcommand and not a command of its own: a seeded check names this in its
+// `command:`, and the noun it runs under should be the noun the thing is.
+check
+  .command("run")
+  .argument("[id]", "which check Whetstone ships the logic for")
+  .description("run a check whose logic ships with wst rather than with this repo")
+  .action(async (id: string | undefined) => {
+    process.exitCode = await runShippedCheck(id);
   });
 
 program
@@ -170,14 +180,6 @@ program
       });
     },
   );
-
-program
-  .command("opinion")
-  .argument("[id]", "which opinion to run; omit for the list and what earned each")
-  .description("run a rule Whetstone offers that no repo declares")
-  .action(async (id: string | undefined) => {
-    process.exitCode = await runOpinion(id);
-  });
 
 program
   .command("config")

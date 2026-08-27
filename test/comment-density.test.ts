@@ -11,7 +11,7 @@ import {
   addedLinesOfNewFile,
   commentLines,
   removedCommentIn,
-} from "../src/core/opinions/comment-density.js";
+} from "../src/core/checks/comment-density.js";
 
 const src = (...lines: string[]): string => lines.join("\n");
 

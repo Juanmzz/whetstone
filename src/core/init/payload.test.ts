@@ -97,7 +97,6 @@ describe("renderConstitution", () => {
     date: "2026-08-08",
     purpose: "A billing service for widget subscriptions.",
     risk: { ...NO_RISK, money: true },
-    conventions: ["code and docs in English"],
     detected: tsRepo,
     declared: "TypeScript on Node 24, deployed to Fly.io.",
   });
@@ -105,7 +104,12 @@ describe("renderConstitution", () => {
   it("carries the interview's answers, not placeholders", () => {
     expect(constitution).toContain("A billing service for widget subscriptions.");
     expect(constitution).toMatch(/money/i);
-    expect(constitution).toContain("code and docs in English");
+  });
+
+  it("says the commit style is not established yet, rather than stating one nobody agreed", () => {
+    // adr-0030 stopped asking. A commit history is a pattern, not a promise, and
+    // on day one the honest answer is that nobody has decided.
+    expect(constitution).toMatch(/not yet established/i);
   });
 
   it("leaves no unresolved template placeholder", () => {
@@ -129,7 +133,6 @@ describe("renderConstitution", () => {
       date: "2026-08-08",
       purpose: "Nothing yet.",
       risk: NO_RISK,
-      conventions: [],
       detected: detectStack(facts()),
       declared: null,
     });
@@ -276,8 +279,6 @@ describe("renderAgentsMd", () => {
     sourcePaths: ["src/**"],
     strictPaths: [{ glob: "src/billing/**", reason: "moves money" }],
     stack: null,
-    conventions: [],
-    opinions: [],
   });
 
   const agents = renderAgentsMd({
@@ -287,7 +288,6 @@ describe("renderAgentsMd", () => {
       date: "2026-08-08",
       purpose: "A billing service.",
       risk: NO_RISK,
-      conventions: [],
       detected: tsRepo,
       declared: null,
     }),

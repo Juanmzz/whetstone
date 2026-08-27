@@ -88,9 +88,6 @@ export function proposalToAnswers(proposal: Proposal): InterviewAnswers {
     // Left empty on purpose. Conventions are house style, and a model inferring them
     // from two commit subjects would be guessing at the one thing a team is touchiest
     // about. The human adds them or they stay empty.
-    conventions: [],
-    // NEVER proposed. An opinion is written on a human yes and on nothing else.
-    opinions: [],
   };
 }
 

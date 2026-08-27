@@ -19,8 +19,6 @@ const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   sourcePaths: ["src/**"],
   strictPaths: [],
   stack: null,
-  conventions: [],
-  opinions: [],
   ...over,
 });
 

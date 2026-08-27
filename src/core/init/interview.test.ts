@@ -1,6 +1,6 @@
-import { OPINIONS } from "../opinions/index.js";
 import { describe, expect, it } from "vitest";
 import {
+  AnswersSchema,
   NO_RISK,
   buildInterview,
   renderRiskProfile,
@@ -11,9 +11,8 @@ import {
 
 /**
  * Nothing here builds a `StackFacts`, and that is the assertion. The interview
- * used to take one and shrink when a table got lucky — a repo with four
- * conventional-looking commits was never asked what its conventions are. It asks
- * the same six questions of every repo now (ADR-0016).
+ * used to take one and shrink when a table got lucky. It asks the same five
+ * questions of every repo now (ADR-0016).
  */
 
 const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
@@ -22,54 +21,29 @@ const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   sourcePaths: [],
   strictPaths: [],
   stack: null,
-  conventions: [],
-  opinions: [],
   ...over,
 });
 
 describe("buildInterview — everything not declared on disk is asked", () => {
-  it("asks the seven questions the repo cannot answer about itself", () => {
+  it("asks the five questions the repo cannot answer about itself", () => {
     const ids = buildInterview().map((q) => q.id);
-    expect(ids).toEqual([
-      "purpose",
-      "risk",
-      "source-paths",
-      "strict-paths",
-      "stack",
-      "conventions",
-      "opinions",
-    ]);
+    expect(ids).toEqual(["purpose", "risk", "source-paths", "strict-paths", "stack"]);
   });
 
   /**
-   * The ceiling moved from five to six, and that is the cost the ADR accepted:
-   * `source-paths` and `stack` used to be guessed from a directory-name list and
-   * a file-extension table. A blank a human fills beats a table's confident wrong
-   * answer — but it is still a question that did not exist before, so the ceiling
-   * stays a ceiling.
+   * Seven at its widest: `source-paths` and `stack` arrived when adr-0016 stopped
+   * guessing them, and `conventions` and `opinions` left under adr-0030. The
+   * ceiling stays a ceiling, and it is lower than the count.
    */
-  it("stays under the over-asking ceiling — at most seven questions, ever", () => {
-    expect(buildInterview().length).toBeLessThanOrEqual(7);
+  it("stays under the over-asking ceiling — at most six questions, ever", () => {
+    expect(buildInterview().length).toBeLessThanOrEqual(6);
   });
 
-  it("asks about every opinion in ONE question, so the ceiling holds as they grow", () => {
-    // adr-0025 accepted "one question per opinion". One multi-select costs less and
-    // keeps the count at seven however many are shipped.
-    const opinions = buildInterview().filter((q) => q.id === "opinions");
-
-    expect(opinions).toHaveLength(1);
-    expect(opinions[0]?.options.length).toBe(OPINIONS.length);
-  });
-
-  it("offers no opinion pre-selected, which is what `never seed one unasked` means", () => {
-    expect(buildInterview().find((q) => q.id === "opinions")?.defaultAnswer).toBeNull();
-  });
-
-  it("asks about conventions even for a repo whose commits all look conventional", () => {
-    // A commit history is a pattern, not a promise. Reading four `feat:` subjects
-    // and writing "this project uses Conventional Commits" into a constitution
-    // states a rule nobody agreed to.
-    expect(buildInterview().map((q) => q.id)).toContain("conventions");
+  it("asks nothing a repo can only answer by guessing about itself on day one", () => {
+    // `conventions` went out with adr-0030. The honest answer at init is "not yet
+    // established", which is what the constitution already writes when nobody says.
+    expect(buildInterview().map((q) => q.id)).not.toContain("conventions");
+    expect(buildInterview().map((q) => q.id)).not.toContain("opinions");
   });
 
   it("asks where the code lives, and does not pre-fill it from a directory name", () => {
@@ -177,5 +151,32 @@ describe("validateAnswers", () => {
       }),
     );
     expect(errors.join(" ")).toMatch(/duplicate/i);
+  });
+});
+
+describe("AnswersSchema — a base written by an older Whetstone still parses", () => {
+  /**
+   * `wst update` reads the base a repo recorded at init and compares it to what
+   * this version writes. A strict schema that rejects a key it no longer asks
+   * about turns every repo bootstrapped before adr-0030 into one that can never
+   * run `update` again, which is the one command that would have told them.
+   */
+  it("drops the questions it stopped asking instead of refusing the file", () => {
+    const older = {
+      purpose: "A billing service.",
+      sourcePaths: ["src/**"],
+      conventions: ["code and docs in English"],
+      opinions: ["comment-density"],
+    };
+
+    const parsed = AnswersSchema.parse(older);
+
+    expect(parsed.purpose).toBe("A billing service.");
+    expect(parsed).not.toHaveProperty("conventions");
+    expect(parsed).not.toHaveProperty("opinions");
+  });
+
+  it("still refuses a key nobody ever wrote, so a typo is not silently ignored", () => {
+    expect(() => AnswersSchema.parse({ purpose: "x", purpsoe: "typo" })).toThrow();
   });
 });

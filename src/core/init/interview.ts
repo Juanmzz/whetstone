@@ -1,13 +1,12 @@
 /**
  * The interview — the "ask everything the repo does not declare" half of `wst init`.
  *
- * Six questions, each carrying the `why` it is asked at all. `source-paths` and
+ * Five questions, each carrying the `why` it is asked at all. `source-paths` and
  * `stack` are new: they used to be inferred by a directory-name list and a
  * file-extension table inside `detect.ts`, both removed by adr-0016.
  */
 
 import { z } from "zod";
-import { OPINIONS } from "../opinions/index.js";
 import { DEFINITION_DIR } from "../paths.js";
 
 export type QuestionId =
@@ -15,9 +14,7 @@ export type QuestionId =
   | "risk"
   | "source-paths"
   | "strict-paths"
-  | "stack"
-  | "conventions"
-  | "opinions";
+  | "stack";
 
 export interface QuestionOption {
   readonly value: string;
@@ -78,13 +75,6 @@ export interface InterviewAnswers {
   readonly strictPaths: readonly StrictPath[];
   /** What the project is built with, verbatim into the constitution. May be null. */
   readonly stack: string | null;
-  /** Free-form bullets for the constitution's Conventions section. May be empty. */
-  readonly conventions: readonly string[];
-  /**
-   * Ids from the opinion catalogue the human said yes to. Empty is the default and
-   * the answer a skipped question gives: an opinion is offered, never seeded.
-   */
-  readonly opinions: readonly string[];
 }
 
 const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
@@ -163,34 +153,7 @@ export function buildInterview(): readonly InitQuestion[] {
       options: [],
       defaultAnswer: null,
     },
-    {
-      id: "conventions",
-      prompt:
-        "Any non-negotiable conventions? (commit format, language of code and docs, style " +
-        "rules a reviewer would reject a PR over)",
-      why:
-        "A commit history is a pattern, not a promise. Reading four `feat:` subjects and " +
-        "writing `this project uses Conventional Commits` into a constitution states a rule " +
-        "nobody agreed to.",
-      kind: "text",
-      options: [],
-      defaultAnswer: null,
-    },
   ];
-
-  questions.push({
-    id: "opinions",
-    prompt:
-      "Whetstone has opinions no repo declares, each earned by getting it wrong somewhere. " +
-      "Select any you want here, or none.",
-    why:
-      "Nothing on disk asks for these, and seeding one unasked is the pile of config from " +
-      "guesses this interview exists to avoid. One question however many ship, so the count " +
-      "does not grow with the catalogue.",
-    kind: "flags",
-    options: OPINIONS.map((o) => ({ value: o.id, label: `${o.title}: ${o.friction}` })),
-    defaultAnswer: null,
-  });
 
   return questions;
 }
@@ -273,11 +236,23 @@ export function validateAnswers(answers: InterviewAnswers): readonly string[] {
   return errors;
 }
 
+const RETIRED_ANSWERS = ["conventions", "opinions"];
+
 /**
- * `InterviewAnswers` as data on disk. Read by `--answers`, and by the base a
- * repo records so `wst update` knows what it was asked.
+ * `InterviewAnswers` as data on disk, tolerant of a base an older Whetstone wrote.
+ *
+ * A retired key is DROPPED rather than rejected. A repo bootstrapped before
+ * adr-0030 recorded its answers with `conventions` and `opinions` in them, and a
+ * strict schema that refuses those is one that makes `wst update` unrunnable in
+ * exactly the repos it exists to tell about the change. An unknown key still
+ * fails, so a typo is not silently swallowed.
  */
-export const AnswersSchema = z.strictObject({
+export const AnswersSchema = z.preprocess((raw) => {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const kept: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  for (const key of RETIRED_ANSWERS) delete kept[key];
+  return kept;
+}, z.strictObject({
   purpose: z.string(),
   risk: z
     .strictObject({
@@ -296,9 +271,5 @@ export const AnswersSchema = z.strictObject({
     .array(z.strictObject({ glob: z.string(), reason: z.string() }))
     .default([]),
   stack: z.string().nullable().default(null),
-  conventions: z.array(z.string()).default([]),
-  // Defaulted: an answers file written before opinions existed means "none", which
-  // is also what a skipped question means.
-  opinions: z.array(z.string()).default([]),
-});
+}));
 

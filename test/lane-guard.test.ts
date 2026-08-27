@@ -135,6 +135,6 @@ describe("the plugin the marketplace ships", () => {
     const skill = await readFile(join(repoRoot, "plugin", "skills", "init", "SKILL.md"), "utf-8");
 
     expect(skill).toContain("wst update");
-    expect(skill).toContain("wst opinion");
+    expect(skill).toContain("wst check run");
   });
 });
