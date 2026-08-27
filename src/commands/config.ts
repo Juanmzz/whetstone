@@ -9,13 +9,14 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { MARK } from "../banner.js";
+import { honingFrames } from "../core/tui/honing.js";
 import { editConfig } from "../core/config/edit.js";
 import { parseConfig } from "../core/config/schema.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { initialState, press, render, type SkillState } from "../core/tui/model.js";
 import { CONFIG_FILE } from "../shell/config.js";
 import { createGitAdapter } from "../shell/git.js";
-import { paint, rawKeys, restore } from "../shell/tui.js";
+import { paint, play, rawKeys, restore } from "../shell/tui.js";
 import { parse as parseYaml } from "yaml";
 
 /** Every skill the config mentions, active or commented out. */
@@ -67,6 +68,8 @@ export async function runConfig(cwd: string): Promise<number> {
   });
 
   try {
+    await play(process.stdout, keys, honingFrames(MARK));
+
     for (;;) {
       // Menu only: the skills list plus the mark is exactly a default terminal.
       const screen = render(state);
