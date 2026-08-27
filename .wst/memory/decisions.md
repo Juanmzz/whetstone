@@ -643,3 +643,74 @@ around it lands on the one person who can. The receipt binds a lens hash, a mode
 runtime, so editing the lens or upgrading the judge drops the authorisation and the check
 refuses to load at `block` until it is re-measured. And the two harness failures of
 2026-08-20 were never diagnosed. They did not recur, but nothing was fixed.
+
+### adr-0028 — a command that runs for minutes reports progress, and silence is the bug
+`proposed` · 2026-08-27 · sig-b828c2b1
+
+Completes adr-0024 rather than reversing it. That decision cut the event log on the ground
+that what it was for is "served live by the progress lines the gate already writes to
+stderr". The reasoning holds. What it did not notice is that only `gate` writes them:
+`retro` and `calibrate` emit nothing between the command and its result, and both run for
+minutes. Measured here: `gate.ts` has eight progress call sites and a pure
+`core/gate/progress.ts` behind them; `retro.ts` and `calibrate.ts` have none.
+
+The cost is not aesthetic. A run that says nothing is indistinguishable from a run that
+hung, and a human resolves that ambiguity by killing it. Twice a `wst retro` of about
+twenty minutes was killed on the belief it was stuck, and a calibration spending real money
+gave its operator no way to tell whether it was advancing. Both reports are from the field
+and from different people, which is more evidence than adr-0024 had when it decided the
+gate's lines were enough.
+
+So: **`retro` and `calibrate` report through the same port `gate` uses.** Phase, item and
+elapsed time, on stderr, so a pipe still carries only the result.
+
+Rejected: restoring `wst events --follow`. It would reinstate the writer adr-0024 removed
+for having one reader, and it answers the question in the wrong place: a second process
+reading a file, when the running process already knows.
+
+Rejected: a spinner. It proves the process is alive and nothing else. The two failures here
+were people deciding a run was stuck; what settles that is which item is in flight and for
+how long, which is what `gate` already prints and a spinner cannot.
+
+Rejected: leaving `calibrate` out because it is a script rather than a command. It is the
+longest-running thing in the repo and it spends money per call, so it is the worst place to
+be silent.
+
+Cost accepted: two more call sites that can drift from what the run actually does, and
+stderr output in a script whose stdout some caller may parse. The port is shared, so the
+drift is one module wide rather than three.
+
+### adr-0029 — this repo's CI runs the checks, and `wst` says whether they cover the change
+`proposed` · 2026-08-27
+
+adr-0010 refused to write a CI workflow into a repo Whetstone does not own, on the ground
+that "the host's own CI runs the same commands already; a second workflow buys a second
+name for one verification. What Whetstone owes that repo is an answer to whether the CI it
+has covers what the gate requires." That reasoning was never applied here, because this
+repo is its own host, and `gate.yml` runs `wst gate` as the whole job.
+
+What that costs came due on 2026-08-26. `correctness` earned `block` (adr-0027), the runner
+has no credentials, and hard rule 3 correctly reports a blocking check that could not run as
+exit 2. So **every pull request touching `src/**/*.ts` went red while typecheck, test and
+lint all passed.** The tool had become the check rather than the thing that says which
+checks apply.
+
+So: **CI runs the commands, and `wst` reports coverage beside them.** A failing typecheck
+fails because typecheck failed, named as itself. `wst triage` says what tier the change
+earned and `wst gate --no-lens` reports what applied, as information rather than as the job's
+verdict.
+
+Rejected: leaving `--no-lens` in the gate invocation and calling it done, which is what
+2026-08-26 shipped as an unblock. It works and it hides the question: the lens then runs
+nowhere at all, and the `block` it measured 100/100 for is authority it never exercises.
+
+Rejected: wiring `ANTHROPIC_API_KEY` and keeping the gate as the job. It fixes the red
+without answering whether one command should be able to fail a run whose every deterministic
+check passed. Worth doing on its own terms, and it is a bill per pull request.
+
+Rejected: dropping the lens to `warn` again. That spends a measured calibration to buy a
+green tick.
+
+Cost accepted: the CI file stops being a demonstration of `wst gate`, which was part of why
+it looked right. Dogfooding the gate moves to the pre-push hook, where a human is present
+and authenticated, and that is the one place the lens could actually run.
