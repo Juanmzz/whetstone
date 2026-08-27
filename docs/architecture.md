@@ -65,6 +65,7 @@ not a fleet manager, not a spec framework, not a memory server.
 
 | | |
 |---|---|
+| `wst` | no arguments, in a terminal: a launcher over the commands, built from the same report `status` prints. Picking one closes the screen and runs it |
 | `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
 | `wst check` | list the registry; refuses to load an uncalibrated blocking lens |
 | `wst triage` | classify a diff → tier → which checks apply |

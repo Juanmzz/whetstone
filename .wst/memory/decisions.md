@@ -755,3 +755,43 @@ Cost accepted: `init` writes a file the repo may never turn on, which is clutter
 directory whose whole claim is that everything in it is real. It is one file, it says on its
 first line that it is off and what turns it on, and it is only seeded where a typecheck
 script was declared, since the runner reads `.ts` files and nothing else.
+### adr-0031 — bare `wst` opens a launcher, and the command it picks runs in the terminal
+`accepted` · 2026-08-27
+
+`wst` with no arguments printed its help, which is a list of nine things with no
+indication of which of them this repo can do. A fresh clone and a fully bootstrapped one
+got the same page.
+
+So: in a terminal, bare `wst` opens a screen built from the same `StatusReport` that
+`wst status` prints, with one row per command and the state beside it. `init` is
+unavailable where `.wst/` already exists and says `update` instead; everything that reads
+the definition layer is unavailable where there is none and says to run `init`; `gate`
+stays available with no judge on PATH and says which half will not run. Picking a row
+CLOSES the screen and runs the command in the terminal it was already in.
+
+That last part is the decision. The command is unchanged: `gate` still prints a report a
+pipe can read, `init` still opens its own interview, and the exit code is still the exit
+code. What the screen does is choose one.
+
+`wst signal` is deliberately not on it. It IS the [RC3] gate: behind a menu pick it
+becomes a click, and a click is not an attestation.
+
+Off a terminal the help prints exactly as before. A program that waits for a keypress in
+a pipe or a CI job hangs where nobody can see it.
+
+Rejected: running the command INSIDE the screen and rendering its output there. It makes
+`wst gate` two different things depending on how it was started, and the one that matters
+is the one a hook and a CI job run.
+
+Rejected: a home that hides what it cannot run. A command that disappears reads as one
+that does not exist, and the note saying what it is waiting for is the whole value over
+`--help`.
+
+Rejected: opening it whenever stdin is a TTY, ignoring stdout. A run whose output is piped
+still has a terminal on stdin, and it would paint a menu into somebody's pipe.
+
+Cost accepted: one more surface that can drift from what the commands actually do, since
+the row descriptions are prose beside a dispatch table. Both live in one file and the
+table is exhaustive over the command union, so a new command fails to compile until it
+has a row.
+

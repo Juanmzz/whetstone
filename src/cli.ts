@@ -15,6 +15,7 @@ import { runSignal, DEFAULT_PHASE, DEFAULT_SEVERITY } from "./commands/signal.js
 import { runInit } from "./commands/init.js";
 import { runShippedCheck } from "./commands/run.js";
 import { runConfig } from "./commands/config.js";
+import { runHome } from "./commands/home.js";
 import { runUpdate } from "./commands/update.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
 import { DEFINITION_DIR } from "./core/paths.js";
@@ -216,6 +217,20 @@ program
     process.exitCode = await runInit(opts);
   });
 
+/**
+ * Bare `wst`, and only where somebody is looking at it.
+ *
+ * Off a terminal it prints the help it always printed. A menu needs a keypress,
+ * and a program that waits for one in a pipe or a CI job is a program that hangs
+ * where nobody can see it.
+ */
+program.action(async () => {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    program.outputHelp();
+    return;
+  }
+  process.exitCode = await runHome(process.cwd());
+});
 
 // A misconfigured repo gets a sentence, not a stack. Anything else keeps its
 // trace: an unexpected throw is a bug in Whetstone and the trace is the report.
