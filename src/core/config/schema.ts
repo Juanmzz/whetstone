@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { retirementMessage } from "./deprecations.js";
 
 /**
  * Which adapter runs `llm` checks.
@@ -17,11 +18,11 @@ import { z } from "zod";
  * flags transfer. Each also earns its own calibration, since a receipt binds the
  * model. They report side by side and never vote (adr-0026).
  *
- * `antigravity` (`agy`) supersedes `gemini`, which stopped serving individual
- * accounts on 2026-06-18; see `deprecations.ts`. It is the closer of the two to
- * `claude -p`, because it takes a schema flag and Gemini never did.
+ * `antigravity` (`agy`) replaced the `gemini` adapter, which was deleted once
+ * Gemini CLI stopped serving individual accounts. A config still naming it gets
+ * a migration message from `deprecations.ts` rather than an enum error.
  */
-export const AGENTS = ["claude", "antigravity", "gemini"] as const;
+export const AGENTS = ["claude", "antigravity"] as const;
 export type Agent = (typeof AGENTS)[number];
 
 /**
@@ -55,6 +56,14 @@ export function parseConfig(raw: unknown): WstConfig {
 
   const issue = parsed.error.issues[0];
   const at = issue?.path.join(".");
+
+  // A repo bootstrapped before a judge was removed still names it. An enum error
+  // says the value is wrong and neither why nor what replaced it.
+  if (at === "agent") {
+    const gone = retirementMessage(String((raw as { agent?: unknown }).agent));
+    if (gone !== null) throw new Error(`wst.yaml: ${gone}`);
+  }
+
   throw new Error(
     `wst.yaml: ${at === undefined || at === "" ? "config" : at}: ${issue?.message ?? "invalid"}`,
   );

@@ -28,7 +28,7 @@ describe("parseConfig", () => {
   });
 
   it("accepts an agent that HAS an adapter, which is what makes the key mean anything", () => {
-    expect(parseConfig({ agent: "gemini" }).agent).toBe("gemini");
+    expect(parseConfig({ agent: "antigravity" }).agent).toBe("antigravity");
   });
 
   it("throws on a backend nothing implements", () => {
