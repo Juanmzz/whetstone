@@ -26,7 +26,7 @@
   },
   "type": "module",
   "bin": {
-    "wst": "./dist/cli.js"
+    "wst": "dist/cli.js"
   },
   "engines": {
     "node": ">=22"
