@@ -615,3 +615,31 @@ is the reason to override it, and remains an explicit choice.
 
 An absent CLI is `errored`, never `fail` (hard rule 3), and an errored `warn` check blocks
 nothing. That is what makes a second judge free to offer: where it cannot run, nothing happens.
+
+### adr-0027 — `correctness` blocks in CI, never in the hook
+`accepted` · 2026-08-25
+
+The lens measured 100/100 on 2026-08-25: unanimous on all ten fixtures, six of them `hard`,
+zero flips, zero harness errors, on claude 2.1.241. The receipt authorises `block`, and
+non-negotiable 2 has nothing left to refuse. `severity` moves from `warn` to `block`.
+
+Rejected: staying at `warn` because the fixtures are synthetic. They are, and the
+false-positive rate on real diffs is unmeasured. But an advisory lens cannot produce the
+evidence that would settle it: at `warn` a false positive is a line in a log nobody reads.
+Staying advisory is choosing never to find out, and this repo is the cheapest place in the
+world to find out -- one author, no team to interrupt.
+
+Rejected: arming the lens in the pre-push hook as well. The hook's own reasoning holds: a
+gate that costs fifty seconds and real money on every push gets bypassed with `--no-verify`,
+and a routed-around gate is worth less than no gate. CI is where the cost is invisible and
+the bypass is visible.
+
+Rejected: requiring N more clean calibrations before promoting. The bar was pre-registered at
+one passing run (adr-0008). Raising it after seeing a pass is fitting the bar to the result,
+which is the only thing that made the measurement mean anything.
+
+Cost accepted: a false positive on real work is now a red PR, and the temptation to route
+around it lands on the one person who can. The receipt binds a lens hash, a model and a
+runtime, so editing the lens or upgrading the judge drops the authorisation and the check
+refuses to load at `block` until it is re-measured. And the two harness failures of
+2026-08-20 were never diagnosed. They did not recur, but nothing was fixed.

@@ -1,12 +1,12 @@
 {
   "format": 1,
   "checkId": "correctness",
-  "lensHash": "0d4092717758f7d292c6269ee695696b07b2ba308d78d0b251f8c58c41ea25ab",
+  "lensHash": "82cf19d92a56e40c2c510a6474ff1ea409faae0f266abd491f816186ce6c33c2",
   "fixturesHash": "3a3c1f3272c3da77ddcdc3c5de2202ca3c54b6bee35d5a4af8df0eb28aa35a8c",
   "model": "sonnet",
   "runtime": {
     "name": "claude",
-    "version": "2.1.237"
+    "version": "2.1.245"
   },
   "runs": 10,
   "results": [
@@ -50,7 +50,7 @@
         "fail",
         "fail",
         "fail",
-        "errored",
+        "fail",
         "fail",
         "fail",
         "fail",
@@ -129,7 +129,7 @@
         "pass",
         "pass",
         "pass",
-        "errored",
+        "pass",
         "pass",
         "pass",
         "pass",
@@ -171,6 +171,6 @@
       ]
     }
   ],
-  "verdict": "failed",
-  "measuredAt": "2026-08-20T07:08:55.722Z"
+  "verdict": "passed",
+  "measuredAt": "2026-08-25T19:30:50.188Z"
 }
