@@ -1,6 +1,6 @@
 {
   "name": "@juanmzz/whetstone",
-  "version": "0.5.0-alpha.0",
+  "version": "0.5.0",
   "description": "A self-sharpening standards layer for AI coding agents — git-native, files-first.",
   "license": "MIT",
   "repository": {
@@ -22,8 +22,7 @@
     "ci"
   ],
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "type": "module",
   "bin": {
