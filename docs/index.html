@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whetstone</title>
+<meta name="description" content="Self-sharpening standards for coding agents. Your definition of correct, enforced by an exit code at push and in CI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Bebas+Neue&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --stock:#d9d3c6;--ink:#221f1a;--ink2:#4a4339;--ink3:#6b6254;
+    --hair:#b3aa99;--line:#8f8676;--red:#8a2b12;--page:#cfc8ba;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --stock:#1b1917;--ink:#e9e4da;--ink2:#b3ab9e;--ink3:#8b8377;
+      --hair:#38332d;--line:#4a443c;--red:#e08a52;--page:#121110;
+    }
+  }
+  :root[data-theme="dark"]{
+    --stock:#1b1917;--ink:#e9e4da;--ink2:#b3ab9e;--ink3:#8b8377;
+    --hair:#38332d;--line:#4a443c;--red:#e08a52;--page:#121110;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--page);color:var(--ink);
+    font-family:"Barlow Condensed",ui-sans-serif,system-ui,sans-serif;
+    font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  .card{
+    max-width:56rem;margin:clamp(.8rem,3vw,2.5rem) auto;
+    background-color:var(--stock);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.14'/%3E%3C/svg%3E");
+    padding:clamp(1.1rem,4vw,2.6rem);
+    box-shadow:0 1px 2px rgba(0,0,0,.12),0 18px 44px rgba(0,0,0,.16);
+  }
+  .mono{font-family:"Courier Prime",ui-monospace,monospace}
+  code{font-family:"Courier Prime",ui-monospace,monospace;font-size:.9em;background:color-mix(in srgb,var(--ink) 9%,transparent);padding:.08em .32em;border-radius:2px}
+
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;border-bottom:3px solid var(--ink);padding-bottom:.45rem}
+  .brand{
+    font-family:"Bebas Neue",sans-serif;font-weight:400;
+    font-size:clamp(1.8rem,7vw,2.9rem);letter-spacing:.1em;line-height:1;margin:0;
+    text-shadow:0 1px 0 rgba(255,255,255,.4),0 -1px 0 rgba(0,0,0,.15);
+  }
+  :root[data-theme="dark"] .brand{text-shadow:0 1px 0 rgba(0,0,0,.5),0 -1px 0 rgba(255,255,255,.08)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand{text-shadow:0 1px 0 rgba(0,0,0,.5),0 -1px 0 rgba(255,255,255,.08)}}
+  .lot{font-family:"Courier Prime",monospace;font-size:.64rem;letter-spacing:.1em;text-align:right;color:var(--ink3);line-height:1.7}
+
+  .hero{display:flex;gap:clamp(1rem,4vw,2.2rem);flex-wrap:wrap;padding:1.4rem 0 1.2rem}
+  .hero img{
+    image-rendering:pixelated;width:clamp(150px,30vw,240px);height:auto;flex:0 0 auto;
+    filter:drop-shadow(0 6px 14px rgba(0,0,0,.25));
+  }
+  .claim{flex:1 1 17rem;min-width:14rem}
+  .claim h2{font-family:"Bebas Neue",sans-serif;font-weight:400;font-size:clamp(1.4rem,4.4vw,2rem);letter-spacing:.03em;line-height:1.05;margin:0 0 .5rem}
+  .claim p{margin:0 0 .7rem;color:var(--ink2);max-width:42ch}
+  .claim p:last-child{margin-bottom:0}
+
+  .sec{border-top:1px solid var(--line);padding-top:.5rem;margin-top:1.6rem}
+  .label{font-family:"Courier Prime",monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink3);margin:0 0 .9rem}
+  .note{font-size:.9rem;color:var(--ink2);max-width:58ch;margin:.9rem 0 0}
+
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th{font-family:"Courier Prime",monospace;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);text-align:left;font-weight:400;padding:0 .7rem .35rem 0;border-bottom:1px solid var(--hair)}
+  td{padding:.55rem .7rem .55rem 0;border-bottom:1px solid var(--hair);vertical-align:baseline;color:var(--ink2)}
+  tr:last-child td{border-bottom:0}
+  .code{font-family:"Courier Prime",monospace;font-weight:700;font-size:1.4rem;line-height:1;width:2.2rem;color:var(--ink);font-variant-numeric:tabular-nums}
+  .name{font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:.76rem;white-space:nowrap;width:7rem;color:var(--ink)}
+  .halt{color:var(--red)}
+
+  .steps{display:grid;gap:0}
+  .step{display:grid;grid-template-columns:2.2rem 7.5rem 1fr;gap:.7rem;padding:.5rem 0;border-bottom:1px solid var(--hair);align-items:baseline}
+  .step:last-child{border-bottom:0}
+  .step .n{font-family:"Courier Prime",monospace;font-size:.72rem;color:var(--red);font-weight:700}
+  .step .cmd{font-family:"Courier Prime",monospace;font-weight:700;font-size:.85rem;color:var(--ink)}
+  .step .d{font-size:.88rem;color:var(--ink2)}
+  @media (max-width:34rem){.step{grid-template-columns:2rem 1fr}.step .d{grid-column:2}}
+
+  pre.tree{font-family:"Courier Prime",monospace;font-size:.78rem;line-height:1.7;color:var(--ink2);white-space:pre;overflow-x:auto;margin:0}
+  pre.tree b{color:var(--ink)}
+
+  .foot{border-top:3px solid var(--ink);margin-top:1.8rem;padding-top:.8rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center}
+  .install{font-family:"Courier Prime",monospace;font-weight:700;font-size:clamp(.82rem,2.6vw,1rem)}
+  .links{font-family:"Courier Prime",monospace;font-size:.76rem}
+  .links a{color:var(--red);text-decoration:none;border-bottom:1px solid currentColor}
+  .links a:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  .fine{font-family:"Courier Prime",monospace;font-size:.7rem;color:var(--ink3);margin:1rem 0 0;max-width:62ch;line-height:1.7}
+</style>
+</head>
+<body>
+<main class="card">
+
+  <div class="top">
+    <h1 class="brand">Whetstone</h1>
+    <div class="lot">CAT. WST&#8209;050<br>MIT &middot; NODE &ge; 22<br>REV. 2026&#8209;08</div>
+  </div>
+
+  <div class="hero">
+    <img src="assets/whetstone-web.png" alt="An isometric pixel-art sharpening stone" width="704" height="384">
+    <div class="claim">
+      <h2>Your definition of correct, enforced.</h2>
+      <p>Whetstone captures what <em>correct</em> means in your repo as plain files in git, then enforces it with a deterministic engine that calls a model only where judgment is irreducible.</p>
+      <p>It gates your changes, whoever wrote them.</p>
+    </div>
+  </div>
+
+  <section class="sec">
+    <p class="label">Output &middot; the exit code is the enforcement</p>
+    <table>
+      <thead><tr><th>Code</th><th>Outcome</th><th>What it means about your change</th></tr></thead>
+      <tbody>
+        <tr><td class="code">0</td><td class="name">Passed</td><td>Every check that applied ran, and none of them failed.</td></tr>
+        <tr><td class="code">0</td><td class="name">Uncovered</td><td>No check matched these paths. It says so rather than implying a pass, and lets you through: blocking here is what teaches people <span class="mono">--no-verify</span>.</td></tr>
+        <tr><td class="code halt">1</td><td class="name halt">Blocked</td><td>A check ran and failed. The only outcome that is a verdict on your change.</td></tr>
+        <tr><td class="code halt">2</td><td class="name halt">Incomplete</td><td>A check that could have blocked never ran. The gate is broken, not your change, and the two never share a message.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Four outcomes where most gates have two. Splitting <em>failed</em> from <em>could not run</em> is the difference between a gate you trust and one you learn to route around.</p>
+  </section>
+
+  <section class="sec">
+    <p class="label">Operation</p>
+    <div class="steps">
+      <div class="step"><span class="n">01</span><span class="cmd">wst init</span><span class="d">Interviews your repo. Reads what it declares, and asks about what it cannot know, like where a bug is expensive.</span></div>
+      <div class="step"><span class="n">02</span><span class="cmd">wst gate</span><span class="d">Classifies the change, selects the checks that apply, skips whatever a receipt proves unchanged, runs the rest.</span></div>
+      <div class="step"><span class="n">03</span><span class="cmd">wst signal</span><span class="d">You record the friction the run hit. A human types this one.</span></div>
+      <div class="step"><span class="n">04</span><span class="cmd">wst retro</span><span class="d">Clusters the signals and proposes rule changes. It never applies them.</span></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <p class="label">What lands in your repository</p>
+    <pre class="tree"><b>.wst/</b>
+  constitution.md      what your project holds non-negotiable
+  triage.yaml          which paths earn which discipline
+  checks/              one file per check, with what earned it
+  skills/              rules that travel with the repo
+  memory/              decisions, signals, retro log
+<b>.githooks/pre-push</b>   where the exit code actually stops a push
+<b>AGENTS.md</b>            rendered from the above, never the source</pre>
+    <p class="note">Plain text, all of it. Delete the directory and the tool is gone; nothing else knows you installed it. Three runtime dependencies, no services, nothing to host.</p>
+  </section>
+
+  <div class="foot">
+    <span class="install mono">npm i -g @juanmzz/whetstone</span>
+    <span class="links"><a href="https://github.com/Juanmzz/whetstone">GitHub</a> &middot; <a href="https://www.npmjs.com/package/@juanmzz/whetstone">npm</a></span>
+  </div>
+
+  <p class="fine">A judgment check earns the right to block by measurement, not by assertion: <span class="mono">severity: block</span> on an <span class="mono">llm</span> check fails to load without a calibration receipt whose hashes still recompute. This project's own review lens measured 100 of 100 correct across ten fixtures before it earned that, and the receipt binds the prompt, the fixtures, the model and the runtime, so changing any one of them drops the authority rather than carrying it over.</p>
+
+</main>
+</body>
+</html>
