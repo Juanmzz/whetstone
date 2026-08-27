@@ -81,7 +81,7 @@ code, at push and in CI, whether or not an agent cooperates.
 - **[`docs/design.md`](./docs/design.md)**: where to read about each part, and the
   anatomy of a check file.
 
-**Not bundled:** an `llm` check needs the `claude` or `gemini` CLI, whichever it names.
+**Not bundled:** an `llm` check needs the CLI it names, `claude` or `agy` (Antigravity).
 Nothing else.
 
 **Not this:** a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers),
