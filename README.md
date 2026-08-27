@@ -2,112 +2,64 @@
 
 **Self-sharpening standards for coding agents.**
 
-Whetstone captures a project's definition of *correct* as plain files in git: its
-constitution, its risk triage, and the checks that matter. A deterministic engine
-enforces them, and calls an LLM only where judgment is irreducible.
-
-The exit code is the whole enforcement surface: it runs in a pre-push hook and in CI,
-so it does not depend on an agent choosing to cooperate. And because the tool records
-the friction it hits, the checks a project needs grow from what actually went wrong.
-Each one carries a receipt for why it exists.
-
-> **Status: alpha.** The gate runs on this repo's every push and PR, and the review lens
-> now blocks: it measured 100 of 100 correct across ten fixtures before it earned that.
-> [AGENTS.md](./AGENTS.md) carries the numbers.
-
-## Why
-
-Most of what a senior engineer does to guarantee quality is already deterministic:
-tests, linters, type checks, review checklists. The LLM's unique contribution is
-**judgment**. Whetstone splits the work along that line, which makes verification
-frugal: reviewing everything with an agent is expensive and slow, and a `CLAUDE.md`
-full of rules is merely advisory.
-
-## The shape of it
-
-```
-wst init    → interview the project, generate .wst/, record a base beside it
-   ↓          the work happens: any agent, or a person. .wst/ is in the repo
-wst gate    → select checks → skip what receipts prove unchanged → pass or block
-wst signal  → a human records the friction the run hit
-wst retro   → cluster signals → propose changes → a human approves → back to .wst/
-```
-
-`wst update` re-plans from that base and reports what changed since: what you edited by
-hand, what a newer Whetstone would write differently. It writes nothing.
-
-`wst config` edits `.wst/wst.yaml` in a terminal: which judge runs `llm` checks, which
-skills are active.
-
-`status`, `check` and `triage` read the machinery back; none of them decide anything.
-`wst opinion` lists the rules Whetstone offers that no repo declares, and the friction that
-earned each. `init` asks before writing any of them, and never writes one unasked.
+Whetstone captures what *correct* means in your repo as plain files in git, then
+enforces it with a deterministic engine that calls a model only where judgment is
+irreducible. The exit code is the enforcement: it runs at push and in CI, so it does
+not depend on an agent choosing to cooperate.
 
 ## Install
 
 ```bash
-npm install -g @juanmzz/whetstone     # the `wst` binary
+npm install -g @juanmzz/whetstone
+
 cd your-repo
-wst init                              # interview the repo, write .wst/
-wst status                            # what is armed, and what is not
+wst init      # interview the repo, write .wst/
+wst status    # what is armed, and what is not
 ```
 
-Node 22 or newer. `init` writes nothing without showing you the plan first, and
+Node 22 or newer. `init` shows you the plan before it writes anything, and
 `--dry-run` shows it without writing at all.
 
-Arming the gate is a separate, deliberate step, because it changes what `git push`
-does:
-
-```bash
-git config core.hooksPath .githooks    # only if nothing else owns the setting
-```
-
-**Claude Code users** get the session-side half as a plugin: the gate runs when the
-agent stops, and a strict-path edit warns at the moment it happens. It ships in the
-same package.
+## The loop
 
 ```
-/plugin marketplace add Juanmzz/whetstone
-/plugin install whetstone
+wst init     interview the project, generate .wst/
+wst gate     select the checks that apply, skip what receipts prove unchanged, pass or block
+wst signal   record the friction a run hit
+wst retro    cluster the signals, propose rule changes, never apply them
 ```
 
-The plugin is convenience, not enforcement. What actually gates a change is the exit
-code, at push and in CI, whether or not an agent cooperates.
+Everything lands as files you can read, diff and revert. Delete `.wst/` and the tool
+is gone; nothing else knows you installed it.
 
-## Reading further
+## Four outcomes, not two
 
-- **[`docs/architecture.md`](./docs/architecture.md)**: the full picture, in the
-  present tense. It is the authority; anything that disagrees with it is drift.
-- **[`docs/design.md`](./docs/design.md)**: where to read about each part, and the
-  anatomy of a check file.
+| | |
+|---|---|
+| `0` **passed** | every check that applied ran, and none failed |
+| `0` **uncovered** | no check matched these paths, and it says so rather than implying a pass |
+| `1` **blocked** | a check ran and failed |
+| `2` **incomplete** | a check that could have blocked never ran, so the gate is broken, not your change |
 
-**Not bundled:** an `llm` check needs the CLI it names, `claude` or `agy` (Antigravity).
-Nothing else.
+Splitting *failed* from *could not run* is the difference between a gate you trust and
+one you learn to route around.
 
-**Not this:** a spec-driven framework (it composes with Spec Kit, BMAD, Superpowers),
-a memory server (memory is an interface; files are the default), or a fleet manager.
-[VISION.md](./VISION.md#what-whetstone-is-not) says why.
+## Documentation
 
-## Development
+- [Architecture](./docs/architecture.md): what is true now, in the present tense
+- [Design](./docs/design.md): where to read about each part, and a check file field by field
+- [Vision](./VISION.md): what this is, and what it deliberately is not
 
-```bash
-npm install
-npm test          # no network, no token cost
-npm run typecheck
-npm run build && node dist/cli.js status
-npm run calibrate # spends real tokens: measures one llm check's stability
-                  #   `-- --check <id>` picks which
-```
-
-`src/core/` is pure and strictly TDD'd; `src/shell/` holds thin adapters. A test
-enforces that the core can never import an adapter, which is what makes "the LLM is
-judgment only" an architectural fact rather than a promise.
+An `llm` check needs the CLI it names, `claude` or `agy`. Nothing else is bundled.
 
 ## Contributing
 
-1. **Read [VISION.md](./VISION.md) first**, especially "What Whetstone is NOT". PRs
-   pulling this toward a spec framework or a memory server get kindly redirected.
-2. **One concern per PR.** Past ~300 lines of diff, open an issue so we can split it.
+Read [VISION.md](./VISION.md) first, especially *What Whetstone is NOT*. One concern
+per pull request.
+
+```bash
+npm install && npm test
+```
 
 ## License
 
