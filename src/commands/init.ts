@@ -15,6 +15,8 @@ import { banner } from "../banner.js";
 import { createGitAdapter, gitEnv } from "../shell/git.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
+import { openInterview, pressIn, renderInterview } from "../core/tui/interview.js";
+import { paint, rawKeys, restore } from "../shell/tui.js";
 import { stagePaths } from "../core/init/stage.js";
 import {
   ProposalSchema,
@@ -251,6 +253,29 @@ function printQuestions(): void {
       '           --strict "src/billing/**:moves money" --stack "TypeScript on Node 24"',
   );
   console.log("\nNothing was written.");
+}
+
+/** The interview, answered in the terminal. Null when the human backed out. */
+async function askInterview(): Promise<InterviewAnswers | null> {
+  let state = openInterview(buildInterview());
+  const keys = rawKeys(process.stdin, () => {
+    keys.close();
+    restore(process.stdout);
+    process.exit(130);
+  });
+
+  try {
+    for (;;) {
+      paint(process.stdout, renderInterview(state));
+      const result = pressIn(state, await keys.next());
+      state = result.state;
+      if (result.action.kind === "cancel") return null;
+      if (result.action.kind === "write") return result.action.answers;
+    }
+  } finally {
+    keys.close();
+    restore(process.stdout);
+  }
 }
 
 function printPlan(plan: InitPlan, root: string): void {
@@ -527,6 +552,16 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   // --propose: the judge drafts, the human signs.
   if (opts.propose === true) {
     return await proposeAnswers(facts, stack, root, opts.out ?? DEFAULT_ANSWERS_FILE);
+  }
+
+  if (answers === null) {
+    // A terminal can answer the questions in place. Anything else gets the list
+    // it always got, because a form nobody can fill in is a printed form.
+    if (process.stdin.isTTY === true) {
+      const filled = await askInterview();
+      if (filled === null) return 0;
+      answers = filled;
+    }
   }
 
   if (answers === null) {

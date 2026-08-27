@@ -75,8 +75,9 @@ function changed(state: TuiState): boolean {
 }
 
 export function press(state: TuiState, key: string): { state: TuiState; action: Action } {
-  if (key === "up") return { state: move(state, -1), action: NONE };
-  if (key === "down") return { state: move(state, 1), action: NONE };
+  // This screen has no text field, so it can afford vim keys. The interview cannot.
+  if (key === "up" || key === "k") return { state: move(state, -1), action: NONE };
+  if (key === "down" || key === "j") return { state: move(state, 1), action: NONE };
 
   if (key === "escape") {
     return { state: { ...state, view: { kind: "menu", cursor: 0 } }, action: NONE };
