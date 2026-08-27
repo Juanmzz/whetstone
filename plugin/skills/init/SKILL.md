@@ -33,12 +33,17 @@ Then look at what the repo already has, because it changes which flags you need:
 ## 2. Let the repo answer what it can
 
 ```bash
-wst init
+wst init --dry-run
 ```
 
-This writes nothing. It prints what it detected and the three questions the repo
-cannot answer. Read the detection out loud to the user: if the test or typecheck
-command is wrong, everything downstream is wrong.
+This writes nothing and prints what the repo declares about itself: package manager,
+test command, typecheck command, whether tests exist. **Read the detection out loud.**
+If the test command is wrong, everything downstream is wrong and nothing later will
+catch it.
+
+**In a terminal, `wst init` with no flags opens the interview itself** and the human
+answers it in place. You are not the one filling it in. Your job is sections 2b and 3:
+be the one who argues about the answers before they are written.
 
 ## 2b. Offer the opinions, and let them say no
 
@@ -73,7 +78,9 @@ forever. Each one needs a reason that would still make sense to somebody decidin
 whether to RETIRE the rule in a year. If you cannot write that sentence, the path
 does not earn it.
 
-Edit `.wst-answers.json` to match what they actually said.
+Edit `.wst-answers.json` to match what they actually said, then either hand it to
+`wst init --answers .wst-answers.json` or read it out and let them type the interview
+themselves. **The draft is a starting point for the argument, never the answer.**
 
 ## 4. Write it
 
