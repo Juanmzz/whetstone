@@ -115,8 +115,8 @@ program
 // other route into `signals.jsonl` is the engine recording what it observed.
 program
   .command("signal")
-  .argument("<type>", "kebab-case type, e.g. triage-miss; the retro clusters on it")
-  .argument("<detail...>", "one or two sentences a reader can reconstruct the event from")
+  .argument("[type]", "kebab-case type, e.g. triage-miss; the retro clusters on it")
+  .argument("[detail...]", "one or two sentences a reader can reconstruct the event from")
   .description(`record an observation in ${DEFINITION_DIR}/memory/signals.jsonl (you are the human gate)`)
   // The defaults come from `commands/signal.ts` rather than being written out
   // again here: the help text and the fallback the command applies are the same
@@ -137,22 +137,36 @@ program
     (value: string, previous: string[] | undefined) => [...(previous ?? []), value],
   )
   .option("--dry-run", "print the line that would be appended, write nothing")
+  .option(
+    "--from-json <file>",
+    "a batch of findings from another tool, or `-` for stdin. Records as `cli`",
+  )
+  .option("--tool <name>", "which tool found them, named in every record")
   .action(
     async (
-      type: string,
+      type: string | undefined,
       detail: string[],
       // `phase` and `severity` are not optional: Commander always supplies the
       // defaults above, so a conditional spread would be a branch that never takes
       // its second path.
-      opts: { phase: string; severity: string; rule?: string[]; dryRun?: boolean },
+      opts: {
+        phase: string;
+        severity: string;
+        rule?: string[];
+        dryRun?: boolean;
+        fromJson?: string;
+        tool?: string;
+      },
     ) => {
       process.exitCode = await runSignal({
-        type,
+        type: type ?? "",
         detail: detail.join(" "),
         phase: opts.phase,
         severity: opts.severity,
         rule: opts.rule ?? [],
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+        ...(opts.fromJson !== undefined ? { fromJson: opts.fromJson } : {}),
+        ...(opts.tool !== undefined ? { tool: opts.tool } : {}),
       });
     },
   );

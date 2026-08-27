@@ -6,6 +6,8 @@ import { access } from "node:fs/promises";
 import { exists } from "../shell/fs.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
+import { readFile } from "node:fs/promises";
+import { readForeignFindings } from "../core/signals/foreign.js";
 import { humanSignal } from "../core/signals/human.js";
 import { createGitAdapter } from "../shell/git.js";
 import { resolveMemory } from "../shell/memory.js";
@@ -13,11 +15,17 @@ import { resolveMemory } from "../shell/memory.js";
 export interface SignalOptions {
   readonly type: string;
   readonly detail: string;
+  // Both are required by the command line and supplied by the batch instead
+  // when `--from-json` is given.
   readonly phase?: string;
   readonly severity?: string;
   readonly rule?: readonly string[];
   /** Print the line that would be appended, write nothing. */
   readonly dryRun?: boolean;
+  /** A file of findings from another tool, or `-` for stdin. */
+  readonly fromJson?: string;
+  /** Which tool found them, named in each record so a reader can re-run it. */
+  readonly tool?: string;
 }
 
 /**
@@ -61,6 +69,71 @@ function humanIsAtTheKeyboard(): boolean {
   return process.env["CLAUDECODE"] === undefined;
 }
 
+
+/**
+ * A batch from another tool. The human gate does not move: a person runs this,
+ * and every record is written `source: "cli"` because nobody typed the words.
+ */
+async function runForeign(
+  path: string,
+  opts: SignalOptions,
+  repoRoot: string,
+  cwd: string,
+): Promise<number> {
+  let text: string;
+  try {
+    text = path === "-" ? await readStdin() : await readFile(path, "utf-8");
+  } catch (cause) {
+    console.error(`could not read ${path}: ${(cause as Error).message}`);
+    return EXIT_MISCONFIGURED;
+  }
+
+  const read = readForeignFindings(text, opts.tool);
+  if (!read.ok) {
+    console.error(`nothing was written. ${String(read.errors.length)} problem(s):`);
+    for (const problem of read.errors) console.error(`  ${problem}`);
+    return EXIT_NOT_RECORDED;
+  }
+
+  const records = read.findings.map((f) => humanSignal(f, new Date()));
+  const lines = records.flatMap((r) => (r.ok ? [r.record] : []));
+
+  if (opts.dryRun === true) {
+    for (const record of lines) console.log(JSON.stringify(record));
+    return 0;
+  }
+
+  let root: string;
+  try {
+    root = await resolveDefinitionRoot(repoRoot);
+    if (!(await exists(root))) throw new Error(`no ${DEFINITION_DIR}/ in ${repoRoot}`);
+  } catch (cause) {
+    console.error((cause as Error).message);
+    for (const record of lines) console.log(JSON.stringify(record));
+    return EXIT_MISCONFIGURED;
+  }
+
+  try {
+    await (await resolveMemory(root)).save(lines);
+  } catch (cause) {
+    console.error(`could not write: ${(cause as Error).message}`);
+    console.error("the findings, so they are not lost:");
+    for (const record of lines) console.log(JSON.stringify(record));
+    return EXIT_NOT_RECORDED;
+  }
+
+  void cwd;
+  console.log(`recorded ${String(lines.length)} finding(s) in ${DEFINITION_DIR}/memory/signals.jsonl`);
+  console.log("  source: cli, because a tool found these and nobody typed them.");
+  return 0;
+}
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf-8");
+}
+
 export async function runSignal(
   opts: SignalOptions,
   cwd: string = process.cwd(),
@@ -70,6 +143,10 @@ export async function runSignal(
   if (repoRoot === null) {
     console.error("not inside a git repository: the signal log lives in one, so it needs one");
     return EXIT_MISCONFIGURED;
+  }
+
+  if (opts.fromJson !== undefined) {
+    return await runForeign(opts.fromJson, opts, repoRoot, cwd);
   }
 
   const result = humanSignal(
