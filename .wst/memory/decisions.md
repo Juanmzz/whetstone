@@ -544,7 +544,7 @@ output and nothing else. And an outcome is now asserted through what the gate pr
 than through a record of it, which is a weaker test of the same guarantee.
 
 ### adr-0025 — `init` may propose an opinion, but never seed one unasked
-`accepted` · 2026-08-21 · signals: sig-4a2610fb, sig-ea119c62
+`superseded by adr-0030` · 2026-08-21 · signals: sig-4a2610fb, sig-ea119c62
 
 *In force since 2026-08-22. The interview asks a seventh question, nothing is
 pre-selected, and a model may not answer it.*
@@ -714,3 +714,44 @@ green tick.
 Cost accepted: the CI file stops being a demonstration of `wst gate`, which was part of why
 it looked right. Dogfooding the gate moves to the pre-push hook, where a human is present
 and authenticated, and that is the one place the lens could actually run.
+
+### adr-0030 — a check Whetstone brings is a check, and it arrives switched off
+`accepted` · 2026-08-27 · signals: sig-4a2610fb
+
+adr-0025 gave the rule its own noun. An `opinion` was a rule no repo declares, earned here,
+offered in the interview and written only on a yes. It bought a catalogue module, a
+`wst opinion` command, a seventh interview question and a word that answered "what is it?"
+with "it is an opinion".
+
+Every check already carries `origin`: the signals that earned it, empty where nothing did.
+That field states the whole distinction. `comment-density` in this repo has said
+`origin: [sig-4a2610fb]` since the day it was written, and nothing calls it an opinion.
+One member, and the category was already redundant against the field beside it.
+
+So: **`comment-density` is a check `init` seeds, `enabled: false`, with the signal that
+earned it in its `origin`.** The offer moves out of the interview and into the file tree,
+where it is read at the moment the friction arrives rather than on day one, when the
+answer to "do you want a comment ceiling?" is "I do not know yet". `enabled: false` is
+adr-0025's guarantee kept, not dropped: a check that never runs cannot block a change
+nobody asked it to judge, which is the outcome that entry existed to prevent. The precedent
+is already here: a mutating `lint` has been seeded off since adr-0016's install.
+
+The runner survives the rename. A seeded check must name a command the target repo has, and
+`npm run check:comments` names a script nobody wrote there. It is `wst check run <id>` now:
+the same binary the check file already assumes, under the noun the thing actually is.
+
+Rejected: keeping the question and renaming the noun. It holds the interview at six for one
+shipped rule, and it asks for a decision at the moment the person knows least about the repo
+they just pointed at.
+
+Rejected: seeding it enabled and at `warn`. That is the "pile of config from guesses"
+adr-0016 exists to prevent, and a warning nobody asked for is noise on the first run, which
+is exactly when a gate is being decided on.
+
+Rejected: dropping it from the payload and leaving it Whetstone-only. adr-0025 rejected this
+already and the reason stands: friction found here would sharpen only this repo.
+
+Cost accepted: `init` writes a file the repo may never turn on, which is clutter in a
+directory whose whole claim is that everything in it is real. It is one file, it says on its
+first line that it is off and what turns it on, and it is only seeded where a typecheck
+script was declared, since the runner reads `.ts` files and nothing else.

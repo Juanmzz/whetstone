@@ -73,7 +73,7 @@ not a fleet manager, not a spec framework, not a memory server.
 | `wst retro` | cluster signals, propose rule changes, never apply them |
 | `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
 | `wst update` | re-plan from the recorded answers and report what changed: drifted, outdated, missing, new, orphan. Writes nothing |
-| `wst opinion` | run a rule Whetstone offers that no repo declares; bare, it lists them and the friction that earned each |
+| `wst check run <id>` | run a check whose logic ships with `wst` rather than with the repo, so a seeded check can name a command the repo has |
 
 Flags that change what runs: `gate --no-lens` (deterministic only, which is what the pre-push hook
 runs) · `gate --fast` (skip whatever declares itself slow) · `gate --no-emit` (record no

@@ -134,7 +134,6 @@ export interface ConstitutionInput {
   readonly date: string;
   readonly purpose: string;
   readonly risk: RiskProfile;
-  readonly conventions: readonly string[];
   /** What the repo declares about itself. Read, never guessed. */
   readonly detected: StackFacts;
   /** What somebody SAID the project is built with. Null until anyone says. */
@@ -171,13 +170,13 @@ function stackSection(detected: StackFacts, declared: string | null): string {
 export function renderConstitution(input: ConstitutionInput): string {
   const stackFacts = stackSection(input.detected, input.declared);
 
-  const conventions =
-    input.conventions.length > 0
-      ? input.conventions.map((c) => `- ${c}`).join("\n")
-      : [
-          "- Code, configuration and comments in English.",
-          "- Commit style not yet established. Pick one and record it here.",
-        ].join("\n");
+  // Not asked (adr-0030). A commit history is a pattern, not a promise, and on the
+  // day `init` runs the honest answer is that nobody has decided yet. This says so
+  // and leaves the section for a human to fill.
+  const conventions = [
+    "- Code, configuration and comments in English.",
+    "- Commit style not yet established. Pick one and record it here.",
+  ].join("\n");
 
   return `---
 id: constitution

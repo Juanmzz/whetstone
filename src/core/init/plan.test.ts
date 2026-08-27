@@ -33,8 +33,6 @@ const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   sourcePaths: ["src/**"],
   strictPaths: [],
   stack: "TypeScript on Node.",
-  conventions: [],
-  opinions: [],
   ...over,
 });
 
@@ -61,6 +59,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
         ".githooks/pre-push",
         ".wst/.gitattributes",
         ".wst/.gitignore",
+        ".wst/checks/comment-density.md",
         ".wst/checks/lint.md",
         ".wst/checks/test.md",
         ".wst/checks/typecheck.md",
@@ -284,48 +283,22 @@ describe("planInit — notes", () => {
   });
 });
 
-describe("opinions (adr-0025)", () => {
-  const withOpinions = (opinions: readonly string[]): InitPlan =>
-    plan({ answers: answers({ opinions: [...opinions] }) });
+describe("the check Whetstone brings (adr-0030)", () => {
+  const file = (): { path: string; contents: string } | undefined =>
+    plan({ answers: answers() }).files.find((f) => f.path.endsWith("comment-density.md"));
 
-  const paths = (p: InitPlan): string[] => p.files.map((f) => f.path);
-
-  it("writes nothing extra when nobody said yes", () => {
-    expect(paths(withOpinions([])).filter((p) => p.includes("comment-density"))).toEqual([]);
-  });
-
-  it("writes the check when the answer names it", () => {
-    expect(paths(withOpinions(["comment-density"]))).toContain(".wst/checks/comment-density.md");
-  });
-
-  it("seeds it at warn, since it was earned somewhere else", () => {
-    const file = withOpinions(["comment-density"]).files.find((f) =>
-      f.path.endsWith("comment-density.md"),
-    );
-
-    expect(file?.contents).toContain("severity: warn");
-    expect(file?.contents).not.toContain("severity: block");
+  it("writes it without asking, because it cannot run until somebody enables it", () => {
+    expect(file()?.path).toBe(".wst/checks/comment-density.md");
+    expect(file()?.contents).toContain("enabled: false");
   });
 
   it("names a command the target repo has, not a script nobody wrote", () => {
-    const file = withOpinions(["comment-density"]).files.find((f) =>
-      f.path.endsWith("comment-density.md"),
-    );
-
-    expect(file?.contents).toContain("wst opinion comment-density");
-    expect(file?.contents).not.toContain("npm run");
+    expect(file()?.contents).toContain("wst check run comment-density");
+    expect(file()?.contents).not.toContain("npm run check");
   });
 
   it("refuses a receipt, because its answer depends on the range", () => {
-    const file = withOpinions(["comment-density"]).files.find((f) =>
-      f.path.endsWith("comment-density.md"),
-    );
-
-    expect(file?.contents).toContain("skippable: false");
-  });
-
-  it("ignores an id nobody ships rather than writing a check that cannot run", () => {
-    expect(paths(withOpinions(["not-a-thing"])).filter((p) => p.includes("not-a-thing"))).toEqual([]);
+    expect(file()?.contents).toContain("skippable: false");
   });
 });
 

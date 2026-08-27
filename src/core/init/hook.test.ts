@@ -71,8 +71,6 @@ const answers: InterviewAnswers = {
   sourcePaths: ["src/**"],
   strictPaths: [],
   stack: "TypeScript on Node.",
-  conventions: [],
-  opinions: [],
 };
 
 describe("planInit — the enforcement surface ships with the definitions", () => {

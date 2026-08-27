@@ -45,15 +45,17 @@ catch it.
 answers it in place. You are not the one filling it in. Your job is sections 2b and 3:
 be the one who argues about the answers before they are written.
 
-## 2b. Offer the opinions, and let them say no
+## 2b. Say what arrived switched off
 
-The interview's last question lists rules no repo declares, each with the friction that
-earned it somewhere else. `wst opinion` prints them.
+`init` writes one check the repo did not ask for: `comment-density`, `enabled: false`,
+with the signal that earned it elsewhere in its `origin`. It is an offer sitting in the
+file tree, not a rule. Run `wst check` and it shows as `off`; `wst check run
+comment-density` runs it once without enabling anything.
 
-Read them out and let the human choose. **Nothing is pre-selected, and you may not
-answer this one for them.** A draft arriving with an opinion chosen is the model
-deciding what a project owes. Whatever they pick is seeded at `warn`: it was earned
-elsewhere, and it earns `block` here by catching something here.
+**Point at it and move on. Do not turn it on for them.** It is off precisely because
+the day `init` runs is the day the answer to "do you want a comment ceiling?" is "I do
+not know yet". Deleting `enabled: false` is a decision the repo makes the first time
+the friction shows up.
 
 ## 3. Draft the answers, then argue about them
 

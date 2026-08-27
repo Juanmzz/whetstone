@@ -1,11 +1,11 @@
 /**
- * This repo's own invocation of the `comment-density` opinion.
+ * This repo's own invocation of `comment-density`.
  *
- * The logic is in `src/core/opinions/` and the runner in `src/commands/opinion.ts`,
- * so a bootstrapped repo gets `wst opinion comment-density` and this one gets the
+ * The logic is in `src/core/checks/` and the runner in `src/commands/run.ts`, so a
+ * bootstrapped repo gets `wst check run comment-density` and this one gets the
  * same code without needing `wst` on PATH inside CI.
  */
 
-import { runOpinion } from "../src/commands/opinion.js";
+import { runShippedCheck } from "../src/commands/run.js";
 
-process.exitCode = await runOpinion("comment-density");
+process.exitCode = await runShippedCheck("comment-density");

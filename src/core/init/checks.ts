@@ -3,8 +3,8 @@
  */
 
 import type { Check } from "../checks/schema.js";
+import { MAX_PERCENT } from "../checks/comment-density.js";
 import { DEFINITION_DIR } from "../paths.js";
-import { opinionById } from "../opinions/index.js";
 import { yamlBlock, yamlList, yamlString, type GeneratedFile } from "./artifact.js";
 import type { StackFacts } from "./detect.js";
 
@@ -21,8 +21,6 @@ export interface SeedChecksOptions {
   readonly agentLens?: boolean;
   /** What the caller ASKED for. `block` is clamped; see rule 2 above. */
   readonly agentLensSeverity?: Check["severity"];
-  /** Ids the human said yes to. An id nobody ships is ignored, never written. */
-  readonly opinions?: readonly string[];
 }
 
 interface Draft {
@@ -38,6 +36,8 @@ interface Draft {
   readonly enabled?: false;
   /** Written only to REFUSE a receipt, where the answer depends on the range. */
   readonly skippable?: false;
+  /** The signals that earned this rule elsewhere. Empty means nothing did. */
+  readonly origin?: readonly string[];
   readonly reviewLens?: string;
   readonly calibrationDate?: string;
   readonly body: string;
@@ -72,10 +72,11 @@ function render(draft: Draft): GeneratedFile {
       `  detail: ${yamlString(`seeded ${draft.calibrationDate}; never measured. Run \`wst calibrate\` before raising severity.`)}`,
     );
   }
-  // Empty `origin` is the schema's word for "unearned". Seeded checks are exactly
-  // that: nothing in this repo's history asked for them yet. The retro replaces
-  // this with real signal ids the first time one of them catches something.
-  lines.push("origin: []", "version: 1", "---", "", draft.body.trim(), "");
+  // Empty `origin` is the schema's word for "unearned": nothing in THIS repo's
+  // history asked for the check yet, which is true of everything read off a
+  // declared script. A rule Whetstone brings names the signal that earned it
+  // somewhere else, and that field is the whole difference between the two.
+  lines.push(`origin: ${yamlList(draft.origin ?? [])}`, "version: 1", "---", "", draft.body.trim(), "");
 
   return { path: `${DEFINITION_DIR}/checks/${draft.id}.md`, contents: lines.join("\n") };
 }
@@ -176,26 +177,11 @@ export function seedChecks(
     drafts.push(agentLensDraft(options));
   }
 
-  // Opinions LAST, and only the ones named. An id nobody ships is dropped rather
-  // than written: a check whose runner does not exist fails on every run, for a
-  // reason that has nothing to do with the code it judges.
-  for (const id of options.opinions ?? []) {
-    const opinion = opinionById(id);
-    if (opinion === null) continue;
-    drafts.push({
-      id: opinion.id,
-      description: opinion.title,
-      kind: "deterministic",
-      // Earned somewhere else. Promote it once it has caught something here, the
-      // same way `test` waits for its first green gate.
-      severity: "warn",
-      tiers: ["strict", "light"],
-      include,
-      command: opinion.command,
-      ...(opinion.skippable ? {} : { skippable: false as const }),
-      body: `${opinion.body}\n\n**Why it exists:** ${opinion.friction} (${opinion.origin.join(", ")})`,
-    });
-  }
+  // LAST, and only where a typecheck script was declared: the runner reads `.ts`
+  // and nothing else, so seeding it beside a Python repo writes a check that can
+  // never see a file. adr-0016 allows this, since a declared script is a fact and
+  // not a guess off file extensions.
+  if (stack.commands.typecheck !== null) drafts.push(commentDensityDraft(include));
 
   return drafts.map(render);
 }
@@ -250,5 +236,54 @@ function agentLensDraft(options: SeedChecksOptions): Draft {
       "**When it fails:** read the named input. If the lens cannot point at a concrete value " +
       "that misbehaves, the lens is wrong, not the code. Record that, because a pattern of " +
       "false positives is the evidence that retires this check or rewrites its prompt.",
+  };
+}
+
+
+/**
+ * The one rule Whetstone brings rather than reads (adr-0030).
+ *
+ * It is `enabled: false`. A repo that gains a check nobody asked for is the "pile
+ * of config from guesses" adr-0016 exists to prevent, and a check that never runs
+ * cannot be that. What it is instead is an offer sitting where the friction will
+ * be felt, rather than a question asked on the day the answer is "I do not know
+ * yet".
+ */
+function commentDensityDraft(include: readonly string[]): Draft {
+  return {
+    id: "comment-density",
+    description: "A change adds more code than commentary about it.",
+    kind: "deterministic",
+    // Earned somewhere else. It stays off until somebody here wants it, and it
+    // stays at `warn` after that until it has caught something.
+    severity: "warn",
+    tiers: ["strict", "light"],
+    include,
+    command: "wst check run comment-density",
+    enabled: false,
+    // The answer depends on the range, not on the contents of a file, so a
+    // receipt from an earlier run proves nothing about this one.
+    skippable: false,
+    origin: ["sig-4a2610fb"],
+    body:
+      "**Seeded OFF.** Nothing in this repo asked for it. It is here because it was earned " +
+      "elsewhere and it is as true in a payments API as it was there: a rule stated twice, " +
+      "applied by hand once, and back two days later on a branch written by the same person " +
+      "who applied it. Nothing held it, which is `sig-4a2610fb`.\n\n" +
+      "**To turn it on:** delete `enabled: false`. It reads `.ts` files only.\n\n" +
+      "Comments belong where the code cannot be made clear on its own. History, a rejected " +
+      "alternative, and what a module used to do belong in the commit body or in the " +
+      "decision record. A comment that recounts a change is stale the moment the next one " +
+      "lands.\n\n" +
+      "**It reads the diff, not the tree.** One branch at 33% moves a repo average by a " +
+      "tenth of a point and passes, so the rule is not expressible over a whole checkout.\n\n" +
+      `**The ceiling was measured, not chosen**, over thirty commits of the repo this came ` +
+      `from: 19, 20, 21, 22, 29, 30, 39, 39, 47. ${String(MAX_PERCENT)} sits in the gap. Move it here, ` +
+      "where the next reader can see that you did.\n\n" +
+      "**What it refuses to judge:** a change with fewer than fifteen added lines, and one " +
+      "that removes at least as many comment lines as it adds in the files it also added to. " +
+      "Without the second, a commit that CLEANS comments scores 100%.\n\n" +
+      "**When it fails:** cut the commentary, do not raise the ceiling. If the comment is " +
+      "the only thing making the code readable, the code is what needs the change.",
   };
 }
