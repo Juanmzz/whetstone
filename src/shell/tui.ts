@@ -96,6 +96,15 @@ export function restore(out: NodeJS.WriteStream): void {
 }
 
 /**
+ * Wipe the screen and leave the cursor visible, for handing the terminal back to
+ * a command that prints normally. `paint` hides the cursor, which is right while
+ * a menu owns the screen and wrong the moment anything else does.
+ */
+export function clear(out: NodeJS.WriteStream): void {
+  out.write(`${CLEAR}${SHOW}`);
+}
+
+/**
  * Play frames, and stop the moment anything is pressed.
  *
  * The skip is the whole reason this is allowed to exist: an entrance you

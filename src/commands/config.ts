@@ -30,7 +30,15 @@ function skillsIn(text: string, active: readonly string[]): readonly SkillState[
   return ids.map((id) => ({ id, active: on.has(id) }));
 }
 
-export async function runConfig(cwd: string): Promise<number> {
+export interface ConfigOptions {
+  /**
+   * Whether to play the entrance. False when something already did: reaching
+   * this from the home screen would otherwise cost a second skip for one open.
+   */
+  readonly entrance?: boolean;
+}
+
+export async function runConfig(cwd: string, opts: ConfigOptions = {}): Promise<number> {
   const root = await createGitAdapter(cwd).repoRoot();
   if (root === null) {
     console.error("not inside a git repository; wst.yaml lives in one, so it needs one");
@@ -68,7 +76,7 @@ export async function runConfig(cwd: string): Promise<number> {
   });
 
   try {
-    await play(process.stdout, keys, honingFrames(MARK));
+    if (opts.entrance !== false) await play(process.stdout, keys, honingFrames(MARK));
 
     for (;;) {
       // Menu only: the skills list plus the mark is exactly a default terminal.

@@ -20,6 +20,7 @@ import {
   buildStatusReport,
   renderStatusReport,
   WHETSTONE_HOOKS_PATH,
+  type StatusReport,
 } from "../core/status/report.js";
 
 /**
@@ -106,10 +107,12 @@ async function resolves(binary: string, root: string): Promise<boolean> {
   }
 }
 
-export async function runStatus(
-  cwd: string = process.cwd(),
-  options: { readonly quiet?: boolean; readonly json?: boolean } = {},
-): Promise<number> {
+/**
+ * The facts, gathered once. Exported because `wst` with no arguments opens a
+ * screen built from the same report: two ways to compute "what this repo has"
+ * is two answers that drift.
+ */
+export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusReport> {
   const git = createGitAdapter(cwd);
   const repoRoot = await git.repoRoot();
   const judge = await resolveJudge(definitionRoot(repoRoot ?? cwd));
@@ -117,7 +120,7 @@ export async function runStatus(
 
   const hookRoot = pluginHookRoot(cwd);
 
-  const report = buildStatusReport({
+  return buildStatusReport({
     repoRoot,
     branch,
     definitionPresent: await exists(definitionRoot(repoRoot ?? cwd)),
@@ -136,6 +139,13 @@ export async function runStatus(
     nodeVersion: process.version,
     missingTools: await missingTools(repoRoot ?? cwd),
   });
+}
+
+export async function runStatus(
+  cwd: string = process.cwd(),
+  options: { readonly quiet?: boolean; readonly json?: boolean } = {},
+): Promise<number> {
+  const report = await gatherStatus(cwd);
 
   // `--json` for the reader that is not a person. The init skill tells an agent to
   // run this FIRST, and until now the answer came back as English — so any wording
