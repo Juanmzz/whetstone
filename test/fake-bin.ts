@@ -2,10 +2,10 @@
  * A stand-in executable on `PATH`, for the adapters that spawn one.
  *
  * `src/shell/` is integration-tested rather than unit-tested (triage-rules.md), and
- * four of its adapters — `claude.ts`, `crewmate.ts`, `plugin.ts`, `treehouse.ts` —
- * do their whole job in the arguments and the working directory they hand to a
- * child process. None of that is a return value, so nothing about it can be
- * asserted from the outside without a child that reports what it received.
+ * three of its adapters — `claude.ts`, `antigravity.ts`, `plugin.ts` — do their
+ * whole job in the arguments and the working directory they hand to a child
+ * process. None of that is a return value, so nothing about it can be asserted
+ * from the outside without a child that reports what it received.
  *
  * PATH is used rather than an injected spawn function on purpose: the seam under
  * test is `execFile("claude", args, { cwd })` exactly as it ships, flag order and
