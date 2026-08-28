@@ -20,11 +20,7 @@ import { appendSignals } from "../shell/signals.js";
 import { resolveMemory } from "../shell/memory.js";
 import { checkEnv } from "../core/gate/env.js";
 import { fastOnly } from "../core/gate/select.js";
-import {
-  runGate as executeGate,
-  type CheckRunner,
-  type ReceiptStore,
-} from "../core/gate/run.js";
+import { runGate as executeGate, type CheckRunner } from "../core/gate/run.js";
 import {
   LensVerdictSchema,
   interpretCommandResult,
@@ -38,7 +34,7 @@ import type { JudgeResult, LlmJudge } from "../core/ports.js";
 import { classify, route } from "../core/triage/index.js";
 import { resolveJudges } from "../shell/judge.js";
 import { createGitAdapter, gitEnv } from "../shell/git.js";
-import { readReceipt, writeReceipt } from "../shell/receipts.js";
+import { createDistrustfulReceiptStore, createReceiptStore } from "../shell/receipts.js";
 import {
   loadRegistry,
   loadTriageRules,
@@ -162,34 +158,6 @@ function unifiedDiff(range: string, paths: readonly string[], cwd: string): Prom
       (error, stdout) => (error === null ? resolve(stdout) : reject(error)),
     );
   });
-}
-
-function createReceiptStore(definitionRoot: string): ReceiptStore {
-  return {
-    read: (checkId) => readReceipt(definitionRoot, checkId),
-    write: async (receipt) => {
-      await writeReceipt(definitionRoot, receipt);
-    },
-  };
-}
-
-/**
- * A store that remembers nothing, for a gate that must not take the subject's word.
- *
- * Exported so a second caller uses THIS rather than deciding for itself what "do not
- * trust the worker's cache" means — the same reason `createCheckRunner` is exported.
- * Three bugs in this codebase were one rule implemented twice and drifting.
- *
- * That second caller was `wst run`, which gated a crewmate inside the crewmate's own
- * worktree. ADR-0014 deleted that half of the command, so `--no-receipts` is the only
- * consumer now. The export stays for the reason above: the day something else needs to
- * distrust a receipt, it must not reimplement this.
- */
-export function createDistrustfulReceiptStore(): ReceiptStore {
-  return {
-    read: async () => null,
-    write: async () => undefined,
-  };
 }
 
 /**

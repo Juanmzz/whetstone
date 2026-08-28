@@ -136,7 +136,7 @@ built under that waiver and removed by ADR-0009.
 - **Unowned:** `npm run check:in-force` lists what is decided and not yet true of the
   code, so this line no longer keeps it by hand. Beyond that: no skill owns
   subprocess-exit-code conventions (a retro proposal was declined for want of a home);
-  **six of the ten checks are Whetstone-only**: `adr-refs`, `docs-fresh`, `in-force`, `provenance`,
-  `skill-shape` and `strict-tdd` enforce this repo's own discipline, `init` seeds none of them, and
+  **seven of the eleven checks are Whetstone-only**: `adr-refs`, `command-surface`, `docs-fresh`,
+  `in-force`, `provenance`, `skill-shape` and `strict-tdd` enforce this repo's own discipline, `init` seeds none of them, and
   nobody has asked what each last caught; and nothing says what the signal log does after two
   years of appending.
