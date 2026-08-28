@@ -19,6 +19,7 @@ import {
 } from "../core/retro/propose.js";
 import { createGitAdapter } from "../shell/git.js";
 import { resolveJudge } from "../shell/judge.js";
+import { startSpinner } from "../shell/spinner.js";
 import { appendRetroLogStub, countRetros, readCursor, writeProposals } from "../shell/retro.js";
 import { resolveMemory } from "../shell/memory.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
@@ -160,10 +161,13 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   const rejected: { rec: Recommendation; reasons: readonly string[] }[] = [];
   let cost = 0;
 
-  // One line per cluster, not one for the whole loop.
+  // One line per cluster, not one for the whole loop. The line is LIVE while the
+  // judge is out: a printed cluster key followed by silence for as long as a
+  // model takes is indistinguishable from a hang (adr-0028).
   console.log(`\n  proposing over ${actionable.length} cluster(s)...`);
   for (const [index, cluster] of actionable.entries()) {
-    console.log(`    [${index + 1}/${actionable.length}] ${cluster.key}`);
+    const at = `[${index + 1}/${actionable.length}] ${cluster.key}`;
+    const spinner = startSpinner(process.stdout, at);
     const result = await judge.judge({
       lens: LENS,
       prompt: await describeCluster(cluster, definitionRoot, skillIndex),
@@ -174,10 +178,10 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
     cost += result.costUsd;
 
     if (!result.ok) {
-      console.log(`        no proposal (${result.error.kind}) · $${cost.toFixed(4)} so far`);
+      spinner.stop(`  ${at}  no proposal (${result.error.kind})`);
       continue;
     }
-    console.log(`        proposed · $${cost.toFixed(4)} so far`);
+    spinner.stop(`  ${at}  proposed`);
 
     const rec: Recommendation = { clusterKey: cluster.key, ...result.value };
     // THE ANTI-POISONING GATE. Validated against the FULL log, not the cluster,
