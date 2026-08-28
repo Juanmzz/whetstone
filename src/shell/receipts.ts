@@ -11,6 +11,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { parseReceipt, receiptFileName, type Receipt } from "../core/receipts/receipt.js";
+import type { ReceiptStore } from "../core/gate/run.js";
 
 export const RECEIPTS_DIR = "receipts";
 
@@ -56,4 +57,32 @@ export async function writeReceipt(definitionRoot: string, receipt: Receipt): Pr
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf-8");
   return path;
+}
+
+/** The receipt store the gate runs on: one JSON file per check under `.wst/receipts/`. */
+export function createReceiptStore(definitionRoot: string): ReceiptStore {
+  return {
+    read: (checkId) => readReceipt(definitionRoot, checkId),
+    write: async (receipt) => {
+      await writeReceipt(definitionRoot, receipt);
+    },
+  };
+}
+
+/**
+ * A store that remembers nothing, for a gate that must not take the subject's word.
+ *
+ * Exported so a second caller uses THIS rather than deciding for itself what "do not
+ * trust the worker's cache" means. Three bugs in this codebase were one rule
+ * implemented twice and drifting.
+ *
+ * That second caller was `wst run`, which gated a crewmate inside the crewmate's own
+ * worktree. ADR-0014 deleted that half of the command, so `--no-receipts` is the only
+ * consumer now. The export stays for the reason above.
+ */
+export function createDistrustfulReceiptStore(): ReceiptStore {
+  return {
+    read: async () => null,
+    write: async () => undefined,
+  };
 }
