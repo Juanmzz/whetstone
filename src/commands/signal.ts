@@ -8,7 +8,7 @@ import { DEFINITION_DIR } from "../core/paths.js";
 import { resolveDefinitionRoot } from "../shell/sdd.js";
 import { readFile } from "node:fs/promises";
 import { readForeignFindings } from "../core/signals/foreign.js";
-import { humanSignal } from "../core/signals/human.js";
+import { DEFAULT_PHASE, DEFAULT_SEVERITY, humanSignal } from "../core/signals/human.js";
 import { createGitAdapter } from "../shell/git.js";
 import { resolveMemory } from "../shell/memory.js";
 
@@ -28,23 +28,6 @@ export interface SignalOptions {
   readonly tool?: string;
 }
 
-/**
- * `other` is in the spec's vocabulary and is the honest answer when nobody said.
- * Guessing a phase would put a fabricated fact in a permanent record to save one
- * flag.
- *
- * EXPORTED because `cli.ts` hands it to Commander as the flag's default, so the
- * help text and the fallback here cannot drift into two different answers. There
- * was a literal `"other"` in each place and nothing to notice when they diverged.
- */
-export const DEFAULT_PHASE = "other";
-/**
- * The middle of the scale. `high` is deliberately not the default: `clusterSignals`
- * treats a lone `high` as actionable on its own, so defaulting to it would let an
- * unconsidered flag drive a rule proposal by itself. Exported for the same reason
- * as `DEFAULT_PHASE`.
- */
-export const DEFAULT_SEVERITY = "medium";
 
 const EXIT_MISCONFIGURED = 2;
 /** A rejected observation and a failed write both mean: nothing was recorded. */

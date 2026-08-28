@@ -2,12 +2,12 @@
 id: command-surface
 description: A file in src/commands/ exports one thing, its run* function.
 kind: deterministic
-severity: warn
+severity: block
 tiers: [strict, light]
 include:
   - "src/commands/**/*.ts"
 command: npm run check:command-surface
-origin: [adr-0008]
+origin: [adr-0008, adr-0037]
 version: 1
 ---
 
@@ -32,13 +32,13 @@ compile time, reachable as nothing, and read by `cli.ts` to type its own flags. 
 reported nine files where four have a problem, and a check that is wrong five times out of
 nine is one people learn to skip past.
 
-**Why `warn` and not `block`.** Four of the eleven files fail it today, and each has a
-concrete destination: `gate.ts` exports `createCheckRunner`, `init.ts` exports four helpers,
-`signal.ts` exports two defaults, `status.ts` exports `gatherStatus` so `home.ts` can reuse
-it. None is a large move and none is this change. A check that is red on arrival and cannot
-be made green gets routed around; this one names four files and what to do with each.
-**Promote it to `block` once those four are paid**, which is a human's signature on a line
-that will hold.
+**It blocks, and it earned that by being green.** It arrived at `warn` over four failing
+files, each with a destination: `createCheckRunner` and the two process adapters around it to
+`shell/check-runner.ts`, `init.ts`'s repo reading to `shell/repo-facts.ts` and its payload
+reading to `shell/payload.ts`, `signal.ts`'s two defaults to `core/signals/human.ts` beside
+the scale they belong to, and `gatherStatus` with the whole of `status.ts`'s reading to
+`shell/status.ts`. All eleven files pass now. A deterministic check over a line that holds may
+block freely; the reason it waited was that it was red, not that it was uncertain.
 
 **When it fails:** move the export, do not delete it. An adapter goes to `src/shell/`,
 policy goes to `src/core/` where a test can reach it, and a helper only one command uses

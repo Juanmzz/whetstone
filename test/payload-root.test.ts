@@ -10,7 +10,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PACKAGE_NAME } from "../src/commands/init.js";
+import { PACKAGE_NAME } from "../src/shell/payload.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 

@@ -12,7 +12,9 @@ import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { banner } from "../banner.js";
-import { createGitAdapter, gitEnv } from "../shell/git.js";
+import { createGitAdapter } from "../shell/git.js";
+import { gatherFacts } from "../shell/repo-facts.js";
+import { findPayloadRoot, readSkills } from "../shell/payload.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import { openInterview, pressIn, renderInterview } from "../core/tui/interview.js";
@@ -83,89 +85,6 @@ export interface InitOptions {
   readonly definitionsOnly?: boolean;
 }
 
-// ── gathering facts ──────────────────────────────────────────────────────────
-
-/**
- * The walk. How deep it goes is `core/init/walk.ts`'s decision, not this file's —
- * the budget restarts at every package manifest, so a monorepo's packages are each
- * read as deeply as a flat repo is.
- *
- * The directory is READ before its depth is judged, because the manifest that
- * restarts the budget is one of the entries. That costs one `readdir` at each
- * boundary and buys the walker its only view of where a package begins.
- */
-async function listFiles(root: string): Promise<string[]> {
-  const found: string[] = [];
-
-  async function walk(dir: string, rel: string, depth: number): Promise<void> {
-    if (found.length >= MAX_FILES) return;
-    let entries;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-
-    const here = walkDepth(
-      depth,
-      entries.filter((entry) => entry.isFile()).map((entry) => entry.name),
-    );
-    if (here === null) return;
-
-    for (const entry of entries) {
-      if (found.length >= MAX_FILES) return;
-      const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
-      if (entry.isDirectory()) {
-        if (skipDir(entry.name)) continue;
-        await walk(join(dir, entry.name), childRel, here + 1);
-      } else {
-        found.push(childRel);
-      }
-    }
-  }
-
-  await walk(root, "", 0);
-  return found;
-}
-
-async function readPackageJson(root: string): Promise<PackageJson | null> {
-  try {
-    // A malformed package.json is indistinguishable from an absent one for our
-    // purposes: neither can be trusted to name a command that exists.
-    return JSON.parse(await readFile(join(root, "package.json"), "utf-8")) as PackageJson;
-  } catch {
-    return null;
-  }
-}
-
-async function git(args: string[], cwd: string): Promise<string | null> {
-  try {
-    const { stdout } = await run("git", args, { cwd, env: gitEnv(), maxBuffer: 8 * 1024 * 1024 });
-    return stdout.trim();
-  } catch {
-    return null;
-  }
-}
-
-export async function gatherFacts(root: string): Promise<RepoFacts> {
-  const [files, packageJson, log, shortlog] = await Promise.all([
-    listFiles(root),
-    readPackageJson(root),
-    git(["log", "-n", "40", "--pretty=format:%s"], root),
-    git(["shortlog", "-sne", "HEAD"], root),
-  ]);
-
-  const contributors =
-    shortlog === null ? null : shortlog.split("\n").filter((l) => l.trim().length > 0).length;
-
-  return {
-    repoName: root.split("/").filter(Boolean).pop() ?? "project",
-    files,
-    packageJson,
-    commitSubjects: log === null ? [] : log.split("\n").filter((s) => s.trim().length > 0),
-    contributors: contributors === 0 ? null : contributors,
-  };
-}
 
 // ── answers ──────────────────────────────────────────────────────────────────
 
@@ -293,68 +212,6 @@ function printPlan(plan: InitPlan, root: string): void {
 
 // ── writing ──────────────────────────────────────────────────────────────────
 
-/**
- * Whetstone's own payload directory, holding the skills copied verbatim into the
- * target. Located by walking up from this module rather than by a hard-coded
- * relative path, so it works the same from `src/` under tsx and from `dist/`
- * after a build.
- *
- * IT MUST STOP AT WHETSTONE'S OWN PACKAGE ROOT. Installed as a dependency the
- * module sits at `<target>/node_modules/whetstone/dist/commands/`, and an unbounded
- * walk escapes the package and finds `<target>/.wst/skills` — the TARGET's skills.
- * `init` would then copy a project's own skills back onto itself and report success,
- * which looks exactly like a correct bootstrap. So the walk is bounded by the
- * package.json that declares this package, and never crosses a node_modules boundary.
- */
-/** Checked against package.json by `test/payload-root.test.ts`: a rename here
- * that misses the manifest makes `init` copy no skills and say so only in an
- * exit code. */
-export const PACKAGE_NAME = "@juanmzz/whetstone";
-
-/**
- * Whetstone's own skills, keyed by their `from` path.
- *
- * Read here rather than at write time because `planInit` audits them: a skill is
- * copied verbatim into a repo that has never heard of Whetstone, so a sentence in
- * one naming `docs/PARALLEL.md` dangles there. An empty map is a legitimate
- * result — a published package without its payload — and produces "not audited",
- * which is a violation, not a pass.
- */
-export async function readSkills(payloadRoot: string | null): Promise<ReadonlyMap<string, string>> {
-  const texts = new Map<string, string>();
-  if (payloadRoot === null) return texts;
-  for (const copy of skillCopies()) {
-    try {
-      texts.set(copy.from, await readFile(join(payloadRoot, copy.from), "utf-8"));
-    } catch {
-      /* absent here is the same as unreadable: reported, not passed */
-    }
-  }
-  return texts;
-}
-
-export async function findPayloadRoot(): Promise<string | null> {
-  let dir = import.meta.dirname;
-  for (;;) {
-    // Reached this package's own root? Answer from here, and never look higher.
-    try {
-      const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf-8")) as {
-        name?: string;
-      };
-      if (pkg.name === PACKAGE_NAME) {
-        const root = join(dir, DEFINITION_DIR);
-        return (await exists(join(root, "skills"))) ? root : null;
-      }
-    } catch {
-      /* no package.json here — keep walking */
-    }
-
-    const parent = dirname(dir);
-    // Never step out of the installed package into the consuming project.
-    if (parent === dir || basename(dir) === "node_modules") return null;
-    dir = parent;
-  }
-}
 
 /**
  * Which of the plan's target paths are already on disk.

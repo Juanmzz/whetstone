@@ -15,7 +15,8 @@ import { runConfig } from "./config.js";
 import { runGate } from "./gate.js";
 import { runInit } from "./init.js";
 import { runRetro } from "./retro.js";
-import { gatherStatus, runStatus } from "./status.js";
+import { runStatus } from "./status.js";
+import { gatherStatus } from "../shell/status.js";
 import { runTriage } from "./triage.js";
 import { runUpdate } from "./update.js";
 
