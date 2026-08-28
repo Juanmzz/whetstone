@@ -7,11 +7,12 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { MARK } from "../banner.js";
 import { honingFrames } from "../core/tui/honing.js";
 import { editConfig } from "../core/config/edit.js";
 import { parseConfig } from "../core/config/schema.js";
+import { summaryOf } from "../core/config/skills.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { initialState, press, render, type SkillState } from "../core/tui/model.js";
 import { CONFIG_FILE } from "../shell/config.js";
@@ -19,15 +20,33 @@ import { createGitAdapter } from "../shell/git.js";
 import { paint, play, rawKeys, restore } from "../shell/tui.js";
 import { parse as parseYaml } from "yaml";
 
-/** Every skill the config mentions, active or commented out. */
-function skillsIn(text: string, active: readonly string[]): readonly SkillState[] {
+/**
+ * Every skill the config mentions, active or commented out, each carrying the
+ * line its own file says about it.
+ *
+ * A skill whose file is missing gets an empty summary rather than being dropped:
+ * it is listed in `wst.yaml`, and hiding it here would hide the reason the
+ * emitter is about to fail.
+ */
+async function skillsIn(
+  text: string,
+  active: readonly string[],
+  definitionRoot: string,
+): Promise<readonly SkillState[]> {
   const on = new Set(active);
   const ids: string[] = [];
   for (const line of text.split("\n")) {
     const m = /^\s*(?:#\s*)?-\s*(skills\/\S+)\s*$/.exec(line);
     if (m?.[1] !== undefined) ids.push(m[1]);
   }
-  return ids.map((id) => ({ id, active: on.has(id) }));
+
+  return Promise.all(
+    ids.map(async (id) => ({
+      id,
+      active: on.has(id),
+      summary: summaryOf(await readFile(join(definitionRoot, id), "utf-8").catch(() => "")),
+    })),
+  );
 }
 
 export interface ConfigOptions {
@@ -59,7 +78,10 @@ export async function runConfig(cwd: string, opts: ConfigOptions = {}): Promise<
   const declared = (raw as { skills?: unknown }).skills;
   const active = Array.isArray(declared) ? declared.filter((s) => typeof s === "string") : [];
 
-  let state = initialState({ agent: config.agent, skills: skillsIn(text, active) });
+  let state = initialState({
+    agent: config.agent,
+    skills: await skillsIn(text, active, dirname(path)),
+  });
 
   if (!process.stdin.isTTY) {
     // Printing the screen is the honest degradation: it says what the settings
@@ -87,15 +109,11 @@ export async function runConfig(cwd: string, opts: ConfigOptions = {}): Promise<
 
       if (result.action.kind === "quit") return 0;
       if (result.action.kind === "save") {
-        const next = editConfig(text, {
-          agent: result.action.agent,
-          skills: result.action.skills,
-        });
-        await writeFile(path, next, "utf-8");
-        keys.close();
-        restore(process.stdout);
-        console.log(`wrote ${DEFINITION_DIR}/${CONFIG_FILE}`);
-        return 0;
+        // `text` is REPLACED, not kept. Each edit is applied to what the file
+        // says now, so the second toggle of a session does not rewrite over the
+        // first one from a copy taken before it.
+        text = editConfig(text, { agent: result.action.agent, skills: result.action.skills });
+        await writeFile(path, text, "utf-8");
       }
     }
   } finally {

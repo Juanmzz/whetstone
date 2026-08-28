@@ -756,7 +756,7 @@ directory whose whole claim is that everything in it is real. It is one file, it
 first line that it is off and what turns it on, and it is only seeded where a typecheck
 script was declared, since the runner reads `.ts` files and nothing else.
 ### adr-0031 — bare `wst` opens a launcher, and the command it picks runs in the terminal
-`accepted` · 2026-08-27
+`superseded by adr-0032` · 2026-08-27
 
 `wst` with no arguments printed its help, which is a list of nine things with no
 indication of which of them this repo can do. A fresh clone and a fully bootstrapped one
@@ -794,4 +794,84 @@ Cost accepted: one more surface that can drift from what the commands actually d
 the row descriptions are prose beside a dispatch table. Both live in one file and the
 table is exhaustive over the command union, so a new command fails to compile until it
 has a row.
+
+### adr-0032 — the launcher comes back, and the one command that spends money asks first
+`accepted` · 2026-08-28
+
+adr-0031 stands except for its ending. The command still runs in the terminal rather than
+inside the screen, still prints a report a pipe can read, still is the same function a hook
+calls. What it got wrong is what happens after: the screen exited, so running `triage` and
+then `gate`, which is the pair somebody actually runs, meant opening `wst` twice. Reported
+three times in one sitting, once per command.
+
+So: the run's output stays on screen until a key is pressed, and then the menu is redrawn
+from a re-read status. The re-read is not a detail. `init` is the row that makes seven other
+rows available, and a menu that came back stale would still be telling you to run it.
+
+The exit code is SHOWN, not returned. Nobody scripts a menu, and the report on screen has
+already said what happened; the number is there because it is what a hook would have seen.
+
+And `wst retro` asks before it starts. It is the one command here that calls a model, once
+per cluster, for minutes. From a command line you typed it; from a menu row it is an arrow
+and an enter, surrounded by rows that cost nothing. The question names the model and the
+number of calls. Skipped where stdin is not a terminal and by `--yes`, because a script
+blocked on a prompt it cannot see is worse than the bill it was guarding.
+
+Rejected: keeping the exit, and the reason is now measured rather than argued. Two of the
+three commands reported as awkward were awkward for this and not for their output.
+
+Rejected: returning the command's exit code from the launcher. It makes the code depend on
+which row was picked last, which is a number about a session and not about a verdict.
+
+Rejected: repainting the menu the moment the command returns. It is the same as not printing
+the report, and it is exactly what `gate` must never do.
+
+Rejected: putting the confirmation in the launcher rather than in `retro`. Then `wst retro`
+typed out spends without asking and the same command has two behaviours, which is what
+adr-0031 refused for `gate`.
+
+Cost accepted: `wst` is now a session rather than a one-shot, so it holds a terminal until
+somebody quits it. The reader is released on every handoff, which is the part that would
+have broken `init` and `config`.
+
+### adr-0033 — a setting is written when it is changed, and the row says what the command does
+`accepted` · 2026-08-28
+
+Three notes from one sitting of using the TUI, and all three are the same complaint: the
+screen makes you guess.
+
+**`wst config` writes on the keypress.** A checkbox that flips and then waits to be saved is
+a checkbox that already looked done. The `s` key, the dirty flag and the confirm-on-quit
+screen are gone; what replaces them is one line saying what was just written. The guard that
+survives is narrower and real: picking the judge that was already picked writes nothing,
+because a file rewritten with identical bytes is still a tool that touched a config nobody
+asked it to.
+
+**Every launcher row carries a detail.** `wst --help` already gives one line each, so a menu
+that gives one line each is help with arrow keys. Under the cursor a row now says what the
+command reads, what it writes, and what its exit code means. That is the launcher's whole
+claim over typing the command: somebody choosing between `triage` and `gate` has to know
+that one of them runs nothing and the other can block a push, and no page said so.
+
+**`gate` gets ONE live line, not one per check.** adr-0028's heartbeat printed a new line
+every ten seconds, which is proof of life and not a sense of progress. A spinner per check
+was tried in an earlier version and reverted, and the reason is recorded in
+`core/gate/progress.test.ts`: the deterministic checks run concurrently under one
+`Promise.all`, so three of them rewriting the same line mangle each other. The line is
+therefore owned by a single writer that knows the whole set: `running: test, typecheck
+(12.3s)`, with each result printed above it as it lands.
+
+Rejected: keeping the save key as well, for the person who wants a batch. Two ways to write
+one file, and the one that does nothing until told is the one that loses work.
+
+Rejected: an undo. Git is the undo, the file is tracked, and a second history of a
+two-setting file is apparatus.
+
+Rejected: hiding the detail behind a key. The information is the reason the row exists.
+
+Rejected: giving each check its own line to animate. It is what the earlier version did, and
+the test that documents its failure is still there.
+
+Cost accepted: `config` can no longer be opened to look at without the risk of writing on a
+stray keypress. It is two settings in a tracked file, and `git diff` shows what happened.
 

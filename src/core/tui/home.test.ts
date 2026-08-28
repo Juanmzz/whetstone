@@ -93,16 +93,13 @@ describe("pressHome", () => {
     expect(pressHome(open(), "up").state.cursor).toBe(0);
   });
 
-  it("refuses an unavailable row and says why instead of running it", () => {
+  it("refuses to run an unavailable row", () => {
     const rows = homeRows(report());
     const at = rows.findIndex((r) => !r.available);
     let state = open();
     for (let i = 0; i < at; i++) state = pressHome(state, "down").state;
 
-    const pressed = pressHome(state, "return");
-
-    expect(pressed.action.kind).toBe("none");
-    expect(pressed.state.complaint).toBe(rows[at]?.note);
+    expect(pressHome(state, "return").action.kind).toBe("none");
   });
 
   it("quits on q and on escape", () => {
@@ -110,9 +107,9 @@ describe("pressHome", () => {
     expect(pressHome(open(), "escape").action).toEqual({ kind: "quit" });
   });
 
-  it("clears a complaint as soon as the cursor moves", () => {
-    const complained = { ...open(), complaint: "nope" };
-    expect(pressHome(complained, "down").state.complaint).toBeNull();
+  it("keeps every row on the list, available or not", () => {
+    // A command that disappears reads as one that does not exist.
+    expect(homeRows(report()).length).toBe(homeRows(report({ definitionPresent: false })).length);
   });
 });
 
@@ -130,10 +127,61 @@ describe("renderHome", () => {
     expect(screen).toMatch(/init/);
   });
 
-  it("shows the complaint when there is one", () => {
-    const screen = renderHome({ ...open(), complaint: "needs a .wst/" }).join("\n");
-    expect(screen).toContain("needs a .wst/");
+  it("says the reason once, under the cursor, and not also inline", () => {
+    // Both at once is one sentence twice on one screen, and the inline copy ran
+    // off the side of a default terminal.
+    const rows = homeRows(report());
+    const at = rows.findIndex((r) => !r.available);
+    let state = open();
+    for (let i = 0; i < at; i++) state = pressHome(state, "down").state;
+    const note = rows[at]?.note ?? "";
+
+    const screen = renderHome(state).join("\n");
+
+    expect(screen).toContain(note);
+    expect(screen.split(note).length - 1).toBe(1);
+  });
+
+  it("keeps every line inside a default terminal", () => {
+    for (const line of renderHome(open())) expect(line.length).toBeLessThanOrEqual(80);
   });
 
   const open = () => openHome(report());
+});
+
+describe("the row says what the command does, which is what the launcher is for", () => {
+  it("gives every command a detail, not only a one-liner", () => {
+    // `wst --help` already gives one line each. Somebody picking between
+    // `triage` and `gate` needs to know one of them runs nothing.
+    for (const row of homeRows(report())) expect(row.detail.length).toBeGreaterThan(0);
+  });
+
+  it("says what the gate's two failing codes mean, which no other page does", () => {
+    const gate = rowFor("gate")?.detail.join(" ") ?? "";
+    expect(gate).toMatch(/exit 1/);
+    expect(gate).toMatch(/exit 2/);
+    expect(gate).toMatch(/could not/i);
+  });
+
+  it("warns that retro spends money before it is picked, not after", () => {
+    const retro = rowFor("retro")?.detail.join(" ") ?? "";
+    expect(retro).toMatch(/costs money/i);
+    expect(retro).toMatch(/never applies/i);
+  });
+
+  it("says triage runs nothing, which is the whole difference from gate", () => {
+    expect(rowFor("triage")?.detail.join(" ")).toMatch(/nothing runs/i);
+  });
+
+  it("shows a detail for the row under the cursor and no other", () => {
+    const screen = renderHome(openHome(report())).join("\n");
+    const others = homeRows(report()).filter((r) => r.command !== "status");
+    for (const row of others) expect(screen).not.toContain(row.detail[0]);
+  });
+
+  it("keeps every detail line inside a default terminal", () => {
+    for (const row of homeRows(report())) {
+      for (const line of row.detail) expect(line.length).toBeLessThanOrEqual(66);
+    }
+  });
 });

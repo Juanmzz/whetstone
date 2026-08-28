@@ -1,16 +1,15 @@
 /**
- * Bare `wst`: the screen, and then the command it picked.
+ * Bare `wst`: the screen, the command it picked, and the screen again.
  *
- * The pick runs AFTER this returns to a normal terminal, not inside the raw-mode
- * loop. Every command stays exactly what it was on a command line — `gate` still
- * prints a report you can pipe, `init` still opens its own interview — and this
- * is only the thing that chose one.
+ * The pick runs AFTER this returns to a normal terminal, and writes to that
+ * terminal directly, so every command stays what it was on a command line
+ * (adr-0032). This only chooses one.
  */
 
 import { MARK } from "../banner.js";
 import { honingFrames } from "../core/tui/honing.js";
 import { openHome, pressHome, renderHome, type HomeCommand } from "../core/tui/home.js";
-import { clear, paint, play, rawKeys, restore } from "../shell/tui.js";
+import { clear, paint, play, rawKeys, restore, type Keys } from "../shell/tui.js";
 import { runCheck } from "./check.js";
 import { runConfig } from "./config.js";
 import { runGate } from "./gate.js";
@@ -32,17 +31,19 @@ const RUN: Readonly<Record<HomeCommand, (cwd: string) => Promise<number>>> = {
   retro: (cwd) => runRetro({}, cwd),
 };
 
-export async function runHome(cwd: string = process.cwd()): Promise<number> {
-  const report = await gatherStatus(cwd);
-  let state = openHome(report);
-
+function openKeys(): Keys {
   const keys = rawKeys(process.stdin, () => {
     keys.close();
     restore(process.stdout);
     process.exit(130);
   });
+  return keys;
+}
 
-  let picked: HomeCommand | null = null;
+export async function runHome(cwd: string = process.cwd()): Promise<number> {
+  let state = openHome(await gatherStatus(cwd));
+  let keys = openKeys();
+
   try {
     await play(process.stdout, keys, honingFrames(MARK));
 
@@ -51,24 +52,27 @@ export async function runHome(cwd: string = process.cwd()): Promise<number> {
       const result = pressHome(state, await keys.next());
       state = result.state;
 
-      if (result.action.kind === "quit") break;
-      if (result.action.kind === "run") {
-        picked = result.action.command;
-        break;
-      }
+      if (result.action.kind === "quit") return 0;
+      if (result.action.kind !== "run") continue;
+
+      // `init` and `config` open readers of their own, and two raw-mode readers
+      // on one stdin split the keystrokes between them. `clear`, not `paint`:
+      // paint hides the cursor, and what runs next owns the terminal.
+      keys.close();
+      restore(process.stdout);
+      clear(process.stdout);
+
+      const code = await RUN[result.action.command](cwd);
+
+      process.stdout.write(`\n  ${result.action.command} exited ${String(code)} · any key for the menu\n`);
+      keys = openKeys();
+      await keys.next();
+
+      // Re-read: `init` is the row that makes seven other rows available.
+      state = openHome(await gatherStatus(cwd));
     }
   } finally {
-    // Released BEFORE the command runs: `init` and `config` open readers of their
-    // own, and two raw-mode readers on one stdin split the keystrokes between them.
     keys.close();
     restore(process.stdout);
   }
-
-  if (picked === null) return 0;
-
-  // Cleared, so the command's own output is the whole screen rather than the
-  // menu with a report appended under it. Not `paint`: that hides the cursor,
-  // and what runs next owns the terminal.
-  clear(process.stdout);
-  return RUN[picked](cwd);
 }
