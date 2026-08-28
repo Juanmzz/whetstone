@@ -833,3 +833,45 @@ adr-0031 refused for `gate`.
 Cost accepted: `wst` is now a session rather than a one-shot, so it holds a terminal until
 somebody quits it. The reader is released on every handoff, which is the part that would
 have broken `init` and `config`.
+
+### adr-0033 — a setting is written when it is changed, and the row says what the command does
+`accepted` · 2026-08-28
+
+Three notes from one sitting of using the TUI, and all three are the same complaint: the
+screen makes you guess.
+
+**`wst config` writes on the keypress.** A checkbox that flips and then waits to be saved is
+a checkbox that already looked done. The `s` key, the dirty flag and the confirm-on-quit
+screen are gone; what replaces them is one line saying what was just written. The guard that
+survives is narrower and real: picking the judge that was already picked writes nothing,
+because a file rewritten with identical bytes is still a tool that touched a config nobody
+asked it to.
+
+**Every launcher row carries a detail.** `wst --help` already gives one line each, so a menu
+that gives one line each is help with arrow keys. Under the cursor a row now says what the
+command reads, what it writes, and what its exit code means. That is the launcher's whole
+claim over typing the command: somebody choosing between `triage` and `gate` has to know
+that one of them runs nothing and the other can block a push, and no page said so.
+
+**`gate` gets ONE live line, not one per check.** adr-0028's heartbeat printed a new line
+every ten seconds, which is proof of life and not a sense of progress. A spinner per check
+was tried in an earlier version and reverted, and the reason is recorded in
+`core/gate/progress.test.ts`: the deterministic checks run concurrently under one
+`Promise.all`, so three of them rewriting the same line mangle each other. The line is
+therefore owned by a single writer that knows the whole set: `running: test, typecheck
+(12.3s)`, with each result printed above it as it lands.
+
+Rejected: keeping the save key as well, for the person who wants a batch. Two ways to write
+one file, and the one that does nothing until told is the one that loses work.
+
+Rejected: an undo. Git is the undo, the file is tracked, and a second history of a
+two-setting file is apparatus.
+
+Rejected: hiding the detail behind a key. The information is the reason the row exists.
+
+Rejected: giving each check its own line to animate. It is what the earlier version did, and
+the test that documents its failure is still there.
+
+Cost accepted: `config` can no longer be opened to look at without the risk of writing on a
+stray keypress. It is two settings in a tracked file, and `git diff` shows what happened.
+

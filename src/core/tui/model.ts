@@ -19,15 +19,14 @@ export interface SkillState {
 export type View =
   | { readonly kind: "menu"; readonly cursor: number }
   | { readonly kind: "judge"; readonly cursor: number }
-  | { readonly kind: "skills"; readonly cursor: number }
-  | { readonly kind: "confirm"; readonly cursor: number };
+  | { readonly kind: "skills"; readonly cursor: number };
 
 export interface TuiState {
   readonly view: View;
   readonly agent: Agent;
   readonly skills: readonly SkillState[];
-  readonly initial: { readonly agent: Agent; readonly skills: readonly SkillState[] };
-  readonly dirty: boolean;
+  /** What the last write did, for the line that says it happened. */
+  readonly wrote: string | null;
 }
 
 export type Action =
@@ -46,8 +45,7 @@ export function initialState(config: {
     view: { kind: "menu", cursor: 0 },
     agent: config.agent,
     skills: config.skills,
-    initial: { agent: config.agent, skills: config.skills },
-    dirty: false,
+    wrote: null,
   };
 }
 
@@ -59,8 +57,6 @@ function rowsIn(state: TuiState): number {
       return AGENTS.length;
     case "skills":
       return state.skills.length;
-    case "confirm":
-      return 2;
   }
 }
 
@@ -68,12 +64,23 @@ function rowsIn(state: TuiState): number {
 function move(state: TuiState, delta: number): TuiState {
   const last = rowsIn(state) - 1;
   const cursor = Math.min(Math.max(state.view.cursor + delta, 0), Math.max(last, 0));
-  return { ...state, view: { ...state.view, cursor } };
+  return { ...state, view: { ...state.view, cursor }, wrote: null };
 }
 
-function changed(state: TuiState): boolean {
-  if (state.agent !== state.initial.agent) return true;
-  return state.skills.some((s, i) => s.active !== state.initial.skills[i]?.active);
+/**
+ * Written when it is changed, which is what a checkbox already looks like it
+ * means. Every write carries the whole settled state, because the shell rewrites
+ * the file from it and a partial payload would drop the previous keypress.
+ */
+function write(state: TuiState, wrote: string): { state: TuiState; action: Action } {
+  return {
+    state: { ...state, wrote },
+    action: {
+      kind: "save",
+      agent: state.agent,
+      skills: state.skills.filter((s) => s.active).map((s) => s.id),
+    },
+  };
 }
 
 export function press(state: TuiState, key: string): { state: TuiState; action: Action } {
@@ -82,34 +89,20 @@ export function press(state: TuiState, key: string): { state: TuiState; action: 
   if (key === "down" || key === "j") return { state: move(state, 1), action: NONE };
 
   if (key === "escape") {
-    return { state: { ...state, view: { kind: "menu", cursor: 0 } }, action: NONE };
+    return { state: { ...state, view: { kind: "menu", cursor: 0 }, wrote: null }, action: NONE };
   }
 
-  if (key === "q") {
-    if (!state.dirty) return { state, action: { kind: "quit" } };
-    return { state: { ...state, view: { kind: "confirm", cursor: 0 } }, action: NONE };
-  }
-
-  if (key === "s") {
-    if (!state.dirty) return { state, action: NONE };
-    return {
-      state,
-      action: {
-        kind: "save",
-        agent: state.agent,
-        skills: state.skills.filter((s) => s.active).map((s) => s.id),
-      },
-    };
-  }
+  // Nothing to confirm on the way out: a change was written when it was made.
+  if (key === "q") return { state, action: { kind: "quit" } };
 
   // Both. `space` is the checkbox convention and `enter` is what people press;
   // in this view enter had nothing else to do.
   if ((key === "space" || key === "return") && state.view.kind === "skills") {
-    const skills = state.skills.map((s, i) =>
-      i === state.view.cursor ? { ...s, active: !s.active } : s,
-    );
-    const next = { ...state, skills };
-    return { state: { ...next, dirty: changed(next) }, action: NONE };
+    const at = state.view.cursor;
+    const skills = state.skills.map((s, i) => (i === at ? { ...s, active: !s.active } : s));
+    const flipped = skills[at];
+    if (flipped === undefined) return { state, action: NONE };
+    return write({ ...state, skills }, `${flipped.active ? "on" : "off"}: ${flipped.id}`);
   }
 
   if (key === "return") return enter(state);
@@ -127,15 +120,13 @@ function enter(state: TuiState): { state: TuiState; action: Action } {
     }
     case "judge": {
       const agent = AGENTS[state.view.cursor] ?? state.agent;
-      const next = { ...state, agent, view: { kind: "menu", cursor: 0 } as View };
-      return { state: { ...next, dirty: changed(next) }, action: NONE };
+      const back: TuiState = { ...state, agent, view: { kind: "menu", cursor: 0 }, wrote: null };
+      // Picking what was already picked writes nothing. A file rewritten with
+      // identical bytes is still a tool that touched a config nobody asked it to.
+      return agent === state.agent ? { state: back, action: NONE } : write(back, `judge: ${agent}`);
     }
     case "skills":
       return { state, action: NONE };
-    case "confirm":
-      return state.view.cursor === 0
-        ? { state, action: { kind: "quit" } }
-        : { state: { ...state, view: { kind: "menu", cursor: 0 } }, action: NONE };
   }
 }
 
@@ -146,11 +137,9 @@ const point = (on: boolean): string => (on ? "›" : " ");
 const clip = (text: string): string => (text.length <= 70 ? text : `${text.slice(0, 69)}…`);
 
 export function render(state: TuiState): readonly string[] {
-  // The pending edit was computed and never shown: `wst.yaml` is a tracked file,
-  // so the write is deliberate rather than per-keypress, and until now the only
-  // hint that anything was unsaved came from trying to quit.
-  const head = ["whetstone config", ...(state.dirty ? ["", "  unsaved: `s` writes wst.yaml, `q` discards"] : []), ""];
-  const foot = ["", `  ↑↓ move · ${keysFor(state)} · s save · q quit`];
+  // Proof that the write happened, rather than a reminder that it has not.
+  const head = ["whetstone config", ...(state.wrote === null ? [] : ["", `  wrote ${state.wrote}`]), ""];
+  const foot = ["", `  ↑↓ move · ${keysFor(state)} · q quit`];
 
   switch (state.view.kind) {
     case "menu":
@@ -189,15 +178,6 @@ export function render(state: TuiState): readonly string[] {
         ...foot,
       ];
     }
-    case "confirm":
-      return [
-        ...head,
-        "  unsaved changes",
-        "",
-        `  ${point(state.view.cursor === 0)} discard them and quit`,
-        `  ${point(state.view.cursor === 1)} go back`,
-        ...foot,
-      ];
   }
 }
 

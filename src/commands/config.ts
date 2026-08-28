@@ -109,15 +109,11 @@ export async function runConfig(cwd: string, opts: ConfigOptions = {}): Promise<
 
       if (result.action.kind === "quit") return 0;
       if (result.action.kind === "save") {
-        const next = editConfig(text, {
-          agent: result.action.agent,
-          skills: result.action.skills,
-        });
-        await writeFile(path, next, "utf-8");
-        keys.close();
-        restore(process.stdout);
-        console.log(`wrote ${DEFINITION_DIR}/${CONFIG_FILE}`);
-        return 0;
+        // `text` is REPLACED, not kept. Each edit is applied to what the file
+        // says now, so the second toggle of a session does not rewrite over the
+        // first one from a copy taken before it.
+        text = editConfig(text, { agent: result.action.agent, skills: result.action.skills });
+        await writeFile(path, text, "utf-8");
       }
     }
   } finally {

@@ -29,3 +29,14 @@ export function liveLine(label: string, ms: number, frame: number): string {
 export function quietLine(label: string, ms: number): string {
   return `  ... ${label} (${elapsed(ms)})`;
 }
+
+/**
+ * One line for every check in flight at once.
+ *
+ * NOT one spinner per check. That was tried and reverted: the gate runs its
+ * deterministic checks concurrently, so three of them reporting at the same time
+ * have no single line to rewrite and each mangles the ones beside it.
+ */
+export function runningLine(ids: readonly string[], ms: number, frame: number): string {
+  return ids.length === 0 ? "" : liveLine(`running: ${ids.join(", ")}`, ms, frame);
+}

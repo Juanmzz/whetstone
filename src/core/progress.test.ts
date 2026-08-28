@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HEARTBEAT_MS, SPINNER, liveLine, quietLine } from "./progress.js";
+import { HEARTBEAT_MS, SPINNER, liveLine, quietLine, runningLine } from "./progress.js";
 
 const CONTROL = new RegExp(String.fromCharCode(13));
 
@@ -34,5 +34,25 @@ describe("quietLine — the same fact where nothing can be overwritten", () => {
 
   it("beats slowly enough that a CI log is not a wall of it", () => {
     expect(HEARTBEAT_MS).toBeGreaterThanOrEqual(10_000);
+  });
+});
+
+describe("runningLine — one line for however many checks are in flight", () => {
+  it("names them all, because the gate runs them concurrently", () => {
+    // A per-check spinner was tried and reverted: three checks reporting at once
+    // have no single line to rewrite, and each mangled the ones beside it.
+    expect(runningLine(["test", "typecheck"], 1000, 0)).toContain("test, typecheck");
+  });
+
+  it("carries the elapsed time of the slowest one still going", () => {
+    expect(runningLine(["test"], 12_300, 0)).toContain("12.3s");
+  });
+
+  it("is empty when nothing is running, so there is no line to leave behind", () => {
+    expect(runningLine([], 1000, 0)).toBe("");
+  });
+
+  it("stays on one line whatever it is given", () => {
+    expect(runningLine(["a", "b", "c", "d", "e", "f"], 1000, 0)).not.toContain("\n");
   });
 });

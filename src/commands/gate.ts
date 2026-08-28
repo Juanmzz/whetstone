@@ -14,6 +14,7 @@ import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
 import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
 import { EXIT_INCOMPLETE, exitCodeFor, renderGateRun } from "../core/gate/report.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
+import { startLive, type Live } from "../shell/live.js";
 import { dedupe, signalsFromGate } from "../core/signals/emit.js";
 import { appendSignals } from "../shell/signals.js";
 import { resolveMemory } from "../shell/memory.js";
@@ -297,41 +298,24 @@ export function createCheckRunner(deps: {
  * piping the verdict still sees the run is alive. `--json` silences it anyway:
  * a machine reading the envelope has no use for progress.
  */
-/** How long a check runs before it has to say it is still there, and how often. */
-const HEARTBEAT_MS = 10_000;
-
 function withProgress(
   runner: CheckRunner,
   target: ProgressTarget,
+  live: Live,
   /** A check the runner will skip without work. Announcing it is noise. */
   willSkip: (check: LoadedCheck) => boolean = () => false,
 ): CheckRunner {
   return async (check, files) => {
     if (willSkip(check)) return runner(check, files);
 
-    for (const line of progressLines({ phase: "started", checkId: check.id }, target)) {
-      process.stderr.write(`${line}\n`);
-    }
     const began = Date.now();
-    // `unref` so a check that resolves between ticks cannot hold the process open.
-    const beat = setInterval(() => {
-      for (const line of progressLines(
-        { phase: "still-running", checkId: check.id, ms: Date.now() - began },
-        target,
-      )) {
-        process.stderr.write(`${line}\n`);
-      }
-    }, HEARTBEAT_MS);
-    beat.unref?.();
-
-    const outcome = await runner(check, files).finally(() => {
-      clearInterval(beat);
-    });
-    const lines = progressLines(
+    live.add(check.id);
+    const outcome = await runner(check, files);
+    const [line] = progressLines(
       { phase: "finished", checkId: check.id, status: outcome.outcome.status, ms: Date.now() - began },
       target,
     );
-    for (const line of lines) process.stderr.write(`${line}\n`);
+    live.done(check.id, line ?? "");
     return outcome;
   };
 }
@@ -403,6 +387,9 @@ export async function runGate(
   const eligible = opts.fast === true ? fastOnly(registry.active) : registry.active;
   const routing = route(opts.tier ?? triage.tier, eligible);
 
+  // ONE line for however many checks are in flight, closed whatever happens: an
+  // interval left running holds an animation over the report it is under.
+  const live = startLive(process.stderr, opts.json === true);
   const run = await executeGate(
     { routing, registry, files },
     {
@@ -424,11 +411,14 @@ export async function runGate(
         timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       }),
       opts.json === true ? { quiet: true } : {},
+      live,
       // `--no-lens` skips every llm check without work. Announcing `running` and
       // then `skipped (0ms)` for it is the gate narrating something it did not do.
       (check) => opts.noLens === true && check.kind === "llm"),
     },
-  );
+  ).finally(() => {
+    live.close();
+  });
 
   // Bookkeeping must never fail the run, and must never fail QUIETLY: emitting
   // over an unreadable log re-emits everything it holds, and skipping in silence

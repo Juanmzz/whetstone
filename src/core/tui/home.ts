@@ -25,6 +25,8 @@ export interface HomeRow {
   readonly command: HomeCommand;
   /** One line, in the imperative. What pressing enter does. */
   readonly what: string;
+  /** What it reads and writes, and what its exit code means. Shown under the cursor. */
+  readonly detail: readonly string[];
   /** The state this row is in, or what it is waiting for. Null when there is nothing to add. */
   readonly note: string | null;
   readonly available: boolean;
@@ -47,19 +49,94 @@ const NONE: HomeAction = { kind: "none" };
 interface Spec {
   readonly command: HomeCommand;
   readonly what: string;
+  /**
+   * What it reads, what it writes, and what its exit code means. Shown under the
+   * cursor.
+   *
+   * This is what the launcher has over typing the command: `wst --help` gives one
+   * line each and a person picking between `triage` and `gate` needs to know that
+   * one of them runs nothing and the other can block a push.
+   */
+  readonly detail: readonly string[];
   /** Whether this row reads the definition layer. Everything but `status` does. */
   readonly needsDefinition: boolean;
 }
 
 const SPECS: readonly Spec[] = [
-  { command: "status", what: "what this repo has and what it is missing", needsDefinition: false },
-  { command: "init", what: `interview this repo and write its ${DEFINITION_DIR}/`, needsDefinition: false },
-  { command: "gate", what: "run the checks over what has changed", needsDefinition: true },
-  { command: "triage", what: "classify the change and say which checks apply", needsDefinition: true },
-  { command: "check", what: "the check registry, and what may block", needsDefinition: true },
-  { command: "config", what: "which judge runs llm checks, which skills are active", needsDefinition: true },
-  { command: "update", what: "what changed since init wrote this repo", needsDefinition: true },
-  { command: "retro", what: "cluster the signals and propose rule changes", needsDefinition: true },
+  {
+    command: "status",
+    what: "what this repo has and what it is missing",
+    detail: [
+      `reads the repo, ${DEFINITION_DIR}/ and the judge on PATH. Writes nothing.`,
+      "exit 1 means something it needs is not here, and it names which.",
+    ],
+    needsDefinition: false,
+  },
+  {
+    command: "init",
+    what: `interview this repo and write its ${DEFINITION_DIR}/`,
+    detail: [
+      "asks what the repo cannot say about itself, then writes the layer.",
+      "the only row that creates anything. Refuses rather than overwrite.",
+    ],
+    needsDefinition: false,
+  },
+  {
+    command: "gate",
+    what: "run the checks over what has changed",
+    detail: [
+      "runs the checks matching your changed files. Minutes, not seconds.",
+      "exit 1 is a check that FAILED. exit 2 is one that could not RUN,",
+      "which is the gate being broken and not a verdict on your change.",
+    ],
+    needsDefinition: true,
+  },
+  {
+    command: "triage",
+    what: "classify the change and say which checks apply",
+    detail: [
+      "the selection `gate` does, printed instead of run. Nothing runs,",
+      "nothing is judged. Run it to see what a push is about to cost you.",
+    ],
+    needsDefinition: true,
+  },
+  {
+    command: "check",
+    what: "the check registry, and what may block",
+    detail: [
+      `every check under ${DEFINITION_DIR}/checks/, whether it is on, and whether it`,
+      "may block. Reads only. It is the list `gate` selects from.",
+    ],
+    needsDefinition: true,
+  },
+  {
+    command: "config",
+    what: "which judge runs llm checks, which skills are active",
+    detail: [
+      `the two settings in ${DEFINITION_DIR}/wst.yaml, edited in place.`,
+      "a change is written the moment you make it.",
+    ],
+    needsDefinition: true,
+  },
+  {
+    command: "update",
+    what: "what changed since init wrote this repo",
+    detail: [
+      "compares the layer to what THIS version of wst would write now:",
+      "edited here, outdated, missing. Reports, and never writes.",
+    ],
+    needsDefinition: true,
+  },
+  {
+    command: "retro",
+    what: "cluster the signals and propose rule changes",
+    detail: [
+      "groups the signals nobody processed and asks the judge what rule",
+      "each implies. ONE MODEL CALL PER CLUSTER: it costs money and takes",
+      "minutes. It asks first, and never applies what it proposes.",
+    ],
+    needsDefinition: true,
+  },
 ];
 
 export function homeRows(report: StatusReport): readonly HomeRow[] {
@@ -162,10 +239,12 @@ export function renderHome(state: HomeState): readonly string[] {
     // because a dimmed row on a terminal whose theme nobody controls is a row
     // that just looks the same.
     lines.push(`  ${point(here)} ${row.command.padEnd(8)} ${row.available ? row.what : "not now"}`);
+    if (!here) return;
     // The reason lives HERE and nowhere else. It used to be printed inline and
     // again at the foot when enter was pressed, which is one sentence twice on
     // one screen, and the inline copy ran off the side of the terminal.
-    if (here && row.note !== null) lines.push(`             ${row.note}`);
+    if (row.note !== null) lines.push(`             ${row.note}`);
+    for (const line of row.detail) lines.push(`             ${line}`);
   });
 
   lines.push("", "  ↑↓ move · enter run · q quit");
