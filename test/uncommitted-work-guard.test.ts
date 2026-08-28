@@ -35,8 +35,11 @@ async function repoWith(dirty: boolean): Promise<string> {
   await git(["init", "-q"]);
   await mkdir(join(dir, "src"), { recursive: true });
   await writeFile(join(dir, "src", "a.ts"), "export const a = 1;\n", "utf-8");
+  await writeFile(join(dir, "src", "b.ts"), "export const b = 1;\n", "utf-8");
+  await writeFile(join(dir, ".gitignore"), "secret.env\n", "utf-8");
   await git(["add", "-A"]);
   await git(["commit", "-qm", "first"]);
+  await writeFile(join(dir, "secret.env"), "TOKEN=1\n", "utf-8");
   if (dirty) await writeFile(join(dir, "src", "a.ts"), "export const a = 2;\n", "utf-8");
   return dir;
 }
@@ -85,5 +88,67 @@ describe("the uncommitted-work guard", () => {
   it("leaves a branch switch alone, which git already refuses when it would lose work", async () => {
     expect(await ask("git checkout main", dirty)).toBeNull();
     expect(await ask("git checkout -b feature/x", dirty)).toBeNull();
+  });
+});
+
+/**
+ * The holes that make a guard worse than no guard, each one a command that reached
+ * git unquestioned while the prompt said it was protected.
+ */
+describe("the uncommitted-work guard does not fail open", () => {
+  let dirty: string;
+  let clean: string;
+
+  beforeAll(async () => {
+    dirty = await repoWith(true);
+    clean = await repoWith(false);
+  });
+
+  it("asks about `git checkout .`, which names no extension to pattern-match on", async () => {
+    expect((await ask("git checkout .", dirty))?.permissionDecision).toBe("ask");
+  });
+
+  it("reads the repo out of `git -C`, not out of the caller's project dir", async () => {
+    const decision = await ask(`git -C ${dirty} checkout -- src/a.ts`, clean);
+
+    expect(decision?.permissionDecision).toBe("ask");
+    expect(decision?.permissionDecisionReason).toContain("src/a.ts");
+  });
+
+  it("follows a `cd` into another repo within the same chain", async () => {
+    expect((await ask(`cd ${dirty} && git checkout -- src/a.ts`, clean))?.permissionDecision).toBe(
+      "ask",
+    );
+  });
+
+  it("resolves the repo from an absolute path outside the project dir", async () => {
+    expect((await ask(`git checkout -- ${dirty}/src/a.ts`, clean))?.permissionDecision).toBe("ask");
+  });
+
+  it("asks when it cannot find a repo to ask about, rather than waving it through", async () => {
+    const nowhere = await tempDir("wst-guard-bare-");
+
+    expect((await ask(`git checkout -- ${nowhere}/x.ts`, clean))?.permissionDecision).toBe("ask");
+  });
+
+  it("asks about `git clean -fx`, which discards ignored files status does not list", async () => {
+    const decision = await ask("git clean -fx", clean);
+
+    expect(decision?.permissionDecision).toBe("ask");
+    expect(decision?.permissionDecisionReason).toContain("secret.env");
+  });
+
+  it("asks before dropping a stash, whose loss a clean worktree hides", async () => {
+    expect((await ask("git stash drop", clean))?.permissionDecision).toBe("ask");
+  });
+});
+
+/**
+ * The other half of not failing open: a prompt on a command that discards nothing
+ * teaches people to click through the ones that do.
+ */
+describe("the uncommitted-work guard scopes the question to the paths named", () => {
+  it("stays silent when the named path is clean and the dirt is elsewhere", async () => {
+    expect(await ask("git checkout -- src/b.ts", await repoWith(true))).toBeNull();
   });
 });
