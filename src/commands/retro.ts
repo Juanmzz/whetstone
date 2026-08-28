@@ -19,6 +19,7 @@ import {
 } from "../core/retro/propose.js";
 import { createGitAdapter } from "../shell/git.js";
 import { resolveJudge } from "../shell/judge.js";
+import { confirm } from "../shell/confirm.js";
 import { startSpinner } from "../shell/spinner.js";
 import { appendRetroLogStub, countRetros, readCursor, writeProposals } from "../shell/retro.js";
 import { resolveMemory } from "../shell/memory.js";
@@ -32,6 +33,8 @@ export interface RetroOptions {
   readonly model?: "haiku" | "sonnet" | "opus";
   /** The proposals as data, for the agent that presents them to a human. */
   readonly json?: boolean;
+  /** Skip the confirmation. For a script, and for the person who meant it. */
+  readonly yes?: boolean;
 }
 
 const RecommendationSchema = z.object({
@@ -161,6 +164,20 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   const rejected: { rec: Recommendation; reasons: readonly string[] }[] = [];
   let cost = 0;
 
+  const model = opts.model ?? "sonnet";
+
+  // The one command here that spends money, and one keypress from a menu row
+  // where nothing else does (adr-0032).
+  if (opts.json !== true && opts.yes !== true) {
+    const go = await confirm(
+      `\n  proposing calls \`${model}\` once per cluster: ${actionable.length} call(s).`,
+    );
+    if (!go) {
+      console.log("  stopped before spending anything.");
+      return 0;
+    }
+  }
+
   // One line per cluster, not one for the whole loop. The line is LIVE while the
   // judge is out: a printed cluster key followed by silence for as long as a
   // model takes is indistinguishable from a hang (adr-0028).
@@ -172,7 +189,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
       lens: LENS,
       prompt: await describeCluster(cluster, definitionRoot, skillIndex),
       schema: RecommendationSchema,
-      model: opts.model ?? "sonnet",
+      model,
       maxAttempts: 3,
     });
     cost += result.costUsd;

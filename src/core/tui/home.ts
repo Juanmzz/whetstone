@@ -168,6 +168,6 @@ export function renderHome(state: HomeState): readonly string[] {
     if (here && row.note !== null) lines.push(`             ${row.note}`);
   });
 
-  lines.push("", "  ↑↓ move · enter run (and leaves this) · q quit");
+  lines.push("", "  ↑↓ move · enter run · q quit");
   return lines;
 }

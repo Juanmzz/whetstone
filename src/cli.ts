@@ -116,9 +116,10 @@ program
   .command("retro")
   .description("cluster new signals and propose rule changes (human-gated, never applied)")
   .option("--dry-run", "cluster only: no LLM calls, nothing written")
+  .option("--yes", "do not ask before spending: for a script, and for meaning it")
   .option("--model <model>", "model for the proposal step")
   .option("--json", "the proposals as data, for the agent that presents them")
-  .action(async (opts: { dryRun?: boolean; model?: "haiku" | "sonnet" | "opus"; json?: boolean }) => {
+  .action(async (opts: { dryRun?: boolean; yes?: boolean; model?: "haiku" | "sonnet" | "opus"; json?: boolean }) => {
     process.exitCode = await runRetro(opts);
   });
 
