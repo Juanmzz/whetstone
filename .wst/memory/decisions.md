@@ -617,7 +617,11 @@ An absent CLI is `errored`, never `fail` (hard rule 3), and an errored `warn` ch
 nothing. That is what makes a second judge free to offer: where it cannot run, nothing happens.
 
 ### adr-0027 — `correctness` blocks in CI, never in the hook
-`accepted` · 2026-08-25
+`accepted` · 2026-08-25 · unbuilt
+
+*Not in force since 2026-08-27: CI runs `--no-lens` (f5a4bd7), because a runner has no
+OAuth session and the lens errored on every run without an API key. The hook skips it by
+design. The block has nowhere left to fire, so the lens runs only when a human runs it.*
 
 The lens measured 100/100 on 2026-08-25: unanimous on all ten fixtures, six of them `hard`,
 zero flips, zero harness errors, on claude 2.1.241. The receipt authorises `block`, and
