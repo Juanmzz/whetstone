@@ -455,3 +455,31 @@ describe("outcomeOf — a check that ran and failed at warn", () => {
     expect(outcomeOf(aggregate(mixed), coverage())).toBe("incomplete");
   });
 });
+
+describe("the pass says what stood behind it, and says it once", () => {
+  const receipt = (id: string): CheckResult =>
+    result(id, "block", { status: "skipped", reason: "receipt" });
+
+  it("counts what ran and what a receipt covered, rather than the bare word", () => {
+    // `passed` alone over a run where everything was a receipt reads as "the
+    // checks ran and were fine". Nothing ran.
+    const text = renderGateRun(gateRun([receipt("test"), receipt("typecheck")]));
+
+    expect(text).toMatch(/passed: 0 checks ran, 2 already verified by receipt/);
+  });
+
+  it("says nothing about receipts when none were used", () => {
+    const text = renderGateRun(gateRun([result("test", "block", { status: "pass" })]));
+
+    expect(text).toMatch(/passed: 1 check ran/);
+    expect(text).not.toMatch(/receipt/);
+  });
+
+  it("names a skipped check once, beside the others, and not again at the foot", () => {
+    // A summary line repeated the per-check lines verbatim, id and reason.
+    const text = renderGateRun(gateRun([receipt("test"), receipt("typecheck")]));
+
+    expect(text).toMatch(/^ +skipped {2}test/m);
+    expect(text).not.toMatch(/^ +skipped:/m);
+  });
+});

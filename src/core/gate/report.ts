@@ -4,6 +4,7 @@
 
 import type { CheckResult, GateVerdict } from "../contracts.js";
 import type { GateRun } from "./run.js";
+import { wrap } from "../text.js";
 
 export const EXIT_PASS = 0;
 export const EXIT_BLOCKED = 1;
@@ -112,6 +113,9 @@ export function exitCodeFor(verdict: GateVerdict, coverage: Coverage): number {
   }
 }
 
+const count = (n: number, noun: string): string =>
+  `${String(n)} ${noun}${n === 1 ? "" : "s"}`;
+
 function indent(detail: string): string {
   return detail
     .split("\n")
@@ -148,7 +152,10 @@ export function renderGateRun(run: GateRun): string {
     // pattern rather than throwing, so a typo in `include` looks exactly like a
     // check that legitimately did not apply. Printing the ids is what stops a
     // check silently ceasing to run.
-    lines.push(`  n/a      matched no changed file: ${selection.unmatched.join(", ")}`);
+    const lead = "  n/a      matched no changed file: ";
+    const [first, ...rest] = wrap(selection.unmatched.join(", "), 80 - lead.length);
+    lines.push(`${lead}${first ?? ""}`);
+    for (const line of rest) lines.push(`${" ".repeat(lead.length)}${line}`);
   }
 
   if (verdict.results.length === 0) {
@@ -177,9 +184,20 @@ export function renderGateRun(run: GateRun): string {
       // there is no failure here and no edit that would fix one (adr-0021).
       lines.push("  UNCOVERED: no check applied, so nothing about this change was verified");
       break;
-    case "passed":
-      lines.push("  passed");
+    case "passed": {
+      // NOT the bare word. `passed` alone over a run where everything was a
+      // receipt reads as "the checks ran and were fine", and the two facts a
+      // reader needs are how many actually executed and how many stood on an
+      // earlier run.
+      const ran = verdict.results.filter(
+        (r) => r.outcome.status === "pass" || r.outcome.status === "fail",
+      ).length;
+      const byReceipt = verdict.results.filter(
+        (r) => r.outcome.status === "skipped" && r.outcome.reason === "receipt",
+      ).length;
+      lines.push(`  passed: ${count(ran, "check")} ran${byReceipt === 0 ? "" : `, ${String(byReceipt)} already verified by receipt`}`);
       break;
+    }
   }
 
   if (verdict.warnings.length > 0) {
@@ -204,13 +222,6 @@ export function renderGateRun(run: GateRun): string {
         lines.push(`    ${result.checkId} (severity: ${result.severity})`, indent(result.outcome.detail));
       }
     }
-  }
-
-  if (verdict.skipped.length > 0) {
-    const reasons = verdict.results
-      .filter((r) => r.outcome.status === "skipped")
-      .map((r) => `${r.checkId} (${r.outcome.status === "skipped" ? r.outcome.reason : ""})`);
-    lines.push("", `  skipped: ${reasons.join(", ")}`);
   }
 
   if (run.receiptsWritten.length > 0) {

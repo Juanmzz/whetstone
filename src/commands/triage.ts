@@ -3,6 +3,7 @@
  * the pure core, prints the answer. No classification decisions are made here.
  */
 
+import { relative } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
 import {
   loadRegistry,
@@ -12,6 +13,7 @@ import {
 } from "../shell/sdd.js";
 import { parseNameStatus } from "../core/diff/parse.js";
 import { classify, route } from "../core/triage/index.js";
+import { wrap, wrapped } from "../core/text.js";
 
 export interface TriageOptions {
   /** `git diff --name-status <range>`. Defaults to the working tree vs HEAD. */
@@ -19,14 +21,6 @@ export interface TriageOptions {
   readonly json?: boolean;
   /** Print the rule reason for every file, not just the one that set the tier. */
   readonly why?: boolean;
-}
-
-/**
- * Display only. The full reason always survives into `--json` and `--why`: a
- * terminal is a viewport, and the receipt must not be shortened to fit it.
- */
-function truncate(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
 export async function runTriage(
@@ -75,8 +69,13 @@ export async function runTriage(
   }
 
   console.log(`triage  ${result.tier}`);
-  console.log(`  ${truncate(result.reason, 160)}`);
-  console.log(`  rules: ${source.origin} (${source.rules.length})  ·  range: ${range}`);
+  // Wrapped, not cut. The reason names the file that set the tier and then
+  // says why, so a cut at eighty loses the half that answers the question.
+  for (const line of wrapped(result.reason, 78, "  ")) console.log(line);
+  // Relative. The absolute path is the same string on every line of every run
+  // and the only part that varies is the tail.
+  const rules = relative(repoRoot, source.origin) || source.origin;
+  console.log(`  rules: ${rules} (${source.rules.length} rules)  ·  range: ${range}`);
 
   if (result.matches.length > 0) {
     console.log("\nfiles");
@@ -95,13 +94,18 @@ export async function runTriage(
     }
   }
 
-  console.log("\nrouting");
-  console.log(`  autonomy  ${routing.autonomy}`);
-  console.log(`  model     ${routing.modelTier}`);
-  console.log(`  autofix   ${routing.autofix ? "yes" : "no"}`);
-  console.log(
-    `  checks    ${routing.checks.length > 0 ? routing.checks.join(", ") : "(none at this tier)"}`,
-  );
+  // Every line says what the value MEANS. It is read off the tier's row and
+  // nothing here names where it came from or what it decides, so `autonomy
+  // autonomous` was three words that answer nothing.
+  console.log(`\nrouting  what the \`${result.tier}\` row of ${rules} sets`);
+  console.log(`  autonomy  ${routing.autonomy.padEnd(11)} how far an agent may go before asking`);
+  console.log(`  model     ${routing.modelTier.padEnd(11)} the model tier this work is worth`);
+  console.log(`  autofix   ${(routing.autofix ? "yes" : "no").padEnd(11)} whether an agent may fix what a check reports`);
+  const checks = routing.checks.length > 0 ? routing.checks.join(", ") : "(none at this tier)";
+  const [first, ...rest] = wrap(checks, 66);
+  console.log(`  checks    ${first ?? ""}`);
+  for (const line of rest) console.log(`            ${line}`);
+  if (routing.checks.length > 0) console.log(`            ^ what \`wst gate\` would run over this change`);
 
   return 0;
 }
