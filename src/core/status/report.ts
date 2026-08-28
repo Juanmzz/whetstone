@@ -36,7 +36,18 @@ export interface StatusFacts {
    * gate being broken rather than as a repo missing a dependency.
    */
   readonly missingTools?: readonly { readonly checkId: string; readonly binary: string }[];
+  /** Absent when the caller did not gather it, which is not the same as zero. */
+  readonly freshSignals?: FreshSignals;
 }
+
+/**
+ * Signals recorded since the last retro's cursor — whether `wst retro` is worth
+ * running. A count is a verdict; `unknown` is status admitting it could not read
+ * the cursor or the log, which hard rule 3 forbids dressing up as a result.
+ */
+export type FreshSignals =
+  | { readonly kind: "counted"; readonly count: number; readonly since: string | null }
+  | { readonly kind: "unknown"; readonly reason: string };
 
 /**
  * What the harness says about the Whetstone plugin. Four states, not a boolean —
@@ -197,6 +208,15 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
     }
   }
 
+  // A warning, never a problem: no other command needs this number, and the retro
+  // will refuse to run for the same reason rather than silently doing the wrong thing.
+  if (facts.freshSignals?.kind === "unknown") {
+    warnings.push(
+      `could not count the signals a retro has yet to process: ${facts.freshSignals.reason}. ` +
+        `That is status failing to read, not an empty backlog`,
+    );
+  }
+
   for (const gap of facts.missingTools ?? []) {
     warnings.push(
       `\`${gap.checkId}\` runs \`${gap.binary}\`, which is not on PATH here: it will report ` +
@@ -238,6 +258,19 @@ function pluginRow(plugin: PluginFacts): string {
   }
 }
 
+/**
+ * The signals row. `UNKNOWN` and `0 fresh` are deliberately nothing like each
+ * other: they are the two answers a reader acts on in opposite ways.
+ */
+function freshSignalsRow(fresh: FreshSignals): string {
+  if (fresh.kind === "unknown") return `UNKNOWN: ${fresh.reason}`;
+  const from =
+    fresh.since === null ? "(no retro has recorded a cursor yet)" : `since ${fresh.since}`;
+  return fresh.count === 0
+    ? `0 fresh ${from}`
+    : `${fresh.count} fresh ${from} · \`wst retro\` has something to work on`;
+}
+
 export function renderStatusReport(
   report: StatusReport,
   options: { readonly quiet?: boolean } = {},
@@ -265,6 +298,9 @@ export function renderStatusReport(
           : "NOT active"
     }`,
     `  plugin    ${pluginRow(facts.plugin)}`,
+    ...(facts.freshSignals === undefined
+      ? []
+      : [`  signals   ${freshSignalsRow(facts.freshSignals)}`]),
     "",
     `  ${report.ready ? "ready" : "NOT ready"}`,
   ];

@@ -11,6 +11,16 @@ export const PROPOSALS_DIR = "memory/proposals";
 
 
 /**
+ * Reading the cursor has three outcomes, and only two of them are answers.
+ * `readCursor` collapses `none` and `unreadable` into `null` because a retro treats
+ * both the same way; a reader being told a NUMBER cannot.
+ */
+export type CursorRead =
+  | { readonly kind: "cursor"; readonly id: string }
+  | { readonly kind: "none" }
+  | { readonly kind: "unreadable"; readonly reason: string };
+
+/**
  * The last signal id a previous retro processed, from the newest `cursor:` line.
  *
  * The pattern accepts hex as well as digits: ids moved to hex at sig-0046 and a
@@ -18,15 +28,23 @@ export const PROPOSALS_DIR = "memory/proposals";
  * whole log and billed for it again. It also stops at the id rather than at
  * end-of-line, because the retro's own summary suffix follows it.
  */
-export async function readCursor(definitionRoot: string): Promise<string | null> {
+export async function readCursorResult(definitionRoot: string): Promise<CursorRead> {
   let text: string;
   try {
     text = await readFile(join(definitionRoot, RETRO_LOG), "utf-8");
-  } catch {
-    return null;
+  } catch (cause) {
+    // A missing log means nothing was ever recorded. Anything else is a failed read.
+    if ((cause as NodeJS.ErrnoException).code === "ENOENT") return { kind: "none" };
+    return { kind: "unreadable", reason: (cause as Error).message };
   }
   const found = [...text.matchAll(/^cursor:\s*(sig-[0-9a-z]+)\b/gm)].pop();
-  return found?.[1] ?? null;
+  return found === undefined ? { kind: "none" } : { kind: "cursor", id: found[1] as string };
+}
+
+/** The cursor, or null when there is not one to be had. */
+export async function readCursor(definitionRoot: string): Promise<string | null> {
+  const read = await readCursorResult(definitionRoot);
+  return read.kind === "cursor" ? read.id : null;
 }
 
 /**
