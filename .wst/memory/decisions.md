@@ -875,3 +875,39 @@ the test that documents its failure is still there.
 Cost accepted: `config` can no longer be opened to look at without the risk of writing on a
 stray keypress. It is two settings in a tracked file, and `git diff` shows what happened.
 
+### adr-0034 — a report states a fact once, and `passed` says what stood behind it
+`accepted` · 2026-08-28
+
+Three commands were reported as confusing in one sitting, and the three had one defect
+between them: a summary that repeated the list printed directly above it, and lines that
+ran off the side of a default terminal.
+
+**`gate` printed the bare word `passed`.** Over a run where two checks were skipped by
+receipt and six matched no file, that is a verdict on a change nothing examined. It is not
+wrong under adr-0021, which counts a receipt as verification, and it is unreadable: the
+reader cannot tell a full run from an empty one. It now says `passed: 4 checks ran`, and
+names the receipts when there were any. The `skipped:` line at the foot is gone; it
+restated the per-check lines verbatim, id and reason.
+
+**`check` printed `BLOCK` on every row and then listed the same ids under `may block`.**
+The trailing line now appears only when the blocking set is a strict subset of the active
+one, which is when it says something the column did not. Descriptions are clipped to the
+terminal rather than wrapping into the next row.
+
+**`triage` printed a `routing` block nobody could read.** `autonomy autonomous` is three
+words that answer nothing: no line said where the values came from or what they decide. The
+block now names the tier row that set them and says what each one governs. The path to
+`triage.yaml` is relative, since the absolute prefix is identical on every line of every
+run.
+
+Rejected: cutting the long lines instead of wrapping them. What fell off was the half that
+named what was missing, which is the only part worth printing.
+
+Rejected: dropping the severity column from `check` and keeping the `may block` list. The
+column is the one that stays useful as soon as two checks differ, and the list is the one
+that goes silent.
+
+Cost accepted: `renderRegistry` moved out of `src/commands/check.ts` into `core/`, so the
+command and the page it prints are now two files instead of one. It is the same split
+`gate` already has, and the page has tests it could not have had before.
+

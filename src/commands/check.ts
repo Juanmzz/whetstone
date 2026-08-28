@@ -6,16 +6,11 @@
 import { createGitAdapter } from "../shell/git.js";
 import { loadRegistry, resolveDefinitionRoot, writeIndex } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
-import type { LoadedCheck } from "../core/checks/registry.js";
+import { renderRegistry } from "../core/checks/report.js";
 
 export interface CheckOptions {
   readonly json?: boolean;
   readonly compile?: boolean;
-}
-
-function severityMark(check: LoadedCheck): string {
-  if (!check.enabled) return "off  ";
-  return { block: "BLOCK", warn: "warn ", annotate: "note " }[check.severity];
 }
 
 export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()): Promise<number> {
@@ -37,25 +32,8 @@ export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()):
     return 0;
   }
 
-  if (registry.all.length === 0) {
-    console.log(`no checks registered: add files under ${DEFINITION_DIR}/checks/<id>.md`);
-    return 0;
-  }
-
-  console.log(`checks (${registry.active.length} active of ${registry.all.length})\n`);
-  for (const check of registry.all) {
-    // Three kinds, three labels. A method rendered as `det` reads as something
-    // the gate runs, which is the one thing it never does.
-    const kind = check.kind === "llm" ? "llm " : check.kind === "method" ? "meth" : "det ";
-    // Severity IS the calibration status now: an llm that reaches `block` has
-    // a verified receipt, because the registry refuses to load it otherwise. Printing
-    // a separate "calibration: passed" would restate the same fact from a field that
-    // no longer decides anything.
-    console.log(`  ${severityMark(check)} ${kind}  ${check.id.padEnd(14)} ${check.description}`);
-  }
-
-  if (registry.index.blocking.length > 0) {
-    console.log(`\n  may block: ${registry.index.blocking.join(", ")}`);
+  for (const line of renderRegistry({ definitionDir: DEFINITION_DIR, checks: registry.all })) {
+    console.log(line);
   }
 
   if (opts.compile === true) {
