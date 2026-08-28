@@ -12,6 +12,8 @@ import { AGENTS, type Agent } from "../config/schema.js";
 export interface SkillState {
   readonly id: string;
   readonly active: boolean;
+  /** What the file says it governs, in one sentence. Empty when it says nothing. */
+  readonly summary: string;
 }
 
 export type View =
@@ -100,7 +102,9 @@ export function press(state: TuiState, key: string): { state: TuiState; action: 
     };
   }
 
-  if (key === "space" && state.view.kind === "skills") {
+  // Both. `space` is the checkbox convention and `enter` is what people press;
+  // in this view enter had nothing else to do.
+  if ((key === "space" || key === "return") && state.view.kind === "skills") {
     const skills = state.skills.map((s, i) =>
       i === state.view.cursor ? { ...s, active: !s.active } : s,
     );
@@ -138,8 +142,14 @@ function enter(state: TuiState): { state: TuiState; action: Action } {
 const mark = (on: boolean): string => (on ? "x" : " ");
 const point = (on: boolean): string => (on ? "›" : " ");
 
+/** A default terminal is eighty columns, and this line is already indented. */
+const clip = (text: string): string => (text.length <= 70 ? text : `${text.slice(0, 69)}…`);
+
 export function render(state: TuiState): readonly string[] {
-  const head = ["whetstone config", ""];
+  // The pending edit was computed and never shown: `wst.yaml` is a tracked file,
+  // so the write is deliberate rather than per-keypress, and until now the only
+  // hint that anything was unsaved came from trying to quit.
+  const head = ["whetstone config", ...(state.dirty ? ["", "  unsaved: `s` writes wst.yaml, `q` discards"] : []), ""];
   const foot = ["", `  ↑↓ move · ${keysFor(state)} · s save · q quit`];
 
   switch (state.view.kind) {
@@ -162,16 +172,23 @@ export function render(state: TuiState): readonly string[] {
         ),
         ...foot,
       ];
-    case "skills":
+    case "skills": {
+      const rows: string[] = [];
+      state.skills.forEach((s, i) => {
+        const here = i === state.view.cursor;
+        rows.push(`  ${point(here)} [${mark(s.active)}] ${s.id}`);
+        // Under the cursor only. The list was eight filenames, so deciding what
+        // to switch off meant opening each file to find out what it governs.
+        if (here && s.summary !== "") rows.push(`        ${clip(s.summary)}`);
+      });
       return [
         ...head,
         "  active skills; the emitter references only these",
         "",
-        ...state.skills.map(
-          (s, i) => `  ${point(i === state.view.cursor)} [${mark(s.active)}] ${s.id}`,
-        ),
+        ...rows,
         ...foot,
       ];
+    }
     case "confirm":
       return [
         ...head,
@@ -192,7 +209,7 @@ function keysFor(state: TuiState): string {
     case "menu":
       return "enter open";
     case "skills":
-      return "space toggle · esc back";
+      return "space or enter toggle · esc back";
     default:
       return "enter pick · esc back";
   }

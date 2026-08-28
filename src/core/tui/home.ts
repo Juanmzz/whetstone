@@ -35,7 +35,6 @@ export interface HomeState {
   readonly cursor: number;
   readonly branch: string | null;
   readonly judge: string;
-  readonly complaint: string | null;
 }
 
 export type HomeAction =
@@ -71,7 +70,7 @@ export function homeRows(report: StatusReport): readonly HomeRow[] {
     if (outsideRepo && spec.command !== "status") {
       return {
         ...spec,
-        note: "not inside a git repository, and Whetstone is git-native by design",
+        note: "not a git repository, and Whetstone is git-native by design",
         available: false,
       };
     }
@@ -80,14 +79,14 @@ export function homeRows(report: StatusReport): readonly HomeRow[] {
       return facts.definitionPresent
         ? {
             ...spec,
-            note: `${DEFINITION_DIR}/ already exists; \`update\` says what a newer Whetstone would write`,
+            note: `${DEFINITION_DIR}/ exists already; \`update\` reports what changed`,
             available: false,
           }
         : { ...spec, note: null, available: true };
     }
 
     if (spec.needsDefinition && !facts.definitionPresent) {
-      return { ...spec, note: `nothing to read: run \`init\` first`, available: false };
+      return { ...spec, note: `no ${DEFINITION_DIR}/ yet: run \`init\``, available: false };
     }
 
     return { ...spec, note: noteFor(spec.command, report), available: true };
@@ -120,7 +119,6 @@ export function openHome(report: StatusReport): HomeState {
     cursor: 0,
     branch: report.facts.branch,
     judge: report.facts.judge.name,
-    complaint: null,
   };
 }
 
@@ -128,7 +126,7 @@ export function openHome(report: StatusReport): HomeState {
 function move(state: HomeState, delta: number): HomeState {
   const last = Math.max(state.rows.length - 1, 0);
   const cursor = Math.min(Math.max(state.cursor + delta, 0), last);
-  return { ...state, cursor, complaint: null };
+  return { ...state, cursor };
 }
 
 export function pressHome(state: HomeState, key: string): { state: HomeState; action: HomeAction } {
@@ -140,8 +138,7 @@ export function pressHome(state: HomeState, key: string): { state: HomeState; ac
 
   if (key === "return") {
     const row = state.rows[state.cursor];
-    if (row === undefined) return { state, action: NONE };
-    if (!row.available) return { state: { ...state, complaint: row.note }, action: NONE };
+    if (row === undefined || !row.available) return { state, action: NONE };
     return { state, action: { kind: "run", command: row.command } };
   }
 
@@ -161,15 +158,16 @@ export function renderHome(state: HomeState): readonly string[] {
   state.rows.forEach((row, i) => {
     const here = i === state.cursor;
     // The unavailable row stays on the list. One that disappears reads as one
-    // that does not exist, and the note is the whole reason it is here. It says
-    // so in words rather than by a glyph, because a dimmed row on a terminal
-    // whose theme nobody controls is a row that just looks the same.
-    const said = row.available ? row.what : `not now: ${row.note ?? row.what}`;
-    lines.push(`  ${point(here)} ${row.command.padEnd(8)} ${said}`);
-    if (here && row.available && row.note !== null) lines.push(`             ${row.note}`);
+    // that does not exist. It says `not now` in words rather than by a glyph,
+    // because a dimmed row on a terminal whose theme nobody controls is a row
+    // that just looks the same.
+    lines.push(`  ${point(here)} ${row.command.padEnd(8)} ${row.available ? row.what : "not now"}`);
+    // The reason lives HERE and nowhere else. It used to be printed inline and
+    // again at the foot when enter was pressed, which is one sentence twice on
+    // one screen, and the inline copy ran off the side of the terminal.
+    if (here && row.note !== null) lines.push(`             ${row.note}`);
   });
 
-  if (state.complaint !== null) lines.push("", `  ${state.complaint}`);
-  lines.push("", "  ↑↓ move · enter run · q quit");
+  lines.push("", "  ↑↓ move · enter run (and leaves this) · q quit");
   return lines;
 }

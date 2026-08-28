@@ -4,9 +4,9 @@ import { initialState, press, render, type TuiState } from "./model.js";
 const START: TuiState = initialState({
   agent: "claude",
   skills: [
-    { id: "skills/delegation.md", active: true },
-    { id: "skills/lazy.md", active: true },
-    { id: "skills/voice.md", active: false },
+    { id: "skills/delegation.md", active: true, summary: "" },
+    { id: "skills/lazy.md", active: true, summary: "" },
+    { id: "skills/voice.md", active: false, summary: "" },
   ],
 });
 
@@ -101,5 +101,59 @@ describe("leaving", () => {
 
   it("will not save when nothing changed", () => {
     expect(press(START, "s").action).toEqual({ kind: "none" });
+  });
+});
+
+describe("the skills screen answers what it is asking you to decide", () => {
+  const withSkills = () =>
+    initialState({
+      agent: "claude",
+      skills: [
+        { id: "skills/voice.md", active: true, summary: "How the agent engages the human." },
+        { id: "skills/lazy.md", active: true, summary: "" },
+      ],
+    });
+
+  const openSkills = () => {
+    const menu = press(press(withSkills(), "down").state, "return").state;
+    return menu;
+  };
+
+  it("shows what the skill under the cursor governs, not only its filename", () => {
+    // Eight filenames and nothing else meant opening each file to decide which
+    // to switch off.
+    const screen = render(openSkills()).join("\n");
+    expect(screen).toContain("How the agent engages the human.");
+  });
+
+  it("says it for the row under the cursor and no other", () => {
+    const screen = render(openSkills()).join("\n");
+    expect(screen.split("How the agent engages").length - 1).toBe(1);
+  });
+
+  it("toggles on enter as well as on space, since enter is what people press", () => {
+    const toggled = press(openSkills(), "return").state;
+    expect(toggled.skills[0]?.active).toBe(false);
+    expect(press(openSkills(), "space").state.skills[0]?.active).toBe(false);
+  });
+
+  it("says an edit is unsaved instead of waiting for the quit to mention it", () => {
+    // `wst.yaml` is tracked, so the write is deliberate rather than per-keypress.
+    // What was missing is any sign on screen that something is pending.
+    const screen = render(press(openSkills(), "space").state).join("\n");
+    expect(screen).toMatch(/unsaved/i);
+  });
+
+  it("says nothing about saving while nothing has changed", () => {
+    expect(render(openSkills()).join("\n")).not.toMatch(/unsaved/i);
+  });
+
+  it("keeps every line inside a default terminal", () => {
+    const long = initialState({
+      agent: "claude",
+      skills: [{ id: "skills/doc-locations.md", active: true, summary: "x".repeat(200) }],
+    });
+    const screen = press(press(long, "down").state, "return").state;
+    for (const line of render(screen)) expect(line.length).toBeLessThanOrEqual(80);
   });
 });
