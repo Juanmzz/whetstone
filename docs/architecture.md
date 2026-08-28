@@ -68,7 +68,7 @@ not a fleet manager, not a spec framework, not a memory server.
 | `wst` | no arguments, in a terminal: a launcher over the commands, built from the same report `status` prints. Picking one runs it in the terminal and returns to the menu |
 | `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
 | `wst check` | list the registry; refuses to load an uncalibrated blocking lens |
-| `wst triage` | classify a diff → tier → which checks apply |
+| `wst triage` | classify a diff → tier → which checks apply. `--paths` classifies paths you DECLARE instead, so the question can be asked before the code exists; the answer says so, and carries no diff status |
 | `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
 | `wst signal` | record an observation in `memory/signals.jsonl`. For a human to type |
 | `wst retro` | cluster signals, propose rule changes, never apply them |
@@ -79,7 +79,7 @@ not a fleet manager, not a spec framework, not a memory server.
 Flags that change what runs: `gate --no-lens` (deterministic only, which is what the pre-push hook
 runs) · `gate --fast` (skip whatever declares itself slow) · `gate --no-emit` (record no
 signals; for verifying the gate itself) · `gate --tier` ·
-`retro --dry-run` · `init --definitions-only` (write `.wst/` and no vendor file, for a repo
+`triage --paths` (classify declared paths, reading no diff) · `retro --dry-run` · `init --definitions-only` (write `.wst/` and no vendor file, for a repo
 another harness already owns) · `update --json`.
 
 ## The layers
