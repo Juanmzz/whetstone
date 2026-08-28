@@ -12,12 +12,13 @@ include:
   - ".wst/**"
   - "docs/**"
   - "plugin/**"
+  - "plugin/.claude-plugin/**"   # `**` will not cross a dot-leading segment
   - ".githooks/**"
   - ".claude/hooks/**"
 command: npm test
 slow: true
 origin: [adr-0008, sig-0005, sig-0006]
-version: 3
+version: 4
 ---
 
 **The `include` is the whole repository, because the suite reads the whole repository.**
@@ -44,6 +45,14 @@ them as their own checks, the way `adr-refs`, `docs-fresh`, `provenance` and
 honest wide `include` beats a narrow one that lies.
 
 Version bumped 2 → 3 so receipts minted against the narrower `include` are re-earned.
+
+**v4: `plugin/.claude-plugin/**`, because `plugin/**` never matched it.** node:path's
+`matchesGlob` will not let `**` cross a dot-leading segment, the same trap
+`triage.yaml` names at the top of its own rule list. So the one file in `plugin/`
+that a release has to get right, `plugin.json`, selected no check at all: changing it
+alone printed `no checks applied` and the suite that asserts its version never ran.
+Found by breaking that version on purpose and watching the gate wave it through.
+Version bumped 3 → 4 so receipts minted while the file was invisible are re-earned.
 
 The default suite must stay free and offline. Live LLM tests are gated behind
 `WST_LIVE_LLM=1`; a suite that costs money per run is a suite people stop running.

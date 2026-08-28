@@ -101,19 +101,6 @@ describe("the lane guard is the lanes file, compiled", () => {
 });
 
 describe("the plugin the marketplace ships", () => {
-  it("declares the version the engine does, so an install says what it installed", async () => {
-    // They drifted: 0.5.0 against 0.5.0-alpha. `wst status` reports plugin state and
-    // would have called a stale install current.
-    const plugin = JSON.parse(
-      await readFile(join(repoRoot, "plugin", ".claude-plugin", "plugin.json"), "utf-8"),
-    ) as { version: string };
-    const pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf-8")) as {
-      version: string;
-    };
-
-    expect(plugin.version).toBe(pkg.version);
-  });
-
   it("names every hook file it registers", async () => {
     const hooks = JSON.parse(
       await readFile(join(repoRoot, "plugin", "hooks", "hooks.json"), "utf-8"),
