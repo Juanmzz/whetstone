@@ -911,3 +911,74 @@ Cost accepted: `renderRegistry` moved out of `src/commands/check.ts` into `core/
 command and the page it prints are now two files instead of one. It is the same split
 `gate` already has, and the page has tests it could not have had before.
 
+
+### adr-0035 — the [RC3] gate is a human confirming their own words, not a TTY
+`proposed` · 2026-08-27
+
+`source: "human"` has been earned twice in sixty-one signals. Not because the human observes
+little, but because `humanIsAtTheKeyboard()` requires a TTY, and the way this human works is
+inside an agent session where there is none. `commands/signal.ts` names the case in a comment
+and accepts it. The mechanism built to mark human evidence marks almost nothing.
+
+Worse than the label: today the agent notices the friction, PARAPHRASES it, and the human
+types the paraphrase. The record ends up carrying the agent's prose about the human's
+friction. That is a lossy translation, and it is part of why 47 of 53 signals read as
+hand-authored prose.
+
+The rule: an agent may DRAFT a signal from what the human actually said, quoting them
+verbatim, and the human's confirmation is the gate. The evidence for `source` stops being
+"a terminal existed" and becomes "these are the human's own words, and they said yes".
+
+Rejected: letting an agent write signals unprompted. That is the failure `signal.ts` already
+guards against, stated in its own comment: the cost of a false yes is an agent's line entering
+the retro as first-class human evidence. Recurrence drives rule changes, so a fabricated
+signal is a fabricated rule two retros later.
+
+Rejected: keeping the TTY test and asking the human to leave the session to type. It is the
+status quo, it produced two records, and it makes the correct action the inconvenient one.
+
+Rejected: reusing `source: "human"` unchanged. A record drafted by an agent and confirmed by a
+person is not the same act as a person typing it, and collapsing them would destroy the only
+distinction the field exists to carry. This needs its own value.
+
+Cost accepted: the confirmation is a weaker gate than typing, because a human confirms faster
+than they compose. The mitigation is that the quote makes fabrication visible in the
+transcript, which a paraphrase never did.
+
+### adr-0036 — a check may require evidence of the result without judging it
+`proposed` · 2026-08-27
+
+Every check here judges the DIFF. `test` runs the suite, `typecheck` compiles, `correctness`
+reads the change. None of them says the thing works. A gate that passes tells you nothing
+broke; it does not tell you what was built, so a human reviewing the PR still reconstructs it
+from scratch.
+
+The rule: a check may require that evidence of the RESULT exists, and the gate fails when it
+is absent. What counts as evidence is declared per project by the same `include` globs every
+check already uses: a UI change owes a screenshot, a new endpoint owes its request and
+response, a migration owes the schema before and after, a pure refactor owes nothing beyond
+its tests.
+
+**Requiring is not judging.** The gate checks that the artifact is there. Whether the screen
+looks right is the human's call at the end of the loop. Where the evidence is machine-readable
+the check may go further and assert its shape, a status code or the fields the task promised,
+and that stays deterministic.
+
+Rejected: an agent-lens that judges the evidence. A lens over screenshots is a new judgment
+check, and non-negotiable 2 means it may not block until it is calibrated against its own
+fixture set. That is a separate project, and requiring existence delivers most of the value
+for none of that cost.
+
+Rejected: attaching the evidence to the PR. adr-0009 removed PR annotation deliberately, and
+reopening it to carry an image is a large decision riding on a small one.
+
+Rejected: committing the evidence to git. A screenshot per branch poisons the history of every
+repo that adopts this, and the payload must not make a target repo worse (adr-0004).
+
+Evidence lives beside the worktree, not in it: the check verifies presence and freshness, and
+the agent reports the path. Nothing travels, nothing is published, and the whole thing can be
+deleted if it does not earn its place.
+
+Cost accepted: a required artifact that nobody looks at is ceremony, and the gate cannot tell
+the difference. If evidence is being produced and never opened, that is a signal, not a
+success.
