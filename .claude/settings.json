@@ -15,5 +15,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "whetstone@whetstone": true
   }
 }
