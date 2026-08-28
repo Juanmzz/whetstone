@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 7
+version: 8
 status: active
 ---
 # TDD discipline
@@ -72,6 +72,13 @@ strict TDD regardless of how small it looks.
    aimed at the wrong subject reads as fine. This is a shape rule, checkable by eye in a
    diff: no linter can say which line is the act, and none should be written to guess.
 
+10. [TD10] **Done means the gate passed, not that the tests passed.** Run `wst gate
+   --no-lens` before declaring a change complete. Three signals in four days were caught by
+   the gate for three different oversights the tests could never see: excess comments, a
+   stale status line, a broken type. All three had a local check that would have found them
+   first. Where the plugin is installed its Stop hook already does this, so this rule is for
+   everywhere it is not.
+
 ## Defining a strict path (worked example)
 
 The constitution's risk profile names the domains where correctness is non-negotiable; the
@@ -95,6 +102,12 @@ project's own config (`CLAUDE.md` / `AGENTS.md`), not here. Cross-cutting E2E su
 CI or pre-release. They are NOT part of the per-change TDD loop.
 
 ## Changelog
+
+- v8 (2026-08-28, retro-0005): added [TD10]. Three `gate-blocked` signals shared one root
+  cause: work declared done on a green test suite while a local check that would have caught
+  the oversight was never run. The proposal named an `npm run verify` that does not exist;
+  the gate already selects the right checks for the diff, and a second command would be a
+  second definition of verified.
 
 - v7 (2026-08-26, owner decision): dropped the requirement to quote the red output in the
   commit body. v5 added it as "the evidence the test came first", and it is evidence

@@ -151,4 +151,24 @@ lacks is checkable, and nothing checks it.
 
 cursor: sig-39f4aa1e · 61 signals · 5 clusters, 5 actionable · $0.2994
 
-_Proposals written, none applied. Replace this line with what was accepted and refused._
+**Accepted 1 of 5.**
+
+- **Proposal 1, accepted narrowed** as `tdd-discipline` [TD10]: done means `wst gate
+  --no-lens` passed, not that the tests passed. The proposal named an `npm run verify` that
+  does not exist, and a second command would be a second definition of verified. It also
+  predates the plugin's Stop hook, which already runs the gate where it is installed, so the
+  rule covers everywhere it is not.
+- **Proposals 2 and 4, accepted as one.** They are the same proposal from one signal
+  (`sig-ea119c62`) clustered under two keys, and neither noticed the other. A `PreToolUse`
+  guard on destructive git commands is real work, filed rather than written here.
+- **Proposal 3, refused.** It asked to document the calibration deadlock's manual workaround.
+  PR #107 fixed the deadlock in code days earlier. The retro could not know: `sig-b828c2b1`
+  carries no `resolved_by`.
+- **Proposal 5, refused.** It says so itself: "expect this to be rejected". It came from a
+  `calibration-passed` signal, and a success is not friction, so the cluster had nothing to
+  propose and one was invented to fill it.
+
+**What this retro taught, beyond its proposals.** Two of five were dead on arrival because the
+loop cannot see what already shipped: one fix landed in code, the other in a hook. And one
+signal produced two identical proposals under two cluster keys. `resolved_by` is what would
+have prevented the first; nothing yet prevents the second.
