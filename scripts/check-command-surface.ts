@@ -6,6 +6,12 @@
  * "instead of accreting in `commands/`, which nothing guards". This is the guard.
  * A second export is the seam an adapter or a policy slips through, and every one
  * of them here was reached for by a test rather than by another command.
+ *
+ * A TYPE export is not that seam and does not count. An `interface CheckOptions`
+ * is the command's own signature, erased at compile time and reachable as nothing;
+ * `cli.ts` reads it to type its own flags. Counting them reported nine files where
+ * four have a problem, and a check that is wrong five times out of nine is one
+ * people learn to skip past.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -63,13 +69,14 @@ interface Drift {
 }
 
 function judge(file: string, surface: readonly Exported[]): Drift | null {
-  if (surface.length === 0) return { file, surface, why: "exports nothing" };
-  if (surface.length > 1) {
-    return { file, surface, why: `exports ${String(surface.length)} things, not one` };
+  const behaviour = surface.filter((e) => !e.type);
+  if (behaviour.length === 0) return { file, surface: behaviour, why: "exports no command" };
+  if (behaviour.length > 1) {
+    return { file, surface: behaviour, why: `exports ${String(behaviour.length)} things, not one` };
   }
-  const only = surface[0];
-  if (only === undefined || !only.name.startsWith("run") || only.type) {
-    return { file, surface, why: `its one export is not a \`run*\` function` };
+  const only = behaviour[0];
+  if (only === undefined || !only.name.startsWith("run")) {
+    return { file, surface: behaviour, why: `its one export is not a \`run*\` function` };
   }
   return null;
 }
@@ -93,7 +100,9 @@ async function main(): Promise<void> {
   }
 
   if (drifted.length === 0) {
-    console.error(`${String(names.length)} command files each export one \`run*\` function`);
+    console.error(
+      `${String(names.length)} command files each export one \`run*\` function and nothing else`,
+    );
     return;
   }
 
@@ -104,9 +113,8 @@ async function main(): Promise<void> {
       console.error(`      ${e.type ? "type " : "     "}${e.name}`);
     }
   }
-  const types = drifted.flatMap((d) => d.surface).filter((e) => e.type).length;
   console.error(
-    `\n${String(drifted.length)} of ${String(names.length)} files, ${String(types)} of the extra exports type-only.`,
+    `\n${String(drifted.length)} of ${String(names.length)} files. Types are not counted: they are the command's own signature.`,
   );
   console.error(`Move an adapter to \`src/shell/\` and policy to \`src/core/\`.`);
   process.exit(1);
