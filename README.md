@@ -44,6 +44,18 @@ is gone; nothing else knows you installed it.
 Splitting *failed* from *could not run* is the difference between a gate you trust and
 one you learn to route around.
 
+## The judgment check
+
+One check asks a model whether a diff introduces a correctness bug. It earned the right to
+block by measurement: 100 correct verdicts out of 100, unanimous on ten fixtures, recorded in
+a receipt that binds the prompt, the fixtures, the model and the runtime. Change any one and
+the authority lapses.
+
+**It blocks nowhere today.** The pre-push hook skips it because a gate that costs fifty
+seconds and real money every push is one people bypass; CI skips it because a runner has no
+interactive session. So it runs when you run it: `wst gate`, without `--no-lens`. The decision
+that promoted it carries `· unbuilt` for that reason.
+
 ## Documentation
 
 - [Architecture](./docs/architecture.md): what is true now, in the present tense
