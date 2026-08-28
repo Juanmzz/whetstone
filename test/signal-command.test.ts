@@ -11,7 +11,13 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runSignal } from "../src/commands/signal.js";
+import { isolateFromInheritedGit } from "./git-env.js";
 import { tempDir } from "./tmp.js";
+
+// This file builds temp repositories too, and was the one left out when the
+// helper was written: under the pre-push hook its `git init` adopted THIS
+// repository and three cases failed a run nobody could reproduce by hand.
+isolateFromInheritedGit();
 
 const run = promisify(execFile);
 
