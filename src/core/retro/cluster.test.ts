@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clusterSignals, signalsSince, type Signal } from "./cluster.js";
+import { clusterSignals, signalsSince, unresolved, type Signal } from "./cluster.js";
 
 const sig = (over: Partial<Signal> & { id: string }): Signal => ({
   ts: "2026-08-08T00:00:00-03:00",
@@ -130,5 +130,29 @@ describe("clusterSignals — subsumption", () => {
     // type:generic survives here, and should: it spans BOTH rules, so no single
     // rule cluster covers it. That is a candidate meta-pattern, not a duplicate.
     expect(clusters.find((c) => c.key === "type:generic")?.signals).toHaveLength(3);
+  });
+});
+
+describe("unresolved", () => {
+  // retro-0005 spent $0.2994 on five proposals; three re-proposed work already done.
+  it("drops a signal that already records what answered it", () => {
+    const kept = unresolved([
+      sig({ id: "a" }),
+      sig({ id: "b", resolved_by: "skills/voice.md@v3" }),
+    ]);
+    expect(kept.map((s) => s.id)).toEqual(["a"]);
+  });
+
+  it("keeps everything when nothing is resolved", () => {
+    expect(unresolved([sig({ id: "a" }), sig({ id: "b" })])).toHaveLength(2);
+  });
+
+  // Recurrence makes a cluster actionable, so a fixed signal may not be half of it.
+  it("leaves a pair with one answered half short of recurrence", () => {
+    const open = unresolved([
+      sig({ id: "a", type: "t" }),
+      sig({ id: "b", type: "t", resolved_by: "pr-107" }),
+    ]);
+    expect(clusterSignals(open).find((c) => c.key === "type:t")?.actionable).toBe(false);
   });
 });

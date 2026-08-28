@@ -8,7 +8,7 @@
 import type { MemoryPort } from "../core/memory/port.js";
 import type { WstConfig } from "../core/config/schema.js";
 import type { SignalRecord } from "../core/signals/parse.js";
-import { appendSignalRecord, readSignalLog } from "./signals.js";
+import { appendSignalRecord, readSignalLog, resolveSignal } from "./signals.js";
 import { loadConfig } from "./config.js";
 
 export function filesMemory(definitionRoot: string): MemoryPort {
@@ -22,6 +22,7 @@ export function filesMemory(definitionRoot: string): MemoryPort {
       }
       return ids;
     },
+    resolve: (id: string, by: string) => resolveSignal(definitionRoot, id, by),
   };
 }
 

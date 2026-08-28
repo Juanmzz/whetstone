@@ -161,6 +161,8 @@ program
     "a batch of findings from another tool, or `-` for stdin. Records as `cli`",
   )
   .option("--tool <name>", "which tool found them, named in every record")
+  .option("--resolve <id>", "record that a stored signal is answered, e.g. sig-b828c2b1")
+  .option("--by <answer>", "what answered it: `skills/x.md@v3`, an adr, a PR. Required with --resolve")
   .action(
     async (
       type: string | undefined,
@@ -175,6 +177,8 @@ program
         dryRun?: boolean;
         fromJson?: string;
         tool?: string;
+        resolve?: string;
+        by?: string;
       },
     ) => {
       process.exitCode = await runSignal({
@@ -186,6 +190,8 @@ program
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
         ...(opts.fromJson !== undefined ? { fromJson: opts.fromJson } : {}),
         ...(opts.tool !== undefined ? { tool: opts.tool } : {}),
+        ...(opts.resolve !== undefined ? { resolve: opts.resolve } : {}),
+        ...(opts.by !== undefined ? { by: opts.by } : {}),
       });
     },
   );
