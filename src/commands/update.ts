@@ -21,7 +21,8 @@ import {
 } from "../core/init/index.js";
 import { createGitAdapter } from "../shell/git.js";
 import { banner } from "../banner.js";
-import { findPayloadRoot, gatherFacts, readSkills } from "./init.js";
+import { gatherFacts } from "../shell/repo-facts.js";
+import { findPayloadRoot, readSkills } from "../shell/payload.js";
 
 const EXIT_NO_BASE = 2;
 

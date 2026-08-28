@@ -982,3 +982,40 @@ deleted if it does not earn its place.
 Cost accepted: a required artifact that nobody looks at is ceremony, and the gate cannot tell
 the difference. If evidence is being produced and never opened, that is a signal, not a
 success.
+
+### adr-0037 — `commands/` holds one export, and the guard blocks
+`accepted` · 2026-08-28 · rules: checks/command-surface.md
+
+adr-0008 named `commands/` composition roots: build adapters, call core, print. The same
+page said policy has a home in `core/` rather than accreting in `commands/`, **which nothing
+guards**, and both halves were true for two years. `core/` had `test/architecture.test.ts`
+holding the import direction. `commands/` had nothing.
+
+`command-surface` arrived at `warn` counting every export, which reported nine of eleven
+files. Five of those nine were `interface *Options`: the command's own signature, erased at
+compile time, read by `cli.ts` to type its own flags. A check wrong five times out of nine is
+one people learn to skip past, so it counts BEHAVIOUR and not types.
+
+That left four, and the four were real. `gate.ts` exported `createCheckRunner`, which spawns
+processes and calls a judge. `init.ts` exported four helpers that read a repo and locate the
+payload. `signal.ts` exported the two flag defaults. `status.ts` exported `gatherStatus`, and
+that one is the shape stated plainly: `home.ts` needed the same facts, so one command
+imported another rather than either reaching an adapter.
+
+They are paid. `shell/check-runner.ts`, `shell/repo-facts.ts`, `shell/payload.ts` and
+`shell/status.ts` now hold what read the world; `DEFAULT_PHASE` and `DEFAULT_SEVERITY` sit in
+`core/signals/human.ts` beside the scale they belong to. Eleven of eleven pass, so the check
+blocks: a deterministic check over a line that holds may block freely, and the reason this one
+waited was that it was red rather than that it was uncertain.
+
+Rejected: counting type exports and living with the noise. It is the failure mode the seeded
+`lint` body already warns about in every repo `init` touches: a permanently-warning check is
+noise, and noise is what makes the signal unreadable.
+
+Rejected: letting a test import a second export "just for tests". Every one of the four was
+reached for by a test rather than by another command, which is exactly how a thing that
+belongs in another layer stops looking like a mistake.
+
+Cost accepted: four more files in `src/shell/`, and `init.ts` and `status.ts` are now split
+across two. `status.ts` is twelve lines and reads better for it; `gate.ts` lost 200.
+

@@ -34,6 +34,23 @@ export type HumanSignalResult =
 const SEVERITIES = ["low", "medium", "high"] as const;
 
 /**
+ * What `wst signal` records when nobody says where it happened.
+ *
+ * `other` rather than a guess. The phase is what a retro clusters on, and a
+ * wrong one is a signal filed under a stage it never touched. Beside the scale
+ * because `cli.ts` hands both to Commander as the flag defaults, and a literal
+ * in each place is two answers with nothing to notice when they diverge.
+ */
+export const DEFAULT_PHASE = "other";
+
+/**
+ * The middle of the scale. `high` is deliberately not the default: `clusterSignals`
+ * treats a lone `high` as actionable on its own, so defaulting to it would let an
+ * unconsidered flag drive a rule proposal by itself.
+ */
+export const DEFAULT_SEVERITY: SignalSeverity = "medium";
+
+/**
  * Narrowing rather than an `as SignalSeverity` cast. The cast made the check above
  * it decorative: change the scale in one place and the record still carries
  * whatever the CLI passed, typed as something it is not.
