@@ -146,3 +146,9 @@ section only documents v6". It does not: v5 (2026-08-14) carries that entry with
 rule text closely enough to refuse restating it, and then missed the changelog it was
 proposing to write. Worth noting as a failure mode: a proposal's claim about what a file
 lacks is checkable, and nothing checks it.
+
+## retro-0005
+
+cursor: sig-39f4aa1e · 61 signals · 5 clusters, 5 actionable · $0.2994
+
+_Proposals written, none applied. Replace this line with what was accepted and refused._
