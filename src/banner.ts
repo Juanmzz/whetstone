@@ -1,11 +1,13 @@
 /**
- * The wordmark. Presentation only — no decisions, so it lives beside `cli.ts`
+ * The wordmark. Presentation only, no decisions, so it lives beside `cli.ts`
  * rather than in `core/`.
  *
  * Shown where a HUMAN typed the command: `wst` bare, and `wst init`. Never in
- * `gate`, `status`, `check` or `triage` — those run inside hooks and CI, where a
+ * `gate`, `status`, `check` or `triage`, which run inside hooks and CI, where a
  * banner is output somebody has to scroll past to find the failure.
  */
+
+import { decodeMark, type Mark } from "./core/tui/mark.js";
 
 export const WORDMARK = "▓▒░ whetstone";
 
@@ -25,14 +27,38 @@ export function banner(version?: string): string {
  * default terminal and stayed there behind every menu frame, which is a logo
  * turned into furniture. Below about twenty-four the isometric silhouette stops
  * reading as a stone.
+ *
+ * Thirty columns still, and still EIGHT rows on screen: a cell carries two
+ * pixels stacked, so the same footprint holds 30x16 square pixels where it used
+ * to hold 30x8 stretched ones. `renderMark` turns this into the escape
+ * sequences a given terminal can take.
  */
-export const MARK: readonly string[] = Object.freeze([
-  "                  ▒▒▒▒",
-  "            ▓▒▒░░░░░░░░░▒▒▓",
-  "     ▓▒▒▒░░░░░░░░░░░░░░░░▒▒▓█",
-  " ▓▒░░░░░░░░░░░░░░░░▒▒▓▓███████",
-  "█▓▓▓▒▓▒░░░░░░▒▓▓▓████████████",
-  " ▓▓▓▓▓▓▓▓▒▓██████████████",
-  "    █▓▓▓▓▓▓████████",
-  "         ▓███",
+export const MARK_PALETTE: readonly string[] = Object.freeze([
+  "#2d2a37",
+  "#474651",
+  "#5e5c61",
+  "#787373",
+  "#8e8a86",
+  "#aaa29a",
+  "#bfb6ac",
+  "#cbc1b5",
+]);
+
+export const MARK: Mark = decodeMark(MARK_PALETTE, [
+  "...................14.........",
+  "................13577741......",
+  ".............1357776677742....",
+  "..........245777666677777753..",
+  ".......3467777777777777777763.",
+  "....34677777777777677777642210",
+  ".35777677777777777777643211110",
+  "045677777777777777642111111110",
+  "044445677777776542111111111110",
+  "04444345677754221111111111100.",
+  "04444444444211111111111100....",
+  ".2344444443111111111100.......",
+  "...13444442111111100..........",
+  ".....024442111100.............",
+  "........132100................",
+  "..........0...................",
 ]);

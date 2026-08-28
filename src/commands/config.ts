@@ -9,6 +9,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { MARK } from "../banner.js";
+import { renderMark } from "../core/tui/mark.js";
+import { colorDepth } from "../shell/color.js";
 import { honingFrames } from "../core/tui/honing.js";
 import { editConfig } from "../core/config/edit.js";
 import { parseConfig } from "../core/config/schema.js";
@@ -98,12 +100,16 @@ export async function runConfig(cwd: string, opts: ConfigOptions = {}): Promise<
   });
 
   try {
-    if (opts.entrance !== false) await play(process.stdout, keys, honingFrames(MARK));
+    const depth = colorDepth(process.stdout.isTTY === true, process.env);
+    const mark = renderMark(MARK, depth);
+    if (opts.entrance !== false) {
+      await play(process.stdout, keys, honingFrames(MARK).map((f) => renderMark(f, depth)));
+    }
 
     for (;;) {
       // Menu only: the skills list plus the mark is exactly a default terminal.
       const screen = render(state);
-      paint(process.stdout, state.view.kind === "menu" ? [...MARK, "", ...screen] : screen);
+      paint(process.stdout, state.view.kind === "menu" ? [...mark, "", ...screen] : screen);
       const result = press(state, await keys.next());
       state = result.state;
 
