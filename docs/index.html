@@ -129,6 +129,7 @@
       <div class="step"><span class="n">03</span><span class="cmd">wst signal</span><span class="d">You record the friction the run hit. A human types this one.</span></div>
       <div class="step"><span class="n">04</span><span class="cmd">wst retro</span><span class="d">Clusters the signals and proposes rule changes. It never applies them.</span></div>
     </div>
+    <p class="note">In a terminal, <span class="mono">wst</span> with no arguments opens a launcher over these commands. One row each, saying what it reads, what it writes and what its exit code means; the rows this repo cannot run yet say what they are waiting for. It runs the one you pick and comes back. Off a terminal it prints the help, because a menu waiting for a keypress in a CI job hangs where nobody can see it.</p>
   </section>
 
   <section class="sec">
@@ -142,6 +143,7 @@
 <b>.githooks/pre-push</b>   where the exit code actually stops a push
 <b>AGENTS.md</b>            rendered from the above, never the source</pre>
     <p class="note">Plain text, all of it. Delete the directory and the tool is gone; nothing else knows you installed it. Three runtime dependencies, no services, nothing to host.</p>
+    <p class="note">A check Whetstone brings itself arrives switched off, with the friction that earned it recorded in the file. Its logic ships with the binary, so it runs as <span class="mono">wst check run &lt;id&gt;</span> and not as a script nobody wrote in your repo.</p>
   </section>
 
   <div class="foot">
