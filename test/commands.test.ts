@@ -208,6 +208,47 @@ describe("wst triage", () => {
     await runGate({ range: "HEAD", noLens: true, noEmit: true, json: true }, dir);
     expect(json()["tier"]).toBe(triaged);
   });
+
+  it("classifies declared paths without reading a diff", async () => {
+    // `migrations/002.sql` is in no diff and not in the repo, and the project's
+    // own rules still rate it strict.
+    const dir = await repo();
+    expect(await runTriage({ paths: ["migrations/002.sql"], json: true }, dir)).toBe(0);
+    expect((json()["triage"] as { tier: string }).tier).toBe("strict");
+  });
+
+  it("never dresses a declared path up as an observed change", async () => {
+    // A `status` of "added" would be indistinguishable from a real diff entry and
+    // `range: "HEAD"` would name a comparison nobody made.
+    const dir = await repo();
+    await runTriage({ paths: ["migrations/002.sql"], json: true }, dir);
+    const payload = json();
+    expect(payload["range"]).toBeNull();
+    expect(payload["declaredPaths"]).toEqual(["migrations/002.sql"]);
+
+    const [match] = (payload["triage"] as { matches: { file: Record<string, unknown> }[] }).matches;
+    expect(match?.file).toEqual({ path: "migrations/002.sql", observed: false });
+
+    out.length = 0;
+    await runTriage({ paths: ["migrations/002.sql"] }, dir);
+    expect(stdout()).toContain("no diff read");
+    expect(stdout()).not.toContain("range:");
+  });
+
+  it("refuses --paths together with --range instead of picking one", async () => {
+    // Answering one and labelling it with the other reports a tier for a set of
+    // files nobody named.
+    const dir = await repo();
+    expect(await runTriage({ paths: ["src/app.ts"], range: "HEAD" }, dir)).toBe(1);
+    expect(stderr()).toMatch(/answer different questions/);
+  });
+
+  it("refuses a declared path the rules cannot be about", async () => {
+    // An absolute path matches no glob and would otherwise land at `light`.
+    const dir = await repo();
+    expect(await runTriage({ paths: ["/etc/passwd"] }, dir)).toBe(1);
+    expect(stderr()).toMatch(/repo-relative/);
+  });
 });
 
 // ── wst status ───────────────────────────────────────────────────────────────

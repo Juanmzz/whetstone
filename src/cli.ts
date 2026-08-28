@@ -72,11 +72,17 @@ check
 
 program
   .command("triage")
-  .description("classify a diff into a tier and show which checks apply")
-  .option("--range <range>", "git diff range", "HEAD")
+  .description("classify a diff, or paths you declare, into a tier and show which checks apply")
+  // No commander default: a default --range makes --paths look like both were
+  // passed. runTriage still falls back to HEAD when neither is given.
+  .option("--range <range>", "git diff range (default: HEAD)")
+  .option(
+    "--paths <path...>",
+    "repo-relative paths you are ABOUT to touch; classified without reading a diff",
+  )
   .option("--json", "print the result as JSON")
   .option("--why", "show the rule that matched each file")
-  .action(async (opts: { range?: string; json?: boolean; why?: boolean }) => {
+  .action(async (opts: { range?: string; paths?: string[]; json?: boolean; why?: boolean }) => {
     process.exitCode = await runTriage(opts);
   });
 program
