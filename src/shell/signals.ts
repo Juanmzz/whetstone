@@ -11,7 +11,7 @@
 
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { signalId, type EmittableSignal } from "../core/signals/emit.js";
+import { gateSignalId, type EmittableSignal } from "../core/signals/emit.js";
 import { parseSignalLog, type SignalRecord } from "../core/signals/parse.js";
 import { markResolved } from "../core/signals/resolve.js";
 import type { ResolveOutcome } from "../core/memory/port.js";
@@ -59,7 +59,7 @@ export async function appendSignals(
   const ids: string[] = [];
   const lines: string[] = [];
   for (const s of signals) {
-    const id = signalId(s.fingerprint);
+    const id = gateSignalId(s.fingerprint, now.toISOString(), branch);
     ids.push(id);
     lines.push(
       JSON.stringify({
