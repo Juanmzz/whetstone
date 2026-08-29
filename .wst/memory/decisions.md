@@ -1171,3 +1171,38 @@ Cost accepted: one model call on a path that had none, on the first run of the t
 anyone has agreed to spend anything. It is announced on the screen that offers it, the run
 that measured it cost $0.0595, and picking only Codex or OpenCode skips it entirely.
 
+### adr-0041 — a pull request body follows the template, and stops at forty lines
+`accepted` · 2026-08-29
+
+Two rules were in force at once. "PR bodies: ONE LINE" was stated three times by the owner
+and produced thirty-one merged bodies of 93 to 330 characters. The template landed on
+2026-08-28 and produced nine of 26 to 59 lines. Both were being followed, by different
+writers, on one repo.
+
+The template wins. A one-line body cannot say what was ruled out, what was measured, or what
+was left unchecked, and those are the three questions this project asks of everything else it
+writes. What the one-line rule defended is that a body nobody reads through is a body that
+did not get written, and that is a ceiling rather than a format.
+
+**Forty lines.** Argued, not fitted: the five sections written tightly are about twenty-five,
+and forty leaves room for a real Evidence block. It could not be fitted, because of the nine
+bodies with headings only ONE used the template's, and it is the 58-line one this rejects.
+
+**Where it runs, and why not in the gate.** Every check in the registry is selected by the
+files a diff touches. A body belongs to the pull request and to no file, so a check keyed on
+`include` globs would claim paths it does not judge. It is a CI step on `pull_request`, plus
+`npm run check:pr-body` for anyone local. Off a pull request the script says there is none and
+exits 0: a branch nobody has opened one for is not a branch with a bad body, and hard rule 3
+is exactly about not merging those two.
+
+Rejected: allowing any heading and checking only the length. Then the format is not enforced
+and the check is a word counter.
+
+Rejected: fitting the ceiling to the measured bodies. The population of correct ones is one.
+
+Rejected: keeping the one-line rule for small changes. Two rules is what produced this.
+
+Cost accepted: the eight merged bodies with invented headings would fail it today, and so
+would the one that used the template. The rule starts by rejecting every example of itself,
+which is what a rule written after the fact does; the number is one line to move.
+

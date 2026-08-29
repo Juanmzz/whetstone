@@ -50,3 +50,9 @@ jobs:
           fi
           echo "gating $RANGE"
           node dist/cli.js gate --range "$RANGE" --no-lens --no-evidence
+
+      # Only where there IS a pull request. A push to `main` has no body to read,
+      # and the script says so and exits 0 rather than inventing a verdict.
+      - name: the pull request body reads
+        if: github.event_name == 'pull_request'
+        run: npm run check:pr-body
