@@ -326,3 +326,31 @@ describe("the harnesses a bootstrapped repo is legible to", () => {
     expect(vendor(plan({ options: { definitionsOnly: true } }))).toEqual([]);
   });
 });
+
+describe("the front doors follow the harnesses you name (adr-0039)", () => {
+  const paths = (harnesses?: readonly string[]): string[] =>
+    plan(harnesses === undefined ? {} : { options: { harnesses } }).files.map((f) => f.path);
+
+  it("writes only the pointer for the harness that was named", () => {
+    // It wrote `GEMINI.md` into a repo whose owner uses Claude, and nobody was
+    // asked. That file is a front door for a harness nobody here runs.
+    const only = paths(["claude-code"]);
+    expect(only).toContain("CLAUDE.md");
+    expect(only).not.toContain("GEMINI.md");
+  });
+
+  it("writes AGENTS.md whatever was named, because it is the source and not a door", () => {
+    for (const picks of [["claude-code"], ["codex"], []]) expect(paths(picks)).toContain("AGENTS.md");
+  });
+
+  it("writes no pointer at all for a harness that reads AGENTS.md itself", () => {
+    const codex = paths(["codex"]);
+    expect(codex).not.toContain("CLAUDE.md");
+    expect(codex).not.toContain("GEMINI.md");
+  });
+
+  it("keeps writing both when nobody was asked, so an old caller is unchanged", () => {
+    expect(paths()).toContain("CLAUDE.md");
+    expect(paths()).toContain("GEMINI.md");
+  });
+});

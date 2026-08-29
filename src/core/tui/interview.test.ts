@@ -286,3 +286,33 @@ describe("a list question you tick rather than type", () => {
     expect(answersOf(pressIn(typed, "ctrl-n").state).sourcePaths).toEqual(["lib"]);
   });
 });
+
+describe("a drafted checkbox screen opens with the boxes already ticked", () => {
+  const risk = (defaultAnswer: string | null): InitQuestion => ({
+    id: "risk",
+    prompt: "p",
+    why: "w",
+    kind: "flags",
+    options: [
+      { value: "money", label: "money" },
+      { value: "authn", label: "auth" },
+    ],
+    defaultAnswer,
+  });
+
+  it("ticks what the draft argued for, and leaves the rest", () => {
+    const s = openInterview([risk("money")]);
+
+    expect(answersOf(s).risk.money).toBe(true);
+    expect(answersOf(s).risk.authn).toBe(false);
+  });
+
+  it("un-ticks on space, which is what makes it a draft and not a verdict", () => {
+    const s = pressIn(openInterview([risk("money")]), "space").state;
+    expect(answersOf(s).risk.money).toBe(false);
+  });
+
+  it("ignores a flag the screen does not offer, rather than ticking a row that is not there", () => {
+    expect(answersOf(openInterview([risk("money,invented")])).risk.money).toBe(true);
+  });
+});

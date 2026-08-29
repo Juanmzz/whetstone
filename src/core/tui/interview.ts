@@ -55,11 +55,20 @@ const NONE: InterviewAction = { kind: "none" };
 function seed(question: InitQuestion): Field {
   const value = question.defaultAnswer;
   if (value === null || value === "") return EMPTY;
-  if (question.kind !== "paths") return { ...EMPTY, draft: value };
-  // Every candidate is a row AND ticked. The repo proposed them; a human unticks
-  // what does not belong rather than retyping around it.
-  const rows = value.split("\n").map((l) => l.trim()).filter((l) => l !== "");
-  return { ...EMPTY, rows, picked: rows };
+  if (question.kind === "paths") {
+    // Every candidate is a row AND ticked. The repo proposed them; a human unticks
+    // what does not belong rather than retyping around it.
+    const rows = value.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+    return { ...EMPTY, rows, picked: rows };
+  }
+  if (question.kind === "flags") {
+    const picked = value.split(",").map((v) => v.trim()).filter((v) => v !== "");
+    // Only values the screen offers. A draft naming a flag nobody ships would
+    // otherwise sit in the answers as a ticked box with no row.
+    const offered = new Set(question.options.map((o) => o.value));
+    return { ...EMPTY, picked: picked.filter((v) => offered.has(v)) };
+  }
+  return { ...EMPTY, draft: value };
 }
 
 export function openInterview(questions: readonly InitQuestion[]): InterviewState {
