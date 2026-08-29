@@ -31,8 +31,13 @@ function withAgent(lines: readonly string[], agent: Agent): string[] {
     found = true;
     return `${m[1]}${agent}${m[3]}`;
   });
-  if (!found) throw new Error("wst.yaml declares no `agent:` key, so there is nothing to change");
-  return out;
+  if (found) return out;
+
+  // ADDED, not refused (adr-0042). Under `version:` where `init` writes it, or at
+  // the top: both are the top level, which is the placement the refusal guarded.
+  const at = out.findIndex((line) => /^version:/.test(line));
+  const added = `agent: ${agent.padEnd(18)} # which adapter runs llm checks`;
+  return at < 0 ? [added, ...out] : [...out.slice(0, at + 1), added, ...out.slice(at + 1)];
 }
 
 function withSkills(lines: readonly string[], active: readonly string[]): string[] {

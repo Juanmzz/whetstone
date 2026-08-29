@@ -1205,4 +1205,29 @@ Rejected: keeping the one-line rule for small changes. Two rules is what produce
 Cost accepted: the eight merged bodies with invented headings would fail it today, and so
 would the one that used the template. The rule starts by rejecting every example of itself,
 which is what a rule written after the fact does; the number is one line to move.
+### adr-0042 — `config` adds the key it is asked to change, and lets nothing escape the menu
+`accepted` · 2026-08-29
+
+Picking a judge in `wst config` threw a Node stack trace out of the menu, with `dist/` paths
+in it, and left the terminal in raw mode. The message underneath was correct and useless:
+`wst.yaml declares no agent: key, so there is nothing to change`. It is a fact about the
+file's structure, told to somebody who asked to change a setting.
+
+The refusal had a real reason: a key appended to a file whose shape nobody parsed lands
+inside whatever block the cursor was in, and `memory:` with an `agent:` indented under it
+means nothing. That is a placement problem, not a reason to refuse. The key goes under
+`version:` where `init` writes it, or at the top where there is no `version:` to sit under,
+which are both the top level by construction.
+
+And the write is wrapped. A menu may report that it could not write; it may not exit through
+a stack trace, because at that point nothing has restored the terminal.
+
+Rejected: hiding the option when the key is absent. Then the setting is unreachable in
+exactly the repos that need it set, which is every repo bootstrapped before the key existed.
+
+Rejected: re-rendering `wst.yaml` from the template. `renderWstYaml` knows only the keys
+`init` writes, so a hand-extended file would silently lose what it does not know.
+
+Cost accepted: a file so malformed that `version:` is inside a block gets the key at the top
+rather than beside its neighbours. It is still valid YAML and still the top level.
 

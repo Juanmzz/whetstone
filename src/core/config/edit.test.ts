@@ -56,13 +56,66 @@ describe("editConfig — a surgical edit, never a re-render", () => {
     expect(editConfig(FILE, { agent: "claude" })).toBe(FILE);
   });
 
-  it("refuses a file with no agent key rather than inventing one", () => {
-    // Appending a key to a file whose shape we did not parse is how an edit
-    // lands in the wrong block.
-    expect(() => editConfig("version: 0\n", { agent: "antigravity" })).toThrow(/agent/);
+  it("adds a missing agent key at the TOP level, never inside a nested block", () => {
+    // The risk the old refusal was guarding: a key appended to a file whose shape
+    // nobody parsed lands under whatever block the cursor happened to be in, and
+    // `memory:\n  agent: claude` means nothing.
+    const nested = "version: 0\nmemory:\n  namespace: \"x\"\n";
+    const out = editConfig(nested, { agent: "antigravity" }).split("\n");
+    const at = out.findIndex((l) => l.startsWith("agent:"));
+
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(out[at]).not.toMatch(/^\s/);
+    expect(out.slice(0, at).some((l) => l.startsWith("memory:"))).toBe(false);
   });
 
   it("refuses a skill it cannot find a line for", () => {
     expect(() => editConfig(FILE, { skills: ["skills/nope.md"] })).toThrow(/nope/);
+  });
+});
+
+/**
+ * A config with no `agent:` key is a config `wst config` can still change.
+ *
+ * It threw, and the throw came out of an interactive menu as a Node stack trace
+ * with internal paths in it. A menu that offers an option has to be able to
+ * carry it out or say why not; the file simply predates the key.
+ */
+describe("editConfig — a key the file does not have yet", () => {
+  const noAgent = "# Whetstone config.\nversion: 0\nbackend: files\nskills:\n  - skills/voice.md\n";
+
+  it("adds the key rather than refusing, and keeps the rest of the file", () => {
+    const out = editConfig(noAgent, { agent: "antigravity" });
+
+    expect(out).toMatch(/^agent: antigravity/m);
+    expect(out).toContain("backend: files");
+    expect(out).toContain("  - skills/voice.md");
+  });
+
+  it("puts it where `init` writes it, under `version:`, so the file still reads in order", () => {
+    const lines = editConfig(noAgent, { agent: "claude" }).split("\n");
+
+    expect(lines[lines.indexOf("version: 0") + 1]).toMatch(/^agent: claude/);
+  });
+
+  it("adds it to a file with no `version:` either, without losing a line", () => {
+    const bare = "backend: files\n";
+    const out = editConfig(bare, { agent: "claude" });
+
+    expect(out).toMatch(/^agent: claude/m);
+    expect(out).toContain("backend: files");
+  });
+
+  it("still edits in place where the key IS there, rather than adding a second", () => {
+    const out = editConfig("version: 0\nagent: claude\n", { agent: "antigravity" });
+
+    expect(out.match(/^agent:/gm)).toHaveLength(1);
+    expect(out).toMatch(/^agent: antigravity/m);
+  });
+
+  it("throws nothing, ever, for a caller that cannot catch it usefully", () => {
+    for (const text of ["", "\n", "nonsense"]) {
+      expect(() => editConfig(text, { agent: "claude" })).not.toThrow();
+    }
   });
 });
