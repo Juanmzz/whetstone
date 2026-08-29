@@ -89,8 +89,16 @@ export function skillCopies(texts?: ReadonlyMap<string, string>): readonly CopyR
  * missingFromRegistry: absence of evidence was never evidence of solo work.
  */
 export function activeSkills(present?: readonly string[]): readonly string[] {
-  // `present` is what the shell read off `.wst/skills/`.
-  return present ?? SKILL_FILES.map((name) => `skills/${name}`);
+  // `present` is what the shell read off `.wst/skills/`, and `undefined` is a
+  // directory that is not there yet, which is not the same as an empty one.
+  const shipped = SKILL_FILES.map((name) => `skills/${name}`);
+  if (present === undefined) return shipped;
+
+  // The order is the PAYLOAD's, not the caller's: a directory read arrives
+  // alphabetical (adr-0044). Anything the payload does not ship was written by
+  // hand and keeps its place at the end rather than being dropped.
+  const named = new Set(present);
+  return [...shipped.filter((s) => named.has(s)), ...present.filter((s) => !shipped.includes(s))];
 }
 
 export interface WstYamlInput {
