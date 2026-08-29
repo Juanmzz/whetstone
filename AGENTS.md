@@ -136,7 +136,10 @@ built under that waiver and removed by ADR-0009.
 - **Unowned:** `npm run check:in-force` lists what is decided and not yet true of the
   code, so this line no longer keeps it by hand. Beyond that: no skill owns
   subprocess-exit-code conventions (a retro proposal was declined for want of a home);
-  **seven of the eleven checks are Whetstone-only**: `adr-refs`, `command-surface`, `docs-fresh`,
-  `in-force`, `provenance`, `skill-shape` and `strict-tdd` enforce this repo's own discipline, `init` seeds none of them, and
+  **eight of the thirteen checks are Whetstone-only**: `adr-refs`, `command-surface`, `docs-fresh`,
+  `in-force`, `provenance`, `run-the-lens`, `skill-shape` and `strict-tdd` enforce this repo's own discipline, `init` seeds none of them, and
   nobody has asked what each last caught; and nothing says what the signal log does after two
-  years of appending.
+  years of appending. **`commit-message` is the first check whose subject is not a file**, and
+  the registry has no way to express that: selection is by changed path, so its `include` is
+  made broad here and scoped to the declared layout where `init` writes it, which means a
+  documentation-only commit escapes it in a bootstrapped repo.

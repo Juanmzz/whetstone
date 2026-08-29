@@ -60,6 +60,7 @@ describe("planInit — what a typical TypeScript repo gets", () => {
         ".wst/.gitattributes",
         ".wst/.gitignore",
         ".wst/checks/comment-density.md",
+    ".wst/checks/commit-message.md",
         ".wst/checks/lint.md",
         ".wst/checks/test.md",
         ".wst/checks/typecheck.md",
