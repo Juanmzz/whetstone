@@ -6,7 +6,7 @@
  * (adr-0032). This only chooses one.
  */
 
-import { MARK, MARK_ENTRANCE } from "../banner.js";
+import { MARK_ENTRANCE, MARK_HOME } from "../banner.js";
 import { honingFrames } from "../core/tui/honing.js";
 import { renderMark } from "../core/tui/mark.js";
 import { colorDepth } from "../shell/color.js";
@@ -50,15 +50,14 @@ export async function runHome(cwd: string = process.cwd()): Promise<number> {
   // Read once: the terminal does not change depth mid-session, and re-deriving
   // it per frame would put an env lookup inside the animation loop.
   const depth = colorDepth(process.stdout.isTTY === true, process.env);
-  const mark = renderMark(MARK, depth);
+  const mark = renderMark(MARK_HOME, depth);
 
   try {
     await play(process.stdout, keys, honingFrames(MARK_ENTRANCE).map((f) => renderMark(f, depth)));
 
     for (;;) {
-      // No separator row. The mark plus the menu is exactly the height of a
-      // default terminal, and the blank one was the cheapest of the twenty-five
-      // to give up: the stone's own last row is mostly empty already.
+      // The mark plus the menu was EXACTLY a default terminal. Moving the name
+      // out of the menu and beside the stone gave one of those rows back.
       paint(process.stdout, [...mark, ...renderHome(state)]);
       const result = pressHome(state, await keys.next());
       state = result.state;
