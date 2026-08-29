@@ -1058,4 +1058,45 @@ is load-bearing; a fifth to describe an environment is a large change for one ch
 Cost accepted: a caller can pass `--no-evidence` on a machine that HAS a store and skip a
 check that would have answered. That is true of `--no-lens` and `--fast` already, and the
 report names what was excluded.
+### adr-0038 — a declaration may pre-fill an answer; an inference still may not
+`accepted` · 2026-08-29 · signals: sig-0041
+
+adr-0016 stopped `init` inferring, and the rule has held. It was written against a table
+guessing a language from file extensions, and it drew the line at what a repo DECLARES:
+its scripts, its lockfile, whether test files exist. Reading those was always allowed.
+
+In the same movement `init` went from guessing everything to asking everything, and the
+2026-08-29 field report measured what that costs. Three of five questions ask for something
+the repo already states: `package.json` declares `workspaces`, `engines.node` names a
+runtime, `tsconfig.json` and `Cargo.toml` each name a language. The owner's words on the
+source-paths question were "uh pero esta pregunta es muy mala, eso deberia descubrirlo
+solo". Whetstone had the answer in hand and asked anyway.
+
+So: **a declared fact arrives in the field, as a draft a keystroke edits.** The question is
+still asked, still counted, still answerable with anything. What changes is that it opens
+with what the repo said instead of a blank, and the screen says where the value came from.
+
+The line adr-0016 drew does not move. `workspaces` is a statement; counting `.ts` files is
+a guess. Purpose, risk profile and strict paths stay blank on every repo, because they are
+judgements about what you are willing to lose and no file states them.
+
+One reading is not a declaration and is done anyway: a workspace pattern says where the
+packages are, not where the code sits inside one. So the TREE is asked. Where members have
+a `src/`, the glob narrows to `apps/*/src/**`; where they do not, it stays `apps/*/**`. That
+is reading the repo rather than applying a convention blind, and it is why the two globs a
+real monorepo produced differ from each other.
+
+Rejected: skipping a question the repo answered. The interview would then shrink when a
+reading gets lucky, and nobody could state its coverage. adr-0016's own test says this and
+it still holds; what changed is the starting value, not the list.
+
+Rejected: showing the reading beside the field as a suggestion to retype. That is the same
+work with an extra step, and the report's complaint was the typing.
+
+Rejected: assuming `src/` inside every workspace member. It is the convention adr-0016
+exists to refuse, and the tree answers it for free.
+
+Cost accepted: a human who does not read the pre-filled field signs a reading they did not
+check. The screen names it as read from the repo, and the evidence lines say which file
+said so, which is the same guard `init` already gives its detected commands.
 

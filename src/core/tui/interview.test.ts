@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInterview } from "../init/interview.js";
+import { buildInterview, type InitQuestion } from "../init/interview.js";
 import { answersOf, openInterview, pressIn, renderInterview, type InterviewState } from "./interview.js";
 
 const QUESTIONS = buildInterview();
@@ -69,14 +69,16 @@ describe("the risk flags", () => {
 describe("a list answer", () => {
   const paths = (): InterviewState => at(START(), ["tab", "tab"]);
 
-  it("commits a line with enter and starts the next", () => {
-    const s = at(type(paths(), "src/**"), ["return"]);
+  it("commits a line with ctrl-n and starts the next", () => {
+    // `enter` advances the question, here and everywhere else. Adding a line is
+    // the thing only this screen does, so it is the thing with its own key.
+    const s = at(type(paths(), "src/**"), ["ctrl-n"]);
 
     expect(answersOf(s).sourcePaths).toEqual(["src/**"]);
   });
 
   it("keeps several", () => {
-    const s = at(type(at(type(paths(), "src/**"), ["return"]), "apps/*/src/**"), ["return"]);
+    const s = at(type(at(type(paths(), "src/**"), ["ctrl-n"]), "apps/*/src/**"), ["ctrl-n"]);
 
     expect(answersOf(s).sourcePaths).toEqual(["src/**", "apps/*/src/**"]);
   });
@@ -110,5 +112,85 @@ describe("leaving", () => {
 
     expect(result.action.kind).toBe("write");
     expect(result.action.kind === "write" && result.action.answers.purpose).toBe("a task app");
+  });
+});
+
+describe("a pre-filled question opens with the answer in it, editable", () => {
+  const q = (over: Partial<InitQuestion>): InitQuestion => ({
+    id: "stack",
+    prompt: "p",
+    why: "w",
+    kind: "text",
+    options: [],
+    defaultAnswer: null,
+    ...over,
+  });
+
+  it("puts a text default in the draft, so a keystroke edits it", () => {
+    const s = openInterview([q({ defaultAnswer: "TypeScript, Node >=22" })]);
+
+    expect(renderInterview(s).join("\n")).toContain("TypeScript, Node >=22");
+    expect(answersOf(s).stack).toBe("TypeScript, Node >=22");
+  });
+
+  it("splits a paths default into committed lines, one per glob", () => {
+    const s = openInterview([
+      q({ id: "source-paths", kind: "paths", defaultAnswer: "apps/*/src/**\npackages/*/**" }),
+    ]);
+
+    expect(answersOf(s).sourcePaths).toEqual(["apps/*/src/**", "packages/*/**"]);
+  });
+
+  it("lets backspace clear a default, which is what makes it a draft and not a decision", () => {
+    let s = openInterview([q({ defaultAnswer: "ab" })]);
+    s = pressIn(pressIn(s, "backspace").state, "backspace").state;
+
+    expect(answersOf(s).stack).toBeNull();
+  });
+
+  it("says the value came from the repo, so nobody signs a reading blind", () => {
+    const s = openInterview([q({ defaultAnswer: "TypeScript" })]);
+    expect(renderInterview(s).join("\n")).toMatch(/read from this repo/i);
+  });
+
+  it("opens empty where nothing was declared", () => {
+    expect(answersOf(openInterview([q({})])).stack).toBeNull();
+  });
+});
+
+describe("one key, one meaning", () => {
+  const ask = (kind: InitQuestion["kind"], id = "stack"): InitQuestion => ({
+    id: id as never,
+    prompt: "p",
+    why: "w",
+    kind,
+    options: [{ value: "a", label: "a" }],
+    defaultAnswer: null,
+  });
+
+  it("advances on enter from every kind of question, including a list", () => {
+    // It used to add a line on `paths`, advance undocumented on `flags`, and run
+    // a command in the launcher. Three meanings in three consecutive screens.
+    const s = openInterview([ask("paths", "source-paths"), ask("text")]);
+    expect(pressIn(s, "return").state.at).toBe(1);
+  });
+
+  it("adds a line with ctrl-n, and says so", () => {
+    const s = openInterview([ask("paths", "source-paths"), ask("text")]);
+    const typed = ["a", "b"].reduce((acc, k) => pressIn(acc, k).state, s);
+
+    const added = pressIn(typed, "ctrl-n").state;
+
+    expect(answersOf(added).sourcePaths).toEqual(["ab"]);
+    expect(renderInterview(added).join("\n")).toMatch(/ctrl-n/);
+  });
+
+  it("documents every key that does something, on every screen", () => {
+    // A key that is undocumented but works teaches the wrong effect.
+    for (const kind of ["text", "flags", "paths"] as const) {
+      const legend = renderInterview(openInterview([ask(kind)])).join("\n");
+      expect(legend).toMatch(/enter/);
+      expect(legend).toMatch(/esc/);
+    }
   });
 });

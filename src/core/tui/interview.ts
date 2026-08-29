@@ -41,11 +41,24 @@ export type InterviewAction =
 const EMPTY: Field = Object.freeze({ draft: "", lines: [], picked: [], option: 0 });
 const NONE: InterviewAction = { kind: "none" };
 
+/**
+ * A pre-filled question opens with the value IN the field, not beside it as a
+ * suggestion. It is a draft the repo wrote and a keystroke edits, which is the
+ * difference between reading a repo and deciding for it.
+ */
+function seed(question: InitQuestion): Field {
+  const value = question.defaultAnswer;
+  if (value === null || value === "") return EMPTY;
+  return question.kind === "paths"
+    ? { ...EMPTY, lines: value.split("\n").filter((l) => l.trim() !== "") }
+    : { ...EMPTY, draft: value };
+}
+
 export function openInterview(questions: readonly InitQuestion[]): InterviewState {
   return {
     questions,
     at: 0,
-    fields: questions.map(() => EMPTY),
+    fields: questions.map(seed),
     complaint: null,
   };
 }
@@ -152,8 +165,17 @@ export function pressIn(s: InterviewState, key: string): { state: InterviewState
     return { state: withField(s, { ...field(s), draft: field(s).draft.slice(0, -1) }), action: NONE };
   }
 
-  if (key === "return") {
-    if (q.kind !== "paths") return { state: step(s, 1), action: NONE };
+  // ONE meaning, everywhere: enter goes to the next question. It used to add a
+  // line here, advance undocumented on a checkbox screen, and run a command in
+  // the launcher, which is three meanings in three consecutive screens of one
+  // flow. Adding a line is its own key now, and the legend says so.
+  if (key === "return") return { state: step(s, 1), action: NONE };
+
+  // `ctrl-n` and not `ctrl-enter`: measured, a terminal sends the same byte for
+  // enter and ctrl-enter, so the second is a key nobody can press. `enter` here
+  // is the linefeed some terminals send for shift-enter, which costs nothing to
+  // accept and works where it exists.
+  if ((key === "ctrl-n" || key === "enter") && q.kind === "paths") {
     const line = field(s).draft.trim();
     if (line === "") return { state: s, action: NONE };
     return {
@@ -193,13 +215,15 @@ export function renderInterview(s: InterviewState): readonly string[] {
   }
 
   lines.push("", `  ${q.why}`);
+  // Nobody signs a reading blind: a value that arrived from the repo says so.
+  if (q.defaultAnswer !== null) lines.push("", "  read from this repo. Edit it or leave it.");
   if (s.complaint !== null) lines.push("", `  ${s.complaint}`);
-  lines.push("", `  ${keysFor(q)} · tab next · shift-tab back · ctrl-d write · esc quit`);
+  lines.push("", `  ${keysFor(q)} · enter next · shift-tab back · ctrl-d write · esc quit`);
   return lines;
 }
 
 function keysFor(q: InitQuestion): string {
   if (q.kind === "flags") return "↑↓ move · space toggle";
-  if (q.kind === "paths") return "type · enter adds a line";
+  if (q.kind === "paths") return "type · ctrl-n adds a line";
   return "type";
 }

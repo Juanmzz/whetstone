@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import type { DeclaredAnswers } from "./detect.js";
 import { DEFINITION_DIR } from "../paths.js";
 
 export type QuestionId =
@@ -85,14 +86,24 @@ const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
   ["safetyCritical", "safety-critical: physical control, medical, anything that can hurt someone"],
 ];
 
+const NOTHING_DECLARED: DeclaredAnswers = Object.freeze({ sourceGlobs: [], stack: null });
+
 /**
- * The questions, in the order they are asked. They do not depend on what was
- * read: `detectStack` answers a disjoint set of facts, so nothing it finds can
- * remove a question from this list or pre-fill one. That independence is the
- * point — an interview that shrinks when a table gets lucky is an interview whose
+ * The questions, in the order they are asked. The LIST never changes: a repo
+ * that declares a lot is asked the same five as one that declares nothing,
+ * because an interview that shrinks when a reading gets lucky is one whose
  * coverage nobody can state.
+ *
+ * What a declaration changes is the STARTING VALUE of two of them. `workspaces`
+ * and `engines` are statements a repo makes about itself, not a table guessing a
+ * language off file extensions, and adr-0016 forbade the second. The other three
+ * are judgements about what you are willing to lose; no file states those, so
+ * nothing pre-fills them.
  */
-export function buildInterview(): readonly InitQuestion[] {
+export function buildInterview(
+  declared: DeclaredAnswers = NOTHING_DECLARED,
+): readonly InitQuestion[] {
+  const blank = (value: string): string | null => (value === "" ? null : value);
   const questions: InitQuestion[] = [
     {
       id: "purpose",
@@ -126,7 +137,7 @@ export function buildInterview(): readonly InitQuestion[] {
         "the gate over the wrong files.",
       kind: "paths",
       options: [],
-      defaultAnswer: null,
+      defaultAnswer: blank(declared.sourceGlobs.join("\n")),
     },
     {
       id: "strict-paths",
@@ -151,7 +162,7 @@ export function buildInterview(): readonly InitQuestion[] {
         "extensions, which is exactly the guess that breaks on an unusual stack.",
       kind: "text",
       options: [],
-      defaultAnswer: null,
+      defaultAnswer: declared.stack,
     },
   ];
 
