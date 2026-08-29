@@ -6,11 +6,11 @@
  * reached into `.wst/memory/signals.jsonl` through two different readers, and
  * `wst.yaml`'s `backend:` key selected among implementations of nothing.
  *
- * TWO VERBS, NOT THREE. adr-0015 names the trap this avoids — *"declare three
- * verbs, implement two, and let `summarize` throw"*. `save` and `all` each have
- * live callers today. `search` does not, so it is absent; it arrives with the
- * consumer that needs it, which is cross-project recall, the one thing a file
- * genuinely cannot serve.
+ * A VERB ARRIVES WITH ITS CONSUMER. adr-0015 names the trap — *"declare three
+ * verbs, implement two, and let `summarize` throw"* — and the bar it sets is a
+ * live caller, not a count. `all`, `save` and `resolve` each have one. `search`
+ * does not, so it is absent; it arrives with cross-project recall, the one thing
+ * a file genuinely cannot serve.
  */
 
 import type { SignalRecord } from "../signals/parse.js";
@@ -27,4 +27,15 @@ export interface MemoryPort {
 
   /** Append observations. Returns the ids written, in order. */
   save(records: readonly SignalRecord[]): Promise<readonly string[]>;
+
+  /**
+   * Record what answered a stored signal. Not a general update:
+   * `core/signals/resolve.ts` states why this one field may be set and no other.
+   */
+  resolve(id: string, by: string): Promise<ResolveOutcome>;
 }
+
+/** What the store did. `why` is for a human, and it is the whole error message. */
+export type ResolveOutcome =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly why: string };

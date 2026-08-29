@@ -1,16 +1,20 @@
 /**
  * Appending engine-emitted signals. THIN.
  *
- * APPEND ONLY, never read-modify-write. The log is the evidence the retro reasons
- * over and the receipts point at; rewriting it to add a line is how a concurrent
- * gate run silently drops someone else's signal, and a lost signal is invisible by
- * construction. The append itself is `shell/jsonl.ts`, shared with the event log.
+ * ADDING a signal is APPEND ONLY, never read-modify-write. The log is the evidence
+ * the retro reasons over and the receipts point at; rewriting it to add a line is
+ * how a concurrent gate run silently drops someone else's signal, and a lost
+ * signal is invisible by construction. The append itself is `shell/jsonl.ts`,
+ * shared with the event log. `resolveSignal` at the bottom is the one write that
+ * touches a stored line, and it says there what buys the exception.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { signalId, type EmittableSignal } from "../core/signals/emit.js";
 import { parseSignalLog, type SignalRecord } from "../core/signals/parse.js";
+import { markResolved } from "../core/signals/resolve.js";
+import type { ResolveOutcome } from "../core/memory/port.js";
 import { appendJsonl } from "./jsonl.js";
 
 export const SIGNALS_PATH = "memory/signals.jsonl";
@@ -93,4 +97,34 @@ export async function appendSignalRecord(definitionRoot: string, record: SignalR
   const path = join(definitionRoot, SIGNALS_PATH);
   await appendJsonl(path, [JSON.stringify(record)]);
   return path;
+}
+
+/**
+ * The ONE read-modify-write here: a field on a stored record cannot be set by
+ * appending. The race is narrow because a human types this one at a time ([RC3])
+ * where the gate appends unattended, and it is closed by writing a sibling temp
+ * file and renaming: a reader sees the old log or the new one, never half.
+ *
+ * `core/signals/resolve.ts` decides WHETHER the write is allowed.
+ */
+export async function resolveSignal(
+  definitionRoot: string,
+  id: string,
+  by: string,
+): Promise<ResolveOutcome> {
+  const path = join(definitionRoot, SIGNALS_PATH);
+  let text: string;
+  try {
+    text = await readFile(path, "utf-8");
+  } catch {
+    return { ok: false, why: `no signal log at ${path}` };
+  }
+
+  const result = markResolved(text, id, by);
+  if (!result.ok) return { ok: false, why: result.error };
+
+  const temp = `${path}.${String(process.pid)}.tmp`;
+  await writeFile(temp, result.text, "utf-8");
+  await rename(temp, path);
+  return { ok: true };
 }

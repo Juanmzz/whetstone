@@ -26,6 +26,10 @@ export interface SignalOptions {
   readonly fromJson?: string;
   /** Which tool found them, named in each record so a reader can re-run it. */
   readonly tool?: string;
+  /** Id of a stored signal to mark answered, instead of recording a new one. */
+  readonly resolve?: string;
+  /** What answered it: an amendment, a decision, a PR. Required with `resolve`. */
+  readonly by?: string;
 }
 
 
@@ -117,6 +121,41 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
+/**
+ * `--resolve`: record what answered a signal, so the retro stops proposing over
+ * it. Same human gate as the rest of the command ([RC3]).
+ */
+async function runResolve(id: string, by: string, repoRoot: string): Promise<number> {
+  let root: string;
+  try {
+    root = await resolveDefinitionRoot(repoRoot);
+    if (!(await exists(root))) {
+      throw new Error(`no ${DEFINITION_DIR}/ in ${repoRoot}: run \`wst init\` first`);
+    }
+  } catch (cause) {
+    console.error((cause as Error).message);
+    return EXIT_MISCONFIGURED;
+  }
+
+  let outcome;
+  try {
+    outcome = await (await resolveMemory(root)).resolve(id, by);
+  } catch (cause) {
+    // A log that does not parse: rewriting a file we cannot read is how one bad
+    // line becomes sixty.
+    console.error(`nothing was written: ${(cause as Error).message}`);
+    return EXIT_NOT_RECORDED;
+  }
+
+  if (!outcome.ok) {
+    console.error(`nothing was written: ${outcome.why}`);
+    return EXIT_NOT_RECORDED;
+  }
+  console.log(`${id} now records \`${by}\` as what answered it`);
+  console.log("  the retro will not propose over it again.");
+  return 0;
+}
+
 export async function runSignal(
   opts: SignalOptions,
   cwd: string = process.cwd(),
@@ -126,6 +165,10 @@ export async function runSignal(
   if (repoRoot === null) {
     console.error("not inside a git repository: the signal log lives in one, so it needs one");
     return EXIT_MISCONFIGURED;
+  }
+
+  if (opts.resolve !== undefined) {
+    return await runResolve(opts.resolve, opts.by ?? "", repoRoot);
   }
 
   if (opts.fromJson !== undefined) {

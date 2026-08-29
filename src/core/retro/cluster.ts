@@ -65,6 +65,19 @@ export function signalsSince(
   return all.slice(at + 1);
 }
 
+/**
+ * The signals still asking a question. Proposing over an answered one spends a
+ * model call to re-fix what is fixed: retro-0005 did that three times out of
+ * five, because nothing recorded that a PR and two hooks had already landed.
+ *
+ * A separate function rather than a filter inside `clusterSignals`, so that one
+ * keeps returning every signal it was handed and the retro can SAY how many it
+ * skipped.
+ */
+export function unresolved(signals: readonly Signal[]): readonly Signal[] {
+  return signals.filter((s) => s.resolved_by === undefined);
+}
+
 const SEVERITY_RANK: Record<Severity, number> = { low: 0, medium: 1, high: 2 };
 
 export function clusterSignals(signals: readonly Signal[]): readonly Cluster[] {
