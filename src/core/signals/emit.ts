@@ -89,8 +89,19 @@ export function signalsFromGate(verdict: GateVerdict, range: string): EmittableS
  * be unique, not ordered, and rewriting the record to match a new scheme is exactly
  * what the memory rules forbid.
  */
-export function signalId(fingerprint: string): string {
-  return `sig-${createHash("sha256").update(fingerprint, "utf8").digest("hex").slice(0, 8)}`;
+export function signalId(seed: string): string {
+  return `sig-${createHash("sha256").update(seed, "utf8").digest("hex").slice(0, 8)}`;
+}
+
+/**
+ * The id of ONE gate block, which is not the id of the check that blocked.
+ *
+ * Seeded with the timestamp and branch, as `human.ts` already was. Recurrence is
+ * still counted on `fingerprint`, which the record carries as its own field; the
+ * id only has to be unique.
+ */
+export function gateSignalId(fingerprint: string, isoTs: string, branch: string | null): string {
+  return signalId(`gate:${fingerprint}:${isoTs}:${branch ?? ""}`);
 }
 
 /**

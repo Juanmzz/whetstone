@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dedupe, signalId, signalsFromGate, type EmittableSignal } from "./emit.js";
+import {
+  dedupe,
+  gateSignalId,
+  signalId,
+  signalsFromGate,
+  type EmittableSignal,
+} from "./emit.js";
 import type { CheckOutcome, CheckResult, GateVerdict } from "../contracts.js";
 import { aggregate } from "../gate/aggregate.js";
 
@@ -136,5 +142,55 @@ describe("signalId", () => {
     const ids = new Set<string>();
     for (let i = 0; i < 2000; i++) ids.add(signalId(`gate-blocked:check-${String(i)}:1`));
     expect(ids.size).toBe(2000);
+  });
+});
+
+/**
+ * Three branches wrote `sig-afa2baff` on 2026-08-29: same check, same
+ * fingerprint, different occurrences. `resolve.ts` finds by id, so only the
+ * first could ever be answered.
+ */
+describe("gateSignalId — one id per occurrence, not per fingerprint", () => {
+  const FP = "gate-blocked:evidence-launcher:1";
+
+  it("gives two branches two ids for the same block", () => {
+    const one = gateSignalId(FP, "2026-08-29T01:14:35.475Z", "fix/the-wordmark");
+    const two = gateSignalId(FP, "2026-08-29T04:55:00.255Z", "feat/the-repo-answers");
+
+    expect(one).not.toBe(two);
+  });
+
+  it("gives two runs on one branch two ids, because each block really happened", () => {
+    expect(gateSignalId(FP, "2026-08-29T01:00:00.000Z", "b")).not.toBe(
+      gateSignalId(FP, "2026-08-29T02:00:00.000Z", "b"),
+    );
+  });
+
+  it("is still a pure function: no log read, so parallel writers cannot race", () => {
+    expect(gateSignalId(FP, "2026-08-29T01:00:00.000Z", "b")).toBe(
+      gateSignalId(FP, "2026-08-29T01:00:00.000Z", "b"),
+    );
+  });
+
+  it("works where git could not name a branch", () => {
+    expect(gateSignalId(FP, "2026-08-29T01:00:00.000Z", null)).toMatch(/^sig-[0-9a-f]{8}$/);
+  });
+
+  it("still looks like a signal id, so the prose and the tooling parse it", () => {
+    expect(gateSignalId(FP, "2026-08-29T01:00:00.000Z", "b")).toMatch(/^sig-[0-9a-f]{8}$/);
+  });
+
+  it("does not collide across a run of blocks a real repo would produce", () => {
+    const ids = new Set<string>();
+    for (let i = 0; i < 500; i++) {
+      for (const branch of ["a", "b", "c", null]) {
+        ids.add(gateSignalId(FP, new Date(Date.UTC(2026, 7, 29, 0, i)).toISOString(), branch));
+      }
+    }
+    expect(ids.size).toBe(2000);
+  });
+
+  it("leaves the fingerprint alone, which is what dedupe still reasons over", () => {
+    expect(gateSignalId(FP, "2026-08-29T01:00:00.000Z", "b")).not.toContain(FP);
   });
 });
