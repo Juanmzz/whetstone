@@ -1,17 +1,15 @@
 /**
- * `docs/assets/whetstone.png` to the half-block mark in `src/banner.ts`.
+ * `docs/assets/whetstone.png` to the half-block marks in `src/banner.ts`.
  *
- *   npx tsx scripts/sprite-to-ascii.ts [sprite] [cols]
+ *   npx tsx scripts/sprite-to-ascii.ts [sprite] [menuCols] [entranceCols] [tones]
  *
  * The mark is DERIVED from the sprite rather than copied by hand, so redrawing
  * one cannot silently leave the other behind. Handles the non-interlaced 8-bit
  * RGBA case, which is what the sprite is; anything else throws rather than
  * guessing.
  *
- * One terminal cell carries TWO pixels, upper and lower, so a cell that is about
- * twice as tall as it is wide holds two square ones. The alternative, one glyph
- * per cell with a luminance ramp, spends the same width on half the vertical
- * resolution and stretches every pixel.
+ * One terminal cell carries TWO pixels, upper and lower, so a cell twice as tall
+ * as it is wide holds two square ones.
  */
 
 import { readFileSync } from "node:fs";
@@ -96,15 +94,13 @@ const dist2 = (a: Rgb, b: Rgb): number =>
   (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
 
 /**
- * Quantize to a small palette by k-means in RGB.
- *
- * Averaging a 94x96 source rectangle turns a sprite drawn in a handful of flat
- * tones into 133 near-duplicates, most of them one step apart along an edge.
- * A palette collapses that back to the tones actually drawn, and it is what
- * makes the emitted constant a grid of indices somebody can read as pixel art
- * rather than a wall of hex.
+ * Quantize to a small palette by k-means, over DISTINCT tones rather than every
+ * pixel: weighted by population the flat top face takes most of the centres and
+ * returns them one step apart. The palette is what makes the emitted constant a
+ * grid somebody can read as pixel art rather than a wall of hex.
  */
-function quantize(colors: readonly Rgb[], k: number): Rgb[] {
+function quantize(all: readonly Rgb[], k: number): Rgb[] {
+  const colors = [...new Map(all.map((c) => [c.join(","), c])).values()];
   const sorted = [...colors].sort((a, b) => lum(a) - lum(b));
   let centres: Rgb[] = Array.from({ length: k }, (_, i) =>
     sorted[Math.floor(((i + 0.5) / k) * sorted.length)] ?? sorted[0]!,
@@ -136,29 +132,44 @@ const DIGITS = "0123456789abcdefghijklmnopqrstuv";
 const hex = (c: Rgb): string =>
   `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 
-function emit(img: Image, cols: number, k: number): string[] {
-  const bg: Rgb = [img.px[0] ?? 0, img.px[1] ?? 0, img.px[2] ?? 0];
+/** One mark: the pixel grid at a given width, and the tones it used. */
+interface Grid {
+  readonly cols: number;
+  readonly rows: number;
+  readonly pixels: readonly (Rgb | null)[][];
+}
 
-  // Two pixels per cell, so the pixel is square: its width is one cell and its
-  // height is half of one, and a cell is about twice as tall as it is wide.
+function grid(img: Image, cols: number, bg: Rgb): Grid {
+  // Two pixels per cell makes the pixel square, a cell being twice as tall as wide.
   const rows = Math.max(1, Math.round((cols * img.h) / img.w / 2));
-  const pxRows = rows * 2;
-  const cw = img.w / cols, ph = img.h / pxRows;
+  const cw = img.w / cols, ph = img.h / (rows * 2);
 
-  const grid: (Rgb | null)[][] = [];
-  const opaque: Rgb[] = [];
-  for (let r = 0; r < pxRows; r++) {
+  const pixels: (Rgb | null)[][] = [];
+  for (let r = 0; r < rows * 2; r++) {
     const row: (Rgb | null)[] = [];
     for (let c = 0; c < cols; c++) {
-      const v = sample(img, c * cw, r * ph, (c + 1) * cw, (r + 1) * ph, bg);
-      row.push(v);
-      if (v !== null) opaque.push(v);
+      row.push(sample(img, c * cw, r * ph, (c + 1) * cw, (r + 1) * ph, bg));
     }
-    grid.push(row);
+    pixels.push(row);
   }
+  console.error(
+    `${String(cols)}x${String(rows * 2)} pixels in ${String(rows)} rows, ` +
+      `pixel ${cw.toFixed(1)}x${ph.toFixed(1)} source px`,
+  );
+  return { cols, rows, pixels };
+}
+
+/** Both marks against ONE palette: same drawing, so two ramps would only make a
+ * reader check which index meant what in which. */
+function emit(img: Image, widths: readonly [number, number], k: number): string[] {
+  const bg: Rgb = [img.px[0] ?? 0, img.px[1] ?? 0, img.px[2] ?? 0];
+  console.error(`decoded ${String(img.w)}x${String(img.h)}`);
+
+  const [menu, entrance] = widths.map((cols) => grid(img, cols, bg)) as [Grid, Grid];
+  const opaque = [...menu.pixels, ...entrance.pixels].flat().filter((v) => v !== null);
   if (opaque.length === 0) throw new Error("the sprite sampled to nothing but background");
 
-  const palette = quantize(opaque, Math.min(k, opaque.length));
+  const palette = quantize(opaque, k);
   const indexOf = (c: Rgb): number => {
     let best = 0;
     for (let i = 1; i < palette.length; i++) {
@@ -166,25 +177,28 @@ function emit(img: Image, cols: number, k: number): string[] {
     }
     return best;
   };
-
-  console.error(`decoded ${String(img.w)}x${String(img.h)}`);
-  console.error(`${String(cols)}x${String(pxRows)} pixels in ${String(rows)} rows`);
-  console.error(`pixel ${(cw).toFixed(1)}x${(ph).toFixed(1)} source px`);
   console.error(`palette ${String(palette.length)}: ${palette.map(hex).join(" ")}`);
 
-  const lines = [
+  const rowsOf = (g: Grid): string[] =>
+    g.pixels.map((row) => `  "${row.map((v) => (v === null ? "." : DIGITS[indexOf(v)]!)).join("")}",`);
+
+  return [
     `export const MARK_PALETTE: readonly string[] = Object.freeze([`,
     ...palette.map((c) => `  "${hex(c)}",`),
     `]);`,
     ``,
     `export const MARK: Mark = decodeMark(MARK_PALETTE, [`,
-    ...grid.map((row) => `  "${row.map((v) => (v === null ? "." : DIGITS[indexOf(v)]!)).join("")}",`),
+    ...rowsOf(menu),
+    `]);`,
+    ``,
+    `export const MARK_ENTRANCE: Mark = decodeMark(MARK_PALETTE, [`,
+    ...rowsOf(entrance),
     `]);`,
   ];
-  return lines;
 }
 
 const img = decode(process.argv[2] ?? "docs/assets/whetstone.png");
-const cols = Number(process.argv[3] ?? 30);
-const k = Number(process.argv[4] ?? 8);
-for (const line of emit(img, cols, k)) console.log(line);
+const menuCols = Number(process.argv[3] ?? 30);
+const entranceCols = Number(process.argv[4] ?? 56);
+const k = Number(process.argv[5] ?? 10);
+for (const line of emit(img, [menuCols, entranceCols], k)) console.log(line);

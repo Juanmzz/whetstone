@@ -14,14 +14,8 @@ import { lumOf, type Cell, type Mark, type Rgb } from "./mark.js";
 /** How far up the mark's own luminance range the working face begins. */
 const FACE_FROM = 0.75;
 
-/**
- * How far a stroke lifts the pixel it passes over, towards white.
- *
- * Chosen against the drawing rather than by taste: the face is already light, so
- * a third of the way to white is a change you have to look for. The glyph swap
- * this replaces was a whole step down a four-tone ramp, and the stroke should
- * stay about as loud as it was.
- */
+/** How far a stroke lifts the pixel it passes over. The face is already light,
+ * so a third of the way to white is a change you have to look for. */
 const LIFT = 0.55;
 
 /** Columns per row: the two angles the drawn mark actually has. */
@@ -36,13 +30,16 @@ interface Row {
   readonly to: number;
 }
 
+/** One face pixel a pass passes over. */
+interface Touch {
+  readonly at: number;
+  readonly x: number;
+  readonly half: "top" | "bottom";
+}
+
 /**
- * Where the working face starts, in this drawing's own terms.
- *
- * Derived and not a constant, for the reason `bestOffset` is: the face used to
- * be "the cells drawn with `░`", which a redrawn sprite could rename without
- * anything noticing. Strictly above, so a mark drawn in one flat tone has no
- * face at all rather than being face all over.
+ * Where the working face starts, in this drawing's own terms. Strictly above, so
+ * a mark drawn in one flat tone has no face rather than being face all over.
  */
 function faceAbove(mark: Mark): number {
   const lums = mark.flatMap((row) =>
@@ -69,23 +66,66 @@ function faceRows(mark: Mark, above: number): Row[] {
 }
 
 /**
- * Where to start so the stroke stays on the face for as many rows as it can.
- *
- * Derived, not hardcoded. The first version used offsets tuned to one drawing,
- * so a redrawn sprite would have walked the strokes off it in silence.
+ * Every face pixel one pass passes over. The ONE traversal, read by both the walk
+ * and the stroke. Drawn twice per row so the seam falls where the line crosses;
+ * otherwise a pass running six columns per row lifts one cell in six.
  */
-function bestOffset(rows: readonly Row[], step: number): number {
-  const widest = Math.max(...rows.map((r) => r.to)) + 1;
-  let best = { offset: 0, hits: -1 };
-  for (let offset = -widest; offset <= widest * 2; offset++) {
-    let hits = 0;
-    rows.forEach((r, k) => {
-      const at = offset + k * step;
-      if (at >= r.from && at <= r.to) hits += 1;
-    });
-    if (hits > best.hits) best = { offset, hits };
+function touched(
+  mark: Mark,
+  rows: readonly Row[],
+  offset: number,
+  step: number,
+  above: number,
+): Touch[] {
+  const out: Touch[] = [];
+
+  rows.forEach((r, k) => {
+    const start = offset + k * step;
+    const end = start + step;
+    const mid = (start + end) / 2;
+    const row = mark[r.at] ?? [];
+
+    const half = (a: number, b: number, which: "top" | "bottom"): void => {
+      // Face pixels only: a cell straddling the top edge holds one of each.
+      for (let x = Math.ceil(Math.min(a, b)); x < Math.max(a, b); x++) {
+        const cell = row[x];
+        if (cell !== undefined && isFace(cell[which], above)) out.push({ at: r.at, x, half: which });
+      }
+    };
+
+    half(start, mid, "top");
+    half(mid, end, "bottom");
+  });
+
+  return out;
+}
+
+/**
+ * The offsets one pass walks through, derived at BOTH ends against `touched`: in
+ * only if it still lifts half of what the best one does. Tuned offsets walk off
+ * a redrawn sprite in silence.
+ */
+function walk(
+  mark: Mark,
+  rows: readonly Row[],
+  step: number,
+  count: number,
+  above: number,
+): number[] {
+  const reach = Math.abs(step) * rows.length + Math.max(...rows.map((r) => r.to)) + 1;
+
+  const scored: { offset: number; n: number }[] = [];
+  for (let offset = -reach; offset <= reach; offset++) {
+    scored.push({ offset, n: touched(mark, rows, offset, step, above).length });
   }
-  return best.offset;
+  const best = Math.max(...scored.map((s) => s.n));
+  if (best === 0) return [];
+
+  const live = scored.filter((s) => s.n * 2 >= best).map((s) => s.offset);
+  const hi = Math.max(...live), lo = Math.min(...live);
+  return Array.from({ length: count }, (_, i) =>
+    Math.round(hi - (i / (count - 1)) * (hi - lo)),
+  );
 }
 
 /** Towards white, keeping the pixel's own hue. */
@@ -95,22 +135,13 @@ const lift = (p: Rgb): Rgb => [
   Math.round(p[2] + (255 - p[2]) * LIFT),
 ];
 
-function stroke(mark: Mark, rows: readonly Row[], offset: number, step: number, above: number): Mark {
-  const out: (readonly Cell[])[] = [...mark];
-  rows.forEach((r, k) => {
-    const at = offset + k * step;
-    const row = out[r.at]!;
-    const cell = row[at];
-    if (at < 0 || cell === undefined || !facing(cell, above)) return;
-
-    // Only the pixels that ARE the face. A cell straddling the top edge holds
-    // one of each, and lifting the dark one would smear the stroke off the face.
-    const cut: Cell = {
-      top: isFace(cell.top, above) ? lift(cell.top!) : cell.top,
-      bottom: isFace(cell.bottom, above) ? lift(cell.bottom!) : cell.bottom,
-    };
-    out[r.at] = [...row.slice(0, at), cut, ...row.slice(at + 1)];
-  });
+function stroke(mark: Mark, touches: readonly Touch[]): Mark {
+  const out: Cell[][] = mark.map((row) => [...row]);
+  for (const t of touches) {
+    const cell = out[t.at]?.[t.x];
+    if (cell === undefined) continue;
+    out[t.at]![t.x] = { ...cell, [t.half]: lift(cell[t.half]!) };
+  }
   return out;
 }
 
@@ -128,13 +159,17 @@ export function honingFrames(mark: Mark): Mark[] {
     frames.push(nudge === 0 ? mark : mark.map((row) => [BLANK, ...row]));
   }
 
-  const along = bestOffset(rows, ALONG);
-  for (const lead of [0, -3]) {
-    for (let k = 0; k < 3; k++) frames.push(stroke(mark, rows, along + lead - k * 3, ALONG, above));
-  }
+  const pass = (step: number): void => {
+    for (const offset of walk(mark, rows, step, 3, above)) {
+      frames.push(stroke(mark, touched(mark, rows, offset, step, above)));
+    }
+  };
 
-  const across = bestOffset(rows, ACROSS);
-  for (let k = 0; k < 3; k++) frames.push(stroke(mark, rows, across - 3 + k * 3, ACROSS, above));
+  // Twice along, then once across. The direction changing at the end is what
+  // makes it honing rather than sanding.
+  pass(ALONG);
+  pass(ALONG);
+  pass(ACROSS);
 
   frames.push(mark);
   return frames;

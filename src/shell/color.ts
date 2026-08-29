@@ -1,10 +1,7 @@
 /**
- * What the terminal on the other end can be sent.
- *
- * The mark degrades rather than switching to a different drawing: 24-bit where
- * the terminal says so, the 256-colour ramp everywhere else, glyphs where there
- * is no colour at all. Every step is the SAME thirty by sixteen pixels in the
- * same eight rows, so the menu below it never moves.
+ * What the terminal on the other end can be sent. The mark DEGRADES rather than
+ * switching drawing, so every step is the same pixels in the same rows and the
+ * menu below never moves.
  */
 
 import type { ColorDepth } from "../core/tui/mark.js";
@@ -21,8 +18,7 @@ export function colorDepth(
   const flag = (env["COLORTERM"] ?? "").toLowerCase();
   if (flag === "truecolor" || flag === "24bit") return "truecolor";
 
-  // Not a guess upward. A terminal that has not claimed 24-bit may well not
-  // have it (Terminal.app does not, and sets no COLORTERM), and asking for a
-  // colour it cannot show gets whichever of its own it decides is nearest.
+  // Never guess upward: Terminal.app has colour, has no truecolor, and sets no
+  // COLORTERM.
   return "ansi256";
 }

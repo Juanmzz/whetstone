@@ -21,13 +21,7 @@ export interface Cell {
 
 export type Mark = readonly (readonly Cell[])[];
 
-/**
- * What the terminal can actually show.
- *
- * Not every terminal takes 24-bit colour: Apple's Terminal.app does not, and it
- * does not set `COLORTERM` either, so the safe reading of a terminal that has
- * not said otherwise is 256.
- */
+/** What the terminal can actually show. See `shell/color.ts` for how it is read. */
 export type ColorDepth = "truecolor" | "ansi256" | "none";
 
 const UPPER = "▀";
@@ -50,11 +44,8 @@ const DEFAULT_BG = `${ESC}[49m`;
 export const lumOf = (c: Rgb): number => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 
 /**
- * The pixel grid as a palette and one index character per pixel, two rows to a
- * cell. `.` is transparent.
- *
- * Written this way so the constant in `banner.ts` reads as the pixel art it is
- * and a regenerated sprite produces a diff somebody can look at.
+ * A palette and one index character per pixel, two rows to a cell. `.` is
+ * transparent. Written this way so `banner.ts` reads as the pixel art it is.
  */
 export function decodeMark(palette: readonly string[], rows: readonly string[]): Mark {
   if (rows.length % 2 !== 0) {
@@ -136,14 +127,9 @@ export function renderMark(mark: Mark, depth: ColorDepth): string[] {
 }
 
 /**
- * The four transparency cases, which are the whole reason this is not a
- * one-liner.
- *
- * A half block paints a background as well as a foreground, so a cell that says
- * nothing about its background inherits the previous cell's and stamps it into
- * the gap around the mark. Where the LOWER pixel is transparent the background
- * is set back to the terminal's own; where the UPPER one is, `▄` carries the
- * lower pixel as a foreground and leaves the whole background alone.
+ * The four transparency cases. A half block paints a background as well as a
+ * foreground, so a cell silent about its background inherits the previous one's
+ * and stamps it into the gap around the mark.
  */
 function renderRow(row: readonly Cell[], depth: ColorDepth): string {
   // Unknown, not default: the first cell of every line states its background

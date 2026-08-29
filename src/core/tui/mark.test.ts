@@ -47,8 +47,7 @@ describe("renderMark, truecolor", () => {
   });
 
   it("keeps the terminal's own background where the lower pixel is transparent", () => {
-    // A half block paints its own background, so a cell that does not reset it
-    // would stamp the previous cell's colour into the gap around the mark.
+    // Without the reset the previous cell's colour fills the gap around the mark.
     const [line] = renderMark(mark("1", "."), "truecolor");
 
     expect(line).toContain("▀");
@@ -57,8 +56,7 @@ describe("renderMark, truecolor", () => {
   });
 
   it("flips to a lower half block where the upper pixel is transparent", () => {
-    // `▄` with a foreground only leaves the top half showing the terminal, which
-    // is what an upper block cannot do without painting a background.
+    // `▄` with a foreground only leaves the top half showing the terminal.
     const line = renderMark(mark(".", "2"), "truecolor")[0]!;
 
     expect(line).toContain("▄");
@@ -73,8 +71,7 @@ describe("renderMark, truecolor", () => {
   });
 
   it("resets the background before a blank that follows a painted cell", () => {
-    // The bleed this guards: `paint` writes the line as-is, so a background left
-    // set runs to the end of the row as a coloured bar.
+    // A background left set runs to the end of the row as a coloured bar.
     const line = renderMark(mark("1.", "2."), "truecolor")[0]!;
 
     const blank = line.slice(line.indexOf("▀") + 1);
@@ -104,8 +101,8 @@ describe("renderMark, 256 colours", () => {
   });
 
   it("sends a grey to the grey ramp rather than the nearest cube corner", () => {
-    // The stone is almost entirely neutral, so the 24-step grey ramp is where
-    // its tones live; the 6x6x6 cube would quantise them four times as coarsely.
+    // The stone is neutral, and the grey ramp resolves neutrals four times as
+    // finely as the cube.
     const [line] = renderMark(decodeMark(["#808080"], ["0", "0"]), "ansi256");
 
     const code = /38;5;(\d+)m/.exec(line ?? "")?.[1];

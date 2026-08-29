@@ -6,7 +6,7 @@
  * (adr-0032). This only chooses one.
  */
 
-import { MARK } from "../banner.js";
+import { MARK, MARK_ENTRANCE } from "../banner.js";
 import { honingFrames } from "../core/tui/honing.js";
 import { renderMark } from "../core/tui/mark.js";
 import { colorDepth } from "../shell/color.js";
@@ -53,10 +53,13 @@ export async function runHome(cwd: string = process.cwd()): Promise<number> {
   const mark = renderMark(MARK, depth);
 
   try {
-    await play(process.stdout, keys, honingFrames(MARK).map((f) => renderMark(f, depth)));
+    await play(process.stdout, keys, honingFrames(MARK_ENTRANCE).map((f) => renderMark(f, depth)));
 
     for (;;) {
-      paint(process.stdout, [...mark, "", ...renderHome(state)]);
+      // No separator row. The mark plus the menu is exactly the height of a
+      // default terminal, and the blank one was the cheapest of the twenty-five
+      // to give up: the stone's own last row is mostly empty already.
+      paint(process.stdout, [...mark, ...renderHome(state)]);
       const result = pressHome(state, await keys.next());
       state = result.state;
 
