@@ -950,7 +950,7 @@ than they compose. The mitigation is that the quote makes fabrication visible in
 transcript, which a paraphrase never did.
 
 ### adr-0036 — a check may require evidence of the result without judging it
-`accepted` · 2026-08-27 · unbuilt
+`accepted` · 2026-08-28
 
 Every check here judges the DIFF. `test` runs the suite, `typecheck` compiles, `correctness`
 reads the change. None of them says the thing works. A gate that passes tells you nothing
