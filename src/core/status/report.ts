@@ -38,6 +38,21 @@ export interface StatusFacts {
   readonly missingTools?: readonly { readonly checkId: string; readonly binary: string }[];
   /** Absent when the caller did not gather it, which is not the same as zero. */
   readonly freshSignals?: FreshSignals;
+  /**
+   * The files an agent reads on arrival. Omitted where the caller did not look.
+   *
+   * `status` reported the gate, the plugin and the judge, and said nothing about
+   * the one surface that decides whether an agent working here knows the
+   * project's rules at all.
+   */
+  readonly agentFiles?: AgentFiles;
+}
+
+export interface AgentFiles {
+  /** `AGENTS.md`, the source every front door points at. */
+  readonly agentsMd: boolean;
+  /** Front doors that exist: `CLAUDE.md`, `GEMINI.md`. */
+  readonly pointers: readonly string[];
 }
 
 /**
@@ -179,6 +194,22 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
         `the pre-push gate is not active: run \`git config core.hooksPath ${WHETSTONE_HOOKS_PATH}\``,
       );
     }
+  }
+
+  // Warned, never blocked: a repo whose harness owns that surface is a legitimate
+  // `--definitions-only` install, and `status` may not call that broken.
+  const doors = facts.agentFiles;
+  if (doors !== undefined && !doors.agentsMd) {
+    const dangling =
+      doors.pointers.length === 0
+        ? ""
+        : doors.pointers.length === 1
+          ? ` ${doors.pointers[0] ?? ""} still points at it, so it reads a file that is gone.`
+          : ` ${doors.pointers.join(" and ")} still point at it, so they read a file that is gone.`;
+    warnings.push(
+      `AGENTS.md is missing: an agent working in this repo has no project rules to read.` +
+        dangling,
+    );
   }
 
   // The plugin, and only when there IS one. A repo that never adopted it is not

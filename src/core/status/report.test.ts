@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildStatusReport, renderStatusReport, type StatusFacts } from "./report.js";
+import {
+  buildStatusReport,
+  renderStatusReport,
+  type AgentFiles,
+  type StatusFacts,
+  type StatusReport,
+} from "./report.js";
 import { DEFINITION_DIR } from "../paths.js";
 
 const base = {
@@ -323,5 +329,61 @@ describe("the fresh-signal count", () => {
   it("says nothing at all when the count was never gathered", () => {
     expect(row(undefined)).toBe("");
     expect(withFresh(undefined).warnings.join(" ")).not.toMatch(/retro/i);
+  });
+});
+
+/**
+ * Deleting `.wst/` takes `AGENTS.md` and its front doors with it, and every agent
+ * working in the repo silently loses the project's rules. Reported from the field
+ * on 2026-08-29: the owner cleaned up to reinstall and found out later, from an
+ * agent behaving oddly.
+ */
+describe("the front doors an agent reads", () => {
+  const withDoors = (over: Partial<AgentFiles> = {}): StatusReport =>
+    buildStatusReport({ ...base, agentFiles: { agentsMd: true, pointers: ["CLAUDE.md"], ...over } });
+
+  it("says nothing while AGENTS.md is there", () => {
+    expect(withDoors().warnings.join(" ")).not.toMatch(/AGENTS\.md/);
+  });
+
+  it("warns when AGENTS.md is gone, and says what that costs", () => {
+    const said = withDoors({ agentsMd: false }).warnings.join(" ");
+
+    expect(said).toMatch(/AGENTS\.md/);
+    expect(said).toMatch(/rules|instructions/i);
+  });
+
+  it("warns rather than blocks, because a repo without one is not broken", () => {
+    // A repo whose harness owns that surface is a legitimate `--definitions-only`
+    // install, and `status` may not call that a problem.
+    expect(withDoors({ agentsMd: false }).problems.join(" ")).not.toMatch(/AGENTS\.md/);
+  });
+
+  it("names a pointer that dangles, which is a file saying to read one that is gone", () => {
+    const said = withDoors({ agentsMd: false, pointers: ["CLAUDE.md"] }).warnings.join(" ");
+    expect(said).toMatch(/CLAUDE\.md/);
+  });
+
+  it("says nothing at all when nobody asked, so an old caller is unchanged", () => {
+    expect(buildStatusReport(base).warnings.join(" ")).not.toMatch(/AGENTS\.md/);
+  });
+});
+
+describe("the dangling pointer reads as English", () => {
+  const said = (pointers: readonly string[]): string =>
+    buildStatusReport({ ...base, agentFiles: { agentsMd: false, pointers } }).warnings.join(" ");
+
+  it("agrees with one pointer", () => {
+    expect(said(["CLAUDE.md"])).toContain("CLAUDE.md still points at it");
+  });
+
+  it("agrees with two", () => {
+    expect(said(["CLAUDE.md", "GEMINI.md"])).toContain(
+      "CLAUDE.md and GEMINI.md still point at it",
+    );
+  });
+
+  it("says nothing about pointers when there are none", () => {
+    expect(said([])).not.toMatch(/point/);
   });
 });

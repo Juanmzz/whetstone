@@ -11,6 +11,7 @@ import { honingFrames } from "../core/tui/honing.js";
 import { renderMark } from "../core/tui/mark.js";
 import { colorDepth } from "../shell/color.js";
 import { openHome, pressHome, renderHome, type HomeCommand } from "../core/tui/home.js";
+import { afterRunning } from "../core/tui/outcome.js";
 import { clear, paint, play, rawKeys, restore, type Keys } from "../shell/tui.js";
 import { runCheck } from "./check.js";
 import { runConfig } from "./config.js";
@@ -74,9 +75,11 @@ export async function runHome(cwd: string = process.cwd()): Promise<number> {
 
       const code = await RUN[result.action.command](cwd);
 
-      process.stdout.write(`\n  ${result.action.command} exited ${String(code)} · any key for the menu\n`);
+      // In words. The report is already on screen; what a reader needs is whether
+      // it went well, and `q` means quit here as it does everywhere else.
+      process.stdout.write(`\n  ${afterRunning(result.action.command, code)}\n`);
       keys = openKeys();
-      await keys.next();
+      if ((await keys.next()) === "q") return 0;
 
       // Re-read: `init` is the row that makes seven other rows available.
       state = openHome(await gatherStatus(cwd));

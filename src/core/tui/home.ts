@@ -29,6 +29,13 @@ export interface HomeRow {
   readonly detail: readonly string[];
   /** The state this row is in, or what it is waiting for. Null when there is nothing to add. */
   readonly note: string | null;
+  /**
+   * Two or three words on the row itself. Null on a row you can just run.
+   *
+   * `not now` said both "cannot yet" and "already done", and the word is the
+   * only thing a reader sees without moving the cursor onto it.
+   */
+  readonly state: string | null;
   readonly available: boolean;
 }
 
@@ -148,6 +155,7 @@ export function homeRows(report: StatusReport): readonly HomeRow[] {
       return {
         ...spec,
         note: "not a git repository, and Whetstone is git-native by design",
+        state: "needs a git repo",
         available: false,
       };
     }
@@ -157,16 +165,22 @@ export function homeRows(report: StatusReport): readonly HomeRow[] {
         ? {
             ...spec,
             note: `${DEFINITION_DIR}/ exists already; \`update\` reports what changed`,
+            state: "already done",
             available: false,
           }
-        : { ...spec, note: null, available: true };
+        : { ...spec, note: null, state: null, available: true };
     }
 
     if (spec.needsDefinition && !facts.definitionPresent) {
-      return { ...spec, note: `no ${DEFINITION_DIR}/ yet: run \`init\``, available: false };
+      return {
+        ...spec,
+        note: `no ${DEFINITION_DIR}/ yet: run \`init\``,
+        state: "needs init",
+        available: false,
+      };
     }
 
-    return { ...spec, note: noteFor(spec.command, report), available: true };
+    return { ...spec, note: noteFor(spec.command, report), state: null, available: true };
   });
 }
 
@@ -238,7 +252,7 @@ export function renderHome(state: HomeState): readonly string[] {
     // that does not exist. It says `not now` in words rather than by a glyph,
     // because a dimmed row on a terminal whose theme nobody controls is a row
     // that just looks the same.
-    lines.push(`  ${point(here)} ${row.command.padEnd(8)} ${row.available ? row.what : "not now"}`);
+    lines.push(`  ${point(here)} ${row.command.padEnd(8)} ${row.available ? row.what : (row.state ?? "")}`);
     if (!here) return;
     // The reason lives HERE and nowhere else. It used to be printed inline and
     // again at the foot when enter was pressed, which is one sentence twice on
