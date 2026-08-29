@@ -103,7 +103,9 @@ async function commentDensity(cwd: string): Promise<number> {
         `${String(verdict.percent)}% of ${String(verdict.total)} added .ts lines over ${range} are comment, over the ${String(MAX_PERCENT)}% ceiling.\n`,
       );
       console.error(`Comments belong where the code cannot be made clear on its own.`);
-      console.error(`History and rejected alternatives go in the commit body, not above the code.`);
+      console.error(
+        `History and rejected alternatives go in the pull request description, not above the code.`,
+      );
       return EXIT_FAILED;
   }
 }

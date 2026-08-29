@@ -247,6 +247,16 @@ describe("seedChecks — the check Whetstone brings", () => {
     expect(file()?.contents).not.toContain("npm run check");
   });
 
+  it("sends the prose it evicts to the description, not to the commit body", () => {
+    // The check tells you where the comment belongs instead, and it said the
+    // commit body. A repo whose commits are one line then has nowhere to put it,
+    // which is how this one ended up with a twenty-five line commit message.
+    const contents = file()?.contents ?? "";
+
+    expect(contents).toMatch(/pull request description/i);
+    expect(contents).not.toMatch(/commit body/i);
+  });
+
   it("refuses a receipt, because its answer depends on the range and not on a file", () => {
     expect(file()?.contents).toContain("skippable: false");
   });

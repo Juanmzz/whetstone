@@ -272,9 +272,9 @@ function commentDensityDraft(include: readonly string[]): Draft {
       "who applied it. Nothing held it, which is `sig-4a2610fb`.\n\n" +
       "**To turn it on:** delete `enabled: false`. It reads `.ts` files only.\n\n" +
       "Comments belong where the code cannot be made clear on its own. History, a rejected " +
-      "alternative, and what a module used to do belong in the commit body or in the " +
-      "decision record. A comment that recounts a change is stale the moment the next one " +
-      "lands.\n\n" +
+      "alternative, and what a module used to do belong in the pull request description or " +
+      "in the decision record. A comment that recounts a change is stale the moment the " +
+      "next one lands.\n\n" +
       "**It reads the diff, not the tree.** One branch at 33% moves a repo average by a " +
       "tenth of a point and passes, so the rule is not expressible over a whole checkout.\n\n" +
       `**The ceiling was measured, not chosen**, over thirty commits of the repo this came ` +
