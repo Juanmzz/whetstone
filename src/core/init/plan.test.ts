@@ -326,3 +326,54 @@ describe("the harnesses a bootstrapped repo is legible to", () => {
     expect(vendor(plan({ options: { definitionsOnly: true } }))).toEqual([]);
   });
 });
+
+describe("the front doors follow the harnesses you name (adr-0040)", () => {
+  const paths = (harnesses?: readonly string[]): string[] =>
+    plan(harnesses === undefined ? {} : { options: { harnesses } }).files.map((f) => f.path);
+
+  it("writes only the pointer for the harness that was named", () => {
+    // It wrote `GEMINI.md` into a repo whose owner uses Claude, and nobody was
+    // asked. That file is a front door for a harness nobody here runs.
+    const only = paths(["claude-code"]);
+    expect(only).toContain("CLAUDE.md");
+    expect(only).not.toContain("GEMINI.md");
+  });
+
+  it("writes AGENTS.md whatever was named, because it is the source and not a door", () => {
+    for (const picks of [["claude-code"], ["codex"], []]) expect(paths(picks)).toContain("AGENTS.md");
+  });
+
+  it("writes no pointer at all for a harness that reads AGENTS.md itself", () => {
+    const codex = paths(["codex"]);
+    expect(codex).not.toContain("CLAUDE.md");
+    expect(codex).not.toContain("GEMINI.md");
+  });
+
+  it("keeps writing both when nobody was asked, so an old caller is unchanged", () => {
+    expect(paths()).toContain("CLAUDE.md");
+    expect(paths()).toContain("GEMINI.md");
+  });
+});
+
+describe("the judge follows the harness that can run one (adr-0040)", () => {
+  const yaml = (harnesses?: readonly string[]): string =>
+    at(plan(harnesses === undefined ? {} : { options: { harnesses } }), ".wst/wst.yaml") ?? "";
+
+  it("writes the adapter the pick can actually drive", () => {
+    expect(yaml(["antigravity"])).toMatch(/^agent: antigravity/m);
+  });
+
+  it("leaves the default where no pick has an adapter", () => {
+    // Codex is a harness this writes for and cannot judge with. The lens simply
+    // does not run; naming codex here would name a judge that cannot exist.
+    expect(yaml(["codex"])).toMatch(/^agent: claude/m);
+  });
+
+  it("takes the first pick that has one, so the order on screen decides", () => {
+    expect(yaml(["codex", "antigravity", "claude-code"])).toMatch(/^agent: antigravity/m);
+  });
+
+  it("leaves the default when nobody was asked", () => {
+    expect(yaml()).toMatch(/^agent: claude/m);
+  });
+});

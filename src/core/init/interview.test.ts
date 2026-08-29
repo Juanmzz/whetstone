@@ -235,3 +235,40 @@ describe("buildInterview — a declared fact arrives pre-filled, an inferred one
     for (const q of buildInterview()) expect(q.defaultAnswer).toBeNull();
   });
 });
+
+/**
+ * A model's guess and a file's statement arrive in the same field, so the field
+ * has to say which. `purpose`, `risk` and `strict-paths` can only ever be
+ * drafted, and those are the three where the human gate matters most.
+ */
+describe("buildInterview — a reading and a guess are labelled apart", () => {
+  const declared = { sourceGlobs: ["apps/*/**"], stack: "TypeScript" };
+  const at = (id: string, drafted = {}) =>
+    buildInterview(declared, drafted).find((q) => q.id === id);
+
+  it("calls a workspace glob a reading", () => {
+    expect(at("source-paths")?.defaultFrom).toBe("repo");
+    expect(at("stack")?.defaultFrom).toBe("repo");
+  });
+
+  it("calls the judge's purpose a draft, never a reading", () => {
+    expect(at("purpose", { purpose: "a task app" })?.defaultFrom).toBe("draft");
+  });
+
+  it("calls a drafted path a draft even where the repo also declared one", () => {
+    expect(at("source-paths", { sourcePaths: ["lib/**"] })?.defaultFrom).toBe("draft");
+  });
+
+  it("labels nothing where nothing was pre-filled", () => {
+    for (const id of ["purpose", "risk", "strict-paths"]) {
+      expect(at(id)?.defaultFrom).toBeNull();
+    }
+  });
+
+  it("never labels a value it does not have", () => {
+    for (const q of buildInterview(declared, { purpose: "x", risk: ["money"] })) {
+      if (q.defaultAnswer === null) expect(q.defaultFrom).toBeNull();
+      else expect(q.defaultFrom).not.toBeNull();
+    }
+  });
+});

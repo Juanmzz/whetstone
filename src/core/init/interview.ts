@@ -31,6 +31,14 @@ export interface InitQuestion {
   readonly options: readonly QuestionOption[];
   /** Pre-filled answer the human can accept, or null when there is nothing to offer. */
   readonly defaultAnswer: string | null;
+  /**
+   * WHERE the pre-filled answer came from. Null when there is none.
+   *
+   * A file said it, or a model guessed it, and the screen may not call the
+   * second the first. `purpose`, `risk` and `strict-paths` can only ever be
+   * drafted, since the code itself says no file states them.
+   */
+  readonly defaultFrom: "repo" | "draft" | null;
 }
 
 /**
@@ -89,6 +97,23 @@ const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
 const NOTHING_DECLARED: DeclaredAnswers = Object.freeze({ sourceGlobs: [], stack: null });
 
 /**
+ * A draft somebody else wrote, for the fields no repo can declare.
+ *
+ * The judge produces it (`propose.ts`). It arrives as the starting value of the
+ * same field a human types into, which is where the human gate is actually
+ * exercised: `--propose` wrote a JSON file and told you to edit it, and editing
+ * a JSON is not reading five questions with the `why` beside each.
+ */
+export interface DraftedAnswers {
+  readonly purpose?: string;
+  /** `RiskProfile` keys the draft argued for. */
+  readonly risk?: readonly string[];
+  readonly strictPaths?: readonly StrictPath[];
+  readonly sourcePaths?: readonly string[];
+  readonly stack?: string;
+}
+
+/**
  * The questions, in the order they are asked. The LIST never changes: a repo
  * that declares a lot is asked the same five as one that declares nothing,
  * because an interview that shrinks when a reading gets lucky is one whose
@@ -102,8 +127,14 @@ const NOTHING_DECLARED: DeclaredAnswers = Object.freeze({ sourceGlobs: [], stack
  */
 export function buildInterview(
   declared: DeclaredAnswers = NOTHING_DECLARED,
+  drafted: DraftedAnswers = {},
 ): readonly InitQuestion[] {
   const blank = (value: string): string | null => (value === "" ? null : value);
+  // The draft wins where it spoke. It read the repo; a declaration is the better
+  // answer only where nothing read one. Both are drafts a keystroke edits.
+  const paths = drafted.sourcePaths ?? declared.sourceGlobs;
+  const from = (drafted_: unknown, declared_: unknown): "repo" | "draft" | null =>
+    drafted_ !== undefined && drafted_ !== null ? "draft" : declared_ === null || declared_ === undefined ? null : "repo";
   const questions: InitQuestion[] = [
     {
       id: "purpose",
@@ -111,7 +142,8 @@ export function buildInterview(
       why: "Intent is not on disk. A README describes what exists; this asks what it is FOR.",
       kind: "text",
       options: [],
-      defaultAnswer: null,
+      defaultAnswer: drafted.purpose ?? null,
+      defaultFrom: drafted.purpose === undefined ? null : "draft",
     },
     {
       id: "risk",
@@ -123,7 +155,8 @@ export function buildInterview(
         "project buys, so it is the one question worth interrupting for.",
       kind: "flags",
       options: RISK_LABELS.map(([value, label]) => ({ value, label })),
-      defaultAnswer: null,
+      defaultAnswer: blank((drafted.risk ?? []).join(",")),
+      defaultFrom: (drafted.risk ?? []).length === 0 ? null : "draft",
     },
     {
       id: "source-paths",
@@ -137,7 +170,8 @@ export function buildInterview(
         "the gate over the wrong files.",
       kind: "paths",
       options: [],
-      defaultAnswer: blank(declared.sourceGlobs.join("\n")),
+      defaultAnswer: blank(paths.join("\n")),
+      defaultFrom: from(drafted.sourcePaths, blank(declared.sourceGlobs.join("\n"))),
     },
     {
       id: "strict-paths",
@@ -149,7 +183,10 @@ export function buildInterview(
         "lose. No layout states it.",
       kind: "paths",
       options: [],
-      defaultAnswer: null,
+      defaultAnswer: blank(
+        (drafted.strictPaths ?? []).map((p) => `${p.glob} : ${p.reason}`).join("\n"),
+      ),
+      defaultFrom: (drafted.strictPaths ?? []).length === 0 ? null : "draft",
     },
     {
       id: "stack",
@@ -162,7 +199,8 @@ export function buildInterview(
         "extensions, which is exactly the guess that breaks on an unusual stack.",
       kind: "text",
       options: [],
-      defaultAnswer: declared.stack,
+      defaultAnswer: drafted.stack ?? declared.stack,
+      defaultFrom: from(drafted.stack, declared.stack),
     },
   ];
 

@@ -8,6 +8,7 @@ import { PRE_PUSH_PATH, renderPrePushHook } from "./hook.js";
 import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 import { seedChecks } from "./checks.js";
+import { judgeFor, pointersFor } from "./harness.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {
@@ -40,6 +41,13 @@ export interface InitOptions {
    * refusing to install at all was the only previous answer.
    */
   readonly definitionsOnly?: boolean;
+  /**
+   * Which harnesses read this repo. Decides the pointer files and nothing else.
+   *
+   * Omitted means every pointer, which is what `init` did before anyone was
+   * asked: it wrote `GEMINI.md` into a repo whose owner uses Claude.
+   */
+  readonly harnesses?: readonly string[];
   /** Memory backend. `files` is the default AND the recommendation (ADR-0001). */
   readonly backend?: string;
   /** Seed an uncalibrated review lens. Off by default: apparatus is earned. */
@@ -132,6 +140,11 @@ export function planInit(input: InitPlanInput): InitPlan {
         backend: options.backend ?? "files",
         skills,
         namespace: input.facts.repoName,
+        // The adapter the harnesses named can drive. Null where none of them can,
+        // and then the default stands and the lens simply does not run.
+        ...(judgeFor(options.harnesses ?? []) === null
+          ? {}
+          : { agent: judgeFor(options.harnesses ?? []) as string }),
       }),
     },
     // Per-machine runtime state (the compiled check index, the event log, the
@@ -183,8 +196,12 @@ export function planInit(input: InitPlanInput): InitPlan {
         ),
       }),
     },
-    // NOT copies of AGENTS.md: a pointer, so there is one source of truth.
-    ...Object.entries(VENDOR_POINTERS).map(([path, contents]) => ({ path, contents })),
+    // NOT copies of AGENTS.md: a pointer, and only for a harness that cannot
+    // find it on its own. Codex and OpenCode read `AGENTS.md`, so a pointer for
+    // them is a second file saying nothing.
+    ...Object.entries<string>(
+      options.harnesses === undefined ? VENDOR_POINTERS : pointersFor(options.harnesses),
+    ).map(([path, contents]) => ({ path, contents })),
   ];
   if (options.definitionsOnly !== true) files.push(...vendorFiles);
 

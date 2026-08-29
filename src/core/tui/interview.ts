@@ -55,11 +55,20 @@ const NONE: InterviewAction = { kind: "none" };
 function seed(question: InitQuestion): Field {
   const value = question.defaultAnswer;
   if (value === null || value === "") return EMPTY;
-  if (question.kind !== "paths") return { ...EMPTY, draft: value };
-  // Every candidate is a row AND ticked. The repo proposed them; a human unticks
-  // what does not belong rather than retyping around it.
-  const rows = value.split("\n").map((l) => l.trim()).filter((l) => l !== "");
-  return { ...EMPTY, rows, picked: rows };
+  if (question.kind === "paths") {
+    // Every candidate is a row AND ticked. The repo proposed them; a human unticks
+    // what does not belong rather than retyping around it.
+    const rows = value.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+    return { ...EMPTY, rows, picked: rows };
+  }
+  if (question.kind === "flags") {
+    const picked = value.split(",").map((v) => v.trim()).filter((v) => v !== "");
+    // Only values the screen offers. A draft naming a flag nobody ships would
+    // otherwise sit in the answers as a ticked box with no row.
+    const offered = new Set(question.options.map((o) => o.value));
+    return { ...EMPTY, picked: picked.filter((v) => offered.has(v)) };
+  }
+  return { ...EMPTY, draft: value };
 }
 
 export function openInterview(questions: readonly InitQuestion[]): InterviewState {
@@ -240,8 +249,12 @@ export function renderInterview(s: InterviewState): readonly string[] {
   }
 
   lines.push("", `  ${q.why}`);
-  // Nobody signs a reading blind: a value that arrived from the repo says so.
-  if (q.defaultAnswer !== null) lines.push("", "  read from this repo. Edit it or leave it.");
+  // Nobody signs a reading blind, and a model's guess is not a reading. The two
+  // arrive in the same field, so the field has to say which.
+  if (q.defaultFrom === "repo") lines.push("", "  read from this repo. Edit it or leave it.");
+  if (q.defaultFrom === "draft") {
+    lines.push("", "  DRAFTED by the judge from what it could see. Check it.");
+  }
   if (s.complaint !== null) lines.push("", `  ${s.complaint}`);
   lines.push("", `  ${keysFor(q)} · enter next · shift-tab back · ctrl-d write · esc quit`);
   return lines;

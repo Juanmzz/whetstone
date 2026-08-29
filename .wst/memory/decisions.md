@@ -1111,3 +1111,63 @@ Cost accepted: a human who does not read the pre-filled field signs a reading th
 check. The screen names it as read from the repo, and the evidence lines say which file
 said so, which is the same guard `init` already gives its detected commands.
 
+### adr-0040 — you name your harnesses, and one of them drafts the answers
+`accepted` · 2026-08-29 · signals: sig-4a2610fb
+
+`init` decided two things nobody was asked. It wrote `GEMINI.md` into a repo whose owner
+uses Claude, and it opened five questions on a blank page in a repo a model could have read.
+The 2026-08-29 field report measured what the second costs: three failed attempts before a
+layer was written, and none of them the user's fault.
+
+**One screen first: which harnesses read this repo.** It answers two separate questions that
+were tangled into one, and adr-0026's judge key answered neither. Which front door gets
+written is about the harnesses a person runs. Which adapter may draft is about which of
+those Whetstone can drive. `AGENTS.md` is the source (ADR-0002) and is written either way;
+Codex and OpenCode read it directly, so a pointer for them would be a second file saying
+nothing. Codex therefore appears in this list and NOT in the judge list, which is the honest
+answer to "codex is missing from config": it is a harness Whetstone writes for and cannot
+judge with, because there is no adapter.
+
+**Then the first pick that has an adapter drafts.** `--propose` already made that call and
+already argued from evidence. What it did with the answer was write a JSON file and tell you
+to edit it, and the doc comment called that gap the human gate. It is a worse gate than the
+one it protects: editing a JSON is not reading five questions with the `why` beside each and
+the field already filled. The draft now lands IN the interview, which is where a person
+actually looks at it. On the first live run the judge answered "unclear from what I was
+shown... the owner should replace this line outright", which is the gate working.
+
+**And `init` asks before it writes.** Everything above it is read-only and the plan is on
+screen; this is the one moment between five answers and a written layer. Skipped where stdin
+is not a terminal, because there is nobody to ask and the caller meant it.
+
+**A guess is not labelled as a reading.** Both arrive in the same field, so the field says
+which: `read from this repo` where a file stated it, `DRAFTED by the judge from what it could
+see` where a model did. `purpose`, `risk` and `strict-paths` can only ever be the second,
+which is exactly where the human gate matters.
+
+**It refuses before it spends.** `init` does not overwrite, and it used to discover that
+after a model call and five questions. The full collision set needs a plan, which needs
+answers; the half that needs neither is checked first.
+
+**And the pick reaches the config.** `renderWstYaml` hardcoded `agent: claude`, so naming
+Antigravity got you a draft from antigravity and a config naming claude. Where no pick has an
+adapter the default stands, and the lens simply does not run: naming `codex` there would name
+a judge that cannot exist.
+
+Rejected: making the judge mandatory. adr-0016 refused an `init` unusable without a model
+and that still holds: no adapter means blank fields and the same five questions.
+
+Rejected: keeping `--propose` as the only drafting path. It is the same call with a file and
+a second command in the middle, and the file was the part nobody read.
+
+Rejected: writing every pointer and letting people delete what they do not use. That is the
+behaviour being fixed, and a file nobody asked for in a repo Whetstone does not own is
+exactly what ADR-0004 refuses.
+
+Rejected: inferring the harnesses from what is on PATH. A binary being installed is not a
+statement that this repo is read by it, and this is the one screen where asking is cheap.
+
+Cost accepted: one model call on a path that had none, on the first run of the tool, before
+anyone has agreed to spend anything. It is announced on the screen that offers it, the run
+that measured it cost $0.0595, and picking only Codex or OpenCode skips it entirely.
+

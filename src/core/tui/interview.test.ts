@@ -123,6 +123,7 @@ describe("a pre-filled question opens with the answer in it, editable", () => {
     kind: "text",
     options: [],
     defaultAnswer: null,
+    defaultFrom: null,
     ...over,
   });
 
@@ -148,9 +149,17 @@ describe("a pre-filled question opens with the answer in it, editable", () => {
     expect(answersOf(s).stack).toBeNull();
   });
 
-  it("says the value came from the repo, so nobody signs a reading blind", () => {
-    const s = openInterview([q({ defaultAnswer: "TypeScript" })]);
+  it("says a reading came from the repo, so nobody signs one blind", () => {
+    const s = openInterview([q({ defaultAnswer: "TypeScript", defaultFrom: "repo" })]);
     expect(renderInterview(s).join("\n")).toMatch(/read from this repo/i);
+  });
+
+  it("says a DRAFT was drafted, and never calls a model's guess a reading", () => {
+    const s = openInterview([q({ defaultAnswer: "a task app", defaultFrom: "draft" })]);
+    const screen = renderInterview(s).join("\n");
+
+    expect(screen).toMatch(/drafted by the judge/i);
+    expect(screen).not.toMatch(/read from this repo/i);
   });
 
   it("opens empty where nothing was declared", () => {
@@ -166,6 +175,7 @@ describe("one key, one meaning", () => {
     kind,
     options: [{ value: "a", label: "a" }],
     defaultAnswer: null,
+    defaultFrom: null,
   });
 
   it("advances on enter from every kind of question, including a list", () => {
@@ -230,6 +240,7 @@ describe("a list question you tick rather than type", () => {
     kind: "paths",
     options: candidates.map((c) => ({ value: c, label: c })),
     defaultAnswer: picked.join("\n"),
+    defaultFrom: "repo",
   });
 
   const open = () =>
@@ -284,5 +295,36 @@ describe("a list question you tick rather than type", () => {
     const typed = ["l", "i", "b"].reduce((s, k) => pressIn(s, k).state, blank);
 
     expect(answersOf(pressIn(typed, "ctrl-n").state).sourcePaths).toEqual(["lib"]);
+  });
+});
+
+describe("a drafted checkbox screen opens with the boxes already ticked", () => {
+  const risk = (defaultAnswer: string | null): InitQuestion => ({
+    id: "risk",
+    prompt: "p",
+    why: "w",
+    kind: "flags",
+    options: [
+      { value: "money", label: "money" },
+      { value: "authn", label: "auth" },
+    ],
+    defaultAnswer,
+    defaultFrom: defaultAnswer === null ? null : "draft",
+  });
+
+  it("ticks what the draft argued for, and leaves the rest", () => {
+    const s = openInterview([risk("money")]);
+
+    expect(answersOf(s).risk.money).toBe(true);
+    expect(answersOf(s).risk.authn).toBe(false);
+  });
+
+  it("un-ticks on space, which is what makes it a draft and not a verdict", () => {
+    const s = pressIn(openInterview([risk("money")]), "space").state;
+    expect(answersOf(s).risk.money).toBe(false);
+  });
+
+  it("ignores a flag the screen does not offer, rather than ticking a row that is not there", () => {
+    expect(answersOf(openInterview([risk("money,invented")])).risk.money).toBe(true);
   });
 });

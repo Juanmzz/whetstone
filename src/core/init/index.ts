@@ -17,6 +17,7 @@ export {
   NO_RISK,
   AnswersSchema,
   buildInterview,
+  type DraftedAnswers,
   renderRiskProfile,
   riskIsElevated,
   validateAnswers,
