@@ -293,19 +293,25 @@ function workspaceGlobs(pkg: PackageJson | null): readonly string[] {
 /**
  * A workspace pattern as a SOURCE glob.
  *
- * `apps/*` says where the packages are and nothing about where the code sits
- * inside one. So the tree is asked: if any member has a `src/`, the glob narrows
- * to it, and otherwise it stays wide. That is reading, not a convention applied
- * blind.
+ * `apps/*` says where the packages are and nothing about where code sits inside
+ * one, so the tree is asked. The pattern becomes a regex to ask with, because
+ * npm accepts a literal path, a star, a globstar and any depth of them, and a
+ * reading that only understood `apps/*` narrowed the wrong ones.
  */
 function sourceGlobFor(pattern: string, files: readonly string[]): string {
-  const prefix = `${pattern.replace(/\/?\*+$/, "")}/`;
-  const inSrc = files.some((f) => {
-    if (!f.startsWith(prefix.split("*")[0] ?? prefix)) return false;
-    const rest = f.slice((prefix.split("*")[0] ?? prefix).length);
-    return /^[^/]+\/src\//.test(rest);
-  });
-  return `${pattern.replace(/\/$/, "")}/${inSrc ? "src/**" : "**"}`;
+  const base = pattern.replace(/\/+$/, "");
+  const asRegex = base
+    .split("/")
+    .map((part) =>
+      part
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*\*/g, "\u0000")
+        .replace(/\*/g, "[^/]+")
+        .replace(/\u0000/g, ".+"),
+    )
+    .join("/");
+  const hasSrc = new RegExp(`^${asRegex}/src/`);
+  return `${base}/${files.some((f) => hasSrc.test(f)) ? "src/**" : "**"}`;
 }
 
 /** Files that NAME a language, as opposed to files written in one. */
@@ -328,9 +334,14 @@ function declaredAnswers(
     note(`source roots: ${sourceGlobs.join(", ")}`, "package.json workspaces");
   }
 
+  // DEPTH, not a list of directory names. A manifest at the root or one level
+  // down describes the project: `src-tauri/Cargo.toml` is where a Tauri app
+  // declares its Rust half. Deeper than that it describes something inside the
+  // project, and `examples/demo/pyproject.toml` made a TypeScript repo Python.
+  const near = files.filter((f) => f.split("/").length <= 2);
   const languages: string[] = [];
   for (const [pattern, name] of DECLARES_LANGUAGE) {
-    const at = files.find((f) => pattern.test(f));
+    const at = near.find((f) => pattern.test(f));
     if (at === undefined || languages.includes(name)) continue;
     languages.push(name);
     note(`language: ${name}`, at);

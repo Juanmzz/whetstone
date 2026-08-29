@@ -1058,7 +1058,7 @@ is load-bearing; a fifth to describe an environment is a large change for one ch
 Cost accepted: a caller can pass `--no-evidence` on a machine that HAS a store and skip a
 check that would have answered. That is true of `--no-lens` and `--fast` already, and the
 report names what was excluded.
-### adr-0038 — a declaration may pre-fill an answer; an inference still may not
+### adr-0039 — a declaration may pre-fill an answer; an inference still may not
 `accepted` · 2026-08-29 · signals: sig-0041
 
 adr-0016 stopped `init` inferring, and the rule has held. It was written against a table
@@ -1089,6 +1089,17 @@ real monorepo produced differ from each other.
 Rejected: skipping a question the repo answered. The interview would then shrink when a
 reading gets lucky, and nobody could state its coverage. adr-0016's own test says this and
 it still holds; what changed is the starting value, not the list.
+
+**A list question is a checklist, not a blank page.** The first version put the candidates in
+a text field, and a cross-review found what that costs: nothing deleted a committed line, so a
+glob the repo proposed could be typed around but never declined. `enter` was worse. It
+advanced the question and dropped whatever was typed and not committed, on the one screen
+whose legend reads `enter next`, and a lost source path seeds a layer that governs no file.
+The screen now lists what was found, all ticked, with `space` to untick and typing reserved
+for adding one nobody found. `enter` commits on its way out.
+
+`tab` went with it. It did what `enter` does and was never in the legend, which is the defect
+the legend test is named for and did not catch; `ctrl-s` went for the same reason.
 
 Rejected: showing the reading beside the field as a suggestion to retype. That is the same
 work with an extra step, and the report's complaint was the typing.

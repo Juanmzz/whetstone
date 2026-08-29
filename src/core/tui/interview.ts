@@ -17,11 +17,17 @@ import {
 interface Field {
   /** What is being typed right now. */
   readonly draft: string;
-  /** Committed lines, for a `paths` question. */
-  readonly lines: readonly string[];
-  /** Selected values, for a `flags` question. */
+  /**
+   * Every candidate on the screen, ticked or not, for a `paths` question.
+   *
+   * Both are needed. `picked` is the answer; this is what stays visible, so
+   * unticking a glob the repo proposed leaves it there to tick again. A list that
+   * removed the row would be a list you cannot change your mind in.
+   */
+  readonly rows: readonly string[];
+  /** What is ticked. For `flags` and for `paths` alike. */
   readonly picked: readonly string[];
-  /** Which option the cursor is on, for a `flags` question. */
+  /** Which row the cursor is on. */
   readonly option: number;
 }
 
@@ -38,7 +44,7 @@ export type InterviewAction =
   | { readonly kind: "cancel" }
   | { readonly kind: "write"; readonly answers: InterviewAnswers };
 
-const EMPTY: Field = Object.freeze({ draft: "", lines: [], picked: [], option: 0 });
+const EMPTY: Field = Object.freeze({ draft: "", rows: [], picked: [], option: 0 });
 const NONE: InterviewAction = { kind: "none" };
 
 /**
@@ -49,9 +55,11 @@ const NONE: InterviewAction = { kind: "none" };
 function seed(question: InitQuestion): Field {
   const value = question.defaultAnswer;
   if (value === null || value === "") return EMPTY;
-  return question.kind === "paths"
-    ? { ...EMPTY, lines: value.split("\n").filter((l) => l.trim() !== "") }
-    : { ...EMPTY, draft: value };
+  if (question.kind !== "paths") return { ...EMPTY, draft: value };
+  // Every candidate is a row AND ticked. The repo proposed them; a human unticks
+  // what does not belong rather than retyping around it.
+  const rows = value.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+  return { ...EMPTY, rows, picked: rows };
 }
 
 export function openInterview(questions: readonly InitQuestion[]): InterviewState {
@@ -91,7 +99,7 @@ export function answersOf(s: InterviewState): InterviewAnswers {
   };
 
   const strict: StrictPath[] = f("strict-paths")
-    .lines.map((line) => {
+    .picked.map((line) => {
       const at = line.indexOf(":");
       return at < 0
         ? { glob: line.trim(), reason: "" }
@@ -104,7 +112,7 @@ export function answersOf(s: InterviewState): InterviewAnswers {
   return {
     purpose: f("purpose").draft.trim(),
     risk: risk.length === 0 ? NO_RISK : profile,
-    sourcePaths: f("source-paths").lines,
+    sourcePaths: f("source-paths").picked,
     strictPaths: strict,
     stack: stack === "" ? null : stack,
   };
@@ -119,12 +127,25 @@ function missing(s: InterviewState): string | null {
 
 function move(s: InterviewState, delta: number): InterviewState {
   const q = current(s);
-  if (q.kind === "flags") {
-    const last = Math.max(q.options.length - 1, 0);
-    const option = Math.min(Math.max(field(s).option + delta, 0), last);
-    return withField(s, { ...field(s), option });
+  const rows = q.kind === "paths" ? field(s).rows.length : q.options.length;
+  if (rows === 0) return s;
+  const option = Math.min(Math.max(field(s).option + delta, 0), rows - 1);
+  return withField(s, { ...field(s), option });
+}
+
+/** What is being typed becomes a ticked row. Unchanged when there is nothing typed. */
+function commit(s: InterviewState): InterviewState {
+  if (current(s).kind !== "paths") return s;
+  const line = field(s).draft.trim();
+  if (line === "" || field(s).rows.includes(line)) {
+    return line === "" ? s : withField(s, { ...field(s), draft: "" });
   }
-  return s;
+  return withField(s, {
+    ...field(s),
+    rows: [...field(s).rows, line],
+    picked: [...field(s).picked, line],
+    draft: "",
+  });
 }
 
 function step(s: InterviewState, delta: number): InterviewState {
@@ -133,7 +154,9 @@ function step(s: InterviewState, delta: number): InterviewState {
 }
 
 export function pressIn(s: InterviewState, key: string): { state: InterviewState; action: InterviewAction } {
-  if (key === "tab") return { state: step(s, 1), action: NONE };
+  // `tab` is gone: it did what `enter` does and was not in the legend, which is
+  // a key that teaches an effect nobody wrote down. `shift-tab` stays because it
+  // is the only way back and it IS in the legend.
   if (key === "shift-tab") return { state: step(s, -1), action: NONE };
   if (key === "up") return { state: move(s, -1), action: NONE };
   if (key === "down") return { state: move(s, 1), action: NONE };
@@ -142,9 +165,7 @@ export function pressIn(s: InterviewState, key: string): { state: InterviewState
   // shortcut is a character the user cannot type.
   if (key === "escape") return { state: s, action: { kind: "cancel" } };
 
-  // Both: ctrl-s is XOFF in a terminal with flow control on, where it can
-  // freeze the session instead of reaching here. ctrl-d has no such history.
-  if (key === "ctrl-s" || key === "ctrl-d") {
+  if (key === "ctrl-d") {
     const complaint = missing(s);
     if (complaint !== null) return { state: { ...s, complaint, at: 0 }, action: NONE };
     return { state: s, action: { kind: "write", answers: answersOf(s) } };
@@ -152,8 +173,9 @@ export function pressIn(s: InterviewState, key: string): { state: InterviewState
 
   const q = current(s);
 
-  if (key === "space" && q.kind === "flags") {
-    const value = q.options[field(s).option]?.value;
+  if (key === "space" && (q.kind === "flags" || q.kind === "paths")) {
+    const value =
+      q.kind === "paths" ? field(s).rows[field(s).option] : q.options[field(s).option]?.value;
     if (value === undefined) return { state: s, action: NONE };
     const picked = field(s).picked.includes(value)
       ? field(s).picked.filter((v) => v !== value)
@@ -169,19 +191,17 @@ export function pressIn(s: InterviewState, key: string): { state: InterviewState
   // line here, advance undocumented on a checkbox screen, and run a command in
   // the launcher, which is three meanings in three consecutive screens of one
   // flow. Adding a line is its own key now, and the legend says so.
-  if (key === "return") return { state: step(s, 1), action: NONE };
+  // It COMMITS what is being typed on the way out. The legend says `enter next`
+  // on the same screen, and dropping the draft silently is how a source path went
+  // missing and the repo got a `.wst/` that governed no file.
+  if (key === "return") return { state: step(commit(s), 1), action: NONE };
 
   // `ctrl-n` and not `ctrl-enter`: measured, a terminal sends the same byte for
   // enter and ctrl-enter, so the second is a key nobody can press. `enter` here
   // is the linefeed some terminals send for shift-enter, which costs nothing to
   // accept and works where it exists.
   if ((key === "ctrl-n" || key === "enter") && q.kind === "paths") {
-    const line = field(s).draft.trim();
-    if (line === "") return { state: s, action: NONE };
-    return {
-      state: withField(s, { ...field(s), lines: [...field(s).lines, line], draft: "" }),
-      action: NONE,
-    };
+    return { state: commit(s), action: NONE };
   }
 
   const ch = charOf(key);
@@ -209,8 +229,13 @@ export function renderInterview(s: InterviewState): readonly string[] {
       const here = i === f.option ? "›" : " ";
       lines.push(`  ${here} [${mark(f.picked.includes(o.value))}] ${o.label}`);
     });
+  } else if (q.kind === "paths") {
+    f.rows.forEach((row, i) => {
+      const here = i === f.option ? "›" : " ";
+      lines.push(`  ${here} [${mark(f.picked.includes(row))}] ${row}`);
+    });
+    lines.push(`    + ${f.draft}_`);
   } else {
-    for (const line of f.lines) lines.push(`    · ${line}`);
     lines.push(`  › ${f.draft}_`);
   }
 
@@ -224,6 +249,6 @@ export function renderInterview(s: InterviewState): readonly string[] {
 
 function keysFor(q: InitQuestion): string {
   if (q.kind === "flags") return "↑↓ move · space toggle";
-  if (q.kind === "paths") return "type · ctrl-n adds a line";
+  if (q.kind === "paths") return "↑↓ move · space toggle · type + ctrl-n adds one";
   return "type";
 }

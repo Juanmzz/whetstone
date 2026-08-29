@@ -295,3 +295,68 @@ describe("detectStack — what the repo declares about its own shape", () => {
     expect(stack.evidence.join(" ")).toMatch(/tsconfig\.json/);
   });
 });
+
+/**
+ * The narrowing is read off the tree, so it has to read every shape npm accepts
+ * as a workspace pattern and not just `apps/*`.
+ */
+describe("detectStack — narrowing a workspace pattern to where the code is", () => {
+  const globs = (workspaces: readonly string[], files: readonly string[]): readonly string[] =>
+    detectStack(facts({ files: [...files], packageJson: { workspaces: [...workspaces] } as never }))
+      .declared.sourceGlobs;
+
+  it("narrows a LITERAL member, which npm accepts and a pattern-only reading misses", () => {
+    expect(globs(["packages/core"], ["packages/core/src/a.ts"])).toEqual(["packages/core/src/**"]);
+  });
+
+  it("narrows a deep pattern at the depth the pattern actually reaches", () => {
+    expect(globs(["apps/*/services/*"], ["apps/w/services/s/src/a.ts"])).toEqual([
+      "apps/*/services/*/src/**",
+    ]);
+  });
+
+  it("narrows a bare star", () => {
+    expect(globs(["*"], ["a/src/x.ts"])).toEqual(["*/src/**"]);
+  });
+
+  it("narrows a globstar only where a `src/` is really under it", () => {
+    expect(globs(["packages/**"], ["packages/ui/src/a.ts"])).toEqual(["packages/**/src/**"]);
+    expect(globs(["packages/**"], ["packages/ui/a.ts"])).toEqual(["packages/**/**"]);
+  });
+
+  it("tolerates a trailing slash, which package.json files carry in the wild", () => {
+    expect(globs(["apps/*/"], ["apps/web/src/a.ts"])).toEqual(["apps/*/src/**"]);
+  });
+
+  it("stays wide where no member has a src, rather than inventing one", () => {
+    expect(globs(["apps/*"], ["apps/web/index.ts"])).toEqual(["apps/*/**"]);
+  });
+});
+
+describe("detectStack — a nested manifest does not name the whole repo", () => {
+  it("prefers a language declared at the root over one declared in a subdirectory", () => {
+    // A TypeScript repo with `examples/python-demo/pyproject.toml` is not a
+    // Python project, and the constitution would have said it was.
+    const stack = detectStack(
+      facts({ files: ["package.json", "tsconfig.json", "examples/demo/pyproject.toml"] }),
+    );
+
+    expect(stack.declared.stack).toContain("TypeScript");
+    expect(stack.declared.stack).not.toContain("Python");
+  });
+
+  it("still reads a nested manifest when nothing at the root declares a language", () => {
+    // `src-tauri/Cargo.toml` is how a Tauri app declares its Rust half, and there
+    // is no root Cargo.toml to find.
+    const stack = detectStack(facts({ files: ["package.json", "src-tauri/Cargo.toml"] }));
+    expect(stack.declared.stack).toContain("Rust");
+  });
+
+  it("reads both where the root declares one and only one other exists nested", () => {
+    const stack = detectStack(
+      facts({ files: ["package.json", "tsconfig.json", "src-tauri/Cargo.toml"] }),
+    );
+    expect(stack.declared.stack).toContain("TypeScript");
+    expect(stack.declared.stack).toContain("Rust");
+  });
+});
