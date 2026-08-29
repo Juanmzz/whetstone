@@ -51,6 +51,8 @@
     "check:comments": "tsx scripts/check-comment-density.ts",
     "check:command-surface": "tsx scripts/check-command-surface.ts",
     "fix:docs": "tsx scripts/check-docs-fresh.ts --fix",
+    "check:plugin-version": "tsx scripts/check-plugin-version.ts",
+    "fix:plugin-version": "tsx scripts/check-plugin-version.ts --fix",
     "check:provenance": "tsx scripts/check-provenance.ts",
     "check:skills": "tsx scripts/check-skills.ts",
     "untested": "tsx scripts/untested.ts",
