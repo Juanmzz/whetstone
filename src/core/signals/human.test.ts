@@ -1,26 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { humanSignal } from "./human.js";
+import { humanSignal, type HumanObservation } from "./human.js";
 import { parseSignalLog } from "./parse.js";
 
 const NOW = new Date("2026-08-10T15:04:05.000Z");
 
-const observation = {
+const observation: HumanObservation = {
   type: "triage-miss",
   phase: "verify",
   severity: "medium",
   detail: "Auth middleware change classified light; it should have been strict.",
-  ruleAffected: [] as readonly string[],
-  branch: "run/two-related-repairs" as string | null,
+  ruleAffected: [],
+  branch: "run/two-related-repairs",
   attested: true,
 };
 
-const ok = (over: Partial<typeof observation> = {}) => {
+const ok = (over: Partial<HumanObservation> = {}) => {
   const result = humanSignal({ ...observation, ...over }, NOW);
   if (!result.ok) throw new Error(`expected ok, got: ${result.errors.join("; ")}`);
   return result.record;
 };
 
-const errors = (over: Partial<typeof observation>): readonly string[] => {
+const errors = (over: Partial<HumanObservation>): readonly string[] => {
   const result = humanSignal({ ...observation, ...over }, NOW);
   return result.ok ? [] : result.errors;
 };
@@ -182,5 +182,57 @@ describe("humanSignal", () => {
     // The real log already carries `dispatch` and `retro`. A closed vocabulary
     // here would reject entries this project has been writing for a month.
     expect(ok({ phase: "dispatch" }).phase).toBe("dispatch");
+  });
+});
+
+describe("a signal an agent drafted from the human's own words", () => {
+  // adr-0035. The evidence for `source: "human"` was a TTY, and this human works
+  // inside agent sessions where there is none, so the agent paraphrased the friction
+  // and the human typed it back. The quote replaces the terminal as evidence.
+
+  const quoted = (over: Partial<HumanObservation> = {}) =>
+    ok({ attested: false, quote: "the gate blocked me twice for the same stale count", ...over });
+
+  it("carries the human's words as their own field, beside the agent's framing", () => {
+    expect(quoted().quote).toBe("the gate blocked me twice for the same stale count");
+    expect(quoted().detail).toBe(observation.detail);
+  });
+
+  it("is `human-quoted`: human evidence, one remove from a human typing it", () => {
+    expect(quoted().source).toBe("human-quoted");
+  });
+
+  it("keeps the quote VERBATIM, unlike every other field it normalises", () => {
+    // The cluster keys are canonicalised because the retro groups on them. A quote
+    // is evidence, not a key, and a reflowed quote is a paraphrase.
+    const raw = "It  BLOCKED me. Twice.\tSame count — and I'd already fixed it?";
+    expect(quoted({ quote: raw }).quote).toBe(raw);
+  });
+
+  it("trims only what the shell left around it", () => {
+    expect(quoted({ quote: "  it blocked me twice  " }).quote).toBe("it blocked me twice");
+  });
+
+  it("binds the words into the id, so the quote cannot be edited off the record", () => {
+    expect(quoted().id).not.toBe(quoted({ quote: "something else entirely" }).id);
+  });
+
+  it("still parses as a line of the log", () => {
+    expect(parseSignalLog(JSON.stringify(quoted()))).toHaveLength(1);
+  });
+
+  it("omits the field entirely when nobody was quoted", () => {
+    expect("quote" in ok()).toBe(false);
+  });
+
+  it("lets a real terminal outrank it: typing is stronger evidence than quoting", () => {
+    expect(quoted({ attested: true }).source).toBe("human");
+    expect(quoted({ attested: true }).quote).toBe(
+      "the gate blocked me twice for the same stale count",
+    );
+  });
+
+  it("rejects a quote with no words in it rather than claiming words it lacks", () => {
+    expect(errors({ attested: false, quote: "   " }).join()).toMatch(/quote/);
   });
 });

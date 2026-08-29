@@ -156,6 +156,9 @@ program
     (value: string, previous: string[] | undefined) => [...(previous ?? []), value],
   )
   .option("--dry-run", "print the line that would be appended, write nothing")
+  // Two flags for one claim, and the command refuses either alone (adr-0035).
+  .option("--quote <words>", "the human's OWN words, verbatim. Drafts; writes nothing on its own")
+  .option("--confirmed", "the human said yes to the quoted draft: writes it as `human-quoted`")
   .option(
     "--from-json <file>",
     "a batch of findings from another tool, or `-` for stdin. Records as `cli`",
@@ -175,6 +178,8 @@ program
         severity: string;
         rule?: string[];
         dryRun?: boolean;
+        quote?: string;
+        confirmed?: boolean;
         fromJson?: string;
         tool?: string;
         resolve?: string;
@@ -188,6 +193,8 @@ program
         severity: opts.severity,
         rule: opts.rule ?? [],
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+        ...(opts.quote !== undefined ? { quote: opts.quote } : {}),
+        ...(opts.confirmed !== undefined ? { confirmed: opts.confirmed } : {}),
         ...(opts.fromJson !== undefined ? { fromJson: opts.fromJson } : {}),
         ...(opts.tool !== undefined ? { tool: opts.tool } : {}),
         ...(opts.resolve !== undefined ? { resolve: opts.resolve } : {}),

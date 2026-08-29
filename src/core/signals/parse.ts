@@ -28,6 +28,8 @@ export interface SignalRecord {
   readonly resolved_by?: string;
   readonly fingerprint?: string;
   readonly source?: string;
+  /** The human's own words, verbatim and uncanonicalised (adr-0035). */
+  readonly quote?: string;
   /**
    * The branch the signal was observed on — the unit of work.
    *
