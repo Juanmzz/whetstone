@@ -21,6 +21,7 @@ import { signalsSince } from "../core/retro/cluster.js";
 import {
   buildStatusReport,
   WHETSTONE_HOOKS_PATH,
+  type AgentFiles,
   type FreshSignals,
   type StatusReport,
 } from "../core/status/report.js";
@@ -159,8 +160,22 @@ export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusR
       definitionTracked: await definitionTracked(repoRoot ?? cwd),
     },
     nodeVersion: process.version,
+    agentFiles: await agentFilesIn(repoRoot ?? cwd),
     missingTools: await missingTools(repoRoot ?? cwd),
     // Omitted, not "unknown", without a `.wst/`: there is no retro to be behind.
     ...(definitionPresent ? { freshSignals: await freshSignals(root) } : {}),
   });
+}
+
+/** The front doors, as they are on disk. `AGENTS.md` is the source; the rest point at it. */
+async function agentFilesIn(root: string): Promise<AgentFiles> {
+  const pointers = await Promise.all(
+    ["CLAUDE.md", "GEMINI.md"].map(async (name) =>
+      (await exists(join(root, name))) ? name : null,
+    ),
+  );
+  return {
+    agentsMd: await exists(join(root, "AGENTS.md")),
+    pointers: pointers.filter((name): name is string => name !== null),
+  };
 }

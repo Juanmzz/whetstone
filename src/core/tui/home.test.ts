@@ -191,3 +191,41 @@ describe("the row says what the command does, which is what the launcher is for"
     }
   });
 });
+
+/**
+ * `not now` said two opposite things. On `init` it meant "already done"; on
+ * everything else it meant "cannot yet, and here is what first". A reader has to
+ * open the detail to tell which, and the word is the only thing on the row.
+ */
+describe("a row says which kind of unavailable it is", () => {
+  it("says what a blocked row is waiting for, in the row itself", () => {
+    const rows = homeRows(report({ definitionPresent: false }));
+    const gate = rows.find((r) => r.command === "gate");
+
+    expect(gate?.available).toBe(false);
+    expect(gate?.state).toBe("needs init");
+  });
+
+  it("says a done row is done, which is the opposite state and used to share a word", () => {
+    expect(rowFor("init")?.state).toBe("already done");
+  });
+
+  it("says nothing extra on a row you can just run", () => {
+    expect(rowFor("gate")?.state).toBeNull();
+  });
+
+  it("says what is missing outside a git repository", () => {
+    expect(rowFor("gate", { repoRoot: null })?.state).toBe("needs a git repo");
+  });
+
+  it("shows the state on the row rather than only under the cursor", () => {
+    const screen = renderHome(openHome(report({ definitionPresent: false }))).join("\n");
+    expect(screen).toMatch(/gate\s+needs init/);
+  });
+
+  it("never prints the words `not now`, which said both things at once", () => {
+    for (const facts of [{}, { definitionPresent: false }, { repoRoot: null }]) {
+      expect(renderHome(openHome(report(facts))).join("\n")).not.toContain("not now");
+    }
+  });
+});

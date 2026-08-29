@@ -1230,4 +1230,37 @@ Rejected: re-rendering `wst.yaml` from the template. `renderWstYaml` knows only 
 
 Cost accepted: a file so malformed that `version:` is inside a block gets the key at the top
 rather than beside its neighbours. It is still valid YAML and still the top level.
+### adr-0043 — the words a reader needs, in the reader's vocabulary
+`accepted` · 2026-08-29
+
+Three complaints from one sitting of using the tool, and one thing underneath: the interface
+was written in the vocabulary of whoever built it.
+
+**`not now` said two opposite things.** On `init` it meant "already done". On every other row
+it meant "cannot yet, and here is what first". The word is the only thing a reader sees
+without moving the cursor onto the row, and it was the same word for both. A row now carries
+its own state: `needs init`, `already done`, `needs a git repo`.
+
+**`<cmd> exited 0` is a process code.** It belongs in a script, and the person who just
+pressed enter is not a script. It says `status done`, or `gate BLOCKED this change`, or `gate
+could not run every check, so this is unverified`, which is hard rule 3 in the one line a menu
+reader sees. The number is still there, after the words and never instead of them.
+
+**`q` meant two things.** The footer said `any key for the menu` and `q` means quit
+everywhere else in the interface, so pressing it there returned to the menu. It quits.
+
+**And `status` says when the front doors are gone.** Deleting `.wst/` takes `AGENTS.md` with
+it, and every agent working in the repo silently loses the project's rules: no commit format,
+no document locations, none of it. It was found in the field by an agent behaving oddly, hours
+later. `status` reported the gate, the plugin and the judge and said nothing about the one
+surface that decides whether an agent here knows anything. A warning, never a problem: a repo
+whose harness owns that surface is a legitimate `--definitions-only` install.
+
+Rejected: greying an unavailable row out instead of wording it. A dimmed row on a terminal
+whose theme nobody controls is a row that looks the same.
+
+Rejected: dropping the exit code entirely. It is what a hook would have seen, and a reader
+debugging a hook wants it.
+
+Cost accepted: `status` now stats three more paths on every run.
 
