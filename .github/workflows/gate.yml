@@ -49,4 +49,4 @@ jobs:
             RANGE="${{ github.event.before }}..${{ github.sha }}"
           fi
           echo "gating $RANGE"
-          node dist/cli.js gate --range "$RANGE" --no-lens
+          node dist/cli.js gate --range "$RANGE" --no-lens --no-evidence

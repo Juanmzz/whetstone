@@ -1023,3 +1023,39 @@ belongs in another layer stops looking like a mistake.
 Cost accepted: four more files in `src/shell/`, and `init.ts` and `status.ts` are now split
 across two. `status.ts` is twelve lines and reads better for it; `gate.ts` lost 200.
 
+### adr-0038 — the gate can be told what this machine cannot answer
+`accepted` · 2026-08-29
+
+`evidence-launcher` (adr-0036) reads a store that lives beside the repo and is never
+committed, which is the whole point of it. An ephemeral runner has no store, so the check
+failed on every CI run that touched the paths it watches, and no edit to the branch could
+clear it. Three of four open pull requests were red for that reason on 2026-08-29, which
+means the gate gave no usable answer on three of four.
+
+The check file predicted this in writing and named the fix it could not make: the registry
+has no environment axis, `include` and `tiers` say which PATHS a check covers and never WHERE
+it can answer, so the honest fix is a gate-level skip of the shape `--no-lens` already has.
+
+So: `wst gate --no-evidence`. A caller asserting something about the machine, not a fact the
+registry holds, filtered where `--fast` filters and reported as excluded rather than as
+passed. CI passes it; the pre-push hook does not, because that is where a human is and where
+the store exists.
+
+It keys on the `evidence-` id prefix, which is the naming those check files already use, one
+per kind of result. That is a string convention rather than a field, and it is the smaller
+change: a field would put an environment axis in the registry, which is the thing the check
+file argued against.
+
+Rejected: dropping `evidence-launcher` to `warn`. It would go amber on every CI run instead
+of red, and an amber that can never be green is the noise that makes the signal unreadable.
+
+Rejected: committing the store. adr-0036 refused it; a screenshot per branch poisons the
+history of every repo that adopts this.
+
+Rejected: a fourth outcome for "matched, but unanswerable here". The gate has four and each
+is load-bearing; a fifth to describe an environment is a large change for one check.
+
+Cost accepted: a caller can pass `--no-evidence` on a machine that HAS a store and skip a
+check that would have answered. That is true of `--no-lens` and `--fast` already, and the
+report names what was excluded.
+

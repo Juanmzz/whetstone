@@ -25,6 +25,7 @@ import { appendSignals } from "../shell/signals.js";
 import { resolveMemory } from "../shell/memory.js";
 import { checkEnv } from "../core/gate/env.js";
 import { fastOnly } from "../core/gate/select.js";
+import { answerableHere } from "../core/gate/environment.js";
 import { runGate as executeGate, type CheckRunner } from "../core/gate/run.js";
 import {
   LensVerdictSchema,
@@ -72,6 +73,8 @@ export interface GateOptions {
    * lens belongs where a human is not waiting on it.
    */
   readonly noLens?: boolean;
+  /** No evidence store on this machine, so a check that reads one cannot answer. */
+  readonly noEvidence?: boolean;
   /** Run only the checks that can answer while somebody is waiting. */
   readonly fast?: boolean;
   /** Suppress signal emission. For dry runs and tests, not for normal use. */
@@ -192,7 +195,12 @@ export async function runGate(
   const triage = classify(files, rules.rules, rules.origin);
   // Routed from the subset, not filtered after: an excluded check never reaches
   // the verdict, so `--fast` reports what it ran.
-  const eligible = opts.fast === true ? fastOnly(registry.active) : registry.active;
+  // Filtered where `--fast` filters, and for the same reason. An unselected check
+  // is reported as excluded, never as passed.
+  const runnable = registry.active.filter((check) =>
+    answerableHere(check, { noEvidence: opts.noEvidence ?? false }),
+  );
+  const eligible = opts.fast === true ? fastOnly(runnable) : runnable;
   const routing = route(opts.tier ?? triage.tier, eligible);
 
   // ONE line for however many checks are in flight, closed whatever happens: an
