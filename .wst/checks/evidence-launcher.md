@@ -10,7 +10,7 @@ include:
   - "src/banner.ts"
 command: npm run check:evidence -- evidence-launcher
 skippable: false
-origin: [adr-0036]
+origin: [adr-0036, adr-0038]
 version: 1
 ---
 
@@ -50,13 +50,13 @@ artifact that says nothing. Images and video get existence and a non-zero size, 
 that is the honest limit of what a deterministic check can say about them.
 
 **What this check does NOT run in: CI.** The store is local by design, so an ephemeral
-runner has none, and mtimes on a fresh clone say nothing about when anything was made. A
-change to these paths will therefore report `evidence-launcher` failing in this repo's own
-workflow, where no edit can clear it. That is a real open edge and it is stated here rather
-than papered over: the registry has no environment axis — `include`, `exclude`, `tiers` and
-`enabled` say which PATHS a check covers, never WHERE it can answer — so the honest fix is
-a gate-level way to skip it, the shape `--no-lens` already has, and that is a decision
-nobody has made. `wst` ships no CI workflow, so this costs a bootstrapped repo nothing.
+runner has none, and mtimes on a fresh clone say nothing about when anything was made. The
+registry still has no environment axis: `include`, `exclude`, `tiers` and `enabled` say which
+PATHS a check covers, never WHERE it can answer. The gate has one instead, which is the shape
+`--no-lens` already had: `wst gate --no-evidence` asserts that this machine has no store, and
+every `evidence-*` check is then excluded rather than failed. CI passes it (adr-0038). A
+change to these paths used to report this check failing in this repo's own workflow, where no
+edit could clear it, and a check that is red everywhere gets routed around.
 
 **When it fails:** run the launcher, capture it, put the file in the directory the failure
 prints. `wst check run evidence-launcher` asks the same question outside the gate.
