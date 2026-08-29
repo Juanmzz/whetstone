@@ -7,7 +7,7 @@
  * banner is output somebody has to scroll past to find the failure.
  */
 
-import { decodeMark, type Mark } from "./core/tui/mark.js";
+import { beside, decodeMark, type Mark } from "./core/tui/mark.js";
 
 export const WORDMARK = "\u2593\u2592\u2591 whetstone";
 
@@ -65,6 +65,43 @@ export const MARK: Mark = decodeMark(MARK_PALETTE, [
   "........354321................",
   "..........0...................",
 ]);
+
+/**
+ * The word, in the stone's own pixels, for the launcher to set beside it.
+ *
+ * SIZED BY THE NARROW TERMINAL: thirty of stone, four of gutter and forty-three
+ * of word leave seventy-seven of eighty. Ten pixel rows is the tallest those
+ * forty-three carry; the next size up wants five-wide bowls and runs to
+ * fifty-three, which fits only the wide window. Drawn here rather than set in a
+ * font because nine letters is less than any library that could render them.
+ *
+ * The blank rows centre it against a stone twice its height, so `beside` needs no
+ * offset. Tone 9 is the stone's own lit face.
+ */
+const MARK_WORD: Mark = decodeMark(MARK_PALETTE, [
+  "...........................................",
+  "...........................................",
+  "...........................................",
+  "......9....................................",
+  "......9..........9........9................",
+  "......9..........9........9................",
+  "......9..........9........9................",
+  "9...9.999...99..999..999.999..99..999...99.",
+  "9...9.9..9.9..9..9..9.....9..9..9.9..9.9..9",
+  "9...9.9..9.9999..9..9.....9..9..9.9..9.9999",
+  "9.9.9.9..9.9.....9...99...9..9..9.9..9.9...",
+  "9.9.9.9..9.9..9..9.....9..9..9..9.9..9.9..9",
+  ".9.9..9..9..99...99.999...99..99..9..9..99.",
+  "...........................................",
+  "...........................................",
+  "...........................................",
+]);
+
+/**
+ * What bare `wst` draws. Not `config`, which heads its own screen with
+ * `whetstone config` and would then be saying the name twice.
+ */
+export const MARK_HOME: Mark = beside(MARK, MARK_WORD, 4);
 
 export const MARK_ENTRANCE: Mark = decodeMark(MARK_PALETTE, [
   ".....................................01.................",
