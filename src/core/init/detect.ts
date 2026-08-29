@@ -12,6 +12,9 @@
 export interface PackageJson {
   readonly name?: unknown;
   readonly packageManager?: unknown;
+  /** npm/yarn take an array; pnpm and yarn's older form take `{ packages: [] }`. */
+  readonly workspaces?: unknown;
+  readonly engines?: Readonly<Record<string, unknown>>;
   readonly scripts?: Readonly<Record<string, unknown>>;
   readonly dependencies?: Readonly<Record<string, unknown>>;
   readonly devDependencies?: Readonly<Record<string, unknown>>;
@@ -56,6 +59,22 @@ export interface StackFacts {
   readonly mutating: readonly (keyof DetectedCommands)[];
   /** What was read and from which file. A plan a human cannot audit is a guess. */
   readonly evidence: readonly string[];
+  /**
+   * Answers the repo states about ITSELF, for pre-filling the interview.
+   *
+   * adr-0016 stopped `init` inferring; it never stopped it reading. A
+   * `workspaces` array and an `engines` field are declarations, not a table
+   * guessing a language from file extensions. Empty and null mean the repo said
+   * nothing, which is still a blank for a human to fill.
+   */
+  readonly declared: DeclaredAnswers;
+}
+
+export interface DeclaredAnswers {
+  /** Source roots, as globs. Read off `workspaces` and confirmed against the tree. */
+  readonly sourceGlobs: readonly string[];
+  /** Language and runtime, from the files that name them. Null when nothing does. */
+  readonly stack: string | null;
 }
 
 /**
@@ -166,7 +185,14 @@ export function detectStack(facts: RepoFacts): StackFacts {
 
   const mutating = mutatingCommands(facts.packageJson, note);
 
-  return { packageManager, commands, hasTests, mutating, evidence };
+  return {
+    packageManager,
+    commands,
+    hasTests,
+    mutating,
+    evidence,
+    declared: declaredAnswers(facts, files, note),
+  };
 }
 
 /**
@@ -251,4 +277,81 @@ function detectCommands(
     typecheck,
     lint: lintScript === null ? null : run(lintScript),
   };
+}
+
+/** `["apps/*"]`, or `{ packages: ["apps/*"] }`. Anything else is not a declaration. */
+function workspaceGlobs(pkg: PackageJson | null): readonly string[] {
+  const raw = pkg?.workspaces;
+  const list = Array.isArray(raw)
+    ? raw
+    : raw !== null && typeof raw === "object" && Array.isArray((raw as { packages?: unknown }).packages)
+      ? ((raw as { packages: unknown[] }).packages)
+      : [];
+  return list.filter((v): v is string => typeof v === "string" && v.trim() !== "");
+}
+
+/**
+ * A workspace pattern as a SOURCE glob.
+ *
+ * `apps/*` says where the packages are and nothing about where code sits inside
+ * one, so the tree is asked. The pattern becomes a regex to ask with, because
+ * npm accepts a literal path, a star, a globstar and any depth of them, and a
+ * reading that only understood `apps/*` narrowed the wrong ones.
+ */
+function sourceGlobFor(pattern: string, files: readonly string[]): string {
+  const base = pattern.replace(/\/+$/, "");
+  const asRegex = base
+    .split("/")
+    .map((part) =>
+      part
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*\*/g, "\u0000")
+        .replace(/\*/g, "[^/]+")
+        .replace(/\u0000/g, ".+"),
+    )
+    .join("/");
+  const hasSrc = new RegExp(`^${asRegex}/src/`);
+  return `${base}/${files.some((f) => hasSrc.test(f)) ? "src/**" : "**"}`;
+}
+
+/** Files that NAME a language, as opposed to files written in one. */
+const DECLARES_LANGUAGE: readonly (readonly [RegExp, string])[] = [
+  [/(^|\/)tsconfig\.json$/, "TypeScript"],
+  [/(^|\/)Cargo\.toml$/, "Rust"],
+  [/(^|\/)go\.mod$/, "Go"],
+  [/(^|\/)pyproject\.toml$/, "Python"],
+  [/(^|\/)Gemfile$/, "Ruby"],
+];
+
+function declaredAnswers(
+  facts: RepoFacts,
+  files: readonly string[],
+  note: (what: string, from: string) => void,
+): DeclaredAnswers {
+  const patterns = workspaceGlobs(facts.packageJson);
+  const sourceGlobs = patterns.map((p) => sourceGlobFor(p, files));
+  if (sourceGlobs.length > 0) {
+    note(`source roots: ${sourceGlobs.join(", ")}`, "package.json workspaces");
+  }
+
+  // DEPTH, not a list of directory names. A manifest at the root or one level
+  // down describes the project: `src-tauri/Cargo.toml` is where a Tauri app
+  // declares its Rust half. Deeper than that it describes something inside the
+  // project, and `examples/demo/pyproject.toml` made a TypeScript repo Python.
+  const near = files.filter((f) => f.split("/").length <= 2);
+  const languages: string[] = [];
+  for (const [pattern, name] of DECLARES_LANGUAGE) {
+    const at = near.find((f) => pattern.test(f));
+    if (at === undefined || languages.includes(name)) continue;
+    languages.push(name);
+    note(`language: ${name}`, at);
+  }
+
+  const node = str(facts.packageJson?.engines?.["node"]);
+  if (node !== null) note(`runtime: Node ${node}`, "package.json engines");
+
+  const parts = [...languages];
+  if (node !== null) parts.push(`Node ${node}`);
+
+  return { sourceGlobs, stack: parts.length === 0 ? null : parts.join(", ") };
 }

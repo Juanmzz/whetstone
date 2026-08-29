@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { DeclaredAnswers } from "./detect.js";
 import {
   AnswersSchema,
   NO_RISK,
@@ -178,5 +179,59 @@ describe("AnswersSchema — a base written by an older Whetstone still parses", 
 
   it("still refuses a key nobody ever wrote, so a typo is not silently ignored", () => {
     expect(() => AnswersSchema.parse({ purpose: "x", purpsoe: "typo" })).toThrow();
+  });
+});
+
+/**
+ * adr-0016 stopped `init` INFERRING. It never stopped it reading, and a repo
+ * that declares its workspaces or its runtime is not a table guessing a language
+ * off file extensions. The blank stays a blank where nothing was declared.
+ */
+describe("buildInterview — a declared fact arrives pre-filled, an inferred one never", () => {
+  const declared = (over: Partial<DeclaredAnswers> = {}): DeclaredAnswers => ({
+    sourceGlobs: [],
+    stack: null,
+    ...over,
+  });
+
+  const question = (id: string, d: DeclaredAnswers) =>
+    buildInterview(d).find((q) => q.id === id);
+
+  it("still asks the same five questions, whatever the repo declared", () => {
+    // An interview that shrinks when a reading gets lucky is one whose coverage
+    // nobody can state. Pre-filling is not skipping.
+    const ids = buildInterview(declared({ sourceGlobs: ["apps/*/src/**"], stack: "TypeScript" }))
+      .map((q) => q.id);
+
+    expect(ids).toEqual(["purpose", "risk", "source-paths", "strict-paths", "stack"]);
+  });
+
+  it("pre-fills the source paths a repo's workspaces declare", () => {
+    const q = question("source-paths", declared({ sourceGlobs: ["apps/*/src/**"] }));
+    expect(q?.defaultAnswer).toBe("apps/*/src/**");
+  });
+
+  it("pre-fills the stack from what the repo names, not from what it counts", () => {
+    expect(question("stack", declared({ stack: "TypeScript, Node >=22" }))?.defaultAnswer).toBe(
+      "TypeScript, Node >=22",
+    );
+  });
+
+  it("leaves both blank when the repo declared nothing", () => {
+    expect(question("source-paths", declared())?.defaultAnswer).toBeNull();
+    expect(question("stack", declared())?.defaultAnswer).toBeNull();
+  });
+
+  it("never pre-fills what no file can state", () => {
+    // Purpose, risk and strict paths are judgements about what you are willing
+    // to lose. A repo cannot declare them, so a reading may not answer them.
+    const all = declared({ sourceGlobs: ["src/**"], stack: "TypeScript" });
+    for (const id of ["purpose", "risk", "strict-paths"]) {
+      expect(question(id, all)?.defaultAnswer).toBeNull();
+    }
+  });
+
+  it("takes no argument and pre-fills nothing, for a caller that read no repo", () => {
+    for (const q of buildInterview()) expect(q.defaultAnswer).toBeNull();
   });
 });

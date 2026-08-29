@@ -153,8 +153,8 @@ function printDetection(stack: ReturnType<typeof detectStack>): void {
   for (const line of stack.evidence) console.log(`  ${line}`);
 }
 
-function printQuestions(): void {
-  const questions = buildInterview();
+function printQuestions(stack: ReturnType<typeof detectStack>): void {
+  const questions = buildInterview(stack.declared);
   console.log(`\n${questions.length} question(s) this repo does not declare an answer to:\n`);
   for (const [i, q] of questions.entries()) {
     console.log(`  ${i + 1}. [${q.id}] ${q.prompt}`);
@@ -173,8 +173,8 @@ function printQuestions(): void {
 }
 
 /** The interview, answered in the terminal. Null when the human backed out. */
-async function askInterview(): Promise<InterviewAnswers | null> {
-  let state = openInterview(buildInterview());
+async function askInterview(stack: ReturnType<typeof detectStack>): Promise<InterviewAnswers | null> {
+  let state = openInterview(buildInterview(stack.declared));
   const keys = rawKeys(process.stdin, () => {
     keys.close();
     restore(process.stdout);
@@ -413,7 +413,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     // A terminal can answer the questions in place. Anything else gets the list
     // it always got, because a form nobody can fill in is a printed form.
     if (process.stdin.isTTY === true) {
-      const filled = await askInterview();
+      const filled = await askInterview(stack);
       if (filled === null) return 0;
       answers = filled;
     }
@@ -422,7 +422,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   if (answers === null) {
     console.log(`${banner()}\n\ninit: ${root}`);
     printDetection(stack);
-    printQuestions();
+    printQuestions(stack);
     if (await judgeAvailable()) {
       console.log(
         "\nOr let the judge draft them from what it can see:\n" +
