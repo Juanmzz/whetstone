@@ -8,8 +8,8 @@
  */
 
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { judgeCommits, type Commit } from "../core/checks/commit-message.js";
 import {
@@ -20,6 +20,15 @@ import {
   removedCommentIn,
   MAX_PERCENT,
 } from "../core/checks/comment-density.js";
+import {
+  evidenceDir,
+  isMachineReadable,
+  judgeEvidence,
+  type FoundEvidence,
+} from "../core/checks/evidence.js";
+import { parseNameStatus } from "../core/diff/parse.js";
+import { matchFiles } from "../core/gate/select.js";
+import { loadRegistry, resolveDefinitionRoot } from "../shell/sdd.js";
 import { gitEnv } from "../shell/git.js";
 
 /** The ids `wst check run` answers to. One entry, one runner, no catalogue. */
@@ -27,6 +36,9 @@ const RUNNERS: Readonly<Record<string, (cwd: string) => Promise<number>>> = {
   "comment-density": commentDensity,
   "commit-message": commitMessage,
 };
+
+/** Every check id under it is an evidence requirement, and shares one runner. */
+const EVIDENCE_PREFIX = "evidence";
 
 const exec = promisify(execFile);
 
@@ -160,18 +172,92 @@ async function commitMessage(cwd: string): Promise<number> {
   return EXIT_FAILED;
 }
 
+/**
+ * Presence and freshness of the evidence one check requires (adr-0036).
+ *
+ * The store hangs off the COMMON git dir, so every linked worktree of a repo
+ * shares one and the branch separates them. `.wst/` is read from this worktree,
+ * because that is where the registry the gate loaded lives.
+ */
+async function evidence(checkId: string, cwd: string): Promise<number> {
+  const worktree = (await git(["rev-parse", "--show-toplevel"], cwd)).trim();
+  const common = (await git(["rev-parse", "--path-format=absolute", "--git-common-dir"], cwd)).trim();
+  const branch = (await git(["rev-parse", "--abbrev-ref", "HEAD"], cwd)).trim();
+  const dir = evidenceDir(dirname(common), branch, checkId);
+
+  const check = (await loadRegistry(await resolveDefinitionRoot(worktree))).byId.get(checkId);
+  if (check === undefined) {
+    console.error(`no check "${checkId}" in the registry, so nothing says which paths owe it.`);
+    return EXIT_UNKNOWN;
+  }
+
+  const range = process.env["WST_GATE_RANGE"] ?? "HEAD";
+  const matched = matchFiles(check, parseNameStatus(await git(["diff", "--name-status", range], cwd)));
+  let newestSourceMs: number | null = null;
+  for (const file of matched) {
+    const info = await stat(join(worktree, file.path)).catch(() => null);
+    if (info !== null && (newestSourceMs === null || info.mtimeMs > newestSourceMs)) {
+      newestSourceMs = info.mtimeMs;
+    }
+  }
+
+  const found: FoundEvidence[] = [];
+  for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    if (!entry.isFile() || entry.name.startsWith(".")) continue;
+    const path = join(dir, entry.name);
+    const info = await stat(path);
+    found.push({
+      name: entry.name,
+      bytes: info.size,
+      mtimeMs: info.mtimeMs,
+      text: isMachineReadable(entry.name) ? await readFile(path, "utf-8").catch(() => "") : null,
+    });
+  }
+
+  const verdict = judgeEvidence(found, newestSourceMs);
+  switch (verdict.kind) {
+    case "present":
+      console.error(`${checkId}: ${String(verdict.count)} artifact(s) in ${dir}`);
+      return 0;
+    case "absent":
+      console.error(`${checkId}: this change owes evidence of the result, and there is none.\n`);
+      console.error(`Put it in:\n  ${dir}\n`);
+      console.error(`${check.description}`);
+      console.error(`Outside the repo on purpose: it is never committed and never travels.`);
+      return EXIT_FAILED;
+    case "empty":
+      console.error(`${checkId}: ${verdict.name} is empty. An artifact that carries nothing is`);
+      console.error(`not evidence, and this check cannot tell a placeholder from a result.`);
+      return EXIT_FAILED;
+    case "malformed":
+      console.error(`${checkId}: ${verdict.name} does not parse: ${verdict.why}`);
+      return EXIT_FAILED;
+    case "stale":
+      console.error(
+        `${checkId}: ${verdict.name} predates the code it claims to show by ` +
+          `${String(Math.round(verdict.behindMs / 1000))}s. Produce it again.`,
+      );
+      return EXIT_FAILED;
+  }
+}
+
 export async function runShippedCheck(
   id: string | undefined,
   cwd: string = process.cwd(),
 ): Promise<number> {
-  const ids = Object.keys(RUNNERS);
+  const ids = [...Object.keys(RUNNERS), `${EVIDENCE_PREFIX}*`];
 
   if (id === undefined) {
     console.error(`which check to run: ${ids.join(", ")}`);
     return EXIT_UNKNOWN;
   }
 
-  const runner = RUNNERS[id];
+  // A PREFIX, not an entry: what a project must be able to declare is one evidence
+  // requirement per kind of result — a screenshot here, a request and response
+  // there — and each is a check file of its own with its own `include`.
+  const runner = id.startsWith(EVIDENCE_PREFIX)
+    ? (cwd: string): Promise<number> => evidence(id, cwd)
+    : RUNNERS[id];
   if (runner === undefined) {
     console.error(`\`wst check run\` has no runner for "${id}". It has: ${ids.join(", ")}.`);
     console.error(`A check with a \`command:\` of its own is run by \`wst gate\`, not by this.`);
