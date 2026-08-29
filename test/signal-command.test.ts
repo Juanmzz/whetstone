@@ -14,9 +14,9 @@ import { runSignal } from "../src/commands/signal.js";
 import { isolateFromInheritedGit } from "./git-env.js";
 import { tempDir } from "./tmp.js";
 
-// This file builds temp repositories too, and was the one left out when the
-// helper was written: under the pre-push hook its `git init` adopted THIS
-// repository and three cases failed a run nobody could reproduce by hand.
+// The pre-push hook exports GIT_DIR to everything it spawns, so a temp repo built
+// here reports WHETSTONE as its root and `--resolve` writes nowhere. Two cases
+// below already expected a nonzero exit and were immune by accident.
 isolateFromInheritedGit();
 
 const run = promisify(execFile);
@@ -88,5 +88,50 @@ describe("a write that fails", () => {
     await runSignal(observation, await unwritable());
     expect(err.join("\n")).toMatch(/could not write the signal/);
     expect(record()["detail"]).toBe(observation.detail);
+  });
+});
+
+/**
+ * `--resolve` writes over a stored line, which no other path here does. A refusal
+ * that still rewrites is invisible to a pure test of `markResolved`.
+ */
+describe("marking a stored signal answered", () => {
+  const log = [
+    JSON.stringify({ id: "sig-0001", ts: "2026-08-01T00:00:00Z", type: "a", phase: "apply", severity: "low", detail: "one" }),
+    JSON.stringify({ id: "sig-0002", ts: "2026-08-02T00:00:00Z", type: "b", phase: "apply", severity: "low", detail: "two" }),
+  ].join("\n") + "\n";
+
+  async function seeded(): Promise<string> {
+    const dir = await repo();
+    await mkdir(join(dir, ".wst/memory"), { recursive: true });
+    await writeFile(join(dir, ".wst/memory/signals.jsonl"), log, "utf-8");
+    return dir;
+  }
+
+  const read = async (dir: string): Promise<string> =>
+    readFile(join(dir, ".wst/memory/signals.jsonl"), "utf-8");
+
+  it("records the answer and leaves the neighbouring line alone", async () => {
+    const dir = await seeded();
+    expect(await runSignal({ type: "", detail: "", resolve: "sig-0002", by: "pr-107" }, dir)).toBe(0);
+    const lines = (await read(dir)).trim().split("\n");
+    expect(lines[0]).toBe(log.trim().split("\n")[0]);
+    expect(JSON.parse(lines[1] ?? "null")).toMatchObject({ id: "sig-0002", resolved_by: "pr-107" });
+  });
+
+  it("refuses an unknown id and writes nothing at all", async () => {
+    const dir = await seeded();
+    expect(await runSignal({ type: "", detail: "", resolve: "sig-9999", by: "pr-107" }, dir)).toBe(1);
+    expect(await read(dir)).toBe(log);
+  });
+
+  it("refuses without --by, rather than recording an empty answer", async () => {
+    const dir = await seeded();
+    expect(await runSignal({ type: "", detail: "", resolve: "sig-0001" }, dir)).toBe(1);
+    expect(await read(dir)).toBe(log);
+  });
+
+  it("refuses on a repo with no .wst/, like every other path here", async () => {
+    expect(await runSignal({ type: "", detail: "", resolve: "sig-0001", by: "x" }, await repo())).toBe(2);
   });
 });

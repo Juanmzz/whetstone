@@ -11,7 +11,7 @@
 import { retroEnvelope } from "../core/retro/machine.js";
 import { join } from "node:path";
 import { z } from "zod";
-import { clusterSignals, signalsSince, type Cluster } from "../core/retro/cluster.js";
+import { clusterSignals, signalsSince, unresolved, type Cluster } from "../core/retro/cluster.js";
 import {
   renderProposal,
   validateRecommendation,
@@ -140,7 +140,19 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
     return 0;
   }
 
-  const clusters = clusterSignals(fresh);
+  // Filtered between the cursor and the clustering: the cursor still advances
+  // past every id it read, and the clustering is not handed spent evidence.
+  const open = unresolved(fresh);
+  const answered = fresh.length - open.length;
+  if (answered > 0) {
+    console.log(`  answered  ${answered} of them already record what fixed them, skipped`);
+  }
+  if (open.length === 0) {
+    console.log(`\n  every new signal is already answered. Nothing to propose.`);
+    return 0;
+  }
+
+  const clusters = clusterSignals(open);
   const actionable = clusters.filter((c) => c.actionable);
   console.log(`  clusters  ${clusters.length} · ${actionable.length} actionable\n`);
 
@@ -211,7 +223,7 @@ export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Pr
   const lines: string[] = [
     `# Retro proposals`,
     ``,
-    `Signals ${fresh[0]?.id} … ${fresh[fresh.length - 1]?.id} (${fresh.length} new).`,
+    `Signals ${open[0]?.id} … ${open[open.length - 1]?.id} (${open.length} unanswered of ${fresh.length} new).`,
     `**Nothing here has been applied.** Approving is a human act.`,
     ``,
   ];

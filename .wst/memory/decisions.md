@@ -917,7 +917,7 @@ command and the page it prints are now two files instead of one. It is the same 
 
 
 ### adr-0035 — the [RC3] gate is a human confirming their own words, not a TTY
-`proposed` · 2026-08-27
+`accepted` · 2026-08-27 · unbuilt
 
 `source: "human"` has been earned twice in sixty-one signals. Not because the human observes
 little, but because `humanIsAtTheKeyboard()` requires a TTY, and the way this human works is
@@ -950,7 +950,7 @@ than they compose. The mitigation is that the quote makes fabrication visible in
 transcript, which a paraphrase never did.
 
 ### adr-0036 — a check may require evidence of the result without judging it
-`proposed` · 2026-08-27
+`accepted` · 2026-08-27 · unbuilt
 
 Every check here judges the DIFF. `test` runs the suite, `typecheck` compiles, `correctness`
 reads the change. None of them says the thing works. A gate that passes tells you nothing
