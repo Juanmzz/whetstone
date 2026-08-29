@@ -1111,7 +1111,7 @@ Cost accepted: a human who does not read the pre-filled field signs a reading th
 check. The screen names it as read from the repo, and the evidence lines say which file
 said so, which is the same guard `init` already gives its detected commands.
 
-### adr-0039 — you name your harnesses, and one of them drafts the answers
+### adr-0040 — you name your harnesses, and one of them drafts the answers
 `accepted` · 2026-08-29 · signals: sig-4a2610fb
 
 `init` decided two things nobody was asked. It wrote `GEMINI.md` into a repo whose owner
@@ -1139,6 +1139,20 @@ shown... the owner should replace this line outright", which is the gate working
 **And `init` asks before it writes.** Everything above it is read-only and the plan is on
 screen; this is the one moment between five answers and a written layer. Skipped where stdin
 is not a terminal, because there is nobody to ask and the caller meant it.
+
+**A guess is not labelled as a reading.** Both arrive in the same field, so the field says
+which: `read from this repo` where a file stated it, `DRAFTED by the judge from what it could
+see` where a model did. `purpose`, `risk` and `strict-paths` can only ever be the second,
+which is exactly where the human gate matters.
+
+**It refuses before it spends.** `init` does not overwrite, and it used to discover that
+after a model call and five questions. The full collision set needs a plan, which needs
+answers; the half that needs neither is checked first.
+
+**And the pick reaches the config.** `renderWstYaml` hardcoded `agent: claude`, so naming
+Antigravity got you a draft from antigravity and a config naming claude. Where no pick has an
+adapter the default stands, and the lens simply does not run: naming `codex` there would name
+a judge that cannot exist.
 
 Rejected: making the judge mandatory. adr-0016 refused an `init` unusable without a model
 and that still holds: no adapter means blank fields and the same five questions.

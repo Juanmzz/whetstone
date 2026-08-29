@@ -31,6 +31,14 @@ export interface InitQuestion {
   readonly options: readonly QuestionOption[];
   /** Pre-filled answer the human can accept, or null when there is nothing to offer. */
   readonly defaultAnswer: string | null;
+  /**
+   * WHERE the pre-filled answer came from. Null when there is none.
+   *
+   * A file said it, or a model guessed it, and the screen may not call the
+   * second the first. `purpose`, `risk` and `strict-paths` can only ever be
+   * drafted, since the code itself says no file states them.
+   */
+  readonly defaultFrom: "repo" | "draft" | null;
 }
 
 /**
@@ -125,6 +133,8 @@ export function buildInterview(
   // The draft wins where it spoke. It read the repo; a declaration is the better
   // answer only where nothing read one. Both are drafts a keystroke edits.
   const paths = drafted.sourcePaths ?? declared.sourceGlobs;
+  const from = (drafted_: unknown, declared_: unknown): "repo" | "draft" | null =>
+    drafted_ !== undefined && drafted_ !== null ? "draft" : declared_ === null || declared_ === undefined ? null : "repo";
   const questions: InitQuestion[] = [
     {
       id: "purpose",
@@ -133,6 +143,7 @@ export function buildInterview(
       kind: "text",
       options: [],
       defaultAnswer: drafted.purpose ?? null,
+      defaultFrom: drafted.purpose === undefined ? null : "draft",
     },
     {
       id: "risk",
@@ -145,6 +156,7 @@ export function buildInterview(
       kind: "flags",
       options: RISK_LABELS.map(([value, label]) => ({ value, label })),
       defaultAnswer: blank((drafted.risk ?? []).join(",")),
+      defaultFrom: (drafted.risk ?? []).length === 0 ? null : "draft",
     },
     {
       id: "source-paths",
@@ -159,6 +171,7 @@ export function buildInterview(
       kind: "paths",
       options: [],
       defaultAnswer: blank(paths.join("\n")),
+      defaultFrom: from(drafted.sourcePaths, blank(declared.sourceGlobs.join("\n"))),
     },
     {
       id: "strict-paths",
@@ -173,6 +186,7 @@ export function buildInterview(
       defaultAnswer: blank(
         (drafted.strictPaths ?? []).map((p) => `${p.glob} : ${p.reason}`).join("\n"),
       ),
+      defaultFrom: (drafted.strictPaths ?? []).length === 0 ? null : "draft",
     },
     {
       id: "stack",
@@ -186,6 +200,7 @@ export function buildInterview(
       kind: "text",
       options: [],
       defaultAnswer: drafted.stack ?? declared.stack,
+      defaultFrom: from(drafted.stack, declared.stack),
     },
   ];
 

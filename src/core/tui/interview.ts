@@ -249,8 +249,12 @@ export function renderInterview(s: InterviewState): readonly string[] {
   }
 
   lines.push("", `  ${q.why}`);
-  // Nobody signs a reading blind: a value that arrived from the repo says so.
-  if (q.defaultAnswer !== null) lines.push("", "  read from this repo. Edit it or leave it.");
+  // Nobody signs a reading blind, and a model's guess is not a reading. The two
+  // arrive in the same field, so the field has to say which.
+  if (q.defaultFrom === "repo") lines.push("", "  read from this repo. Edit it or leave it.");
+  if (q.defaultFrom === "draft") {
+    lines.push("", "  DRAFTED by the judge from what it could see. Check it.");
+  }
   if (s.complaint !== null) lines.push("", `  ${s.complaint}`);
   lines.push("", `  ${keysFor(q)} · enter next · shift-tab back · ctrl-d write · esc quit`);
   return lines;

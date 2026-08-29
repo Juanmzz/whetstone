@@ -327,7 +327,7 @@ describe("the harnesses a bootstrapped repo is legible to", () => {
   });
 });
 
-describe("the front doors follow the harnesses you name (adr-0039)", () => {
+describe("the front doors follow the harnesses you name (adr-0040)", () => {
   const paths = (harnesses?: readonly string[]): string[] =>
     plan(harnesses === undefined ? {} : { options: { harnesses } }).files.map((f) => f.path);
 
@@ -352,5 +352,28 @@ describe("the front doors follow the harnesses you name (adr-0039)", () => {
   it("keeps writing both when nobody was asked, so an old caller is unchanged", () => {
     expect(paths()).toContain("CLAUDE.md");
     expect(paths()).toContain("GEMINI.md");
+  });
+});
+
+describe("the judge follows the harness that can run one (adr-0040)", () => {
+  const yaml = (harnesses?: readonly string[]): string =>
+    at(plan(harnesses === undefined ? {} : { options: { harnesses } }), ".wst/wst.yaml") ?? "";
+
+  it("writes the adapter the pick can actually drive", () => {
+    expect(yaml(["antigravity"])).toMatch(/^agent: antigravity/m);
+  });
+
+  it("leaves the default where no pick has an adapter", () => {
+    // Codex is a harness this writes for and cannot judge with. The lens simply
+    // does not run; naming codex here would name a judge that cannot exist.
+    expect(yaml(["codex"])).toMatch(/^agent: claude/m);
+  });
+
+  it("takes the first pick that has one, so the order on screen decides", () => {
+    expect(yaml(["codex", "antigravity", "claude-code"])).toMatch(/^agent: antigravity/m);
+  });
+
+  it("leaves the default when nobody was asked", () => {
+    expect(yaml()).toMatch(/^agent: claude/m);
   });
 });

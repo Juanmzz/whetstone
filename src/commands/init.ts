@@ -505,10 +505,29 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     // A terminal can answer the questions in place. Anything else gets the list
     // it always got, because a form nobody can fill in is a printed form.
     if (process.stdin.isTTY === true) {
+      // BEFORE anything is asked and long before anything is spent. `init`
+      // refuses to overwrite, and it used to find that out after a model call
+      // and five questions. The full collision set needs a plan, which needs
+      // answers; this is the half that needs neither.
+      const already = await existingOf(
+        { files: [{ path: `${DEFINITION_DIR}/constitution.md`, contents: "" }], copies: [] } as never,
+        root,
+      );
+      if (already.length > 0 && opts.force !== true) {
+        console.error(
+          `${DEFINITION_DIR}/ already exists here, and \`init\` does not overwrite.
+` +
+            `  \`wst update\` reports what a newer Whetstone would write. \`--force\` lists what it
+` +
+            `  would replace before replacing it. Nothing was asked and nothing was spent.`,
+        );
+        return 1;
+      }
+
       // The order is the point: you say who reads this repo, that decides who may
       // draft, and only then are you asked anything. `init` used to ask five
       // questions from a blank page and write a front door for a harness nobody
-      // named (adr-0039).
+      // named (adr-0040).
       const picked = await askHarnesses();
       if (picked === null) return 0;
       harnesses = picked;

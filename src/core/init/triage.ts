@@ -75,11 +75,15 @@ export function buildTriageRules(answers: InterviewAnswers): readonly TriageRule
       "it does not earn test ceremony.",
   });
   push({
-    glob: "{README,AGENTS,CLAUDE}.md",
+    glob: "{README,AGENTS,CLAUDE,GEMINI}.md",
     tier: "light",
     reason:
-      `Orientation prose. AGENTS.md and CLAUDE.md are generated from ${DEFINITION_DIR}/, so edit the ` +
-      "source and regenerate rather than patching them here.",
+      // It named `CLAUDE.md` in a repo that may not have one: the front doors
+      // follow the harnesses somebody named (adr-0040), and `AGENTS.md` is the
+      // only one always written.
+      `Orientation prose. AGENTS.md is generated from ${DEFINITION_DIR}/, and any front door ` +
+      "beside it points at AGENTS.md, so edit the source and regenerate rather than " +
+      "patching them here.",
   });
   push({
     glob: `${DEFINITION_DIR}/memory/decisions.md`,

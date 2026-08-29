@@ -8,7 +8,7 @@ import { PRE_PUSH_PATH, renderPrePushHook } from "./hook.js";
 import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 import { seedChecks } from "./checks.js";
-import { pointersFor } from "./harness.js";
+import { judgeFor, pointersFor } from "./harness.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {
@@ -140,6 +140,11 @@ export function planInit(input: InitPlanInput): InitPlan {
         backend: options.backend ?? "files",
         skills,
         namespace: input.facts.repoName,
+        // The adapter the harnesses named can drive. Null where none of them can,
+        // and then the default stands and the lens simply does not run.
+        ...(judgeFor(options.harnesses ?? []) === null
+          ? {}
+          : { agent: judgeFor(options.harnesses ?? []) as string }),
       }),
     },
     // Per-machine runtime state (the compiled check index, the event log, the
