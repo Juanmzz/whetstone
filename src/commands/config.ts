@@ -118,8 +118,14 @@ export async function runConfig(cwd: string, opts: ConfigOptions = {}): Promise<
         // `text` is REPLACED, not kept. Each edit is applied to what the file
         // says now, so the second toggle of a session does not rewrite over the
         // first one from a copy taken before it.
-        text = editConfig(text, { agent: result.action.agent, skills: result.action.skills });
-        await writeFile(path, text, "utf-8");
+        // Caught: a throw escapes a raw-mode menu as a stack trace, and at that
+        // point nothing has restored the terminal.
+        try {
+          text = editConfig(text, { agent: result.action.agent, skills: result.action.skills });
+          await writeFile(path, text, "utf-8");
+        } catch (cause) {
+          state = { ...state, wrote: `NOT written: ${(cause as Error).message}` };
+        }
       }
     }
   } finally {
