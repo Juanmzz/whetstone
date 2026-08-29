@@ -97,7 +97,7 @@ Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
-## Status: branch `main` · 40 ADRs · 63 signals · 10 commands
+## Status: branch `main` · 40 ADRs · 64 signals · 10 commands
 
 ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
 `init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
