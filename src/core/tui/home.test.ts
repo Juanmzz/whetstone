@@ -146,6 +146,12 @@ describe("renderHome", () => {
     for (const line of renderHome(open())) expect(line.length).toBeLessThanOrEqual(80);
   });
 
+  it("does not name the repo again: the word now sits beside the stone", () => {
+    // It was the first line of this list, one row of nine characters under a
+    // thirty-column drawing. `banner.ts` draws it, and the row it cost is back.
+    expect(renderHome(open())).not.toContain("whetstone");
+  });
+
   const open = () => openHome(report());
 });
 

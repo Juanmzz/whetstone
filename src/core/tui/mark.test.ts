@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeMark, renderMark, type Mark } from "./mark.js";
+import { beside, decodeMark, renderMark, type Mark } from "./mark.js";
 
 const PALETTE = ["#000000", "#ff0000", "#00ff00"];
 
@@ -129,5 +129,35 @@ describe("renderMark, no colour", () => {
     const lines = renderMark(mark("1.", ".2"), "none");
 
     expect(lines[0]).toBe("▀▄");
+  });
+});
+
+describe("beside", () => {
+  const blank = { top: null, bottom: null };
+
+  it("sets the second mark to the right of the first, a gap of blanks between", () => {
+    const composed = beside(mark("1", "2"), mark("1", "2"), 2);
+
+    expect(composed).toHaveLength(1);
+    expect(composed[0]).toHaveLength(4);
+    expect(composed[0]?.[1]).toEqual(blank);
+    expect(composed[0]?.[3]).toEqual({ top: [255, 0, 0], bottom: [0, 255, 0] });
+  });
+
+  it("leaves a row as it was where the right mark has run out", () => {
+    // The word is shorter than the stone, and a row padded to the full width
+    // would paint the terminal background out to column eighty.
+    const composed = beside(mark("11", "22", "11", "22"), mark("1", "2"), 1);
+
+    expect(composed[0]).toHaveLength(4);
+    expect(composed[1]).toHaveLength(2);
+  });
+
+  it("squares a ragged left mark, so the right one starts in one column", () => {
+    const left = decodeMark(PALETTE, ["11", "22", "1", "2"]);
+    const composed = beside(left, mark("1", "2", "1", "2"), 1);
+
+    expect(composed[1]).toHaveLength(4);
+    expect(composed[1]?.[1]).toEqual(blank);
   });
 });

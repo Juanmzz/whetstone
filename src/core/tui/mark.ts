@@ -122,6 +122,24 @@ const bgOf = (c: Rgb, depth: ColorDepth): string =>
     ? `${ESC}[48;2;${String(c[0])};${String(c[1])};${String(c[2])}m`
     : `${ESC}[48;5;${String(ansi256(c))}m`;
 
+const BLANK_CELL: Cell = { top: null, bottom: null };
+
+/**
+ * Two marks side by side, one drawing, so a single render pass colours both. A
+ * row the right block does not reach is left short: a trailing cell would paint
+ * background out to the width of the pair.
+ */
+export function beside(left: Mark, right: Mark, gap: number): Mark {
+  const width = Math.max(...left.map((row) => row.length));
+
+  return Array.from({ length: Math.max(left.length, right.length) }, (_, i) => {
+    const l = left[i] ?? [];
+    const r = right[i] ?? [];
+    if (r.length === 0) return [...l];
+    return [...l, ...Array<Cell>(width - l.length + gap).fill(BLANK_CELL), ...r];
+  });
+}
+
 export function renderMark(mark: Mark, depth: ColorDepth): string[] {
   return depth === "none" ? renderMono(mark) : mark.map((row) => renderRow(row, depth));
 }

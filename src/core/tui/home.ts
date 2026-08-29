@@ -225,8 +225,8 @@ export function pressHome(state: HomeState, key: string): { state: HomeState; ac
 const point = (on: boolean): string => (on ? "›" : " ");
 
 export function renderHome(state: HomeState): readonly string[] {
+  // No name here: `banner.ts` draws it beside the stone, a row up and bigger.
   const lines: string[] = [
-    "whetstone",
     "",
     `  ${state.branch ?? "(no branch)"} · judge ${state.judge}`,
     "",
