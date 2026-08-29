@@ -53,3 +53,22 @@ there and wrong here.
 
 **It reads the range, not the tree**, so no receipt can stand in for it: the same
 working tree over two different ranges is two different sets of messages.
+
+## What it does not check
+
+**The body.** A `why` is worth one paragraph and most commits owe none at all, but nothing
+here counts its lines, and that is a decision rather than an omission.
+
+No number survived being argued. This repo's median body over 333 commits is 10 lines and its
+p90 is 22, so a ceiling low enough to change the habit fails most of the history it was
+measured on. And the number would live in the binary, not in `.wst/`, so whatever this repo
+chose would ship as a rule to every bootstrapped project without anyone there arguing it. The
+remedy is the worse half: a commit is already written by the time the gate reads it, so the
+only way to satisfy a body rule is to reword history to pass a style check, on a branch
+somebody may already have pulled.
+
+So the norm is written and not gated. The subject carries the change; the argument goes in the
+pull request body (adr-0041) and the ADR. `tdd-discipline` v7 settled the same question the
+same way when it dropped the requirement to quote red output in the body: a rule that costs
+every commit several lines to satisfy one, and that no reader can verify, is guidance and not
+a gate.
