@@ -25,7 +25,21 @@ export interface HumanObservation {
    * because it is the layer that can see a terminal.
    */
   readonly attested: boolean;
+  /**
+   * The human's OWN WORDS, verbatim, when an agent drafted this from something
+   * they said (adr-0035). `attested` asks only whether a terminal existed, which
+   * this human never has; a quote is checkable against the transcript.
+   */
+  readonly quote?: string;
 }
+
+/**
+ * An agent drafted it from what the human said; the human said yes to the draft.
+ *
+ * NOT `human` (adr-0035 refused to reuse it): composing a record and approving one
+ * are different acts, and that difference is the whole job of `source`.
+ */
+const QUOTED: string = "human-quoted";
 
 export type HumanSignalResult =
   | { readonly ok: true; readonly record: SignalRecord }
@@ -110,6 +124,9 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
   // Trimmed like every other field. It was the one exception, so `-s high ` was
   // rejected while ` triage-miss ` was accepted — the same shell, the same accident.
   const severity = input.severity.trim();
+  // NOT canonicalised the way the cluster keys are: reflowing evidence turns the
+  // human's words into someone else's. Outer whitespace is the shell's, not theirs.
+  const quote = input.quote?.trim();
   // Deduped AFTER canonicalisation. Two spellings of one rule would otherwise put
   // the same signal in the same bucket twice, and `group.length >= 2` reads that as
   // recurrence: one observation wearing the shape of two.
@@ -130,6 +147,12 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
   if (detail === "") {
     errors.push("detail is empty: a signal nobody can reconstruct the event from is not evidence");
   }
+  if (input.quote !== undefined && quote === "") {
+    errors.push(
+      "quote is empty: the words ARE the provenance here, so a record claiming a quote it does " +
+        "not carry claims nothing",
+    );
+  }
   for (const rule of rules) {
     if (!RULE.test(rule)) {
       errors.push(
@@ -149,7 +172,12 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
       // Seeded with the timestamp as well as the content, so recording the same
       // observation twice on purpose gives two entries. Recurrence is what the
       // retro reasons over, and a human logging it again is asserting exactly that.
-      id: signalId(`human:${now.toISOString()}:${type}:${detail}`),
+      // Seeded with the quote when there is one, so editing the words in an
+      // append-only log leaves an id that no longer hashes to the line beside it.
+      id: signalId(
+        `human:${now.toISOString()}:${type}:${detail}` +
+          (quote !== undefined && quote !== "" ? `:${quote}` : ""),
+      ),
       ts: now.toISOString(),
       type,
       phase,
@@ -157,10 +185,13 @@ export function humanSignal(input: HumanObservation, now: Date): HumanSignalResu
       detail,
       ...(input.branch !== null ? { branch: input.branch } : {}),
       rule_affected: rules,
-      // `human` is NOT `gate`, and not absent either: absent is what the
-      // agent-written entries look like, and blending a human's observation into
-      // those loses the only provenance distinction the log has.
-      source: input.attested ? "human" : "cli",
+      // Carried on every class, not just the one that rests on it: dropping the
+      // words would be the paraphrase arriving by another door.
+      ...(quote !== undefined && quote !== "" ? { quote } : {}),
+      // Strongest evidence wins, and typing outranks quoting: someone at a terminal
+      // composed this themselves. `cli` is the floor, never absent — absent is what
+      // the agent-written entries look like.
+      source: input.attested ? "human" : quote !== undefined && quote !== "" ? QUOTED : "cli",
     },
   };
 }

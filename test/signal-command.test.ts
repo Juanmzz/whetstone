@@ -135,3 +135,45 @@ describe("marking a stored signal answered", () => {
     expect(await runSignal({ type: "", detail: "", resolve: "sig-0001", by: "x" }, await repo())).toBe(2);
   });
 });
+
+describe("a signal an agent drafted from the human's own words (adr-0035)", () => {
+  /** A repo the command will actually write into. */
+  async function initialised(): Promise<string> {
+    const dir = await repo();
+    await mkdir(join(dir, ".wst/memory"), { recursive: true });
+    return dir;
+  }
+
+  const log = (dir: string): Promise<string> =>
+    readFile(join(dir, ".wst/memory/signals.jsonl"), "utf-8");
+
+  const quoted = { ...observation, quote: "it blocked me twice for the same stale count" };
+
+  it("drafts rather than writes: the human has not said yes yet", async () => {
+    const dir = await initialised();
+    expect(await runSignal(quoted, dir)).not.toBe(0);
+    await expect(log(dir)).rejects.toThrow();
+  });
+
+  it("shows the human the exact line, and how to say yes to it", async () => {
+    await runSignal(quoted, await initialised());
+    expect(record()["quote"]).toBe(quoted.quote);
+    expect(out.concat(err).join("\n")).toMatch(/--confirmed/);
+  });
+
+  it("writes it once confirmed, as `human-quoted` and carrying the words", async () => {
+    const dir = await initialised();
+    expect(await runSignal({ ...quoted, confirmed: true }, dir)).toBe(0);
+    const written = JSON.parse((await log(dir)).trim()) as Record<string, unknown>;
+    expect(written["source"]).toBe("human-quoted");
+    expect(written["quote"]).toBe(quoted.quote);
+  });
+
+  it("refuses a confirmation with nothing quoted — that is the paraphrase again", async () => {
+    // A `yes` with no quote attached buys back the exact record adr-0035 names:
+    // the agent's words about the human's problem, wearing human provenance.
+    const dir = await initialised();
+    expect(await runSignal({ ...observation, confirmed: true }, dir)).not.toBe(0);
+    await expect(log(dir)).rejects.toThrow();
+  });
+});

@@ -30,6 +30,10 @@ export interface SignalOptions {
   readonly resolve?: string;
   /** What answered it: an amendment, a decision, a PR. Required with `resolve`. */
   readonly by?: string;
+  /** The human's own words, verbatim. Without `confirmed` it drafts and writes nothing. */
+  readonly quote?: string;
+  /** The human said yes to the draft. Refused without a quote. */
+  readonly confirmed?: boolean;
 }
 
 
@@ -175,6 +179,16 @@ export async function runSignal(
     return await runForeign(opts.fromJson, opts, repoRoot, cwd);
   }
 
+  const quote = opts.quote?.trim();
+  if (opts.confirmed === true && (quote === undefined || quote === "")) {
+    // The failure adr-0035 closes: the agent restates the friction, the human
+    // approves the restatement, and the log keeps the agent's words wearing the
+    // human's provenance.
+    console.error("nothing was written: --confirmed needs --quote, the words being confirmed.");
+    console.error("  a confirmed paraphrase is the record adr-0035 exists to stop writing.");
+    return EXIT_NOT_RECORDED;
+  }
+
   const result = humanSignal(
     {
       type: opts.type,
@@ -187,6 +201,7 @@ export async function runSignal(
       // never shared one.
       branch: await git.currentBranch(),
       attested: humanIsAtTheKeyboard(),
+      ...(opts.quote !== undefined ? { quote: opts.quote } : {}),
     },
     new Date(),
   );
@@ -201,6 +216,15 @@ export async function runSignal(
   if (opts.dryRun === true) {
     console.log(line);
     return 0;
+  }
+
+  if (quote !== undefined && opts.confirmed !== true) {
+    // Nonzero on purpose: an agent chaining this with `&&` must not read a draft
+    // as a record, and "waiting on a human" is not success.
+    console.log(line);
+    console.error("nothing was recorded: that is a DRAFT, and the human has not confirmed it.");
+    console.error("  show them the quote above. Re-run with --confirmed when they say yes.");
+    return EXIT_NOT_RECORDED;
   }
 
   // `.wst/` must already be there. A repo still holding the OLD directory gets the
@@ -233,11 +257,13 @@ export async function runSignal(
     return EXIT_NOT_RECORDED;
   }
   console.log(`recorded ${result.record.id} in ${DEFINITION_DIR}/memory/signals.jsonl`);
-  if (result.record.source !== "human") {
+  if (result.record.source === "human-quoted") {
+    console.log("  source: `human-quoted` — an agent drafted it, you confirmed your own words");
+  } else if (result.record.source !== "human") {
     // Not an error, and not silent either. `source` is the log's only provenance
     // distinction and the retro weighs it; the person reading this deserves to
     // know their record did not claim to be theirs.
-    console.log("  recorded as `cli`, not `human`: no terminal evidenced who typed it");
+    console.log("  recorded as `cli`, not `human`: nothing evidenced whose words these are");
   }
   if (result.record.rule_affected?.length === 0) {
     // Not an error. [RC7] allows an empty list and the retro will try to classify

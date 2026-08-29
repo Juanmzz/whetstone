@@ -917,7 +917,7 @@ command and the page it prints are now two files instead of one. It is the same 
 
 
 ### adr-0035 — the [RC3] gate is a human confirming their own words, not a TTY
-`accepted` · 2026-08-27 · unbuilt
+`accepted` · 2026-08-27
 
 `source: "human"` has been earned twice in sixty-one signals. Not because the human observes
 little, but because `humanIsAtTheKeyboard()` requires a TTY, and the way this human works is
