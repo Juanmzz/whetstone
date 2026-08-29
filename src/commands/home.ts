@@ -6,8 +6,10 @@
  * (adr-0032). This only chooses one.
  */
 
-import { MARK } from "../banner.js";
+import { MARK, MARK_ENTRANCE } from "../banner.js";
 import { honingFrames } from "../core/tui/honing.js";
+import { renderMark } from "../core/tui/mark.js";
+import { colorDepth } from "../shell/color.js";
 import { openHome, pressHome, renderHome, type HomeCommand } from "../core/tui/home.js";
 import { clear, paint, play, rawKeys, restore, type Keys } from "../shell/tui.js";
 import { runCheck } from "./check.js";
@@ -45,11 +47,19 @@ export async function runHome(cwd: string = process.cwd()): Promise<number> {
   let state = openHome(await gatherStatus(cwd));
   let keys = openKeys();
 
+  // Read once: the terminal does not change depth mid-session, and re-deriving
+  // it per frame would put an env lookup inside the animation loop.
+  const depth = colorDepth(process.stdout.isTTY === true, process.env);
+  const mark = renderMark(MARK, depth);
+
   try {
-    await play(process.stdout, keys, honingFrames(MARK));
+    await play(process.stdout, keys, honingFrames(MARK_ENTRANCE).map((f) => renderMark(f, depth)));
 
     for (;;) {
-      paint(process.stdout, [...MARK, "", ...renderHome(state)]);
+      // No separator row. The mark plus the menu is exactly the height of a
+      // default terminal, and the blank one was the cheapest of the twenty-five
+      // to give up: the stone's own last row is mostly empty already.
+      paint(process.stdout, [...mark, ...renderHome(state)]);
       const result = pressHome(state, await keys.next());
       state = result.state;
 

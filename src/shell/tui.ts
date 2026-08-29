@@ -87,8 +87,12 @@ const CLEAR = `${ESC}[2J${ESC}[H`;
 const HIDE = `${ESC}[?25l`;
 const SHOW = `${ESC}[?25h`;
 
+/**
+ * No trailing newline: a screen as tall as the terminal would step the cursor
+ * past its own last line and scroll the top row away. `clear` hands back.
+ */
 export function paint(out: NodeJS.WriteStream, lines: readonly string[]): void {
-  out.write(`${CLEAR}${HIDE}${lines.join("\n")}\n`);
+  out.write(`${CLEAR}${HIDE}${lines.join("\n")}`);
 }
 
 export function restore(out: NodeJS.WriteStream): void {

@@ -11,6 +11,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { judgeCommits, type Commit } from "../core/checks/commit-message.js";
 import {
   addedLines,
   addedLinesOfNewFile,
@@ -24,6 +25,7 @@ import { gitEnv } from "../shell/git.js";
 /** The ids `wst check run` answers to. One entry, one runner, no catalogue. */
 const RUNNERS: Readonly<Record<string, (cwd: string) => Promise<number>>> = {
   "comment-density": commentDensity,
+  "commit-message": commitMessage,
 };
 
 const exec = promisify(execFile);
@@ -103,9 +105,59 @@ async function commentDensity(cwd: string): Promise<number> {
         `${String(verdict.percent)}% of ${String(verdict.total)} added .ts lines over ${range} are comment, over the ${String(MAX_PERCENT)}% ceiling.\n`,
       );
       console.error(`Comments belong where the code cannot be made clear on its own.`);
-      console.error(`History and rejected alternatives go in the commit body, not above the code.`);
+      console.error(
+        `History and rejected alternatives go in the pull request description, not above the code.`,
+      );
       return EXIT_FAILED;
   }
+}
+
+/**
+ * The commits a push is about to add, as records.
+ *
+ * NUL between the fields and a record separator between commits, because a body
+ * holds newlines and a subject can hold anything. `--no-merges` because a merge
+ * subject is written by git and by the forge, not by the person being checked.
+ */
+async function commitsIn(range: string, cwd: string): Promise<Commit[]> {
+  const args = range.includes("..")
+    ? ["log", "--no-merges", "--format=%H%x00%s%x00%b%x1e", range]
+    : ["log", "--no-merges", "-1", "--format=%H%x00%s%x00%b%x1e", "HEAD"];
+
+  const out = await git(args, cwd);
+  return out
+    .split("\x1e")
+    .map((record) => record.replace(/^\n/, ""))
+    .filter((record) => record.trim() !== "")
+    .map((record) => {
+      const [sha = "", subject = "", body = ""] = record.split("\x00");
+      return { sha, subject, body };
+    });
+}
+
+async function commitMessage(cwd: string): Promise<number> {
+  const range = process.env["WST_GATE_RANGE"] ?? "HEAD";
+
+  // A check that cannot READ the commits has not cleared them. Reporting 0 here
+  // is the failure hard rule 3 exists to prevent.
+  let commits: Commit[];
+  try {
+    commits = await commitsIn(range, cwd);
+  } catch (cause) {
+    console.error(`could not read the commits over ${range}: ${String(cause)}`);
+    return EXIT_UNKNOWN;
+  }
+
+  const found = judgeCommits(commits);
+  if (found.length === 0) {
+    console.error(`${String(commits.length)} commit message(s) over ${range}: all conventional, none crediting a model.`);
+    return 0;
+  }
+
+  console.error(`${String(found.length)} problem(s) in ${String(commits.length)} commit message(s) over ${range}:\n`);
+  for (const f of found) console.error(`  ${f.sha.slice(0, 7)}  ${f.kind}\n    ${f.detail}\n`);
+  console.error(`Amend the message. The rationale for a change goes in the pull request description.`);
+  return EXIT_FAILED;
 }
 
 export async function runShippedCheck(

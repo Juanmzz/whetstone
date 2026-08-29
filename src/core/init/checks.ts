@@ -182,6 +182,15 @@ export function seedChecks(
   // never see a file. adr-0016 allows this, since a declared script is a fact and
   // not a guess off file extensions.
   if (stack.commands.typecheck !== null) drafts.push(commentDensityDraft(include));
+  // Gated on a declared layout like every other seeded check, and NOT on a
+  // language: a commit message is not one. The gate is the registry's, not this
+  // rule's. Selection is by changed path, so a repo that never said where its
+  // code lives has nothing to scope the check to, and `**` is the catch-all this
+  // file already refused for being neither catch-all nor harmless.
+  // Only where `init` understood the repo at all. A checkout that declared no
+  // layout and no runner told it nothing, and adr-0016's rule is that `init`
+  // writes what a repo DECLARES: a commit convention is not among those facts.
+  if (drafts.length > 0 && include.length > 0) drafts.push(commitMessageDraft(include));
 
   return drafts.map(render);
 }
@@ -272,9 +281,9 @@ function commentDensityDraft(include: readonly string[]): Draft {
       "who applied it. Nothing held it, which is `sig-4a2610fb`.\n\n" +
       "**To turn it on:** delete `enabled: false`. It reads `.ts` files only.\n\n" +
       "Comments belong where the code cannot be made clear on its own. History, a rejected " +
-      "alternative, and what a module used to do belong in the commit body or in the " +
-      "decision record. A comment that recounts a change is stale the moment the next one " +
-      "lands.\n\n" +
+      "alternative, and what a module used to do belong in the pull request description or " +
+      "in the decision record. A comment that recounts a change is stale the moment the " +
+      "next one lands.\n\n" +
       "**It reads the diff, not the tree.** One branch at 33% moves a repo average by a " +
       "tenth of a point and passes, so the rule is not expressible over a whole checkout.\n\n" +
       `**The ceiling was measured, not chosen**, over thirty commits of the repo this came ` +
@@ -285,5 +294,55 @@ function commentDensityDraft(include: readonly string[]): Draft {
       "Without the second, a commit that CLEANS comments scores 100%.\n\n" +
       "**When it fails:** cut the commentary, do not raise the ceiling. If the comment is " +
       "the only thing making the code readable, the code is what needs the change.",
+  };
+}
+
+/**
+ * The second rule Whetstone brings rather than reads (adr-0030).
+ *
+ * Off, like the first, for the same reason: a repo that gains a check nobody
+ * asked for is the pile of config adr-0016 exists to prevent.
+ */
+function commitMessageDraft(include: readonly string[]): Draft {
+  return {
+    id: "commit-message",
+    description:
+      "A commit names its kind in a conventional subject, and credits nobody who did not write it.",
+    kind: "deterministic",
+    severity: "warn",
+    tiers: ["strict", "light"],
+    include,
+    command: "wst check run commit-message",
+    enabled: false,
+    // The same tree over two ranges is two different sets of messages.
+    skippable: false,
+    origin: [],
+    body:
+      "**Seeded OFF.** Nothing in this repo asked for it. Delete `enabled: false` to turn " +
+      "it on.\n\n" +
+      "**The subject is conventional.** `type(scope): description`, with a type from the " +
+      "standard set. Measured where this came from: 332 of 333 commits already matched, so " +
+      "it holds a rule rather than introducing one.\n\n" +
+      "**No commit credits a model.** A `Co-Authored-By:` naming an assistant, or the " +
+      "`Generated with` footer. The commit carries the author's name, and a model is not a " +
+      "co-author of it.\n\n" +
+      "**It matches attribution, not mention.** Of the nine lines naming the tool where this " +
+      "came from, five were prose ABOUT it. A pattern that cannot tell `Co-Authored-By: " +
+      "Claude` from \"the Claude Code skill\" makes the subject undiscussable in the messages " +
+      "that discuss it.\n\n" +
+      "**What it does NOT judge:** subject length, and whether a body exists. Both are house " +
+      "style rather than measurable defects, and where this came from the repo did the " +
+      "opposite of its own rule on each: 10 of the last 60 subjects ran past 72 characters " +
+      "and 23 of them carried a prose body. A check that blocks a third of what a repo " +
+      "actually does teaches `--no-verify`. Decide those yourself and add them here.\n\n" +
+      "**It reads the range, not the tree**, so no receipt stands in for it.\n\n" +
+      "**Its `include` is this repo's source layout, and that is a compromise.** A commit " +
+      "always has a message, so this would run on every change; the registry selects by " +
+      "changed PATH and has no way to say `always`. Scoped like this, a commit touching only " +
+      "documentation is not checked. Widen the globs if that matters to you.\n\n" +
+      "**When it fails:** amend the message. `git commit --amend` for the last one, an " +
+      "interactive rebase for anything older. The rationale a long body wanted to carry " +
+      "belongs in the pull request description, where a reader looking at the change will " +
+      "actually find it.",
   };
 }

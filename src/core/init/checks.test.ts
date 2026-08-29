@@ -48,7 +48,7 @@ describe("seedChecks — round-trips through the real registry loader", () => {
 
   it("seeds typecheck, test and lint for a TS repo that declares all three scripts", () => {
     const ids = load(seedChecks(tsRepo, seeded)).map((c) => c.id).sort();
-    expect(ids).toEqual(["comment-density", "lint", "test", "typecheck"]);
+    expect(ids).toEqual(["comment-density", "commit-message", "lint", "test", "typecheck"]);
   });
 
   it("bakes in the DETECTED command, not a guess", () => {
@@ -222,6 +222,45 @@ describe("seedChecks — what init may not assume about a repo's own scripts", (
  * adr-0030. The category `opinion` is gone; what it named is a check whose
  * `origin` says it was earned somewhere else, and it arrives switched off.
  */
+describe("seedChecks — the commit-message check Whetstone brings", () => {
+  const file = () =>
+    seedChecks(tsRepo, seeded).find((f) => f.path.endsWith("commit-message.md"));
+
+  it("arrives disabled, like every rule no repo asked for", () => {
+    expect(file()?.contents).toContain("enabled: false");
+  });
+
+  it("runs on the binary that wrote it, not on a script nobody added", () => {
+    expect(file()?.contents).toContain("wst check run commit-message");
+  });
+
+  it("refuses a receipt, because its answer depends on the range and not on a file", () => {
+    // The same tree over two ranges is two different sets of messages.
+    expect(file()?.contents).toContain("skippable: false");
+  });
+
+  it("is not gated on a LANGUAGE, unlike the other rule Whetstone brings", () => {
+    // `comment-density` reads `.ts` and is seeded only where a typecheck script
+    // is declared. A commit message is not a language.
+    const noTypecheck = detectStack(
+      facts({
+        files: ["package.json", "src/a.js", "src/a.test.js"],
+        packageJson: { scripts: { test: "vitest run" } },
+      }),
+    );
+    const ids = seedChecks(noTypecheck, seeded).map((f) => f.path);
+
+    expect(ids.some((p) => p.endsWith("comment-density.md"))).toBe(false);
+    expect(ids.some((p) => p.endsWith("commit-message.md"))).toBe(true);
+  });
+
+  it("is withheld from a repo init understood nothing about", () => {
+    // The guard in the other direction. adr-0016: `init` writes what a repo
+    // DECLARES, and a checkout with no layout and no runner declared nothing.
+    expect(seedChecks(detectStack(facts()), seeded)).toEqual([]);
+  });
+});
+
 describe("seedChecks — the check Whetstone brings", () => {
   const file = (over: Partial<Parameters<typeof seedChecks>[1]> = {}) =>
     seedChecks(tsRepo, { ...seeded, ...over }).find((f) => f.path.endsWith("comment-density.md"));
@@ -245,6 +284,16 @@ describe("seedChecks — the check Whetstone brings", () => {
     // Whetstone did not write, so the seeded check fails on every run.
     expect(file()?.contents).toContain("wst check run comment-density");
     expect(file()?.contents).not.toContain("npm run check");
+  });
+
+  it("sends the prose it evicts to the description, not to the commit body", () => {
+    // The check tells you where the comment belongs instead, and it said the
+    // commit body. A repo whose commits are one line then has nowhere to put it,
+    // which is how this one ended up with a twenty-five line commit message.
+    const contents = file()?.contents ?? "";
+
+    expect(contents).toMatch(/pull request description/i);
+    expect(contents).not.toMatch(/commit body/i);
   });
 
   it("refuses a receipt, because its answer depends on the range and not on a file", () => {
