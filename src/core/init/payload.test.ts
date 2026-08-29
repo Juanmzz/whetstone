@@ -448,3 +448,39 @@ describe("what init writes into a repo it does not own", () => {
     }
   });
 });
+
+/**
+ * A skill list is a SET; the order is the payload's, not the caller's.
+ *
+ * `init` writes them in `SKILL_FILES` order, which is a reading order. `update`
+ * reads them back off a directory, where they arrive alphabetical, and reported
+ * `.wst/wst.yaml` and `AGENTS.md` as outdated on the first run in a repo whose
+ * bytes matched the hash the base itself recorded.
+ */
+describe("activeSkills — the order is the payload's", () => {
+  it("returns the canonical order whatever order it was handed", () => {
+    const canonical = activeSkills();
+    const shuffled = [...canonical].reverse();
+
+    expect(activeSkills(shuffled)).toEqual(canonical);
+  });
+
+  it("keeps only what was named, so a skill switched off stays off", () => {
+    const [first, second] = activeSkills();
+    expect(activeSkills([second ?? "", first ?? ""])).toEqual([first, second]);
+  });
+
+  it("distinguishes an unread directory from an empty one", () => {
+    expect(activeSkills([])).toEqual([]);
+    expect(activeSkills().length).toBeGreaterThan(0);
+  });
+
+  it("keeps a skill the payload does not ship, at the end", () => {
+    // Written by hand after init. Dropping it would make it invisible to every
+    // agent that reads the file.
+    const withOwn = activeSkills([...activeSkills(), "skills/house-style.md"]);
+
+    expect(withOwn.at(-1)).toBe("skills/house-style.md");
+    expect(withOwn.slice(0, -1)).toEqual(activeSkills());
+  });
+});

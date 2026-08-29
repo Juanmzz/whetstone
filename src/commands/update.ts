@@ -8,7 +8,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DEFINITION_DIR } from "../core/paths.js";
 import {
@@ -79,14 +79,20 @@ export async function runUpdate(
   // The SAME answers, re-planned by THIS version. That is the whole comparison:
   // one input, two renderers, and the difference is what the upgrade would change.
   const payloadRoot = await findPayloadRoot();
+  const presentSkills = await readdir(join(root, DEFINITION_DIR, "skills"))
+    .then((names) => names.filter((n) => n.endsWith(".md")).sort().map((n) => `skills/${n}`))
+    .catch(() => undefined);
   let plan: InitPlan;
   try {
+    // The SAME inputs, or the difference is not the upgrade (adr-0041). The
+    // clock is the date the answers were given, and the skills are read off disk
+    // rather than declared empty.
     plan = planInit({
       facts: await gatherFacts(root),
       answers: base.answers,
-      clock: { now: () => new Date() },
+      clock: { now: () => new Date(base.generatedAt) },
       skillTexts: await readSkills(payloadRoot),
-      presentSkills: [],
+      ...(presentSkills === undefined ? {} : { presentSkills }),
     });
   } catch (cause) {
     console.error(`could not re-plan from the recorded answers: ${(cause as Error).message}`);

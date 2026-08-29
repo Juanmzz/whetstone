@@ -1171,3 +1171,38 @@ Cost accepted: one model call on a path that had none, on the first run of the t
 anyone has agreed to spend anything. It is announced on the screen that offers it, the run
 that measured it cost $0.0595, and picking only Codex or OpenCode skips it entirely.
 
+### adr-0041 — `update` re-plans from the inputs `init` used, or it is not comparing
+`accepted` · 2026-08-29
+
+`wst update` re-plans from the recorded answers and calls the difference what an upgrade
+would change. Run immediately after a successful `init`, it reported `.wst/wst.yaml` and
+`AGENTS.md` as `outdated: untouched, and this version writes it differently` in a repo whose
+bytes matched the hash the base itself recorded. It is the first thing a new user runs to
+find out what the command does, and the answer was a false positive both times.
+
+Three of its inputs were not the ones `init` used, and each is a different mistake:
+
+**`presentSkills: []`.** `init` passes `undefined` where there is no directory yet, and
+`init.ts` carries a comment about precisely this: `[]` says the directory was read and held
+nothing, and every bootstrapped repo would be told its config now declares all eight skills
+inactive.
+
+**The clock was today.** Anything the payload stamps with a date then differs on any day but
+the first, and a difference that is always there hides the ones that are not. It re-plans at
+the date the base recorded, which is the date the answers were given.
+
+**And the skill order.** `init` writes them in the payload's order, which is a reading order;
+a directory read arrives alphabetical. The set was identical and the file was not. `activeSkills`
+now returns the payload's order whatever order it is handed, and keeps a skill the payload
+does not ship at the end rather than dropping it: written by hand after init, it is invisible
+to every agent that reads the file if it is dropped.
+
+Rejected: comparing sets rather than bytes. The whole mechanism is a hash per file, and a
+comparison that normalises before hashing cannot see a reordering that IS a change.
+
+Rejected: re-planning at today's date and filtering the date lines out. That is a second
+renderer to keep in step with the first.
+
+Cost accepted: `update` no longer notices that regenerating today would restamp a date. It
+would, and it is not a change anybody wants reported.
+
