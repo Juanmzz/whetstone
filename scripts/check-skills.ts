@@ -17,13 +17,15 @@ import { parse } from "yaml";
 import { DEFINITION_DIR } from "../src/core/paths.js";
 
 const SKILLS = join(DEFINITION_DIR, "skills");
+const CHECKS = join(DEFINITION_DIR, "checks");
 
 interface Problem {
   readonly file: string;
   readonly why: string;
 }
 
-function check(file: string, text: string): Problem[] {
+/** Below `changelogFrom` a file has never been amended, so it has nothing to log. */
+function check(file: string, text: string, changelogFrom = 1): Problem[] {
   const out: Problem[] = [];
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(text);
   if (match === null) return [{ file, why: "has no YAML frontmatter delimited by `---`" }];
@@ -45,6 +47,8 @@ function check(file: string, text: string): Problem[] {
     out.push({ file, why: `declares version ${JSON.stringify(version)}, expected a positive integer` });
     return out;
   }
+
+  if (version < changelogFrom) return out;
 
   if (!body.includes("\n## Changelog")) {
     out.push({ file, why: "has no `## Changelog` section" });
@@ -68,25 +72,34 @@ function check(file: string, text: string): Problem[] {
   return out;
 }
 
+async function readDir(dir: string): Promise<(readonly [string, string])[]> {
+  const names = (await readdir(dir)).filter((n) => n.endsWith(".md")).sort();
+  return Promise.all(names.map(async (n) => [n, await readFile(join(dir, n), "utf-8")] as const));
+}
+
 async function main(): Promise<void> {
-  const names = (await readdir(SKILLS)).filter((n) => n.endsWith(".md")).sort();
-  if (names.length === 0) {
+  const skills = await readDir(SKILLS);
+  if (skills.length === 0) {
     console.error(`${SKILLS} holds no skills: nothing was verified`);
     process.exit(1);
   }
+  // Checks too (adr-0047), from v2 up: a v1 has never been amended.
+  const checks = await readDir(CHECKS);
 
-  const texts = await Promise.all(
-    names.map(async (n) => [n, await readFile(join(SKILLS, n), "utf-8")] as const),
-  );
-  const problems = texts.flatMap(([n, t]) => check(n, t));
+  const problems = [
+    ...skills.flatMap(([n, t]) => check(`${SKILLS}/${n}`, t)),
+    ...checks.flatMap(([n, t]) => check(`${CHECKS}/${n}`, t, 2)),
+  ];
 
   if (problems.length > 0) {
-    for (const p of problems) console.error(`${SKILLS}/${p.file} ${p.why}`);
-    console.error(`\n${problems.length} problem(s) across ${names.length} skill(s)`);
+    for (const p of problems) console.error(`${p.file} ${p.why}`);
+    console.error(`\n${problems.length} problem(s) across ${skills.length + checks.length} file(s)`);
     process.exit(1);
   }
 
-  console.error(`${names.length} skills: versions, changelogs and frontmatter all agree`);
+  console.error(
+    `${skills.length} skills and ${checks.length} checks: versions, changelogs and frontmatter agree`,
+  );
 }
 
 await main();

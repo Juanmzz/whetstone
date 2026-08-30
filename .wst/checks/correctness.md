@@ -81,3 +81,13 @@ flagged. Do not adjust a fixture to make the lens pass; ADR-0008 pre-registers a
 and the two it got wrong are the two most likely to tempt you.
 
 See `test/fixtures/lens-correctness/RESULT.md` and ADR-0008.
+
+## Changelog
+
+> Entries before 2026-08-30 were reconstructed from the commits that changed
+> `version:`, not written at the time. adr-0047 made the log required.
+
+- v4 (2026-08-08): Adds the concurrency clause: a race verdict must name the shared state, two interleavings and the wrong result. Left UNCALIBRATED.
+- v3 (2026-08-08): Contract-justification lens. False positives nearly gone, still failing the fixture set.
+- v2 (2026-08-08): Calibration recorded as FAILED rather than passed, once eight harder fixtures landed.
+- v1 (2026-08-07): The first `llm` check, seeded with the registry.

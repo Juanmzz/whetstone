@@ -25,3 +25,11 @@ unknowable, model it as `unknown` and narrow explicitly.
 
 Deterministic checks may block freely (constitution non-negotiable 7); there is no
 ambiguity in whether the compiler succeeded.
+
+## Changelog
+
+> Entries before 2026-08-30 were reconstructed from the commits that changed
+> `version:`, not written at the time. adr-0047 made the log required.
+
+- v2 (2026-08-15): Covers `package.json`, which no check watched.
+- v1 (2026-08-11): Seeded with the registry.

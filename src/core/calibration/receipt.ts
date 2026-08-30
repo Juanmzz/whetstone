@@ -171,6 +171,15 @@ export function recordCalibration(input: CalibrationInput): CalibrationReceipt {
   };
 }
 
+/** The owner accepting a lens without measuring it (adr-0047). */
+export interface BlockSignature {
+  readonly by: string;
+  readonly on: string;
+  readonly why: string;
+}
+
+export const MIN_SIGNATURE_REASON = 60;
+
 export type AuthorityDecision =
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: string };
@@ -188,7 +197,21 @@ export function blockAuthority(
   currentFixturesHash: string,
   /** Every model this check could run with. More than one denies (adr-0045). */
   models: readonly string[] = [],
+  /** The owner's signature, where the block rests on judgement and not a run. */
+  signature?: BlockSignature,
 ): AuthorityDecision {
+  if (signature !== undefined) {
+    const why = signature.why.trim();
+    if (why.length < MIN_SIGNATURE_REASON) {
+      return {
+        ok: false,
+        reason:
+          `the signature's reason is ${String(why.length)} characters: too thin to review. ` +
+          `A signature that says nothing is the checkbox this mechanism replaced`,
+      };
+    }
+    return { ok: true };
+  }
   if (receipt === null || receipt === undefined) {
     return {
       ok: false,
