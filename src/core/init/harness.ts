@@ -29,7 +29,7 @@ export interface Harness {
 export const HARNESSES: readonly Harness[] = Object.freeze([
   { id: "claude-code", label: "Claude Code", readsAgentsMd: false, pointer: "CLAUDE.md", adapter: "claude" },
   { id: "antigravity", label: "Antigravity / Gemini CLI", readsAgentsMd: false, pointer: "GEMINI.md", adapter: "antigravity" },
-  { id: "codex", label: "Codex", readsAgentsMd: true, pointer: null, adapter: null },
+  { id: "codex", label: "Codex", readsAgentsMd: true, pointer: null, adapter: "codex" },
   { id: "opencode", label: "OpenCode", readsAgentsMd: true, pointer: null, adapter: null },
 ]);
 
@@ -44,6 +44,17 @@ export function pointersFor(picked: readonly string[]): Readonly<Record<string, 
     if (pointer !== null && pointer !== undefined) out[pointer] = "@AGENTS.md\n";
   }
   return out;
+}
+
+/**
+ * The pointers for the harnesses a given judge belongs to.
+ *
+ * The fallback for an `init` that never asked which harnesses read the repo. It
+ * used to write CLAUDE.md AND GEMINI.md unconditionally, so a repo whose judge is
+ * claude was left carrying a front door for a harness nobody there runs.
+ */
+export function pointersForAgent(agent: Agent): Readonly<Record<string, string>> {
+  return pointersFor(HARNESSES.filter((h) => h.adapter === agent).map((h) => h.id));
 }
 
 /** The first pick that can actually run a lens, or null when none can. */

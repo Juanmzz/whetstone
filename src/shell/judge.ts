@@ -10,6 +10,7 @@ import type { Agent, WstConfig } from "../core/config/schema.js";
 import type { LlmJudge } from "../core/ports.js";
 import { createClaudeJudge } from "./claude.js";
 import { createAntigravityJudge } from "./antigravity.js";
+import { createCodexJudge } from "./codex.js";
 import { loadConfig } from "./config.js";
 
 /** The adapter the config asks for. */
@@ -19,6 +20,8 @@ export function judgeFor(config: WstConfig): LlmJudge {
       return createClaudeJudge();
     case "antigravity":
       return createAntigravityJudge();
+    case "codex":
+      return createCodexJudge();
   }
 }
 

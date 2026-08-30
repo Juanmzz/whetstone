@@ -24,7 +24,7 @@ describe("parseConfig", () => {
     // The whole point of the key. Silently running claude under another name is
     // invisible: the run succeeds and the verdict looks normal, so nobody learns
     // the judge they asked for was never consulted.
-    expect(() => parseConfig({ agent: "codex" })).toThrow(/wst\.yaml: agent/);
+    expect(() => parseConfig({ agent: "opencode" })).toThrow(/wst\.yaml: agent/);
   });
 
   it("accepts an agent that HAS an adapter, which is what makes the key mean anything", () => {
