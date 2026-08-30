@@ -186,6 +186,8 @@ export function blockAuthority(
   lens: string,
   receipt: CalibrationReceipt | null | undefined,
   currentFixturesHash: string,
+  /** Every model this check could run with. More than one denies (adr-0045). */
+  models: readonly string[] = [],
 ): AuthorityDecision {
   if (receipt === null || receipt === undefined) {
     return {
@@ -211,6 +213,15 @@ export function blockAuthority(
   }
   if (receipt.verdict !== "passed") {
     return { ok: false, reason: "the calibration did not pass" };
+  }
+  if (models.length !== 1 || models[0] !== receipt.model) {
+    const asked = models.length === 0 ? "no model" : models.join(" or ");
+    return {
+      ok: false,
+      reason:
+        `measured on \`${receipt.model}\` and this check would run on ${asked}: ` +
+        `a different model is a different judge, so the measurement does not carry over`,
+    };
   }
   if (receipt.runs < MIN_AUTHORISING_RUNS) {
     return {

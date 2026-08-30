@@ -8,6 +8,7 @@
 
 import { parse as parseYaml } from "yaml";
 import { blockAuthority, type CalibrationReceipt } from "../calibration/receipt.js";
+import { modelForTier } from "../triage/route.js";
 import { DEFINITION_DIR } from "../paths.js";
 import { CheckSchema, type Check } from "./schema.js";
 
@@ -70,10 +71,12 @@ export function parseCheckFile(
   // passed. `blockAuthority` denies on every ambiguity, including the absent
   // evidence a forgetful caller produces.
   if (check.kind === "llm" && check.severity === "block") {
+    // The models this check could be judged by, from the tiers it declares.
     const decision = blockAuthority(
       check.review_lens ?? "",
       evidence?.receipt ?? null,
       evidence?.currentFixturesHash ?? "",
+      [...new Set(check.tiers.map(modelForTier))],
     );
     if (!decision.ok) {
       throw new Error(

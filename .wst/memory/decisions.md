@@ -1298,3 +1298,44 @@ renderer to keep in step with the first.
 Cost accepted: `update` no longer notices that regenerating today would restamp a date. It
 would, and it is not a change anybody wants reported.
 
+
+### adr-0045 — a calibration receipt binds the model, and not the runtime version
+`proposed` · 2026-08-30
+
+`AGENTS.md` said the receipt binds "the prompt, the fixtures, the model and the runtime:
+change any one and the authority lapses rather than carrying over". `blockAuthority`
+compared `lensHash`, `fixturesHash`, `verdict` and `runs`. It read neither `model` nor
+`runtime`, both of which the receipt records. The document promised a guarantee the code
+did not give, which is the failure mode this project exists to distrust.
+
+The two halves are not one decision. A runtime version moves on its own: `claude`
+auto-updates, and comparing it would disarm the only blocking lens on a Tuesday and hold
+it disarmed until somebody spent a hundred calls re-measuring. `wst status` already
+reports that drift, and a report is the right weight for it. A MODEL is different. It does
+not change under anyone; somebody chooses it, and a different model is a different judge,
+so a measurement of one says nothing about the other.
+
+So: authority binds the model, and the runtime version stays a warning. `blockAuthority`
+now takes the models a check could actually be judged by, derived from the tiers it
+declares, and denies unless there is exactly one and the receipt measured it. More than
+one denies too: a check in two tiers runs under two models, and one measurement cannot
+speak for both.
+
+**What this cost immediately, and it is the point.** `correctness` was calibrated on
+2026-08-25 with `model: sonnet`. It declares `tiers: [strict]`, and strict routing judges
+with `opus`. So the one lens allowed to block held its authority from a measurement of a
+model it never runs under, and nothing noticed for five days. It drops to `warn` here.
+`npm run calibrate -- --check correctness --model opus` restores it.
+
+Rejected: correcting the prose in `AGENTS.md` instead. Cheaper, and it settles a real
+contradiction by lowering the promise, which leaves the sonnet-versus-opus gap in place
+and unnamed.
+
+Rejected: comparing the runtime version too, as the sentence claimed. That is the
+guarantee the document promised, and its price is that every CLI upgrade silently lapses
+the block until someone pays three dollars and half an hour. A gate that disarms itself on
+a schedule nobody chose is worse than one that says what it does not check.
+
+Rejected: calibrating per tier, so a check in two tiers carries two receipts. It is the
+honest generalisation and nothing needs it yet; one check is `llm` and it declares one
+tier. Revisit when a second one declares two.

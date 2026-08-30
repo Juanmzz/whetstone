@@ -107,11 +107,11 @@ describe("blockAuthority", () => {
   const current = fixturesHash(fixtures);
 
   it("grants block when the receipt describes exactly this lens and these fixtures", () => {
-    expect(blockAuthority(LENS, perfect(), current).ok).toBe(true);
+    expect(blockAuthority(LENS, perfect(), current, ["sonnet"]).ok).toBe(true);
   });
 
   it("DENIES block when there is no receipt at all", () => {
-    const decision = blockAuthority(LENS, null, current);
+    const decision = blockAuthority(LENS, null, current, ["sonnet"]);
     expect(decision.ok).toBe(false);
     expect(decision.ok === false && decision.reason).toMatch(/no calibration/i);
   });
@@ -122,14 +122,14 @@ describe("blockAuthority", () => {
    * describe this text." A hash does not need to be remembered.
    */
   it("DENIES block when one character of the lens changed", () => {
-    const decision = blockAuthority(`${LENS} `, perfect(), current);
+    const decision = blockAuthority(`${LENS} `, perfect(), current, ["sonnet"]);
     expect(decision.ok).toBe(false);
     expect(decision.ok === false && decision.reason).toMatch(/lens/i);
   });
 
   it("DENIES block when the fixture set changed", () => {
     const moved = fixturesHash([...fixtures, { path: "new.diff", expected: "pass", hash: "3333" }]);
-    const decision = blockAuthority(LENS, perfect(), moved);
+    const decision = blockAuthority(LENS, perfect(), moved, ["sonnet"]);
     expect(decision.ok).toBe(false);
     expect(decision.ok === false && decision.reason).toMatch(/fixture/i);
   });
@@ -142,7 +142,7 @@ describe("blockAuthority", () => {
         { fixture: "race-good.diff", expected: "pass", got: ["pass", "pass", "pass"] },
       ],
     });
-    expect(blockAuthority(LENS, failed, current).ok).toBe(false);
+    expect(blockAuthority(LENS, failed, current, ["sonnet"]).ok).toBe(false);
   });
 
   it("cannot be satisfied by a receipt for a different check", () => {
@@ -220,13 +220,13 @@ describe("a passing receipt must have looked hard enough", () => {
   ]);
 
   it("DENIES block on a two-run sweep, however clean", () => {
-    const decision = blockAuthority(LENS, enough(2), current);
+    const decision = blockAuthority(LENS, enough(2), current, ["sonnet"]);
     expect(decision.ok).toBe(false);
     expect(decision.ok === false && decision.reason).toMatch(/runs|sample/i);
   });
 
   it("grants block once the sample is large enough", () => {
-    expect(blockAuthority(LENS, enough(10), current).ok).toBe(true);
+    expect(blockAuthority(LENS, enough(10), current, ["sonnet"]).ok).toBe(true);
   });
 
   it("still records the small run honestly rather than refusing to mint it", () => {
@@ -273,5 +273,40 @@ describe("what an errored run leaves behind", () => {
     };
 
     expect(CalibrationReceiptSchema.safeParse(older).success).toBe(true);
+  });
+});
+
+describe("blockAuthority — the model it was measured on", () => {
+  const current = fixturesHash(fixtures);
+
+  it("denies when the check would run on a model the receipt did not measure", () => {
+    // Found on this repo: the receipt says `sonnet`, `correctness` is `tiers:
+    // [strict]`, and strict routes to `opus`. So the one blocking lens held its
+    // authority from a measurement of a different model.
+    const decision = blockAuthority(LENS, perfect(), current, ["opus"]);
+
+    expect(decision.ok).toBe(false);
+    expect(decision.ok === false && decision.reason).toMatch(/opus/);
+    expect(decision.ok === false && decision.reason).toMatch(/sonnet/);
+  });
+
+  it("allows the model it was measured on", () => {
+    expect(blockAuthority(LENS, perfect(), current, ["sonnet"]).ok).toBe(true);
+  });
+
+  it("denies a check that could run on either of two models", () => {
+    // One measurement cannot speak for both, and every ambiguity denies.
+    expect(blockAuthority(LENS, perfect(), current, ["opus", "sonnet"]).ok).toBe(false);
+  });
+
+  it("does NOT compare the runtime version, which is the owner's call", () => {
+    // A CLI that auto-updates would otherwise disarm the only blocking lens on
+    // a Tuesday. `wst status` reports that drift; it does not lapse authority.
+    const older = { ...perfect(), runtime: { name: "claude", version: "2.0.0" } };
+    expect(blockAuthority(LENS, older, current, ["sonnet"]).ok).toBe(true);
+  });
+
+  it("denies when the caller names no model, since absence is not evidence", () => {
+    expect(blockAuthority(LENS, perfect(), current, []).ok).toBe(false);
   });
 });
