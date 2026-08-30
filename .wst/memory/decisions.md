@@ -1339,3 +1339,41 @@ a schedule nobody chose is worse than one that says what it does not check.
 Rejected: calibrating per tier, so a check in two tiers carries two receipts. It is the
 honest generalisation and nothing needs it yet; one check is `llm` and it declares one
 tier. Revisit when a second one declares two.
+### adr-0046 — `triage.yaml` splits into the half that travels and the half that does not
+`proposed` · 2026-08-30
+
+`plugin/` holds the three hooks and the skill that install into the Claude Code session of
+anyone who installs the plugin. That is the blast radius `.wst/skills/**` has, and
+`.wst/skills/**` is strict tier. `plugin/**` fell through to `light`, so a change to a hook
+that denies the wrong write needed no test and was judged as prose.
+
+The rule could not be written. `.wst/triage.yaml` was pinned byte-for-byte to
+`DEFAULT_RULES_YAML`, which is what any repo with no `triage.yaml` of its own is triaged by,
+and a second test forbids naming a path that exists only in Whetstone there: those defaults
+travel, and this project's biography must not arrive as another project's policy. `plugin/`
+is exactly such a path. Its location is `"source": "./plugin"` in this repo's
+`marketplace.json`, chosen here, not a convention anyone else follows.
+
+So the file gets two halves, separated by a marker it names in its own text. Above it is
+`DEFAULT_RULES_YAML`, unchanged and still pinned. Below it are rules that are true of this
+repo and of nothing else. Both tests survive: the constant is now a PREFIX of the file
+rather than the whole of it, and the ban on Whetstone-only paths applies to the constant,
+which is the half that actually leaves.
+
+The cost is ordering. Classification is first-match-wins and the local rules land last, so
+one of them has to be narrower than everything above it or it is dead on arrival and
+nothing says so. `plugin/**` is: no rule above it matches that path. The marker's own
+comment states the constraint for the next rule that goes there.
+
+Rejected: adding `plugin/**` to both halves. One line, and the test that bans Whetstone-only
+paths passes by accident, because its list of patterns does not happen to include `plugin/`.
+A stranger's repo with a `plugin/` directory of its own would then owe full TDD there for a
+reason that is not theirs. Passing a check by being unlisted is not passing it.
+
+Rejected: leaving `plugin/**` at `light` and writing the gap down. It is the honest
+no-change, and it leaves the surface that edits other people's files as the least-gated
+thing in the repo.
+
+Rejected: a separate `local-triage.yaml`. Two files to keep in precedence order, and the
+loader would have to define which wins. The marker does the same work in one file, where
+the order is visible.
