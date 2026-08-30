@@ -13,7 +13,12 @@ name: gate
 # and it is also a bill: wiring an ANTHROPIC_API_KEY secret is what clears it.
 
 on:
+  # `edited` is here because the body check reads the body. Without it, a writer
+  # told to fix the body edits it and nothing re-runs: a re-run replays the event
+  # payload it was triggered with, which still carries the text that failed. The
+  # other four types are the default set, which naming any type overrides.
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -25,6 +30,10 @@ permissions:
 
 jobs:
   gate:
+    # An edit changes the body, never the diff, so the verdict on the diff still
+    # stands. Re-running the suite to reach the same answer is what gets a gate
+    # turned off.
+    if: github.event.action != 'edited'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,8 +60,16 @@ jobs:
           echo "gating $RANGE"
           node dist/cli.js gate --range "$RANGE" --no-lens --no-evidence
 
-      # Only where there IS a pull request. A push to `main` has no body to read,
-      # and the script says so and exits 0 rather than inventing a verdict.
-      - name: the pull request body reads
-        if: github.event_name == 'pull_request'
-        run: npm run check:pr-body
+  # Its own job so an edit can re-run it alone. A push to `main` has no body to
+  # read, and the script says so and exits 0 rather than inventing a verdict.
+  pr-body:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check:pr-body
