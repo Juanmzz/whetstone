@@ -9,7 +9,7 @@
  */
 
 import { DEFINITION_DIR } from "../paths.js";
-import { hooksArmed, type StatusReport } from "../status/report.js";
+import { prePushGate, type StatusReport } from "../status/report.js";
 
 export type HomeCommand =
   | "init"
@@ -194,7 +194,7 @@ function noteFor(command: HomeCommand, report: StatusReport): string | null {
   if (report.facts.judge.version === null) {
     parts.push(`no \`${report.facts.judge.name}\` on PATH, so llm checks cannot run`);
   }
-  if (!hooksArmed(report.facts.hooks, report.facts.repoRoot)) {
+  if (prePushGate(report.facts.hooks, report.facts.repoRoot) === "off") {
     parts.push("the pre-push hook is not armed, so this runs only when you ask");
   }
   return parts.length === 0 ? null : parts.join(" · ");

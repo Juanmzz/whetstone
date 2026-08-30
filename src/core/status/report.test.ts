@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildStatusReport,
+  prePushGate,
   renderStatusReport,
   type AgentFiles,
   type StatusFacts,
@@ -14,7 +15,7 @@ const base = {
   definitionPresent: true,
   judge: { name: "claude", version: "2.1.224" },
   nodeVersion: "v24.19.0",
-  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },
+  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true, gateInPrePush: null },
   plugin: {
     install: "enabled" as const,
     hookRoot: "/repo",
@@ -385,5 +386,51 @@ describe("the dangling pointer reads as English", () => {
 
   it("says nothing about pointers when there are none", () => {
     expect(said([])).not.toMatch(/point/);
+  });
+});
+
+describe("a gate chained from someone else's hook", () => {
+  const chained = {
+    ...base,
+    hooks: {
+      configuredPath: ".husky/_",
+      whetstoneHooksPresent: false,
+      gateInPrePush: ".husky/pre-push",
+    },
+  };
+
+  it("counts as active, because the gate runs on every push", () => {
+    // Measured in sift-app, where two pushes were cut short by exactly this hook
+    // while status reported the repo unguarded.
+    expect(prePushGate(chained.hooks, chained.repoRoot)).toBe("chained");
+  });
+
+  it("stops warning that the gate is not active", () => {
+    expect(buildStatusReport(chained).warnings.join("\n")).not.toMatch(
+      /pre-push gate is not active/,
+    );
+  });
+
+  it("names the hook it is chained from, so the reader can find it", () => {
+    expect(renderStatusReport(buildStatusReport(chained))).toMatch(
+      /pre-push\s+active \(chained from `\.husky\/pre-push`\)/,
+    );
+  });
+
+  it("still keeps the refusal to hand over a command when nothing is chained", () => {
+    // The refusal is right and must survive; only the fact it started from was wrong.
+    const unchained = { ...chained, hooks: { ...chained.hooks, gateInPrePush: null } };
+    const text = buildStatusReport(unchained).warnings.join("\n");
+    expect(text).toMatch(/pre-push gate is not active/);
+    expect(text).toMatch(/owns core\.hooksPath/);
+  });
+
+  it("prefers `own` when Whetstone holds the path itself", () => {
+    const both = { ...base.hooks, gateInPrePush: ".githooks/pre-push" };
+    expect(prePushGate(both, "/repo")).toBe("own");
+  });
+
+  it("is off when no hook reaches the gate", () => {
+    expect(prePushGate({ configuredPath: ".husky/_", whetstoneHooksPresent: false, gateInPrePush: null }, "/repo")).toBe("off");
   });
 });
