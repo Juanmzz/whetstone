@@ -323,6 +323,63 @@ const DECLARES_LANGUAGE: readonly (readonly [RegExp, string])[] = [
   [/(^|\/)Gemfile$/, "Ruby"],
 ];
 
+/** What each of those languages is written in, for the count that orders them. */
+const WRITTEN_IN: Readonly<Record<string, readonly string[]>> = {
+  TypeScript: [".ts", ".tsx"],
+  Rust: [".rs"],
+  Go: [".go"],
+  Python: [".py"],
+  Ruby: [".rb"],
+};
+
+function fileCounts(files: readonly string[]): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>();
+  for (const [name, extensions] of Object.entries(WRITTEN_IN)) {
+    counts.set(name, files.filter((f) => extensions.some((e) => f.endsWith(e))).length);
+  }
+  return counts;
+}
+
+/**
+ * The languages of this repo, most of it first.
+ *
+ * TWO readings crossed, because each alone gets a real repo wrong. A manifest
+ * declares intent and a count measures reality: sift-app was called `Rust` off
+ * `src-tauri/Cargo.toml` with 206 TypeScript files against 8 Rust ones, and the
+ * counting heuristic that would have got it right had been dropped for the
+ * declaration without ever comparing the two.
+ *
+ * A declared language stays declared whatever the count says, since a fresh
+ * `cargo init` has a manifest and no code. An undeclared one is added only when
+ * the tree holds MORE of it than of anything declared, which is the case a split
+ * `tsconfig.app.json` produces and a Rust repo with three build scripts does not.
+ */
+function languagesIn(
+  files: readonly string[],
+  near: readonly string[],
+  note: (what: string, from: string) => void,
+): string[] {
+  const counts = fileCounts(files);
+  const found: { name: string; count: number; from: string }[] = [];
+
+  for (const [pattern, name] of DECLARES_LANGUAGE) {
+    const at = near.find((f) => pattern.test(f));
+    if (at === undefined || found.some((l) => l.name === name)) continue;
+    found.push({ name, count: counts.get(name) ?? 0, from: at });
+  }
+
+  const declaredTop = Math.max(0, ...found.map((l) => l.count));
+  for (const [name, count] of counts) {
+    if (count > declaredTop && !found.some((l) => l.name === name)) {
+      found.push({ name, count, from: `${String(count)} files` });
+    }
+  }
+
+  found.sort((a, b) => b.count - a.count);
+  for (const l of found) note(`language: ${l.name} (${String(l.count)} files)`, l.from);
+  return found.map((l) => l.name);
+}
+
 function declaredAnswers(
   facts: RepoFacts,
   files: readonly string[],
@@ -339,13 +396,7 @@ function declaredAnswers(
   // declares its Rust half. Deeper than that it describes something inside the
   // project, and `examples/demo/pyproject.toml` made a TypeScript repo Python.
   const near = files.filter((f) => f.split("/").length <= 2);
-  const languages: string[] = [];
-  for (const [pattern, name] of DECLARES_LANGUAGE) {
-    const at = near.find((f) => pattern.test(f));
-    if (at === undefined || languages.includes(name)) continue;
-    languages.push(name);
-    note(`language: ${name}`, at);
-  }
+  const languages = languagesIn(files, near, note);
 
   const node = str(facts.packageJson?.engines?.["node"]);
   if (node !== null) note(`runtime: Node ${node}`, "package.json engines");

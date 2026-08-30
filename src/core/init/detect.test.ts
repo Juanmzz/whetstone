@@ -360,3 +360,78 @@ describe("detectStack — a nested manifest does not name the whole repo", () =>
     expect(stack.declared.stack).toContain("Rust");
   });
 });
+
+describe("the language a repo is actually written in", () => {
+  /** A Tauri app: a TypeScript front end wrapped in a thin Rust shell. */
+  const tauri = (over: Partial<RepoFacts> = {}): RepoFacts =>
+    facts({
+      files: [
+        "package.json",
+        "tsconfig.json",
+        "src-tauri/Cargo.toml",
+        ...Array.from({ length: 206 }, (_, i) => `src/c${String(i)}.tsx`),
+        ...Array.from({ length: 8 }, (_, i) => `src-tauri/src/m${String(i)}.rs`),
+      ],
+      ...over,
+    });
+
+  it("puts the language most of the repo is written in first", () => {
+    // sift-app was declared `Rust`, on a manifest, with 206 .ts/.tsx against 8
+    // .rs. The wrong answer then travels into constitution.md and AGENTS.md,
+    // which is the file an agent reads to orient itself.
+    expect(tauri() && detectStack(tauri()).declared.stack).toMatch(/^TypeScript, Rust/);
+  });
+
+  it("orders by the repo, not by the order of the table", () => {
+    // Reverse the Tauri shape: the Rust half is the project and the TypeScript
+    // is a small web view. The table lists TypeScript first, so an ordering that
+    // came out right on sift-app came out right by luck.
+    const rustFirst = detectStack(
+      facts({
+        files: [
+          "Cargo.toml",
+          "tsconfig.json",
+          ...Array.from({ length: 300 }, (_, i) => `src/m${String(i)}.rs`),
+          ...Array.from({ length: 12 }, (_, i) => `web/a${String(i)}.ts`),
+        ],
+      }),
+    );
+    expect(rustFirst.declared.stack).toMatch(/^Rust, TypeScript/);
+  });
+
+  it("names a language the tree is full of even when no manifest declares it", () => {
+    // The counting heuristic was dropped for a declared one and the two were
+    // never crossed. A repo whose tsconfig is split into `tsconfig.app.json`
+    // declares nothing this table matches, and 206 files say otherwise.
+    const noTsconfig = detectStack(
+      tauri({ files: tauri().files.filter((f) => f !== "tsconfig.json") }),
+    );
+    expect(noTsconfig.declared.stack).toMatch(/^TypeScript, Rust/);
+  });
+
+  it("does not promote a language a repo merely touches", () => {
+    // The control. A Rust project with three build scripts in TypeScript is a
+    // Rust project, and counting must not make it a TypeScript one.
+    const rust = detectStack(
+      facts({
+        files: [
+          "Cargo.toml",
+          ...Array.from({ length: 200 }, (_, i) => `src/m${String(i)}.rs`),
+          "scripts/build.ts",
+          "scripts/release.ts",
+        ],
+      }),
+    );
+    expect(rust.declared.stack).toBe("Rust");
+  });
+
+  it("records the count it ordered by, so the answer is checkable", () => {
+    expect(detectStack(tauri()).evidence.join("\n")).toMatch(/language: TypeScript.*206/);
+  });
+
+  it("still names a declared language the repo has no files for yet", () => {
+    // A fresh `cargo init` has a manifest and no code. Zero files is not a
+    // reason to drop what the repo says about itself.
+    expect(detectStack(facts({ files: ["Cargo.toml"] })).declared.stack).toBe("Rust");
+  });
+});
