@@ -7,6 +7,7 @@ import { MAX_PERCENT } from "../checks/comment-density.js";
 import { DEFINITION_DIR } from "../paths.js";
 import { yamlBlock, yamlList, yamlString, type GeneratedFile } from "./artifact.js";
 import type { StackFacts } from "./detect.js";
+import { probeNote, severityFor, type Probes } from "./probe.js";
 
 export interface SeedChecksOptions {
   /** ISO date, from `ClockPort`. Recorded on the calibration stub. */
@@ -17,6 +18,17 @@ export interface SeedChecksOptions {
    * would put the guess back one layer down.
    */
   readonly include: readonly string[];
+  /**
+   * What the repo's own commands did when `init` ran them. A green run is what a
+   * seeded `block` rests on; absent means nothing was measured, which is `warn`.
+   */
+  readonly probes?: Probes;
+  /**
+   * Ids to seed with `enabled: false`, from the plan screen. A check turned off
+   * where the offer was made is one somebody saw and declined, which is not the
+   * same as one that arrived off and was never read.
+   */
+  readonly disabled?: readonly string[];
   /** Seed a starter review lens. Off by default: apparatus is earned, not sprayed. */
   readonly agentLens?: boolean;
   /** What the caller ASKED for. `block` is clamped; see rule 2 above. */
@@ -98,13 +110,14 @@ export function seedChecks(
       id: "typecheck",
       description: "The project's typechecker reports no errors.",
       kind: "deterministic",
-      severity: "block",
+      severity: severityFor(options.probes?.["typecheck"]),
       tiers: ["strict", "light"],
       include,
       command: stack.commands.typecheck,
       body:
         "Seeded by \`wst init\` from the command this repo already declares, not from a " +
         "guess about what it might use.\n\n" +
+        `${probeNote(options.probes?.["typecheck"], options.date)}\n\n` +
         "A deterministic check may block freely: there is no ambiguity about whether the " +
         "compiler succeeded, so a failure here is never a matter of taste.\n\n" +
         "**When it fails:** fix the type, do not widen it. Reaching for an escape hatch to " +
@@ -114,25 +127,21 @@ export function seedChecks(
   }
 
   if (stack.commands.test !== null) {
-    // `init` has never seen this suite run, so it may not block on it.
     drafts.push({
       id: "test",
       description: "The test suite passes.",
       kind: "deterministic",
-      severity: "warn",
+      severity: severityFor(options.probes?.["test"]),
       tiers: ["strict", "light"],
       include,
       command: stack.commands.test,
       body:
         "Seeded by \`wst init\` from the test script this repo already declares.\n\n" +
+        `${probeNote(options.probes?.["test"], options.date)}\n\n` +
         (stack.hasTests
-          ? "Held at `warn` because **`init` has not seen this suite pass.** Test files exist, " +
-            "which is not the same thing: a suite can need a database, a fixture server or an " +
-            "env var that nobody has here. **Promote it to `block` after the first green " +
-            "gate.** That run is the evidence this seeding cannot have.\n\n"
-          : "Held at `warn` because no test files were found at init. **Promote it to " +
-            "`block` after the first green gate.** A blocking check over an empty " +
-            "suite proves nothing and trains everyone to ignore it.\n\n") +
+          ? ""
+          : "No test files were found at init. A blocking check over an empty suite proves " +
+            "nothing and trains everyone to ignore it, so look at what it actually ran.\n\n") +
         "**When it fails:** read the failure before touching the test. Deleting, skipping " +
         "or loosening an assertion to get green is the one move this check exists to make " +
         "visible.",
@@ -148,13 +157,14 @@ export function seedChecks(
       id: "lint",
       description: "The linter reports no errors.",
       kind: "deterministic",
-      severity: "warn",
+      severity: mutates ? "warn" : severityFor(options.probes?.["lint"]),
       tiers: ["strict", "light"],
       include,
       command: stack.commands.lint,
       ...(mutates ? { enabled: false as const } : {}),
       body:
         "Seeded by \`wst init\` from the lint script this repo already declares.\n\n" +
+        (mutates ? "" : `${probeNote(options.probes?.["lint"], options.date)}\n\n`) +
         (mutates
           ? "**Seeded OFF: this command rewrites the tree it is judging.** The script " +
             "carries a write flag (`--fix`, `--write`, `-w`), so running it inside the gate " +
@@ -164,10 +174,9 @@ export function seedChecks(
             "**To turn it on:** point `command:` at a read-only invocation (`eslint .` " +
             "rather than `eslint --fix .`), then delete `enabled: false`.\n\n"
           : "") +
-        "Held at `warn` deliberately. Lint rules encode taste as well as correctness, and a " +
-        "gate that blocks a merge over a formatting preference gets routed around, after " +
-        "which it stops catching the real findings too. Promote it once the ruleset is one " +
-        "the team actually agrees with.\n\n" +
+        "Lint rules encode taste as well as correctness. A gate that blocks a merge over a " +
+        "formatting preference gets routed around, after which it stops catching the real " +
+        "findings too. If that is this ruleset, drop it back to `warn` and say so here.\n\n" +
         "**When it fails:** fix it, or delete the rule. A permanently-warning check is " +
         "noise, and noise is what makes the signal unreadable.",
     });
@@ -192,7 +201,27 @@ export function seedChecks(
   // writes what a repo DECLARES: a commit convention is not among those facts.
   if (drafts.length > 0 && include.length > 0) drafts.push(commitMessageDraft(include));
 
-  return drafts.map(render);
+  const off = new Set(options.disabled ?? []);
+  return drafts.map((d) => render(off.has(d.id) ? { ...d, enabled: false } : d));
+}
+
+export interface SeededCheck {
+  readonly id: string;
+  readonly severity: Check["severity"];
+}
+
+/** What the plan screen offers, so the offer and what is written cannot drift. */
+export function seededChecks(
+  stack: StackFacts,
+  options: SeedChecksOptions,
+): readonly SeededCheck[] {
+  return seedChecks(stack, { ...options, disabled: [] }).map((file) => {
+    const contents = file.contents;
+    return {
+      id: /^id: (.+)$/m.exec(contents)?.[1] ?? "",
+      severity: (/^severity: (.+)$/m.exec(contents)?.[1] ?? "warn") as Check["severity"],
+    };
+  });
 }
 
 /**
@@ -252,34 +281,34 @@ function agentLensDraft(options: SeedChecksOptions): Draft {
 /**
  * The one rule Whetstone brings rather than reads (adr-0030).
  *
- * It is `enabled: false`. A repo that gains a check nobody asked for is the "pile
- * of config from guesses" adr-0016 exists to prevent, and a check that never runs
- * cannot be that. What it is instead is an offer sitting where the friction will
- * be felt, rather than a question asked on the day the answer is "I do not know
- * yet".
+ * It arrives ON, at `warn`. It used to arrive `enabled: false` so that a repo
+ * gained no check nobody asked for, which is the "pile of config from guesses"
+ * adr-0016 prevents. What that produced instead was a rule nobody ever saw: an
+ * offer in a file, waiting to be found. `init` shows the checks it is about to
+ * seed in the plan, before it writes, so the offer is made where it can be
+ * declined and the default no longer has to be off.
  */
 function commentDensityDraft(include: readonly string[]): Draft {
   return {
     id: "comment-density",
     description: "A change adds more code than commentary about it.",
     kind: "deterministic",
-    // Earned somewhere else. It stays off until somebody here wants it, and it
-    // stays at `warn` after that until it has caught something.
+    // Earned somewhere else, so it starts at `warn` here until it has caught
+    // something in THIS repo.
     severity: "warn",
     tiers: ["strict", "light"],
     include,
     command: "wst check run comment-density",
-    enabled: false,
     // The answer depends on the range, not on the contents of a file, so a
     // receipt from an earlier run proves nothing about this one.
     skippable: false,
     origin: ["sig-4a2610fb"],
     body:
-      "**Seeded OFF.** Nothing in this repo asked for it. It is here because it was earned " +
-      "elsewhere and it is as true in a payments API as it was there: a rule stated twice, " +
+      "**Seeded at `warn`.** Nothing in this repo asked for it. It is here because it was " +
+      "earned elsewhere and it is as true in a payments API as it was there: a rule stated twice, " +
       "applied by hand once, and back two days later on a branch written by the same person " +
       "who applied it. Nothing held it, which is `sig-4a2610fb`.\n\n" +
-      "**To turn it on:** delete `enabled: false`. It reads `.ts` files only.\n\n" +
+      "It reads `.ts` files only. To switch it off, add `enabled: false`.\n\n" +
       "Comments belong where the code cannot be made clear on its own. History, a rejected " +
       "alternative, and what a module used to do belong in the pull request description or " +
       "in the decision record. A comment that recounts a change is stale the moment the " +
@@ -300,8 +329,8 @@ function commentDensityDraft(include: readonly string[]): Draft {
 /**
  * The second rule Whetstone brings rather than reads (adr-0030).
  *
- * Off, like the first, for the same reason: a repo that gains a check nobody
- * asked for is the pile of config adr-0016 exists to prevent.
+ * On at `warn`, like the first, and for the same reason: an offer nobody sees is
+ * not an offer. The plan screen shows it before `init` writes anything.
  */
 function commitMessageDraft(include: readonly string[]): Draft {
   return {
@@ -313,13 +342,12 @@ function commitMessageDraft(include: readonly string[]): Draft {
     tiers: ["strict", "light"],
     include,
     command: "wst check run commit-message",
-    enabled: false,
     // The same tree over two ranges is two different sets of messages.
     skippable: false,
     origin: [],
     body:
-      "**Seeded OFF.** Nothing in this repo asked for it. Delete `enabled: false` to turn " +
-      "it on.\n\n" +
+      "**Seeded at `warn`.** Nothing in this repo asked for it. Add `enabled: false` to " +
+      "switch it off.\n\n" +
       "**The subject is conventional.** `type(scope): description`, with a type from the " +
       "standard set. Measured where this came from: 332 of 333 commits already matched, so " +
       "it holds a rule rather than introducing one.\n\n" +

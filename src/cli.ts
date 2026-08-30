@@ -235,6 +235,7 @@ program
   .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else: no AGENTS.md, no CLAUDE.md`)
   .option("--force", "overwrite existing files, listing them first")
   .option("--dry-run", "show the plan, write nothing")
+  .option("--no-probe", "do not run this repo's own commands; every seeded check starts at warn")
   .option("--json", "print the plan as JSON")
   .action(async (opts: Parameters<typeof runInit>[0]) => {
     process.exitCode = await runInit(opts);

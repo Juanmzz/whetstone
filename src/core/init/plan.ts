@@ -8,7 +8,8 @@ import { DEFINITION_DIR } from "../paths.js";
 import { PRE_PUSH_PATH, renderPrePushHook } from "./hook.js";
 import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
-import { seedChecks } from "./checks.js";
+import { seedChecks, seededChecks, type SeededCheck } from "./checks.js";
+import type { Probes } from "./probe.js";
 import { judgeFor, pointersFor, pointersForAgent } from "./harness.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
@@ -57,6 +58,13 @@ export interface InitOptions {
 
 export interface InitPlanInput {
   /**
+   * What this repo's own commands did when the shell ran them, keyed by check id.
+   * A seeded `block` rests on one of these; absent means nothing was measured.
+   */
+  readonly probes?: Probes;
+  /** Check ids the human unticked on the plan screen. Seeded `enabled: false`. */
+  readonly disabledChecks?: readonly string[];
+  /**
    * Skills already on disk in the TARGET repo, repo-relative (`skills/x.md`).
    * Read by the shell. Absent on a fresh repo, where the shipped set is right.
    */
@@ -80,6 +88,8 @@ export interface InitPlan {
   readonly rules: readonly TriageRule[];
   readonly files: readonly GeneratedFile[];
   readonly copies: readonly CopyRequest[];
+  /** The checks this plan seeds, and what each would do. Offered before writing. */
+  readonly checks: readonly SeededCheck[];
   /** What was inferred, and what init could NOT do. Printed for the human. */
   readonly notes: readonly string[];
 }
@@ -111,6 +121,8 @@ export function planInit(input: InitPlanInput): InitPlan {
   const checkFiles = seedChecks(stack, {
     date,
     include: sourcePaths,
+    ...(input.probes === undefined ? {} : { probes: input.probes }),
+    ...(input.disabledChecks === undefined ? {} : { disabled: input.disabledChecks }),
     ...(options.seedAgentLens === true ? { agentLens: true } : {}),
   });
 
@@ -274,5 +286,12 @@ export function planInit(input: InitPlanInput): InitPlan {
     );
   }
 
-  return { stack, rules, files, copies, notes };
+  const checks = seededChecks(stack, {
+    date,
+    include: sourcePaths,
+    ...(input.probes === undefined ? {} : { probes: input.probes }),
+    ...(options.seedAgentLens === true ? { agentLens: true } : {}),
+  });
+
+  return { stack, rules, files, copies, notes, checks };
 }
