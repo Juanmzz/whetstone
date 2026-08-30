@@ -1,10 +1,14 @@
 /**
  * Whether this branch's pull request body can be read.
  *
- * The I/O around `core/pr/body.ts`. It reads the body from the pull request that
- * exists, and says so plainly when there is none: a branch nobody has opened a
- * pull request for is not a branch with a bad body, and reporting it as one is
- * the confusion hard rule 3 exists to prevent.
+ * The I/O around `core/pr/body.ts`. It reads a draft file when given one, and
+ * otherwise the pull request that exists. It says so plainly when there is
+ * neither: a branch nobody has opened a pull request for is not a branch with a
+ * bad body, and reporting it as one is the confusion hard rule 3 exists to
+ * prevent.
+ *
+ *   npm run check:pr-body -- <file>   before opening it
+ *   npm run check:pr-body             the pull request for this branch
  */
 
 import { execFile } from "node:child_process";
@@ -16,6 +20,12 @@ const run = promisify(execFile);
 
 /** The body, and where it came from. Null when there is no pull request to read. */
 async function bodyOf(): Promise<{ body: string; from: string } | null> {
+  // A DRAFT on disk, before there is a pull request to attach it to.
+  const draft = process.argv[2];
+  if (draft !== undefined && draft !== "") {
+    return { body: await readFile(draft, "utf-8"), from: draft };
+  }
+
   // CI hands it over in the event payload, which needs no auth and no network.
   const event = process.env["GITHUB_EVENT_PATH"];
   if (event !== undefined && event !== "") {
