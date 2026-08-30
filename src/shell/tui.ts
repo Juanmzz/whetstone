@@ -17,22 +17,30 @@ const NAMES: Readonly<Record<string, string>> = {
   return: "return",
   escape: "escape",
   space: "space",
+  backspace: "backspace",
+  delete: "delete",
 };
 // NOT j/k here. Aliasing them to movement makes two letters untypeable in a
 // text field, which cost a `k` in "a task capture app". The reader reports what
 // was pressed; a model that wants vim keys says so itself.
 
+const DEL = "\u007f";
+
 /**
  * A form needs the characters themselves, not just names: in a text field every
  * letter is input, so a letter shortcut is a letter the user cannot type.
+ *
+ * Exported for its own test. It looks like a lookup and is a decision.
  */
-function nameOf(ch: string, key: { name?: string; ctrl?: boolean; shift?: boolean; sequence?: string }): string {
+export function nameOf(ch: string, key: { name?: string; ctrl?: boolean; shift?: boolean; sequence?: string }): string {
   if (key.ctrl === true && key.name !== undefined) return `ctrl-${key.name}`;
   if (key.shift === true && key.name === "tab") return "shift-tab";
   const named = NAMES[key.name ?? ""];
   if (named !== undefined) return named;
-  // A printable character arrives as itself; a named key does not.
-  if (typeof ch === "string" && ch.length === 1 && ch >= " ") return ch;
+  // A printable character arrives as itself; a named key does not. DEL is the
+  // exception the range misses: it is 0x7f, above every letter, and a backspace
+  // key sends it, so the field was typing it instead of deleting.
+  if (typeof ch === "string" && ch.length === 1 && ch >= " " && ch !== DEL) return ch;
   return key.name ?? "";
 }
 
