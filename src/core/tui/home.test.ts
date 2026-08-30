@@ -8,7 +8,7 @@ const facts = (over: Partial<StatusFacts> = {}): StatusFacts => ({
   definitionPresent: true,
   judge: { name: "claude", version: "2.1.245" },
   nodeVersion: "v24.0.0",
-  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },
+  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true, gateInPrePush: null },
   plugin: {
     install: "absent",
     hookRoot: "/repo",
@@ -62,7 +62,7 @@ describe("homeRows — the list says what this repo can actually do", () => {
 
   it("says on the gate row when the pre-push hook is not armed", () => {
     const gate = rowFor("gate", {
-      hooks: { configuredPath: null, whetstoneHooksPresent: true },
+      hooks: { configuredPath: null, whetstoneHooksPresent: true, gateInPrePush: null },
     });
     expect(gate?.note).toMatch(/pre-push/i);
   });

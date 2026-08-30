@@ -11,7 +11,7 @@ const facts: StatusFacts = {
   definitionPresent: true,
   judge: { name: "claude", version: "2.1.245" },
   nodeVersion: "v24.0.0",
-  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },
+  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true, gateInPrePush: null },
   plugin: {
     install: "absent",
     hookRoot: "/repo",

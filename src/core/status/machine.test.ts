@@ -8,7 +8,7 @@ const facts = (over: Partial<StatusFacts> = {}): StatusFacts => ({
   definitionPresent: true,
   judge: { name: "claude", version: "2.1.224" },
   nodeVersion: "v24.19.0",
-  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true },
+  hooks: { configuredPath: ".githooks", whetstoneHooksPresent: true, gateInPrePush: null },
   plugin: {
     install: "enabled",
     hookRoot: "/repos/acme",
@@ -44,7 +44,7 @@ describe("statusEnvelope — what an agent needs before it acts", () => {
     const env = statusEnvelope(
       buildStatusReport(
         facts({
-          hooks: { configuredPath: ".husky/_", whetstoneHooksPresent: false },
+          hooks: { configuredPath: ".husky/_", whetstoneHooksPresent: false, gateInPrePush: null },
           plugin: {
             install: "absent",
             hookRoot: "/repos/acme",
@@ -63,7 +63,7 @@ describe("statusEnvelope — what an agent needs before it acts", () => {
     // `sig-4b3339fb`: the string form reported an armed hook as unarmed. The
     // envelope must not reintroduce the comparison the renderer stopped doing.
     const env = statusEnvelope(
-      buildStatusReport(facts({ hooks: { configuredPath: "/repos/acme/.githooks", whetstoneHooksPresent: true } })),
+      buildStatusReport(facts({ hooks: { configuredPath: "/repos/acme/.githooks", whetstoneHooksPresent: true, gateInPrePush: null } })),
     );
 
     expect(env.enforcement.prePush).toBe(true);
@@ -77,7 +77,7 @@ describe("statusEnvelope — what an agent needs before it acts", () => {
     const env = statusEnvelope(
       buildStatusReport(
         facts({
-          hooks: { configuredPath: ".husky/_", whetstoneHooksPresent: false },
+          hooks: { configuredPath: ".husky/_", whetstoneHooksPresent: false, gateInPrePush: null },
           plugin: {
             install: "absent",
             hookRoot: "/repos/acme",
@@ -97,5 +97,17 @@ describe("statusEnvelope — what an agent needs before it acts", () => {
     const env = statusEnvelope(buildStatusReport(facts({ repoRoot: null, branch: null })));
 
     expect(JSON.parse(JSON.stringify(env))).toEqual(env);
+  });
+});
+
+describe("enforcement.prePush with a chained gate", () => {
+  it("is true when another tool's hook calls the gate", () => {
+    // The machine answer and the human answer come from one predicate on purpose.
+    // An agent reading `--json` was told the repo was unprotected while the gate
+    // was cutting the user's pushes short.
+    const report = buildStatusReport(
+      facts({ hooks: { configuredPath: ".husky/_", whetstoneHooksPresent: false, gateInPrePush: ".husky/pre-push" } }),
+    );
+    expect(statusEnvelope(report).enforcement.prePush).toBe(true);
   });
 });

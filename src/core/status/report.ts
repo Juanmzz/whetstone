@@ -121,7 +121,10 @@ export interface HookFacts {
   readonly configuredPath: string | null;
   /** Whether a `.githooks/` directory actually exists to be pointed at. */
   readonly whetstoneHooksPresent: boolean;
+  /** The hook under the configured path that reaches `wst gate`, or null. */
+  readonly gateInPrePush: string | null;
 }
+
 
 /**
  * Whether the pre-push gate is actually in the path.
@@ -141,6 +144,18 @@ export const hooksArmed = (hooks: HookFacts, repoRoot: string | null): boolean =
   const from = repoRoot ?? ".";
   return resolve(from, hooks.configuredPath) === resolve(from, WHETSTONE_HOOKS_PATH);
 };
+
+/** How the gate reaches a push, if it does. */
+export type PrePushGate = "own" | "chained" | "off";
+
+/**
+ * Owning `core.hooksPath` is one way for the gate to run on a push, and it was
+ * read as the only one. `own` wins over `chained`: git runs the configured path.
+ */
+export function prePushGate(hooks: HookFacts, repoRoot: string | null): PrePushGate {
+  if (hooksArmed(hooks, repoRoot)) return "own";
+  return hooks.gateInPrePush === null ? "off" : "chained";
+}
 
 export interface StatusReport {
   readonly facts: StatusFacts;
@@ -168,7 +183,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   // A gate that only runs when invoked is a gate that will be forgotten. Always a
   // warning, never a problem: a fresh clone is not broken, it is just unarmed — and
   // a repo that deliberately uses husky is not broken either.
-  if (!hooksArmed(facts.hooks, facts.repoRoot)) {
+  if (prePushGate(facts.hooks, facts.repoRoot) === "off") {
     const { configuredPath, whetstoneHooksPresent } = facts.hooks;
 
     if (configuredPath !== null) {
@@ -302,6 +317,20 @@ function freshSignalsRow(fresh: FreshSignals): string {
     : `${fresh.count} fresh ${from} · \`wst retro\` has something to work on`;
 }
 
+/** Names the owner when it is not us, so "NOT active" cannot read as unguarded. */
+function prePushRow(facts: StatusFacts): string {
+  switch (prePushGate(facts.hooks, facts.repoRoot)) {
+    case "own":
+      return "active";
+    case "chained":
+      return `active (chained from \`${facts.hooks.gateInPrePush ?? ""}\`)`;
+    default:
+      return facts.hooks.configuredPath === null
+        ? "NOT active"
+        : `NOT active (\`${facts.hooks.configuredPath}\` owns core.hooksPath)`;
+  }
+}
+
 export function renderStatusReport(
   report: StatusReport,
   options: { readonly quiet?: boolean } = {},
@@ -321,13 +350,7 @@ export function renderStatusReport(
     `  node      ${facts.nodeVersion}`,
     // Names the owner when it is not us. "NOT active" alone reads as "nothing is
     // guarding this repo", which is the opposite of the truth on a husky repo.
-    `  pre-push  ${
-      hooksArmed(facts.hooks, facts.repoRoot)
-        ? "active"
-        : facts.hooks.configuredPath !== null
-          ? `NOT active (\`${facts.hooks.configuredPath}\` owns core.hooksPath)`
-          : "NOT active"
-    }`,
+    `  pre-push  ${prePushRow(facts)}`,
     `  plugin    ${pluginRow(facts.plugin)}`,
     ...(facts.freshSignals === undefined
       ? []

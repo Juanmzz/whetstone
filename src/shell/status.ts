@@ -6,7 +6,7 @@
 import { execFile } from "node:child_process";
 import { access } from "node:fs/promises";
 import { promisify } from "node:util";
-import { join } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 import { createGitAdapter, gitEnv } from "./git.js";
 import { exists } from "./fs.js";
 import { readFile } from "node:fs/promises";
@@ -18,6 +18,7 @@ import { describePlugin, pluginHookRoot } from "./plugin.js";
 import { readCursorResult } from "./retro.js";
 import { resolveMemory } from "./memory.js";
 import { signalsSince } from "../core/retro/cluster.js";
+import { mentionsGate, sourcedPaths } from "../core/status/prepush.js";
 import {
   buildStatusReport,
   WHETSTONE_HOOKS_PATH,
@@ -38,6 +39,53 @@ async function hooksPath(cwd: string): Promise<string | null> {
     const { stdout } = await promisify(execFile)("git", ["config", "--get", "core.hooksPath"], { cwd, env: gitEnv() });
     const value = stdout.trim();
     return value === "" ? null : value;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The hook that reaches `wst gate`, repo-relative, or null when none does.
+ *
+ * Searches the configured `pre-push`, its sibling one level up (husky's layout)
+ * and the default `.git/hooks/pre-push`, then what each of those sources.
+ *
+ * READ as text, never executed. Running someone's pre-push hook to answer a
+ * status question is not a trade `status` gets to make.
+ */
+async function gateInPrePush(repoRoot: string, configuredPath: string | null): Promise<string | null> {
+  const hooksDir = configuredPath === null ? ".git/hooks" : relativeToRepo(repoRoot, configuredPath);
+  if (hooksDir === null) return null;
+
+  const parent = hooksDir.includes("/") ? hooksDir.slice(0, hooksDir.lastIndexOf("/")) : null;
+  const queue = [`${hooksDir}/pre-push`, ...(parent === null ? [] : [`${parent}/pre-push`]), ".git/hooks/pre-push"];
+
+  const seen = new Set<string>();
+  // Three levels covers husky's shim, its `h`, and the hook `h` runs.
+  for (let hop = 0; hop < 3 && queue.length > 0; hop++) {
+    const wave = queue.splice(0, queue.length);
+    for (const path of wave) {
+      if (seen.has(path)) continue;
+      seen.add(path);
+      const text = await readIfPresent(join(repoRoot, path));
+      if (text === null) continue;
+      if (mentionsGate(text)) return path;
+      queue.push(...sourcedPaths(text, path));
+    }
+  }
+  return null;
+}
+
+/** `core.hooksPath` as a repo-relative path, or null when it points outside. */
+function relativeToRepo(repoRoot: string, configured: string): string | null {
+  const abs = isAbsolute(configured) ? configured : join(repoRoot, configured);
+  const rel = relative(repoRoot, abs);
+  return rel === "" || rel.startsWith("..") || isAbsolute(rel) ? null : rel;
+}
+
+async function readIfPresent(path: string): Promise<string | null> {
+  try {
+    return await readFile(path, "utf-8");
   } catch {
     return null;
   }
@@ -139,6 +187,7 @@ export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusR
   const judge = await resolveJudge(definitionRoot(repoRoot ?? cwd));
   const [branch, judgeInfo] = await Promise.all([git.currentBranch(), judge.describe()]);
 
+  const configured = await hooksPath(repoRoot ?? cwd);
   const hookRoot = pluginHookRoot(cwd);
   const root = definitionRoot(repoRoot ?? cwd);
   const definitionPresent = await exists(root);
@@ -149,8 +198,9 @@ export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusR
     definitionPresent,
     judge: judgeInfo,
     hooks: {
-      configuredPath: await hooksPath(repoRoot ?? cwd),
+      configuredPath: configured,
       whetstoneHooksPresent: await exists(join(repoRoot ?? cwd, WHETSTONE_HOOKS_PATH)),
+      gateInPrePush: await gateInPrePush(repoRoot ?? cwd, configured),
     },
     plugin: {
       install: await describePlugin(),

@@ -4,7 +4,7 @@
  * PURE. A report in, a JSON-safe object out.
  */
 
-import { hooksArmed, type PluginInstall, type StatusReport } from "./report.js";
+import { prePushGate, type PluginInstall, type StatusReport } from "./report.js";
 
 export interface StatusEnvelope {
   /** Whether the repo is in a state the other commands can work from. */
@@ -37,11 +37,9 @@ export function statusEnvelope(report: StatusReport): StatusEnvelope {
     problems: [...report.problems],
     warnings: [...report.warnings],
     enforcement: {
-      // `hooksArmed`, not a string compare. `sig-4b3339fb`: comparing the raw
-      // `core.hooksPath` reported a demonstrably firing hook as unarmed, and the
-      // renderer stopped doing it. Reusing the predicate is how the two answers
-      // cannot drift.
-      prePush: hooksArmed(facts.hooks, facts.repoRoot),
+      // One predicate, not a string compare (`sig-4b3339fb`). What an agent asked
+      // is whether a push is gated, so a chained gate answers true.
+      prePush: prePushGate(facts.hooks, facts.repoRoot) !== "off",
       plugin: facts.plugin.install,
     },
     repo: {
