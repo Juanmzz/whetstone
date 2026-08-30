@@ -435,3 +435,60 @@ describe("the language a repo is actually written in", () => {
     expect(detectStack(facts({ files: ["Cargo.toml"] })).declared.stack).toBe("Rust");
   });
 });
+
+describe("the strict-path candidates a repo offers without being asked", () => {
+  const tree = (...files: string[]): RepoFacts => facts({ files });
+
+  it("names the directories whose names say a bug there is expensive", () => {
+    // The question arrives blank with a billing example that exists in no repo,
+    // and it is the one that asks for the most memory. Proposing candidates does
+    // not decide anything: which of them may not break is still a human's call.
+    const found = detectStack(
+      tree("src/auth/login.ts", "src/billing/invoice.ts", "src/ui/button.tsx"),
+    ).declared.strictCandidates;
+
+    expect(found).toContain("src/auth/** : authentication and sessions");
+    expect(found).toContain("src/billing/** : moves money");
+    expect(found.join(" ")).not.toContain("src/ui");
+  });
+
+  it("names each directory once, however many files it holds", () => {
+    const found = detectStack(
+      tree("src/auth/a.ts", "src/auth/b.ts", "src/auth/c.ts"),
+    ).declared.strictCandidates;
+
+    expect(found).toHaveLength(1);
+  });
+
+  it("finds the other three vocabularies, not just the two obvious ones", () => {
+    const found = detectStack(
+      tree("db/migrations/001.sql", "src/secrets/vault.ts", "server/permissions/acl.go"),
+    ).declared.strictCandidates.join("\n");
+
+    expect(found).toMatch(/migrations\/\*\* : changes stored data/);
+    expect(found).toMatch(/secrets\/\*\* : secrets and credentials/);
+    expect(found).toMatch(/permissions\/\*\* : decides who may do what/);
+  });
+
+  it("offers nothing rather than something, when nothing matches", () => {
+    expect(detectStack(tree("src/a.ts", "README.md")).declared.strictCandidates).toEqual([]);
+  });
+
+  it("stops well short of a wall of rows", () => {
+    const many = Array.from({ length: 40 }, (_, i) => `pkg/auth${String(i)}/a.ts`);
+    expect(detectStack(tree(...many)).declared.strictCandidates.length).toBeLessThanOrEqual(8);
+  });
+});
+
+describe("the purpose a repo already declares", () => {
+  it("reads `description` from package.json, which is a declaration", () => {
+    const stack = detectStack(
+      facts({ packageJson: { description: "Ships invoices to customers." } as never }),
+    );
+    expect(stack.declared.purpose).toBe("Ships invoices to customers.");
+  });
+
+  it("stays null when the repo declares none, rather than inventing one", () => {
+    expect(detectStack(facts()).declared.purpose).toBeNull();
+  });
+});

@@ -22,7 +22,7 @@ const stack: StackFacts = {
   commands: { test: "npm run test", typecheck: null, lint: "npm run lint" },
   hasTests: true,
   mutating: [],
-  declared: { sourceGlobs: [], stack: null },
+  declared: { sourceGlobs: [], stack: null, strictCandidates: [], purpose: null },
   evidence: ["package manager: npm (from package-lock.json)"],
 };
 

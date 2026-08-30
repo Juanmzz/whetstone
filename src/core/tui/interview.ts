@@ -54,12 +54,17 @@ const NONE: InterviewAction = { kind: "none" };
  */
 function seed(question: InitQuestion): Field {
   const value = question.defaultAnswer;
-  if (value === null || value === "") return EMPTY;
+  const offered = question.candidates ?? [];
+  if (value === null || value === "") {
+    // Offered, not answered: a candidate is a shortlist the human ticks, where a
+    // default is an answer they untick.
+    return offered.length === 0 ? EMPTY : { ...EMPTY, rows: [...offered] };
+  }
   if (question.kind === "paths") {
-    // Every candidate is a row AND ticked. The repo proposed them; a human unticks
+    // Every default is a row AND ticked. The repo proposed them; a human unticks
     // what does not belong rather than retyping around it.
     const rows = value.split("\n").map((l) => l.trim()).filter((l) => l !== "");
-    return { ...EMPTY, rows, picked: rows };
+    return { ...EMPTY, rows: [...rows, ...offered.filter((c) => !rows.includes(c))], picked: rows };
   }
   if (question.kind === "flags") {
     const picked = value.split(",").map((v) => v.trim()).filter((v) => v !== "");
@@ -196,21 +201,26 @@ export function pressIn(s: InterviewState, key: string): { state: InterviewState
     return { state: withField(s, { ...field(s), draft: field(s).draft.slice(0, -1) }), action: NONE };
   }
 
-  // ONE meaning, everywhere: enter goes to the next question. It used to add a
-  // line here, advance undocumented on a checkbox screen, and run a command in
-  // the launcher, which is three meanings in three consecutive screens of one
-  // flow. Adding a line is its own key now, and the legend says so.
-  // It COMMITS what is being typed on the way out. The legend says `enter next`
-  // on the same screen, and dropping the draft silently is how a source path went
-  // missing and the repo got a `.wst/` that governed no file.
-  if (key === "return") return { state: step(commit(s), 1), action: NONE };
+  // ONE meaning: enter commits what you typed. What that leaves you looking at
+  // depends on whether there was anything to commit, which is the list idiom
+  // everywhere else. On a list with a draft it adds the line and keeps you in the
+  // list; on an empty line there is nothing to add, so it moves on; on the last
+  // question there is nowhere to move on to, so it writes.
+  //
+  // It used to mean three things across three consecutive screens: advance, do
+  // nothing at all on the last question while the legend still said `enter next`,
+  // and confirm on the plan. Adding a line was `ctrl-n`, which is not what anyone
+  // presses after typing an item into a list.
+  if (key === "return" || key === "enter" || key === "ctrl-n") {
+    if (q.kind === "paths" && field(s).draft.trim() !== "") {
+      return { state: commit(s), action: NONE };
+    }
+    const committed = commit(s);
+    if (s.at < s.questions.length - 1) return { state: step(committed, 1), action: NONE };
 
-  // `ctrl-n` and not `ctrl-enter`: measured, a terminal sends the same byte for
-  // enter and ctrl-enter, so the second is a key nobody can press. `enter` here
-  // is the linefeed some terminals send for shift-enter, which costs nothing to
-  // accept and works where it exists.
-  if ((key === "ctrl-n" || key === "enter") && q.kind === "paths") {
-    return { state: commit(s), action: NONE };
+    const complaint = missing(committed);
+    if (complaint !== null) return { state: { ...committed, complaint, at: 0 }, action: NONE };
+    return { state: committed, action: { kind: "write", answers: answersOf(committed) } };
   }
 
   const ch = charOf(key);
@@ -256,12 +266,13 @@ export function renderInterview(s: InterviewState): readonly string[] {
     lines.push("", "  DRAFTED by the judge from what it could see. Check it.");
   }
   if (s.complaint !== null) lines.push("", `  ${s.complaint}`);
-  lines.push("", `  ${keysFor(q)} · enter next · shift-tab back · ctrl-d write · esc quit`);
+  const onward = s.at < s.questions.length - 1 ? "enter next" : "enter write";
+  lines.push("", `  ${keysFor(q)} · ${onward} · shift-tab back · ctrl-d write · esc quit`);
   return lines;
 }
 
 function keysFor(q: InitQuestion): string {
   if (q.kind === "flags") return "↑↓ move · space toggle";
-  if (q.kind === "paths") return "↑↓ move · space toggle · type + ctrl-n adds one";
+  if (q.kind === "paths") return "↑↓ move · space toggle · type + enter adds one";
   return "type";
 }

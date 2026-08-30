@@ -20,7 +20,9 @@ describe("moving between questions", () => {
   it("goes forward and back, and stops at the ends", () => {
     expect(at(START(), ["return"]).at).toBe(1);
     expect(at(START(), ["shift-tab"]).at).toBe(0);
-    const last = at(START(), Array<string>(QUESTIONS.length + 3).fill("return"));
+    // Stops at the last question rather than wrapping. Enter THERE writes, which
+    // is the next test's business, not this one's.
+    const last = at(START(), Array<string>(QUESTIONS.length - 1).fill("return"));
     expect(last.at).toBe(QUESTIONS.length - 1);
   });
 });
@@ -185,14 +187,27 @@ describe("one key, one meaning", () => {
     expect(pressIn(s, "return").state.at).toBe(1);
   });
 
-  it("adds a line with ctrl-n, and says so", () => {
+  it("adds a line with enter, which is what a list does everywhere else", () => {
+    // It was `ctrl-n`, and enter advanced. Typing an item and pressing enter is
+    // what anyone does in a list, and here it left the question instead.
     const s = openInterview([ask("paths", "source-paths"), ask("text")]);
     const typed = ["a", "b"].reduce((acc, k) => pressIn(acc, k).state, s);
 
-    const added = pressIn(typed, "ctrl-n").state;
+    const added = pressIn(typed, "return");
 
-    expect(answersOf(added).sourcePaths).toEqual(["ab"]);
-    expect(renderInterview(added).join("\n")).toMatch(/ctrl-n/);
+    expect(answersOf(added.state).sourcePaths).toEqual(["ab"]);
+    expect(added.state.at).toBe(0);
+    expect(renderInterview(added.state).join("\n")).toMatch(/enter adds one/);
+  });
+
+  it("moves on when enter is pressed with nothing typed, since there is nothing to add", () => {
+    const s = openInterview([ask("paths", "source-paths"), ask("text")]);
+    const typed = ["a", "b"].reduce((acc, k) => pressIn(acc, k).state, s);
+
+    const after = pressIn(pressIn(typed, "return").state, "return").state;
+
+    expect(after.at).toBe(1);
+    expect(answersOf(after).sourcePaths).toEqual(["ab"]);
   });
 
   it("documents every key that does something, on every screen", () => {
@@ -204,7 +219,7 @@ describe("one key, one meaning", () => {
     const also: Record<string, readonly string[]> = {
       text: [],
       flags: ["space"],
-      paths: ["space", "ctrl-n"],
+      paths: ["space"],
     };
     for (const kind of ["text", "flags", "paths"] as const) {
       const legend = renderInterview(openInterview([ask(kind), ask("text")])).at(-1) ?? "";
@@ -273,14 +288,16 @@ describe("a list question you tick rather than type", () => {
     expect(answersOf(added).sourcePaths).toContain("e2e/**");
   });
 
-  it("does not lose what was typed when enter advances the question", () => {
+  it("does not lose what was typed, whichever thing enter does next", () => {
     // The bug: `enter` called `step` and the pending draft went nowhere, while
-    // the legend on that exact screen said `enter next`.
+    // the legend on that exact screen said `enter next`. It now adds the line and
+    // stays; a second enter, with nothing left to add, moves on.
     const typed = ["e", "2", "e"].reduce((s, k) => pressIn(s, k).state, open());
-    const next = pressIn(typed, "return").state;
+    const added = pressIn(typed, "return").state;
 
-    expect(next.at).toBe(1);
-    expect(answersOf(next).sourcePaths).toContain("e2e");
+    expect(added.at).toBe(0);
+    expect(answersOf(added).sourcePaths).toContain("e2e");
+    expect(pressIn(added, "return").state.at).toBe(1);
   });
 
   it("says where each candidate came from, so a wrong one is visible", () => {
@@ -326,5 +343,71 @@ describe("a drafted checkbox screen opens with the boxes already ticked", () => 
 
   it("ignores a flag the screen does not offer, rather than ticking a row that is not there", () => {
     expect(answersOf(openInterview([risk("money,invented")])).risk.money).toBe(true);
+  });
+});
+
+describe("candidates the repo offered but did not answer", () => {
+  const tail = (): InitQuestion => ({
+    id: "stack",
+    prompt: "what",
+    why: "because",
+    kind: "text",
+    options: [],
+    defaultAnswer: null,
+    defaultFrom: null,
+  });
+
+  const withCandidates = () =>
+    openInterview([
+      {
+        id: "strict-paths",
+        prompt: "which paths",
+        why: "because",
+        kind: "paths" as const,
+        options: [],
+        defaultAnswer: null,
+        defaultFrom: null,
+        candidates: ["src/auth/** : authentication and sessions", "src/billing/** : moves money"],
+      },
+      tail(),
+    ]);
+
+  it("shows them as rows, and ticks none of them", () => {
+    // The question's own help says which code is dangerous is a human judgement.
+    // Offering the shortlist spares the recall; ticking it would take the call.
+    const s = withCandidates();
+    const screen = renderInterview(s).join("\n");
+
+    expect(screen).toContain("[ ] src/auth/**");
+    expect(screen).toContain("[ ] src/billing/**");
+    expect(answersOf(s).strictPaths).toEqual([]);
+  });
+
+  it("answers with the one that was ticked, and its reason", () => {
+    const ticked = pressIn(withCandidates(), "space").state;
+
+    expect(answersOf(ticked).strictPaths).toEqual([
+      { glob: "src/auth/**", reason: "authentication and sessions" },
+    ]);
+  });
+
+  it("keeps a drafted answer ticked and the candidates below it unticked", () => {
+    const both = openInterview([
+      {
+        id: "strict-paths",
+        prompt: "which paths",
+        why: "because",
+        kind: "paths" as const,
+        options: [],
+        defaultAnswer: "src/pay/** : moves money",
+        defaultFrom: "draft" as const,
+        candidates: ["src/auth/** : authentication and sessions"],
+      },
+      tail(),
+    ]);
+    const screen = renderInterview(both).join("\n");
+
+    expect(screen).toContain("[x] src/pay/**");
+    expect(screen).toContain("[ ] src/auth/**");
   });
 });

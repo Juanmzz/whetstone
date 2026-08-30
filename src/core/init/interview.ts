@@ -39,6 +39,12 @@ export interface InitQuestion {
    * drafted, since the code itself says no file states them.
    */
   readonly defaultFrom: "repo" | "draft" | null;
+  /**
+   * Rows offered but NOT ticked. A `paths` question's default is an answer the
+   * repo proposed and a human unticks; these are the opposite, a shortlist the
+   * human ticks. Empty everywhere but `strict-paths`.
+   */
+  readonly candidates?: readonly string[];
 }
 
 /**
@@ -94,7 +100,12 @@ const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
   ["safetyCritical", "safety-critical: physical control, medical, anything that can hurt someone"],
 ];
 
-const NOTHING_DECLARED: DeclaredAnswers = Object.freeze({ sourceGlobs: [], stack: null });
+const NOTHING_DECLARED: DeclaredAnswers = Object.freeze({
+  sourceGlobs: [],
+  stack: null,
+  strictCandidates: [],
+  purpose: null,
+});
 
 /**
  * A draft somebody else wrote, for the fields no repo can declare.
@@ -142,8 +153,8 @@ export function buildInterview(
       why: "Intent is not on disk. A README describes what exists; this asks what it is FOR.",
       kind: "text",
       options: [],
-      defaultAnswer: drafted.purpose ?? null,
-      defaultFrom: drafted.purpose === undefined ? null : "draft",
+      defaultAnswer: drafted.purpose ?? declared.purpose ?? null,
+      defaultFrom: from(drafted.purpose, declared.purpose),
     },
     {
       id: "risk",
@@ -180,13 +191,14 @@ export function buildInterview(
         "reason it earns that (`src/billing/** : moves money`).",
       why:
         "Which part of the code is dangerous is a judgement about what you are willing to " +
-        "lose. No layout states it.",
+        "lose. No layout states it, so anything offered below arrives unticked.",
       kind: "paths",
       options: [],
       defaultAnswer: blank(
         (drafted.strictPaths ?? []).map((p) => `${p.glob} : ${p.reason}`).join("\n"),
       ),
       defaultFrom: (drafted.strictPaths ?? []).length === 0 ? null : "draft",
+      candidates: declared.strictCandidates,
     },
     {
       id: "stack",

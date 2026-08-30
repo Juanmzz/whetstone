@@ -191,6 +191,8 @@ describe("buildInterview — a declared fact arrives pre-filled, an inferred one
   const declared = (over: Partial<DeclaredAnswers> = {}): DeclaredAnswers => ({
     sourceGlobs: [],
     stack: null,
+    strictCandidates: [],
+    purpose: null,
     ...over,
   });
 
@@ -242,7 +244,7 @@ describe("buildInterview — a declared fact arrives pre-filled, an inferred one
  * drafted, and those are the three where the human gate matters most.
  */
 describe("buildInterview — a reading and a guess are labelled apart", () => {
-  const declared = { sourceGlobs: ["apps/*/**"], stack: "TypeScript" };
+  const declared = { sourceGlobs: ["apps/*/**"], stack: "TypeScript", strictCandidates: [], purpose: null };
   const at = (id: string, drafted = {}) =>
     buildInterview(declared, drafted).find((q) => q.id === id);
 

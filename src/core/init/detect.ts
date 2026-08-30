@@ -11,6 +11,7 @@
 
 export interface PackageJson {
   readonly name?: unknown;
+  readonly description?: unknown;
   readonly packageManager?: unknown;
   /** npm/yarn take an array; pnpm and yarn's older form take `{ packages: [] }`. */
   readonly workspaces?: unknown;
@@ -75,6 +76,14 @@ export interface DeclaredAnswers {
   readonly sourceGlobs: readonly string[];
   /** Language and runtime, from the files that name them. Null when nothing does. */
   readonly stack: string | null;
+  /**
+   * Directories whose NAME says a bug there is expensive, as `glob : reason`
+   * lines. Offered UNTICKED: which of them may not break is a human's judgement,
+   * and this only spares them the recall.
+   */
+  readonly strictCandidates: readonly string[];
+  /** `description` from package.json. A declaration, so adr-0016 allows it. */
+  readonly purpose: string | null;
 }
 
 /**
@@ -314,6 +323,41 @@ function sourceGlobFor(pattern: string, files: readonly string[]): string {
   return `${base}/${files.some((f) => hasSrc.test(f)) ? "src/**" : "**"}`;
 }
 
+/**
+ * Directory names that say what a bug there would cost, and the words for it.
+ *
+ * The strict-paths question arrives blank with a billing example that exists in
+ * no real repo, and it is the one that asks for the most memory. Its own help
+ * says which part of the code is dangerous is a human judgement. It is, and
+ * proposing candidates does not take that judgement: they arrive UNTICKED.
+ */
+const DANGEROUS: readonly (readonly [RegExp, string])[] = [
+  [/^(auth|authn|authentication|login|session|sessions|oauth)$/i, "authentication and sessions"],
+  [/^(secret|secrets|token|tokens|credential|credentials|keys|crypto)$/i, "secrets and credentials"],
+  [/^(billing|payment|payments|invoice|invoices|checkout|pricing|ledger)$/i, "moves money"],
+  [/^(migration|migrations|schema)$/i, "changes stored data"],
+  [/^(permission|permissions|acl|allowlist|policy|policies|roles)$/i, "decides who may do what"],
+];
+
+/** Enough to read at a glance. A wall of rows is the same as no offer at all. */
+const MAX_CANDIDATES = 8;
+
+function strictCandidatesIn(files: readonly string[]): string[] {
+  const found = new Map<string, string>();
+  for (const file of files) {
+    const parts = file.split("/");
+    // Directories only, and not too deep to be a component of this project.
+    for (const [depth, part] of parts.slice(0, -1).entries()) {
+      if (depth > 3) break;
+      const matched = DANGEROUS.find(([pattern]) => pattern.test(part));
+      if (matched === undefined) continue;
+      const dir = parts.slice(0, depth + 1).join("/");
+      if (!found.has(dir)) found.set(dir, matched[1]);
+    }
+  }
+  return [...found].slice(0, MAX_CANDIDATES).map(([dir, why]) => `${dir}/** : ${why}`);
+}
+
 /** Files that NAME a language, as opposed to files written in one. */
 const DECLARES_LANGUAGE: readonly (readonly [RegExp, string])[] = [
   [/(^|\/)tsconfig\.json$/, "TypeScript"],
@@ -404,5 +448,13 @@ function declaredAnswers(
   const parts = [...languages];
   if (node !== null) parts.push(`Node ${node}`);
 
-  return { sourceGlobs, stack: parts.length === 0 ? null : parts.join(", ") };
+  const purpose = str(facts.packageJson?.description);
+  if (purpose !== null) note("purpose: declared", "package.json description");
+
+  return {
+    sourceGlobs,
+    stack: parts.length === 0 ? null : parts.join(", "),
+    strictCandidates: strictCandidatesIn(files),
+    purpose,
+  };
 }

@@ -186,7 +186,7 @@ describe("seedChecks — what init may not assume about a repo's own scripts", (
     hasTests: true,
     mutating: [],
     evidence: [],
-    declared: { sourceGlobs: [], stack: null },
+    declared: { sourceGlobs: [], stack: null, strictCandidates: [], purpose: null },
     ...over,
   });
   const fileFor = (

@@ -39,11 +39,76 @@ export interface HomeRow {
   readonly available: boolean;
 }
 
+/** The one thing this repo should do now, and why it is that one. */
+export interface Lead {
+  readonly command: HomeCommand;
+  /** One line naming the state that chose it. Shown above the action. */
+  readonly because: string;
+  /** The imperative on the action line. */
+  readonly what: string;
+}
+
 export interface HomeState {
   readonly rows: readonly HomeRow[];
   readonly cursor: number;
   readonly branch: string | null;
   readonly judge: string;
+  readonly repo: string | null;
+  readonly armed: boolean;
+  readonly lead: Lead;
+  /** Fresh signals worth a retro, or null. Decides whether `r` does anything. */
+  readonly fresh: number | null;
+  /** `now` is the one action; `all` is the index every row lives in. */
+  readonly view: "now" | "all";
+}
+
+/**
+ * What to do now, and nothing else.
+ *
+ * The eight-row index answers "what can this tool do", which is a question you
+ * ask once. A person opening `wst` in a repo is asking what THIS repo needs, and
+ * eight equal rows make them work that out for themselves every time. The index
+ * is still there, one key away: nothing is hidden, it is subordinated.
+ */
+export function leadFor(report: StatusReport): Lead {
+  const { facts } = report;
+  const what = (command: HomeCommand): string =>
+    SPECS.find((s) => s.command === command)?.what ?? "";
+
+  if (facts.repoRoot === null) {
+    return { command: "status", because: "not a git repository", what: what("status") };
+  }
+  if (!facts.definitionPresent) {
+    return {
+      command: "init",
+      because: `nothing here yet: no ${DEFINITION_DIR}/ to gate against`,
+      what: what("init"),
+    };
+  }
+
+  const dirty = facts.uncommitted ?? [];
+  if (dirty.length > 0) {
+    const n = String(dirty.length);
+    return {
+      command: "gate",
+      because: `${n} uncommitted file(s)`,
+      what: what("gate"),
+    };
+  }
+
+  const fresh = freshCount(facts);
+  if (fresh !== null) {
+    return { command: "retro", because: `${String(fresh)} new signal(s) since the last retro`, what: what("retro") };
+  }
+
+  return { command: "status", because: "nothing waiting", what: what("status") };
+}
+
+/** Signals a retro has not seen, or null when there is nothing to cluster. */
+function freshCount(facts: StatusReport["facts"]): number | null {
+  const fresh = facts.freshSignals;
+  if (fresh === undefined || fresh.kind !== "counted" || fresh.count === 0) return null;
+  return fresh.count;
 }
 
 export type HomeAction =
@@ -205,11 +270,19 @@ function noteFor(command: HomeCommand, report: StatusReport): string | null {
  * describing a different repo from the one the rows were built for.
  */
 export function openHome(report: StatusReport): HomeState {
+  const root = report.facts.repoRoot;
   return {
     rows: homeRows(report),
     cursor: 0,
     branch: report.facts.branch,
     judge: report.facts.judge.name,
+    repo: root === null ? null : (root.split("/").at(-1) ?? null),
+    // `!== "off"`, not `hooksArmed`: a gate chained from husky runs on every
+    // push, and the header saying otherwise is the false negative #166 fixed.
+    armed: prePushGate(report.facts.hooks, report.facts.repoRoot) !== "off",
+    lead: leadFor(report),
+    fresh: freshCount(report.facts),
+    view: "now",
   };
 }
 
@@ -223,9 +296,22 @@ function move(state: HomeState, delta: number): HomeState {
 export function pressHome(state: HomeState, key: string): { state: HomeState; action: HomeAction } {
   // Vim keys are safe here and not in the interview: no row is a text field, so
   // no letter is a character somebody is trying to type.
+  if (key === "q" || key === "escape") return { state, action: { kind: "quit" } };
+  if (key === "?") {
+    return { state: { ...state, view: state.view === "now" ? "all" : "now", cursor: 0 }, action: NONE };
+  }
+  if (key === "r") {
+    return state.fresh === null ? { state, action: NONE } : { state, action: { kind: "run", command: "retro" } };
+  }
+
+  if (state.view === "now") {
+    return key === "return"
+      ? { state, action: { kind: "run", command: state.lead.command } }
+      : { state, action: NONE };
+  }
+
   if (key === "up" || key === "k") return { state: move(state, -1), action: NONE };
   if (key === "down" || key === "j") return { state: move(state, 1), action: NONE };
-  if (key === "q" || key === "escape") return { state, action: { kind: "quit" } };
 
   if (key === "return") {
     const row = state.rows[state.cursor];
@@ -238,13 +324,30 @@ export function pressHome(state: HomeState, key: string): { state: HomeState; ac
 
 const point = (on: boolean): string => (on ? "›" : " ");
 
-export function renderHome(state: HomeState): readonly string[] {
-  // No name here: `banner.ts` draws it beside the stone, a row up and bigger.
-  const lines: string[] = [
+function header(state: HomeState): string[] {
+  const where = [state.repo, state.branch ?? "(no branch)", `judge ${state.judge}`]
+    .filter((p) => p !== null)
+    .join(" · ");
+  return [
     "",
-    `  ${state.branch ?? "(no branch)"} · judge ${state.judge}`,
+    `  ${where}`,
+    `  ${state.armed ? "gate armed on every push" : "gate runs only when you ask"}`,
     "",
   ];
+}
+
+export function renderHome(state: HomeState): readonly string[] {
+  // No name here: `banner.ts` draws it beside the stone, a row up and bigger.
+  const lines: string[] = header(state);
+
+  if (state.view === "now") {
+    lines.push(`  ${state.lead.because}`, `  → ${state.lead.what.padEnd(44)} enter`, "");
+    if (state.fresh !== null && state.lead.command !== "retro") {
+      lines.push(`  ${String(state.fresh)} new signal(s) since the last retro`.padEnd(48) + "r");
+    }
+    lines.push("  everything else".padEnd(48) + "?", "", "  q quits");
+    return lines;
+  }
 
   state.rows.forEach((row, i) => {
     const here = i === state.cursor;
@@ -261,6 +364,6 @@ export function renderHome(state: HomeState): readonly string[] {
     for (const line of row.detail) lines.push(`             ${line}`);
   });
 
-  lines.push("", "  ↑↓ move · enter run · q quit");
+  lines.push("", "  ↑↓ move · enter run · ? back · q quit");
   return lines;
 }
