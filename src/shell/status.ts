@@ -92,6 +92,35 @@ async function readIfPresent(path: string): Promise<string | null> {
 }
 
 /**
+ * Repo-relative paths with uncommitted changes, tracked or not.
+ *
+ * `--porcelain=v1 -z`: NUL-separated, so a path with a space or a quote in it
+ * survives, which `git status --porcelain` on its own does not.
+ */
+async function uncommittedIn(cwd: string): Promise<readonly string[]> {
+  try {
+    const { stdout } = await promisify(execFile)(
+      "git",
+      ["status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+      { cwd, env: gitEnv(), maxBuffer: 16 * 1024 * 1024 },
+    );
+    const out: string[] = [];
+    // Each record is `XY <path>`; a rename adds a second NUL-terminated path,
+    // which is the old name and not a change of its own.
+    const records = stdout.split("\0");
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i] ?? "";
+      if (record.length < 4) continue;
+      out.push(record.slice(3));
+      if (record.startsWith("R") || record.startsWith("C")) i++;
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Whether `.wst/` is TRACKED, not merely present.
  *
  * Untracked files do not propagate into git worktrees, so an uncommitted `.wst/` is
@@ -210,6 +239,7 @@ export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusR
       definitionTracked: await definitionTracked(repoRoot ?? cwd),
     },
     nodeVersion: process.version,
+    uncommitted: await uncommittedIn(repoRoot ?? cwd),
     agentFiles: await agentFilesIn(repoRoot ?? cwd),
     missingTools: await missingTools(repoRoot ?? cwd),
     // Omitted, not "unknown", without a `.wst/`: there is no retro to be behind.

@@ -39,6 +39,11 @@ export interface StatusFacts {
   /** Absent when the caller did not gather it, which is not the same as zero. */
   readonly freshSignals?: FreshSignals;
   /**
+   * Repo-relative paths with uncommitted changes. Omitted where the caller did
+   * not look; empty means it looked and the tree is clean.
+   */
+  readonly uncommitted?: readonly string[];
+  /**
    * The files an agent reads on arrival. Omitted where the caller did not look.
    *
    * `status` reported the gate, the plugin and the judge, and said nothing about

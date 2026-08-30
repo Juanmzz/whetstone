@@ -159,7 +159,7 @@ program
   )
   .option("--dry-run", "print the line that would be appended, write nothing")
   // Two flags for one claim, and the command refuses either alone (adr-0035).
-  .option("--quote <words>", "the human's OWN words, verbatim. Drafts; writes nothing on its own")
+  .option("--quote <words>", "the human's OWN words, verbatim. Still needs a detail, and writes nothing without --confirmed")
   .option("--confirmed", "the human said yes to the quoted draft: writes it as `human-quoted`")
   .option(
     "--from-json <file>",
