@@ -7,6 +7,8 @@ enforces it with a deterministic engine that calls a model only where judgment i
 irreducible. The exit code is the enforcement: it runs at push and in CI, so it does
 not depend on an agent choosing to cooperate.
 
+[What it is, on one page](https://juanmzz.github.io/whetstone/)
+
 ## Install
 
 ```bash
