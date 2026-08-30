@@ -22,7 +22,10 @@ import { retirementMessage } from "./deprecations.js";
  * Gemini CLI stopped serving individual accounts. A config still naming it gets
  * a migration message from `deprecations.ts` rather than an enum error.
  */
-export const AGENTS = ["claude", "antigravity"] as const;
+export const AGENTS = ["claude", "antigravity", "codex"] as const;
+
+/** What an unstated `agent:` means, in one place rather than three. */
+export const DEFAULT_AGENT = "claude" as const;
 export type Agent = (typeof AGENTS)[number];
 
 /**
@@ -33,7 +36,7 @@ export const BACKENDS = ["files"] as const;
 export type Backend = (typeof BACKENDS)[number];
 
 export const ConfigSchema = z.object({
-  agent: z.enum(AGENTS).default("claude"),
+  agent: z.enum(AGENTS).default(DEFAULT_AGENT),
   backend: z.enum(BACKENDS).default("files"),
 });
 

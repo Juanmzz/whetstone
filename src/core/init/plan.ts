@@ -2,20 +2,20 @@
  * `planInit` — the whole of Layer 1 as one pure function.
  */
 
+import { DEFAULT_AGENT } from "../config/schema.js";
 import type { TriageRule } from "../contracts.js";
 import { DEFINITION_DIR } from "../paths.js";
 import { PRE_PUSH_PATH, renderPrePushHook } from "./hook.js";
 import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 import { seedChecks } from "./checks.js";
-import { judgeFor, pointersFor } from "./harness.js";
+import { judgeFor, pointersFor, pointersForAgent } from "./harness.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {
   renderDecisionsMd,
   renderWstGitignore,
   renderWstGitattributes,
-  VENDOR_POINTERS,
   MEMORY_README,
   OUT_OF_SCOPE_README,
   activeSkills,
@@ -200,7 +200,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     // find it on its own. Codex and OpenCode read `AGENTS.md`, so a pointer for
     // them is a second file saying nothing.
     ...Object.entries<string>(
-      options.harnesses === undefined ? VENDOR_POINTERS : pointersFor(options.harnesses),
+      options.harnesses === undefined ? pointersForAgent(DEFAULT_AGENT) : pointersFor(options.harnesses),
     ).map(([path, contents]) => ({ path, contents })),
   ];
   if (options.definitionsOnly !== true) files.push(...vendorFiles);

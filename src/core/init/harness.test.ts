@@ -56,11 +56,11 @@ describe("judgeFor — which pick can actually run an llm check", () => {
     // adapter. Offering it as a judge would offer a check that cannot run.
     expect(judgeFor(["claude-code"])).toBe("claude");
     expect(judgeFor(["antigravity"])).toBe("antigravity");
-    expect(judgeFor(["codex"])).toBeNull();
+    expect(judgeFor(["opencode"])).toBeNull();
   });
 
   it("takes the first pick that has an adapter, so the order on screen decides", () => {
-    expect(judgeFor(["codex", "antigravity", "claude-code"])).toBe("antigravity");
+    expect(judgeFor(["opencode", "antigravity", "claude-code"])).toBe("antigravity");
   });
 
   it("answers null for no picks at all", () => {

@@ -76,7 +76,6 @@ describe("planInit — what a typical TypeScript repo gets", () => {
         ".wst/wst.yaml",
         "AGENTS.md",
         "CLAUDE.md",
-        "GEMINI.md",
       ].sort(),
     );
   });
@@ -307,18 +306,16 @@ describe("the harnesses a bootstrapped repo is legible to", () => {
   const vendor = (p: InitPlan): string[] =>
     p.files.map((f) => f.path).filter((path) => /\.md$/.test(path) && !path.includes("/"));
 
-  it("writes a front door for every harness that reads a different file", () => {
-    // Gemini CLI reads GEMINI.md and nothing else. A repo with only the other two
-    // is invisible to it.
-    expect(vendor(plan()).sort()).toEqual(["AGENTS.md", "CLAUDE.md", "GEMINI.md"]);
+  it("writes a front door only for the harness the judge belongs to", () => {
+    // Gemini CLI reads GEMINI.md and nothing else, so a repo that runs it needs
+    // that file. A repo that does not run it needs a door for a harness nobody
+    // there has, which is what `init` used to leave behind.
+    expect(vendor(plan()).sort()).toEqual(["AGENTS.md", "CLAUDE.md"]);
   });
 
-  it("points each at the one source rather than copying it", () => {
-    const p = plan();
-    for (const path of ["CLAUDE.md", "GEMINI.md"]) {
-      const contents = p.files.find((f) => f.path === path)?.contents ?? "";
-      expect(contents.trim()).toBe("@AGENTS.md");
-    }
+  it("points it at the one source rather than copying it", () => {
+    const contents = plan().files.find((f) => f.path === "CLAUDE.md")?.contents ?? "";
+    expect(contents.trim()).toBe("@AGENTS.md");
   });
 
   it("writes none of them under --definitions-only", () => {
@@ -349,9 +346,11 @@ describe("the front doors follow the harnesses you name (adr-0040)", () => {
     expect(codex).not.toContain("GEMINI.md");
   });
 
-  it("keeps writing both when nobody was asked, so an old caller is unchanged", () => {
+  it("falls back to the default judge's harness when nobody was asked", () => {
+    // It used to write both unconditionally. The judge is the only signal left
+    // when the question was never put, and it says claude.
     expect(paths()).toContain("CLAUDE.md");
-    expect(paths()).toContain("GEMINI.md");
+    expect(paths()).not.toContain("GEMINI.md");
   });
 });
 
@@ -365,12 +364,12 @@ describe("the judge follows the harness that can run one (adr-0040)", () => {
 
   it("leaves the default where no pick has an adapter", () => {
     // Codex is a harness this writes for and cannot judge with. The lens simply
-    // does not run; naming codex here would name a judge that cannot exist.
-    expect(yaml(["codex"])).toMatch(/^agent: claude/m);
+    // does not run; naming one here would name a judge that cannot exist.
+    expect(yaml(["opencode"])).toMatch(/^agent: claude/m);
   });
 
   it("takes the first pick that has one, so the order on screen decides", () => {
-    expect(yaml(["codex", "antigravity", "claude-code"])).toMatch(/^agent: antigravity/m);
+    expect(yaml(["opencode", "antigravity", "claude-code"])).toMatch(/^agent: antigravity/m);
   });
 
   it("leaves the default when nobody was asked", () => {
