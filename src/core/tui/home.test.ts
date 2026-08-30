@@ -74,8 +74,10 @@ describe("homeRows — the list says what this repo can actually do", () => {
   });
 });
 
+// The index, which is now one key in. `now` is what opens; `?` is the list.
+const open = (over: Partial<StatusFacts> = {}) => pressHome(openHome(report(over)), "?").state;
+
 describe("pressHome", () => {
-  const open = (over: Partial<StatusFacts> = {}) => openHome(report(over));
 
   it("runs the row under the cursor", () => {
     const { action } = pressHome(open(), "return");
@@ -123,7 +125,7 @@ describe("renderHome", () => {
   it("marks an unavailable row, rather than hiding it and shortening the list", () => {
     // A command that disappears reads as a command that does not exist. It is
     // here, and the note says what it is waiting for.
-    const screen = renderHome(openHome(report())).join("\n");
+    const screen = renderHome(open()).join("\n");
     expect(screen).toMatch(/init/);
   });
 
@@ -152,7 +154,6 @@ describe("renderHome", () => {
     expect(renderHome(open())).not.toContain("whetstone");
   });
 
-  const open = () => openHome(report());
 });
 
 describe("the row says what the command does, which is what the launcher is for", () => {
@@ -219,7 +220,7 @@ describe("a row says which kind of unavailable it is", () => {
   });
 
   it("shows the state on the row rather than only under the cursor", () => {
-    const screen = renderHome(openHome(report({ definitionPresent: false }))).join("\n");
+    const screen = renderHome(open({ definitionPresent: false })).join("\n");
     expect(screen).toMatch(/gate\s+needs init/);
   });
 
@@ -227,5 +228,82 @@ describe("a row says which kind of unavailable it is", () => {
     for (const facts of [{}, { definitionPresent: false }, { repoRoot: null }]) {
       expect(renderHome(openHome(report(facts))).join("\n")).not.toContain("not now");
     }
+  });
+});
+
+describe("what this repo should do now", () => {
+  const withFacts = (over: Partial<StatusFacts>) => openHome(report(over));
+
+  it("leads with init when there is no definition layer", () => {
+    const home = withFacts({ definitionPresent: false });
+    expect(home.lead.command).toBe("init");
+    expect(home.lead.because).toMatch(/nothing here yet|no .*\/ yet/i);
+  });
+
+  it("leads with the gate when there is uncommitted work", () => {
+    // The eight-row index shows everything the tool can do. What a person opening
+    // it wants is the one thing this repo needs now.
+    const home = withFacts({ uncommitted: ["src/a.ts", "src/b.ts", "README.md"] });
+    expect(home.lead.command).toBe("gate");
+    expect(home.lead.because).toContain("3");
+  });
+
+  it("leads with retro when the log has moved and the tree has not", () => {
+    const home = withFacts({
+      uncommitted: [],
+      freshSignals: { kind: "counted" as const, count: 6, since: "sig-39f4aa1e" },
+    });
+    expect(home.lead.command).toBe("retro");
+  });
+
+  it("leads with status when there is nothing else to say", () => {
+    expect(withFacts({ uncommitted: [] }).lead.command).toBe("status");
+  });
+
+  it("prefers a missing definition layer over uncommitted work", () => {
+    // A repo with no `.wst/` has nothing to gate against, so the gate is not the
+    // answer however dirty the tree is.
+    const home = withFacts({ definitionPresent: false, uncommitted: ["src/a.ts"] });
+    expect(home.lead.command).toBe("init");
+  });
+});
+
+describe("the two views", () => {
+  const home = () => openHome(report({ uncommitted: ["src/a.ts"] }));
+
+  it("opens on the one action, not on the index", () => {
+    const screen = renderHome(home()).join("\n");
+    expect(screen).toContain("run the checks");
+    expect(screen).not.toContain("classify the change");
+  });
+
+  it("keeps every row behind `?`, so nothing is hidden, only subordinated", () => {
+    const all = pressHome(home(), "?").state;
+    const screen = renderHome(all).join("\n");
+    for (const command of ["status", "init", "gate", "triage", "check", "config", "update", "retro"]) {
+      expect(screen).toContain(command);
+    }
+  });
+
+  it("comes back from the index the same way it went in", () => {
+    const there = pressHome(home(), "?").state;
+    expect(pressHome(there, "?").state.view).toBe("now");
+  });
+
+  it("runs the lead on enter", () => {
+    expect(pressHome(home(), "return").action).toEqual({ kind: "run", command: "gate" });
+  });
+
+  it("runs retro on `r` when the log has something to work on", () => {
+    const withSignals = openHome(
+      report({ uncommitted: [], freshSignals: { kind: "counted", count: 6, since: "s" } }),
+    );
+    expect(pressHome(withSignals, "r").action).toEqual({ kind: "run", command: "retro" });
+  });
+
+  it("does not offer retro when there is nothing new to cluster", () => {
+    const quiet = openHome(report({ uncommitted: [] }));
+    expect(pressHome(quiet, "r").action).toEqual({ kind: "none" });
+    expect(renderHome(quiet).join("\n")).not.toMatch(/^.*signals.*r$/m);
   });
 });
