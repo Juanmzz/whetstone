@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildRegistry, parseCheckFile } from "../checks/registry.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
-import { seedChecks } from "./checks.js";
+import { seedChecks, type SeedChecksOptions } from "./checks.js";
 
 const facts = (over: Partial<RepoFacts> = {}): RepoFacts => ({
   repoName: "acme",
@@ -189,10 +189,14 @@ describe("seedChecks — what init may not assume about a repo's own scripts", (
     declared: { sourceGlobs: [], stack: null },
     ...over,
   });
-  const fileFor = (id: string, over: Partial<StackFacts> = {}) =>
-    seedChecks(facts(over), seeded).find((f) => f.path.endsWith(`${id}.md`));
+  const fileFor = (
+    id: string,
+    over: Partial<StackFacts> = {},
+    extra: Partial<SeedChecksOptions> = {},
+  ) =>
+    seedChecks(facts(over), { ...seeded, ...extra }).find((f) => f.path.endsWith(`${id}.md`));
 
-  it("never seeds `test` at block, because it has not seen the suite pass", () => {
+  it("never seeds `test` at block when it has not seen the suite pass", () => {
     // Seeded at `block` on the evidence that test FILES exist. In that repo a
     // quarter of the suite opened a database nobody had started, so the gate was
     // red on every machine — and a check that is red everywhere gets routed
@@ -200,8 +204,20 @@ describe("seedChecks — what init may not assume about a repo's own scripts", (
     expect(fileFor("test")?.contents).toContain("severity: warn");
   });
 
-  it("says what promotes `test`, so warn is a step and not a resting place", () => {
-    expect(fileFor("test")?.contents).toMatch(/first green gate/i);
+  it("says what it measured, so a `warn` is a reading and not a resting place", () => {
+    // It used to say "promote it after the first green gate", and nothing ever
+    // promoted. The severity now comes from a run `init` watched.
+    expect(fileFor("test")?.contents).toMatch(/not measured/i);
+  });
+
+  it("blocks on the command it watched pass, and warns on the one that failed", () => {
+    const probes = {
+      test: { ran: true as const, ok: true, exitCode: 0, durationMs: 8000 },
+      lint: { ran: true as const, ok: false, exitCode: 1, durationMs: 900 },
+    };
+    expect(fileFor("test", {}, { probes })?.contents).toMatch(/^severity: block$/m);
+    expect(fileFor("lint", {}, { probes })?.contents).toMatch(/^severity: warn$/m);
+    expect(fileFor("lint", {}, { probes })?.contents).toMatch(/exit 1/);
   });
 
   it("seeds a mutating command disabled rather than letting it rewrite the tree", () => {
@@ -274,10 +290,13 @@ describe("seedChecks — the check Whetstone brings", () => {
     expect(file()?.contents).toContain("enabled: false");
   });
 
-  it("says on the page that it is off and what turns it on", () => {
+  it("arrives on, at warn, and says how to switch it off", () => {
+    // Seeded OFF, it was a rule nobody ever saw. `init` shows what it is about to
+    // seed before it writes, so the offer can be declined where it is made.
     const contents = file()?.contents ?? "";
-    expect(contents).toMatch(/enabled: false/);
-    expect(contents).toMatch(/delete `enabled: false`/i);
+    expect(contents).not.toMatch(/^enabled: false$/m);
+    expect(contents).toMatch(/^severity: warn$/m);
+    expect(contents).toMatch(/`enabled: false`/);
   });
 
   it("names a command the target repo has, not a script nobody wrote there", () => {

@@ -13,6 +13,8 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
+import { probeCommands } from "../shell/probe.js";
+import type { Probes } from "../core/init/probe.js";
 import { gatherFacts } from "../shell/repo-facts.js";
 import { findPayloadRoot, readSkills } from "../shell/payload.js";
 import { DEFINITION_DIR } from "../core/paths.js";
@@ -74,6 +76,11 @@ export interface InitOptions {
   readonly stack?: string;
   readonly force?: boolean;
   readonly dryRun?: boolean;
+  /**
+   * `--no-probe`, which commander delivers as `false`. Skips running the repo's
+   * own commands, after which every seeded check starts at `warn`.
+   */
+  readonly probe?: boolean;
   readonly json?: boolean;
   /** Draft the answers with the judge instead of asking the human to type them. */
   readonly propose?: boolean;
@@ -212,6 +219,53 @@ async function askHarnesses(): Promise<readonly string[] | null> {
       state = result.state;
       if (result.action.kind === "cancel") return null;
       if (result.action.kind === "done") return result.action.picked;
+    }
+  } finally {
+    keys.close();
+    restore(process.stdout);
+  }
+}
+
+/**
+ * Which of the seeded checks stay on. One screen, after the plan is known.
+ *
+ * They used to arrive `enabled: false` so nobody gained a check they had not
+ * asked for, and the result was a rule nobody ever read. The offer belongs where
+ * it can be declined, which is here, before anything is written. Null when the
+ * human backed out.
+ */
+async function askChecks(checks: InitPlan["checks"]): Promise<readonly string[] | null> {
+  let state = openPicker(
+    "wst init  ·  what will stop you",
+    "These are the checks this repo gets. Untick any you do not want; " +
+      "`block` refuses a push, `warn` says so and lets it through.",
+    checks.map((c) => ({
+      value: c.id,
+      label: `${c.severity.toUpperCase().padEnd(5)} ${c.id}`,
+      detail:
+        c.severity === "block"
+          ? "refuses the push. Seeded here because init watched it pass."
+          : "reports and lets the push through. Raise it in the file once it is green.",
+    })),
+    checks.map((c) => c.id),
+  );
+
+  const keys = rawKeys(process.stdin, () => {
+    keys.close();
+    restore(process.stdout);
+    process.exit(130);
+  });
+
+  try {
+    for (;;) {
+      paint(process.stdout, renderPicker(state));
+      const result = pressPicker(state, await keys.next());
+      state = result.state;
+      if (result.action.kind === "cancel") return null;
+      if (result.action.kind === "done") {
+        const on = result.action.picked;
+        return checks.map((c) => c.id).filter((id) => !on.includes(id));
+      }
     }
   } finally {
     keys.close();
@@ -573,6 +627,21 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     .then((names) => names.filter((n) => n.endsWith(".md")).sort().map((n) => `skills/${n}`))
     .catch(() => undefined);
 
+  // Measured, not asserted. `init` already holds the three commands this repo
+  // declares; running them once is what lets a seeded `block` rest on something.
+  // Skipped under --dry-run, which writes nothing and should cost nothing.
+  let probes: Probes | undefined;
+  if (opts.dryRun !== true && opts.probe !== false) {
+    console.log("\nrunning this repo's own commands once, so a seeded block rests on a run");
+    probes = await probeCommands({ ...stack.commands }, root, (id, command) => {
+      console.log(`  ${id.padEnd(10)} ${command}`);
+    });
+    for (const [id, result] of Object.entries(probes)) {
+      const said = !result.ran ? `could not run: ${result.why}` : result.ok ? "green" : `exit ${String(result.exitCode)}`;
+      console.log(`  ${id.padEnd(10)} ${said}`);
+    }
+  }
+
   let plan: InitPlan;
   try {
     plan = planInit({
@@ -580,6 +649,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       answers,
       clock: { now: () => new Date() },
       skillTexts,
+      ...(probes === undefined ? {} : { probes }),
       ...(presentSkills === undefined ? {} : { presentSkills }),
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
@@ -598,6 +668,33 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   }
 
   console.log(`${banner()}\n\ninit: ${root}`);
+  // Offered before the plan is printed, so what is printed is what will be
+  // written. Only where somebody is looking: off a terminal there is nobody to
+  // ask, and the caller already meant it.
+  if (opts.dryRun !== true && process.stdin.isTTY === true && process.stdout.isTTY === true) {
+    const disabledChecks = await askChecks(plan.checks);
+    if (disabledChecks === null) {
+      console.log("  nothing written.");
+      return 0;
+    }
+    if (disabledChecks.length > 0) {
+      plan = planInit({
+        facts,
+        answers,
+        clock: { now: () => new Date() },
+        skillTexts,
+        disabledChecks,
+        ...(probes === undefined ? {} : { probes }),
+        ...(presentSkills === undefined ? {} : { presentSkills }),
+        options: {
+          ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
+          ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
+          ...(harnesses === undefined ? {} : { harnesses }),
+        },
+      });
+    }
+  }
+
   printDetection(plan.stack);
   printPlan(plan, root);
 
