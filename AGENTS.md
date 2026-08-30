@@ -97,7 +97,7 @@ Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
-## Status: branch `main` · 44 ADRs · 65 signals · 10 commands
+## Status: branch `main` · 45 ADRs · 66 signals · 10 commands
 
 ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
 `init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
@@ -112,11 +112,12 @@ built under that waiver and removed by ADR-0009.
 - **61 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
   `tdd-discipline` v7, `delegation` v4, `xreview` v3, `doc-locations` v4, `voice` v2,
   `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
-- **`correctness` blocks.** Measured 2026-08-25 on claude 2.1.245: 100/100, unanimous on all
-  ten fixtures, zero harness errors, $2.97. adr-0027 promoted it. The two unreturned calls of
-  2026-08-20 did not reproduce and are still undiagnosed, so the result is a pass and not an
-  explanation. The receipt binds the prompt, the fixtures, the model and the runtime: change
-  any one and the authority lapses rather than carrying over.
+- **`correctness` does NOT block.** Measured 2026-08-25 on claude 2.1.245: 100/100, unanimous
+  on all ten fixtures, zero harness errors, $2.97. adr-0027 promoted it on that. The receipt
+  records `model: sonnet`, and the check is `tiers: [strict]`, which routes to `opus`: its
+  authority came from a measurement of a judge it never runs under. adr-0045 binds the model
+  and the block lapsed on 2026-08-30. The receipt binds the prompt, the fixtures and the
+  model; the runtime version is recorded and reported as drift, not enforced.
 
 ### Known weaknesses, stated plainly
 
@@ -128,9 +129,9 @@ built under that waiver and removed by ADR-0009.
   persisted what it observed.
   The machine-written six are the loop's only input nobody had to remember to type, and
   that number is the one to watch.
-- **The block is one measurement old, and it has never fired.** The promoting change touches no
-  `src/**/*.ts`, so the lens did not run in its own CI. The first real test is the next PR that
-  touches code.
+- **Nothing blocks on judgement right now.** `correctness` never fired: the promoting change
+  touched no `src/**/*.ts`, so the lens did not run in its own CI, and adr-0045 then found the
+  measurement described the wrong model. One `calibrate` run against `opus` restores it.
 - **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
   was small.
 - **Unowned:** `npm run check:in-force` lists what is decided and not yet true of the

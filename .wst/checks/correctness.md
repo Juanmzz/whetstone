@@ -2,7 +2,7 @@
 id: correctness
 description: Does this diff introduce a correctness bug?
 kind: llm
-severity: block
+severity: warn
 tiers: [strict]
 include: ["src/**/*.ts"]
 exclude: ["src/**/*.test.ts"]
@@ -43,14 +43,20 @@ calibration:
   fixtures: test/fixtures/lens-correctness
   detail: >-
     Lens v4 adds a concurrency clause after v3 failed only on race-good (1 flip in 5).
-    Never measured at v4. There is no `<id>.calibration.json`, so the loader would refuse
-    `severity: warn` outright. The sentence that used to live here, asking a human to
-    remember that editing the lens invalidates its measurement, is now a hash.
+    The 2026-08-25 receipt measured MODEL sonnet; this check is `tiers: [strict]`, and
+    strict routes to opus. adr-0045 binds authority to the model, so the block lapsed on
+    2026-08-30. Re-measure with `npm run calibrate -- --check correctness --model opus`
+    and raise `severity` back to `block`.
 origin: [adr-0008, sig-0007, sig-0008, sig-0011]
 version: 4
 ---
 
 The first `llm` check, and the reason the calibration harness exists.
+
+**Why it is `warn` today.** adr-0027 promoted it to `block` on a receipt measured with
+`sonnet`. The check declares `tiers: [strict]`, and strict routing judges with `opus`, so
+the measurement described a judge this check does not use. adr-0045 makes that lapse the
+authority rather than carry it over. One run of `calibrate` against `opus` restores it.
 
 **Why this is `warn`, and now cannot be anything else.** The 2026-08-07 run passed 10/10,
 but on two mirror-image fixtures, unambiguous by construction. The debt that result

@@ -11,6 +11,11 @@ interface TierPolicy {
   readonly autofix: boolean;
 }
 
+/** The model a check in this tier would be judged by. */
+export function modelForTier(tier: Tier): Routing["modelTier"] {
+  return POLICY[tier].modelTier;
+}
+
 /**
  * Exhaustive by type: `Record<Tier, …>` means adding a tier to
  * `checks/schema.ts` fails to compile until its policy is written down, rather
