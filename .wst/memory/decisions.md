@@ -1377,3 +1377,53 @@ thing in the repo.
 Rejected: a separate `local-triage.yaml`. Two files to keep in precedence order, and the
 loader would have to define which wins. The marker does the same work in one file, where
 the order is visible.
+
+### adr-0047 — a block may rest on a measurement or on a signature, and the file says which
+`proposed` · 2026-08-30
+
+Two things were true at once and neither was written down. A `review_lens` is prose
+defining what correct means in this repo, which is exactly what a skill is; and a lens was
+governed as if it were something else. It had a `version:` with no changelog behind it,
+`skill-shape` did not look at it, and amending it cost a hundred model calls where amending
+a skill costs nothing. `correctness` carried `version: 4` for three weeks with nothing
+recording what v1 through v3 had been.
+
+**A lens is the exigible half of a skill.** A skill is imperative: do it this way. A lens
+is interrogative and falsifiable: did they fail, and name the concrete input that proves
+it. Most skills have no such half. `voice` has none, because no input demonstrates that a
+sentence reads badly. That asymmetry is the rule for when a lens is worth writing, and it
+did not exist anywhere before this.
+
+So the two are aligned where alignment costs nothing. `skill-shape` covers
+`.wst/checks/**` from v2 upward; a check at v1 has never been amended and has no history
+to record. The five checks already past v1 gained changelogs reconstructed from the commits
+that changed their `version:`, marked in the file as reconstructed rather than written at
+the time.
+
+**And the toll comes off.** `signed_block: { by, on, why }` lets the owner grant an `llm`
+check its `block` without a receipt. adr-0008 pre-registered calibration as the KILL
+CRITERION FOR THE PROJECT: if no lens could be correct and unanimous, the differentiator
+did not exist and the right move was to stop. That question was asked and answered.
+Charging every future lens a hundred calls to re-answer it is a toll, not a safeguard.
+`wst check` prints `BLOCK*` for a signed block, so a reader tells the two apart without
+opening the file.
+
+`why` has a floor of sixty characters, enforced where authority is decided. That is not
+decoration: `status: passed` was a hand-typed field that granted blocking authority, it
+promoted an unmeasured lens, and it was deleted for it. A signature that says nothing is
+that field wearing a new name.
+
+Rejected: keeping calibration mandatory. It is the status quo and it is why the lens has
+not been touched in three weeks; the cost fell on exactly the edits that improve it.
+
+Rejected: putting the signature inside `calibration:`. Every field there is prose that
+grants nothing, and that docstring is load-bearing. One field that grants something does
+not belong under a heading that promises the opposite.
+
+Rejected: moving the lens into a skill file. The judge is hermetic and cannot resolve a
+path, so the text would be inlined at load anyway (delegation D7). It changes where the
+file sits and not what the mechanism does.
+
+Rejected: an `enforces: skills/x.md` field pointing a lens at the skill it makes
+enforceable. It is the natural next step and it is a field somebody has to keep true, for a
+benefit that needs a second lens to exist before it means anything. Revisit then.

@@ -43,6 +43,18 @@ export const CalibrationSchema = z.strictObject({
 
 export type Calibration = z.infer<typeof CalibrationSchema>;
 
+/**
+ * The owner accepting an `llm` check's `block` without a measurement (adr-0047).
+ *
+ * The one hand-typed field here that grants anything, which is why it sits outside
+ * `calibration:`, where everything grants nothing. `why` has a floor.
+ */
+export const SignedBlockSchema = z.strictObject({
+  by: z.string().min(1),
+  on: z.string().min(1),
+  why: z.string().min(1),
+});
+
 const BaseCheck = z.strictObject({
   /** Must equal the filename stem — receipts and `origin` refs point at it. */
   id: z
@@ -72,6 +84,8 @@ const BaseCheck = z.strictObject({
   version: z.number().int().min(1).default(1),
   /** Signals / ADRs that earned this check. Empty means unearned. */
   origin: z.array(z.string()).default([]),
+  /** Present when this check's `block` rests on the owner's judgement, not a run. */
+  signed_block: SignedBlockSchema.optional(),
   owner: z.string().nullish(),
 
   /** Required when kind === "deterministic". */

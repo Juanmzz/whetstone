@@ -310,3 +310,40 @@ describe("blockAuthority — the model it was measured on", () => {
     expect(blockAuthority(LENS, perfect(), current, []).ok).toBe(false);
   });
 });
+
+describe("a block the owner signed instead of measuring", () => {
+  const current = fixturesHash(fixtures);
+  const signature = {
+    by: "Juan Ignacio Munoz",
+    on: "2026-08-30",
+    why: "The lens has run advisory for three weeks over sixty diffs and has not once failed correct work; that is the evidence I am acting on.",
+  };
+
+  it("grants block on a signature, with no receipt at all", () => {
+    // adr-0008 asked whether an llm verdict is stable enough to gate on and
+    // answered yes. Re-buying that answer per lens is a toll, not a safeguard.
+    expect(blockAuthority(LENS, null, current, ["opus"], signature).ok).toBe(true);
+  });
+
+  it("refuses a signature with no reason, which is a checkbox", () => {
+    // `status: passed` was this exact field, and it promoted an unmeasured lens.
+    const empty = { ...signature, why: "  " };
+    expect(blockAuthority(LENS, null, current, ["opus"], empty).ok).toBe(false);
+  });
+
+  it("refuses a reason too short to review", () => {
+    const thin = { ...signature, why: "it works fine" };
+    const decision = blockAuthority(LENS, null, current, ["opus"], thin);
+    expect(decision.ok).toBe(false);
+    expect(decision.ok === false && decision.reason).toMatch(/reason/i);
+  });
+
+  it("still denies when there is neither a receipt nor a signature", () => {
+    expect(blockAuthority(LENS, null, current, ["opus"]).ok).toBe(false);
+  });
+
+  it("lets a signature stand where a receipt measured the wrong model", () => {
+    // The state `correctness` is in today.
+    expect(blockAuthority(LENS, perfect(), current, ["opus"], signature).ok).toBe(true);
+  });
+});

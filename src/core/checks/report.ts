@@ -25,7 +25,13 @@ const kindOf = (check: LoadedCheck): string =>
   check.kind === "llm" ? "llm " : check.kind === "method" ? "meth" : "det ";
 
 const severityOf = (check: LoadedCheck): string =>
-  !check.enabled ? "off  " : { block: "BLOCK", warn: "warn ", annotate: "note " }[check.severity];
+  // All six wide: the column has to line up, and `BLOCK*` is the widest.
+  !check.enabled
+    ? "off   "
+    : // Marked apart from a measured block: both legitimate, not the same claim.
+      check.severity === "block" && check.signed_block !== undefined
+      ? "BLOCK*"
+      : { block: "BLOCK ", warn: "warn  ", annotate: "note  " }[check.severity];
 
 export function renderRegistry(page: RegistryPage): readonly string[] {
   const { checks } = page;
@@ -41,8 +47,9 @@ export function renderRegistry(page: RegistryPage): readonly string[] {
   ];
 
   const width = widthOf(checks);
-  // What is left for the description after the indent, the two labels and the id.
-  const room = ROOM - (2 + 6 + 6 + width + 1);
+  // What is left after the indent, the two labels and the id. Severity is 6 wide
+  // since `BLOCK*` joined it, plus its trailing space.
+  const room = ROOM - (2 + 7 + 6 + width + 1);
 
   for (const check of checks) {
     const said =

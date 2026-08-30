@@ -77,6 +77,7 @@ export function parseCheckFile(
       evidence?.receipt ?? null,
       evidence?.currentFixturesHash ?? "",
       [...new Set(check.tiers.map(modelForTier))],
+      check.signed_block,
     );
     if (!decision.ok) {
       throw new Error(

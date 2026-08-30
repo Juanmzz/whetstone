@@ -97,7 +97,7 @@ Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
-## Status: branch `main` · 46 ADRs · 66 signals · 10 commands
+## Status: branch `main` · 47 ADRs · 66 signals · 10 commands
 
 ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
 `init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
@@ -117,7 +117,9 @@ built under that waiver and removed by ADR-0009.
   records `model: sonnet`, and the check is `tiers: [strict]`, which routes to `opus`: its
   authority came from a measurement of a judge it never runs under. adr-0045 binds the model
   and the block lapsed on 2026-08-30. The receipt binds the prompt, the fixtures and the
-  model; the runtime version is recorded and reported as drift, not enforced.
+  model; the runtime version is recorded and reported as drift, not enforced. adr-0047
+  adds the other way back: a `signed_block` grants it on the owner's judgement instead,
+  and `wst check` prints `BLOCK*` so the two bases are never read as one.
 
 ### Known weaknesses, stated plainly
 

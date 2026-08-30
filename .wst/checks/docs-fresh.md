@@ -58,3 +58,13 @@ is one command away, and the failure message prints both the claim and the reali
 
 Deterministic checks may block freely (constitution non-negotiable 7). Every rule here
 compares a number in a file to a number the filesystem already knows.
+
+## Changelog
+
+> Entries before 2026-08-30 were reconstructed from the commits that changed
+> `version:`, not written at the time. adr-0047 made the log required.
+
+- v4 (2026-08-20): retro-0004 applied.
+- v3 (2026-08-14): Follows the ADR page after nineteen decisions were folded into it.
+- v2 (2026-08-14): Watches the signal log it counts. It counted signals and did not run when the log changed.
+- v1 (2026-08-13): Added so the status block cannot go stale again.

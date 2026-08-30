@@ -50,3 +50,11 @@ resolves is a fact.
 
 Deterministic checks may block freely (constitution non-negotiable 7). Every rule here
 compares a string in a file to a heading the filesystem already holds.
+
+## Changelog
+
+> Entries before 2026-08-30 were reconstructed from the commits that changed
+> `version:`, not written at the time. adr-0047 made the log required.
+
+- v2 (2026-08-14): Covers the dotted directories too. A citation in `.wst/` or `.github/` resolved to nothing and the check could not see it.
+- v1 (2026-08-14): Seeded with the page that folded seventeen ADRs into one file.

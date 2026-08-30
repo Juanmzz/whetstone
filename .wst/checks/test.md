@@ -70,3 +70,13 @@ Deleting or skipping the assertion would have shipped both.
 is what makes a gate usable at a commit or when an agent stops rather than only at the
 push, by which time the work has compounded. Nothing else changes: the push and CI still
 run it, and it still blocks there.
+
+## Changelog
+
+> Entries before 2026-08-30 were reconstructed from the commits that changed
+> `version:`, not written at the time. adr-0047 made the log required.
+
+- v4 (2026-08-28): Follows `package.json`, now that the plugin version is derived from it.
+- v3 (2026-08-19): Declares what its suite actually reads, rather than a guess at it.
+- v2 (2026-08-15): Covers `package.json`, which no check watched.
+- v1 (2026-08-11): Seeded with the registry.
