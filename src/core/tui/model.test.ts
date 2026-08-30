@@ -54,6 +54,17 @@ describe("the judge picker", () => {
     });
   });
 
+  it("repaints the judge it just picked, on both screens that name one", () => {
+    // The field report read this as a render that repainted the value the config
+    // had on entry. It does not: what it saw was 0.6.0 dying on a `wst.yaml` with
+    // no `agent:` key, leaving the judge list frozen on `(x) claude` under a stack
+    // trace. adr-0042 fixed that. This pins the half that was never wrong.
+    const picked = press(at(JUDGE, ["down"]), "return").state;
+
+    expect(render(picked).join("\n")).toMatch(/judge\s+antigravity/);
+    expect(render(press(picked, "return").state).join("\n")).toMatch(/\(x\) antigravity/);
+  });
+
   it("writes nothing when the judge picked is the one already set", () => {
     // A file rewritten with identical bytes is still a tool that touched a
     // config nobody asked it to.
