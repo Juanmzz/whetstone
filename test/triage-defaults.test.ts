@@ -22,10 +22,30 @@ import { DEFAULT_RULES_YAML } from "../src/core/triage/rules.js";
 
 const ROOT = join(import.meta.dirname, "..");
 
-describe("DEFAULT_RULES_YAML", () => {
-  it("is byte-for-byte this repo's triage.yaml", async () => {
-    const onDisk = await readFile(join(ROOT, DEFINITION_DIR, "triage.yaml"), "utf-8");
+/** Where the travelling half of the file stops and this repo's own rules begin. */
+const MARKER = "# \u2500\u2500 BELOW HERE: rules of this repo only. They do NOT travel.";
 
-    expect(DEFAULT_RULES_YAML).toBe(onDisk);
+describe("DEFAULT_RULES_YAML", () => {
+  const onDisk = async (): Promise<string> =>
+    readFile(join(ROOT, DEFINITION_DIR, "triage.yaml"), "utf-8");
+
+  it("is byte-for-byte the part of this repo's triage.yaml that travels", async () => {
+    // It used to be the WHOLE file, so a rule only this repo could want had
+    // nowhere to live. The default is still one text; it is now a prefix.
+    expect((await onDisk()).startsWith(DEFAULT_RULES_YAML)).toBe(true);
+  });
+
+  it("names the boundary in the file, so nobody has to infer where it is", async () => {
+    expect(await onDisk()).toContain(MARKER);
+  });
+
+  it("keeps every local rule below the marker, where it cannot travel", async () => {
+    const [travels, local] = (await onDisk()).split(MARKER);
+    expect((travels ?? "").trimEnd()).toBe(DEFAULT_RULES_YAML.trimEnd());
+    expect(local ?? "").toContain("plugin/**");
+  });
+
+  it("holds no path that exists only in Whetstone above the marker", async () => {
+    expect(DEFAULT_RULES_YAML).not.toContain("plugin/**");
   });
 });

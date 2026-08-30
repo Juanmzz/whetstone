@@ -95,3 +95,22 @@ rules:
     tier: light
     reason: >-
       Design and reference documentation.
+
+# ── BELOW HERE: rules of this repo only. They do NOT travel. ─────────────
+#
+# Everything above this line is `DEFAULT_RULES_YAML` in `core/triage/rules.ts`,
+# byte for byte: it is what any repo with no `triage.yaml` of its own is triaged
+# by, so a path that exists only here would be this project's biography imposed
+# as another project's policy.
+#
+# Rules below it are Whetstone's own. They land LAST, and precedence is
+# first-match-wins, so a rule here must be narrower than everything above or it
+# is dead on arrival.
+
+  - glob: "plugin/**"
+    tier: strict
+    reason: >-
+      The three hooks and the skill installed into the session of anyone who
+      installs the plugin. Same blast radius as .wst/skills/**: an error here
+      denies or allows the wrong writes in somebody else's editor, and it fails
+      open, which looks like working.
