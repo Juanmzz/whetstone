@@ -10,6 +10,7 @@ import { runStatus } from "./commands/status.js";
 import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
+import { runReady } from "./commands/ready.js";
 import { runRetro } from "./commands/retro.js";
 import { runSignal } from "./commands/signal.js";
 import { DEFAULT_PHASE, DEFAULT_SEVERITY } from "./core/signals/human.js";
@@ -86,6 +87,18 @@ program
   .action(async (opts: { range?: string; paths?: string[]; json?: boolean; why?: boolean }) => {
     process.exitCode = await runTriage(opts);
   });
+program
+  .command("ready")
+  .description("is this task's work ready? resolves its own scope, no range needed")
+  .option("--json", "the report as a JSON envelope, with a semantic `result` field")
+  .option("--range <range>", "advanced: verify this range instead of the resolved scope")
+  .option("--fast", "run only the checks that do not declare themselves slow")
+  .option("--no-evidence", "no evidence store on this machine, so those checks cannot answer")
+  .option("--lens", "run llm checks too; off by default")
+  .action(async (opts: Parameters<typeof runReady>[0]) => {
+    process.exitCode = await runReady(opts);
+  });
+
 program
   .command("gate")
   .description("run the verification gate over a diff")
