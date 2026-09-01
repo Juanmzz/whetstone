@@ -22,6 +22,22 @@ export interface ScopeFacts {
   readonly remoteBranches: readonly string[];
 }
 
+/**
+ * Standing on the default branch, the task is the divergence from its own remote.
+ *
+ * Not the same rule as a work branch, and deliberately: there `origin/<branch>` is
+ * NOT a base, because it excludes commits of the same task that were already
+ * pushed. On the default branch there is no parent to diff against, so the remote
+ * counterpart is the only boundary the task has, and `HEAD` would drop every
+ * committed-but-unpushed change from the scope.
+ */
+function standingOnDefault(facts: ScopeFacts, how: string): BaseResolution {
+  const mirror = `origin/${facts.branch ?? ""}`;
+  return facts.remoteBranches.includes(mirror)
+    ? { ok: true, ref: mirror, how: `${how}, so the base is what it tracks` }
+    : { ok: true, ref: "HEAD", how: `${how}, and it has no remote, so the base is the last commit` };
+}
+
 export type BaseResolution =
   | { readonly ok: true; readonly ref: string; readonly how: string }
   | { readonly ok: false; readonly why: string };
@@ -51,31 +67,49 @@ export function resolveBase(facts: ScopeFacts): BaseResolution {
     return { ok: true, ref: facts.originHead, how: "origin/HEAD" };
   }
 
-  // Standing ON the default branch is not ambiguity. There is no branch to be
-  // ahead of, so the task is whatever is uncommitted, and `HEAD` says exactly
-  // that. Refusing here sent a repo with one branch to `--range` for no reason.
-  const onDefault =
-    (DEFAULTS as readonly string[]).includes(facts.branch) ||
-    facts.originHead === `origin/${facts.branch}`;
-  if (onDefault) {
-    return { ok: true, ref: "HEAD", how: "the working tree, since this is the default branch" };
+  // `origin/HEAD` naming the branch we are ON is positive evidence of standing on
+  // the default, and it has to be read BEFORE the name search. Discarded as `self`,
+  // it let a stale `origin/master` beside it become the base: a ref that is not
+  // this branch's history at all.
+  if (facts.originHead === `origin/${facts.branch}`) {
+    return standingOnDefault(facts, "origin/HEAD names this branch");
   }
 
-  const remote = DEFAULTS.map((n) => `origin/${n}`).filter(
-    (r) => facts.remoteBranches.includes(r) && !self.has(r),
+  // Candidates by NAME, across both namespaces. A remote candidate outranks a local
+  // one only where they name the SAME branch: `origin/main` beside a local `main` is
+  // one default seen twice, but `origin/main` beside a local `master` is two
+  // different claims about what the default is, and nothing here points at either.
+  // Preferring the remote there silently picks one, and if it is the newer, the
+  // scope quietly loses part of the change.
+  const names = DEFAULTS.filter(
+    (n) =>
+      (facts.remoteBranches.includes(`origin/${n}`) && !self.has(`origin/${n}`)) ||
+      (facts.localBranches.includes(n) && !self.has(n)),
   );
-  const local = DEFAULTS.filter((n) => facts.localBranches.includes(n) && !self.has(n));
-  const found = remote.length > 0 ? remote : local;
 
-  if (found.length > 1) {
+  if (names.length > 1) {
     return {
       ok: false,
-      why: `${found.join(" and ")} both exist and nothing points at either. Set origin/HEAD, set an upstream, or pass --range`,
+      why: `${names.join(" and ")} both exist and nothing points at either. Set origin/HEAD, set an upstream, or pass --range`,
     };
   }
-  const only = found[0];
-  if (only !== undefined) {
-    return { ok: true, ref: only, how: remote.length > 0 ? "the only default branch on origin" : "the only local default branch" };
+  const name = names[0];
+  if (name !== undefined) {
+    const remote = `origin/${name}`;
+    return facts.remoteBranches.includes(remote) && !self.has(remote)
+      ? { ok: true, ref: remote, how: "the only default branch on origin" }
+      : { ok: true, ref: name, how: "the only local default branch" };
+  }
+
+  // LAST, and only once nothing else resolved. Standing on the default branch is
+  // not ambiguity: there is no branch to be ahead of, so the task is whatever is
+  // uncommitted. But the NAME alone is not evidence of being on it. Checked first,
+  // this returned `HEAD` on a task branch called `main` in a repo whose default is
+  // `origin/master`, silently dropping every commit on that branch from the scope.
+  // A base that is too new is the one error that reports a half-verified change as
+  // fully verified.
+  if ((DEFAULTS as readonly string[]).includes(facts.branch)) {
+    return standingOnDefault(facts, "this is the default branch");
   }
 
   return {
