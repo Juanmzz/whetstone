@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditSelfContained, unauditedCopies } from "./selfcontained.js";
+import { auditSelfContained } from "./selfcontained.js";
 
 const audit = (contents: string, extra: { files?: string[]; copies?: string[] } = {}) =>
   auditSelfContained({
@@ -95,66 +95,6 @@ describe("auditSelfContained — every .wst/ path named must be a path that gets
  * as created; the loop was `for (const file of input.files)`. So the files most
  * likely to cite a Whetstone-only path — prose written for THIS repo, shipped
  * unchanged into someone else's — were the files nothing checked.
- */
-describe("auditSelfContained — the copied skills are audited too", () => {
-  const withCopy = (contents: string) =>
-    auditSelfContained({
-      files: [{ path: ".wst/constitution.md", contents: "Nothing to see." }],
-      copies: [{ from: "skills/voice.md", to: ".wst/skills/voice.md", contents }],
-    });
-
-  it("catches a Whetstone-only reference inside a copied skill", () => {
-    const found = withCopy("The reasoning is in docs/PARALLEL.md.");
-
-    expect(found).toHaveLength(1);
-    expect(found[0]?.path).toBe(".wst/skills/voice.md");
-  });
-
-  it("catches a copied skill citing a path this init does not create", () => {
-    const found = withCopy("See `.wst/memory/decisions/0001-x.md`.");
-
-    expect(found).toHaveLength(1);
-    expect(found[0]?.match).toBe(".wst/memory/decisions/0001-x.md");
-  });
-
-  it("passes a copied skill that only names what init writes", () => {
-    const found = auditSelfContained({
-      files: [
-        { path: ".wst/constitution.md", contents: "Nothing to see." },
-        { path: ".wst/memory/signals.jsonl", contents: "" },
-      ],
-      copies: [
-        { from: "skills/voice.md", to: ".wst/skills/voice.md", contents: "Append to `.wst/memory/signals.jsonl`." },
-      ],
-    });
-
-    expect(found).toEqual([]);
-  });
-
-  /**
-   * Hard rule 3, at the level of this audit: a copy whose text was never
-   * supplied is UNCHECKED, and unchecked may not render as clean. `init` resolves
-   * the payload directory at write time and can fail to find it at all.
-   */
-  it("names a copy it could not read, and does not call it a violation", () => {
-    const copies = [{ from: "skills/voice.md", to: ".wst/skills/voice.md" }];
-
-    const found = auditSelfContained({
-      files: [{ path: ".wst/constitution.md", contents: "Nothing to see." }],
-      copies,
-    });
-
-    expect(found).toEqual([]);
-    expect(unauditedCopies(copies)).toEqual([".wst/skills/voice.md"]);
-  });
-});
-
-/**
- * Citations by ID are the newest way a payload file dangles, and the audit was
- * blind to them: `adr-0001` is not a path, so reference closure never saw it, and
- * a bootstrapped repo's decision record starts empty. Wiring the copied skills in
- * surfaced ten of these on the first run — eight in changelogs, two in the body
- * of `recording.md`.
  */
 describe("auditSelfContained — a citation by id is a reference too", () => {
   const copied = (contents: string) =>

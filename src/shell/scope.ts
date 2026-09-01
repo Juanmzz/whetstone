@@ -73,6 +73,23 @@ const pathsOf = (out: string | null): string[] =>
     return parts.at(-1) ?? "";
   }).filter((p) => p !== "");
 
+/**
+ * The files a caller-supplied RANGE names. All reported as committed, because a
+ * range is a statement about commits: there is no working tree in `a..b`.
+ *
+ * Separate from `taskFilesFrom` because that one builds `<base>..HEAD` itself, and
+ * handing it a full range produced `a..b..HEAD`, which git rejects. The `--range`
+ * override is the CI path, so it broke exactly where nobody was watching.
+ */
+export async function rangeFiles(range: string, cwd: string): Promise<TaskFiles> {
+  return {
+    committed: pathsOf(await git(["diff", "--name-status", range], cwd)),
+    staged: [],
+    unstaged: [],
+    untracked: [],
+  };
+}
+
 export async function taskFilesFrom(mergeBase: string, cwd: string): Promise<TaskFiles> {
   const [committed, staged, unstaged, untracked] = await Promise.all([
     git(["diff", "--name-status", `${mergeBase}..HEAD`], cwd),

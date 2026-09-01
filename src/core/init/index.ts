@@ -38,7 +38,6 @@ export { planInit, type InitOptions, type InitPlan, type InitPlanInput } from ".
 export {
   auditSelfContained,
   formatViolations,
-  unauditedCopies,
   type SelfContainmentViolation,
 } from "./selfcontained.js";
 export { MAX_DEPTH, MAX_FILES, skipDir, walkDepth } from "./walk.js";

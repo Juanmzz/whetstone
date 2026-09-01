@@ -16,7 +16,7 @@ import {
   renderWstGitignore,
   renderWstYaml,
 } from "./payload.js";
-import { auditSelfContained, formatViolations, unauditedCopies } from "./selfcontained.js";
+import { auditSelfContained, formatViolations } from "./selfcontained.js";
 import {
   buildTriageRules,
   renderTriageYaml,
@@ -165,19 +165,10 @@ export function planInit(input: InitPlanInput): InitPlan {
     );
   }
 
-  // ADR-0004, enforced. Free text from the interview flows into the constitution
-  // verbatim, so this catches the human's words as well as the generator's — and
-  // the copied skills, which are prose written for Whetstone's own repo.
-  const unaudited = unauditedCopies(copies);
-  if (unaudited.length > 0) {
-    // A note, not a violation: the audit could not run on these, which is not the
-    // same as their being clean, and not the same as their being broken.
-    notes.push(
-      `${String(unaudited.length)} copied file(s) were NOT audited for self-containment: ` +
-        `their text could not be read: ${unaudited.join(", ")}`,
-    );
-  }
-
+  // ADR-0004, enforced. Free text from the interview flows into `triage.yaml`
+  // verbatim, so this catches the human's words as well as the generator's.
+  // Nothing is COPIED any more, so there is nothing that could go unaudited: the
+  // audit below reads every generated file, and there is no second category.
   const violations = auditSelfContained({
     files,
     copies,

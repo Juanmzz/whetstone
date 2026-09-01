@@ -1,16 +1,20 @@
 /**
  * `wst ready` — the command an implementation agent runs when it thinks it is done.
  *
- * It takes NO ARGUMENTS. Resolving what to verify is the whole point: an agent
- * that has to be told a range gets told the wrong one, and a green report over
- * half a change is worse than no report. So it finds the repository, the branch,
- * the base and the merge base itself, and it says which of each it used.
+ * The normal path takes NO ARGUMENTS. Resolving what to verify is the whole point:
+ * an agent that has to be told a range gets told the wrong one, and a green report
+ * over half a change is worse than no report. So it finds the repository, the
+ * branch, the base and the merge base itself, and it says which of each it used.
+ *
+ * `--range` exists for CI and for diagnosing this resolution, and it is an
+ * override rather than an argument: a human passing one is doing something
+ * deliberate, and the report says the base came from `--range`.
  *
  * Composition root. Every decision it looks like it makes is in `core/ready/`.
  */
 
 import { createGitAdapter } from "../shell/git.js";
-import { readScopeFacts, mergeBaseOf, taskFilesFrom } from "../shell/scope.js";
+import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom } from "../shell/scope.js";
 import { verifyRange } from "../shell/verify.js";
 import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
@@ -89,7 +93,8 @@ export async function runReady(
     console.error(`\n  ${saidAs("INCOMPLETE")}\n\n  could not read the diff against ${commit}\n  ${(cause as Error).message}\n`);
     return EXIT_INCOMPLETE;
   }
-  const where = await taskFilesFrom(commit, cwd);
+  const where =
+    opts.range === undefined ? await taskFilesFrom(commit, cwd) : await rangeFiles(opts.range, cwd);
   const untracked = where.untracked.map((path): ChangedFile => ({ path, status: "added" }));
   const files = [...tracked, ...untracked];
 

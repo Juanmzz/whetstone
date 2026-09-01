@@ -218,6 +218,22 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
     expect(said()).not.toContain("..");
   });
 
+  it("takes a full `a..b` range, which is the CI path", async () => {
+    // Found by a cross-vendor review of the whole cut: `--range main..HEAD` was
+    // handed to a helper that builds `<base>..HEAD` itself, producing
+    // `main..HEAD..HEAD`. git rejects it, so the one documented CI override could
+    // not run at all.
+    const dir = await repo();
+    await git(dir, "checkout", "-q", "-b", "feat/r");
+    await writeFile(join(dir, "src/ranged.ts"), "export const r = 1;\n", "utf-8");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "feat: ranged");
+
+    expect(await runReady({ range: "main..HEAD" }, dir)).toBe(0);
+    expect(said()).toMatch(/committed\s+src\/ranged\.ts/);
+    expect(said()).toContain("--range");
+  });
+
   it("names the base ref and the commit it compared against", async () => {
     const dir = await repo();
     await writeFile(join(dir, "src/a.ts"), "export const a = 4;\n", "utf-8");
