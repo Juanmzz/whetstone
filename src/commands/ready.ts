@@ -9,7 +9,6 @@
  * Composition root. Every decision it looks like it makes is in `core/ready/`.
  */
 
-import { relative } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
 import { readScopeFacts, mergeBaseOf, taskFilesFrom } from "../shell/scope.js";
 import { verifyRange } from "../shell/verify.js";
@@ -99,7 +98,6 @@ export async function runReady(
   const outcome = registry.byId.size === 0 ? "incomplete" : outcomeOf(run.verdict, run.selection);
   const readiness = readinessOf(outcome, files.length > 0, { errored: run.verdict.errored });
 
-  const rel = (p: string): string => relative(repoRoot, p) || p;
   const results: CheckLine[] = run.verdict.results.map((r) => ({
     id: r.checkId,
     status: STATUS[r.outcome.status] ?? "n/a",
@@ -113,10 +111,14 @@ export async function runReady(
     repo: repoRoot,
     branch: scope.branch ?? "(detached)",
     base: { ref: base.ref, how: base.how, commit: commit.slice(0, 8) },
-    committed: where.committed.map(rel),
-    staged: where.staged.map(rel),
-    unstaged: where.unstaged.map(rel),
-    untracked: where.untracked.map(rel),
+    // Already relative to the repository root: that is what git prints, and what
+    // every check's `include` glob is written against. Re-relativising them
+    // against the process's cwd produced `../../home/...` the moment `ready` ran
+    // from anywhere but the root.
+    committed: where.committed,
+    staged: where.staged,
+    unstaged: where.unstaged,
+    untracked: where.untracked,
     tier: routing.tier,
     applicable: run.selection.selected.map((s) => s.check.id),
     results,

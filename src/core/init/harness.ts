@@ -2,8 +2,7 @@
  * Which agent harnesses this repo is for, and what that decides. PURE.
  *
  * TWO decisions, and `init` used to make neither. It wrote `GEMINI.md` into a
- * repo whose owner uses Claude, and `wst config` offered a judge list that left
- * out a harness the owner had installed. They are not the same list:
+ * repo whose owner uses Claude. They are not the same list:
  *
  * - which harnesses read this repo, which decides the pointer files
  * - which of those can run an `llm` check, which needs an adapter to exist
