@@ -113,7 +113,7 @@ describe("planInit — everything generated must load through the real loaders",
 
 describe("planInit — refuses to produce a broken payload", () => {
   it("throws when the answers do not validate", () => {
-    expect(() => plan({ answers: answers({ purpose: "" }) })).toThrow(/purpose/i);
+    expect(() => plan({ answers: answers({ sourcePaths: ["   "] }) })).toThrow(/blank/i);
   });
 
   it("throws when an elevated risk profile names no strict path", () => {
@@ -167,20 +167,22 @@ describe("planInit — the declared source paths reach both places that need the
     }
   });
 
-  it("seeds no check at all when nobody said where the code lives", () => {
-    const blind = plan({ answers: answers({ sourcePaths: [] }) });
-    expect(blind.files.filter((f) => f.path.startsWith(".wst/checks/"))).toEqual([]);
-    expect(blind.notes.join("\n")).toMatch(/source path/i);
+  it("refuses to plan at all when nobody said where the code lives", () => {
+    // It used to plan and seed no checks, which writes a definition layer that
+    // verifies nothing. Nothing downstream can recover from that: `ready` can only
+    // ever answer INCOMPLETE, and the reason is three commands away.
+    expect(() => plan({ answers: answers({ sourcePaths: [] }) })).toThrow(/source path/i);
   });
 });
 
 describe("planInit — a repo with nothing to detect", () => {
   const p = plan({
     facts: facts(),
-    answers: answers({ purpose: "Not started yet.", sourcePaths: [], stack: null }),
+    answers: answers({ purpose: "Not started yet.", sourcePaths: ["src/**"], stack: null }),
   });
 
   it("seeds no checks rather than commands that would error on every run", () => {
+    // The paths are declared; what is missing is a script to run over them.
     expect(p.files.filter((f) => f.path.startsWith(".wst/checks/"))).toEqual([]);
   });
 

@@ -20,7 +20,6 @@ import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import { openInterview, pressIn, renderInterview } from "../core/tui/interview.js";
 import { openPicker, pressPicker, renderPicker } from "../core/tui/picker.js";
-import { HARNESSES, judgeFor as adapterFor } from "../core/init/harness.js";
 import type { Agent } from "../core/config/schema.js";
 import { confirm } from "../shell/confirm.js";
 import { startSpinner } from "../shell/spinner.js";
@@ -109,7 +108,10 @@ export interface InitOptions {
 const RISK_KEYS = ["money", "personalData", "productionData", "authn", "safetyCritical"] as const;
 
 function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
-  if (opts.purpose === undefined) return null;
+  // `--source` is the trigger, because it is the only required answer: every
+  // seeded check scopes its `include` to it. `--purpose` used to be, back when it
+  // reached the constitution.
+  if (opts.source === undefined || opts.source.length === 0) return null;
 
   const flags = (opts.risk ?? "")
     .split(",")
@@ -134,7 +136,7 @@ function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
   });
 
   return {
-    purpose: opts.purpose,
+    purpose: opts.purpose ?? "",
     risk: {
       ...NO_RISK,
       ...Object.fromEntries(RISK_KEYS.map((k) => [k, flags.includes(k)])),
@@ -183,46 +185,6 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
   console.log("\nNothing was written.");
 }
 
-/**
- * Which harnesses read this repo. One screen, before anything else.
- *
- * It decides two things `init` used to decide for you: which front-door pointer
- * gets written, and which adapter may draft the answers. Null when the human
- * backed out.
- */
-async function askHarnesses(): Promise<readonly string[] | null> {
-  let state = openPicker(
-    "wst init  ·  your harnesses",
-    "Which agent harnesses read this repo? `AGENTS.md` is written either way; " +
-      "one of these will be asked to draft your answers.",
-    HARNESSES.map((h) => ({
-      value: h.id,
-      label: h.label,
-      detail: h.readsAgentsMd
-        ? "reads AGENTS.md on its own, so nothing else is written for it"
-        : `writes ${String(h.pointer)}, one line pointing at AGENTS.md`,
-    })),
-  );
-
-  const keys = rawKeys(process.stdin, () => {
-    keys.close();
-    restore(process.stdout);
-    process.exit(130);
-  });
-
-  try {
-    for (;;) {
-      paint(process.stdout, renderPicker(state));
-      const result = pressPicker(state, await keys.next());
-      state = result.state;
-      if (result.action.kind === "cancel") return null;
-      if (result.action.kind === "done") return result.action.picked;
-    }
-  } finally {
-    keys.close();
-    restore(process.stdout);
-  }
-}
 
 /**
  * Which of the seeded checks stay on. One screen, after the plan is known.
@@ -271,46 +233,6 @@ async function askChecks(checks: InitPlan["checks"]): Promise<readonly string[] 
   }
 }
 
-/**
- * The judge reads the repo and drafts what no file declares.
- *
- * A failure here is the DRAFTER being broken and not a fact about the project,
- * so it falls back to blank fields rather than to half an answer. The same
- * distinction the gate draws between `blocked` and `incomplete`.
- */
-async function draftAnswers(
-  facts: RepoFacts,
-  stack: ReturnType<typeof detectStack>,
-  root: string,
-  agent: Agent,
-): Promise<DraftedAnswers> {
-  const readme = await readFirst(root, ["README.md", "readme.md", "README", "docs/README.md"]);
-  const spinner = startSpinner(process.stdout, `${agent} is reading this repo`);
-
-  const result = await judgeFor({ ...DEFAULT_CONFIG, agent }).judge({
-    lens:
-      "You draft project definitions for review by the project's owner. You argue " +
-      "from evidence you were given and never from assumption. You propose; you do " +
-      "not decide.",
-    prompt: buildProposalPrompt(facts, stack, readme),
-    schema: ProposalSchema,
-  });
-
-  if (!result.ok) {
-    spinner.stop(`  could not draft (${result.error.kind}). Answer them yourself.`);
-    return {};
-  }
-
-  spinner.stop(`  drafted in ${agent} for $${result.costUsd.toFixed(4)}. Check every field.`);
-  const answers = proposalToAnswers(result.value);
-  return {
-    purpose: answers.purpose,
-    risk: RISK_KEYS.filter((k) => answers.risk[k]),
-    sourcePaths: answers.sourcePaths,
-    strictPaths: answers.strictPaths,
-    ...(answers.stack === null ? {} : { stack: answers.stack }),
-  };
-}
 
 /** The interview, answered in the terminal. Null when the human backed out. */
 async function askInterview(
@@ -540,7 +462,6 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   const stack = detectStack(facts);
 
   let answers: InterviewAnswers | null;
-  let harnesses: readonly string[] | undefined;
   try {
     answers = await loadAnswers(opts, cwd);
   } catch (cause) {
@@ -576,18 +497,13 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
         return 1;
       }
 
-      // The order is the point: you say who reads this repo, that decides who may
-      // draft, and only then are you asked anything. `init` used to ask five
-      // questions from a blank page and write a front door for a harness nobody
-      // named (adr-0040).
-      const picked = await askHarnesses();
-      if (picked === null) return 0;
-      harnesses = picked;
-
-      const agent = adapterFor(picked);
-      const drafted = agent === null ? {} : await draftAnswers(facts, stack, root, agent);
-
-      const filled = await askInterview(stack, drafted);
+      // NO harness question, and no model call. Naming a harness decided the
+      // pointer files and who drafted; `init` writes no pointer any more, and the
+      // three questions left are a risk profile nothing can read off disk plus two
+      // path lists the tree already proposes candidates for. A call that costs
+      // money to draft answers a directory listing already has is a call to skip.
+      // `--propose` still asks a judge, for whoever wants one.
+      const filled = await askInterview(stack, {});
       if (filled === null) return 0;
       answers = filled;
     }
@@ -637,7 +553,6 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
-        ...(harnesses === undefined ? {} : { harnesses }),
       },
     });
   } catch (cause) {
@@ -670,8 +585,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
           options: {
           ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
           ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
-          ...(harnesses === undefined ? {} : { harnesses }),
-        },
+          },
       });
     }
   }
