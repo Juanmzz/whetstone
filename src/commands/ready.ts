@@ -149,7 +149,10 @@ export async function runReady(
   };
 
   if (opts.json === true) {
-    console.log(JSON.stringify({ result: readiness, ...facts }, null, 2));
+    // `result` is the field a consumer reads; `readiness` is the same value under
+    // the name the renderer uses, and two names for one fact is one too many.
+    const { readiness: _same, ...rest } = facts;
+    console.log(JSON.stringify({ result: readiness, ...rest }, null, 2));
   } else {
     console.log(renderReady(facts));
   }

@@ -16,7 +16,6 @@ import { createGitAdapter } from "../shell/git.js";
 import { probeCommands } from "../shell/probe.js";
 import type { Probes } from "../core/init/probe.js";
 import { gatherFacts } from "../shell/repo-facts.js";
-import { findPayloadRoot, readSkills } from "../shell/payload.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import { openInterview, pressIn, renderInterview } from "../core/tui/interview.js";
@@ -50,7 +49,6 @@ import {
   detectStack,
   planInit,
   renderRootGitignoreStanza,
-  skillCopies,
   skipDir,
   walkDepth,
   type InitPlan,
@@ -609,24 +607,6 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
-  // Resolved BEFORE the plan, not at write time: the reference-closure audit runs
-  // inside `planInit`, and it cannot audit the eight copied skills without their
-  // text. Missing text is reported as unaudited, never as clean.
-  const payloadRoot = await findPayloadRoot();
-  const skillTexts = await readSkills(payloadRoot);
-
-  // What the TARGET repo already has, which is not the same as what Whetstone
-  // ships. Only `--force` re-renders AGENTS.md, and until now that re-render
-  // listed the eight shipped names — so a skill written by hand after init was
-  // invisible to every agent that read the file.
-  // `undefined` when there is no directory yet, which is every first init.
-  // Collapsing that into `[]` told `activeSkills` the directory had been read
-  // and was empty, and every bootstrapped repo got a config declaring all eight
-  // skills INACTIVE while the files sat beside it.
-  const presentSkills = await readdir(join(root, DEFINITION_DIR, "skills"))
-    .then((names) => names.filter((n) => n.endsWith(".md")).sort().map((n) => `skills/${n}`))
-    .catch(() => undefined);
-
   // Measured, not asserted. `init` already holds the three commands this repo
   // declares; running them once is what lets a seeded `block` rest on something.
   // Skipped under --dry-run, which writes nothing and should cost nothing.
@@ -653,9 +633,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       facts,
       answers,
       clock: { now: () => new Date() },
-      skillTexts,
       ...(probes === undefined ? {} : { probes }),
-      ...(presentSkills === undefined ? {} : { presentSkills }),
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
@@ -687,11 +665,9 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
         facts,
         answers,
         clock: { now: () => new Date() },
-        skillTexts,
         disabledChecks,
         ...(probes === undefined ? {} : { probes }),
-        ...(presentSkills === undefined ? {} : { presentSkills }),
-        options: {
+          options: {
           ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
           ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
           ...(harnesses === undefined ? {} : { harnesses }),
@@ -750,14 +726,6 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
-  if (payloadRoot === null) {
-    console.error(
-      "\ncould not locate Whetstone's own skills directory, so the skills were NOT copied.\n" +
-        `  Everything else was written. Copy \`${DEFINITION_DIR}/skills/\` across by hand, or re-run from a\n` +
-        "  checkout rather than a published package.",
-    );
-  }
-
   try {
     await writePlan(plan, root);
     await ensureRootGitignored(root);
@@ -769,9 +737,8 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 1;
   }
 
-  const written = plan.files.length + (payloadRoot === null ? 0 : plan.copies.length);
-  console.log(`\nwrote ${written} files. Review them, then commit:`);
+  console.log(`\nwrote ${String(plan.files.length)} files. Review them, then commit:`);
   console.log(`  git add ${stagePaths(plan).join(" ")}`);
-  console.log('  git commit -m "chore: bootstrap the agent workflow"');
-  return payloadRoot === null ? 1 : 0;
+  console.log('  git commit -m "chore: bootstrap verification"');
+  return 0;
 }

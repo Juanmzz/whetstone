@@ -5,7 +5,6 @@
 import { DEFAULT_AGENT } from "../config/schema.js";
 import type { TriageRule } from "../contracts.js";
 import { DEFINITION_DIR } from "../paths.js";
-import { PRE_PUSH_PATH, renderPrePushHook } from "./hook.js";
 import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 import { seedChecks, seededChecks, type SeededCheck } from "./checks.js";
@@ -14,13 +13,7 @@ import { judgeFor, pointersFor, pointersForAgent } from "./harness.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {
-  renderDecisionsMd,
   renderWstGitignore,
-  renderWstGitattributes,
-  MEMORY_README,
-  OUT_OF_SCOPE_README,
-  renderAgentsMd,
-  renderConstitution,
   renderWstYaml,
 } from "./payload.js";
 import { auditSelfContained, formatViolations, unauditedCopies } from "./selfcontained.js";
@@ -128,19 +121,6 @@ export function planInit(input: InitPlanInput): InitPlan {
   // installing verification is eight files nobody there has a use for yet.
   const copies: readonly CopyRequest[] = [];
 
-  // Compiled BEFORE the prose, because the prose refers to it: `triage-rules.md`
-  // may only name the hook in a repo where the hook actually exists.
-
-  const constitution = renderConstitution({
-    repoName: input.facts.repoName,
-    date,
-    purpose: input.answers.purpose,
-    risk: input.answers.risk,
-    detected: stack,
-    declared: input.answers.stack,
-  });
-  const triageRulesMd = renderTriageRulesMd(rules, { date });
-
   /**
    * ONLY what selects and runs a readiness check.
    *
@@ -155,7 +135,7 @@ export function planInit(input: InitPlanInput): InitPlan {
     { path: `${DEFINITION_DIR}/triage.yaml`, contents: renderTriageYaml(rules) },
     {
       path: `${DEFINITION_DIR}/wst.yaml`,
-      contents: renderWstYaml({ backend: options.backend ?? "files", namespace: input.facts.repoName }),
+      contents: renderWstYaml({ backend: options.backend ?? "files" }),
     },
     // The compiled check index, the event log and the receipts cache are per-machine
     // and must never be committed.
