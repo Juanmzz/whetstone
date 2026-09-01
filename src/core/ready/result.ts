@@ -21,8 +21,17 @@ export const EXIT_INCOMPLETE = 2;
 export function readinessOf(
   outcome: GateOutcome,
   hadChanges: boolean,
-  /** Checks that could not run. Empty by default; any entry denies READY. */
-  ran: { readonly errored: readonly string[] } = { errored: [] },
+  /**
+   * What stops a run from having verified everything it should have.
+   *
+   * `errored` is a check that could not run. `declined` is one that would have
+   * applied and is switched off. Neither is a verdict on the change, and neither
+   * leaves readiness established. A check skipped by its own RECEIPT is absent from
+   * both on purpose: the receipt proves it already passed on these exact inputs.
+   */
+  ran: { readonly errored: readonly string[]; readonly declined?: readonly string[] } = {
+    errored: [],
+  },
 ): Readiness {
   if (!hadChanges) return "NO_CHANGES";
   switch (outcome) {
@@ -32,7 +41,7 @@ export function readinessOf(
       // The gate tolerates a non-blocking check erroring: the push may proceed.
       // Readiness may not. A check that never ran verified nothing, and `READY`
       // over it is false confidence, which is the expensive direction to be wrong in.
-      return ran.errored.length > 0 ? "INCOMPLETE" : "READY";
+      return ran.errored.length > 0 || (ran.declined ?? []).length > 0 ? "INCOMPLETE" : "READY";
     // `uncovered` exits 0 in the gate (adr-0021), where the question is whether a
     // push may proceed. Here the question is whether the work is ready, and a run
     // that verified nothing has not established that.

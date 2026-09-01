@@ -180,6 +180,22 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
     expect(said()).toContain("fails");
   });
 
+  it("refuses when there is no merge base, rather than diffing unrelated trees", async () => {
+    // Found by a cross-vendor review. Two histories that share nothing have no
+    // merge base; diffing against the ref anyway compares everything in both and
+    // then reports the result as verified.
+    const dir = await repo();
+    await git(dir, "checkout", "-q", "--orphan", "other");
+    await writeFile(join(dir, "src/a.ts"), "export const a = 1;\n", "utf-8");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "unrelated");
+    await git(dir, "branch", "-q", "-M", "main-2");
+    await git(dir, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main").catch(() => undefined);
+
+    const code = await runReady({ range: "definitely-not-a-ref" }, dir);
+    expect(code).toBe(2);
+  });
+
   it("refuses on a detached HEAD rather than guessing a base", async () => {
     const dir = await repo();
     const { stdout } = await exec("git", ["rev-parse", "HEAD"], { cwd: dir, env: ENV });

@@ -59,7 +59,24 @@ export async function runReady(
     return EXIT_INCOMPLETE;
   }
 
-  const commit = (await mergeBaseOf(base.ref, cwd)) ?? base.ref;
+  // A merge base that will not resolve means the scope was never established. Two
+  // unrelated histories have none, and diffing against the ref anyway compares two
+  // trees that share nothing: an enormous scope that would then be reported as
+  // verified. `--range` is exempt because the caller said what they meant, and a
+  // range like `a..b` is not a ref `merge-base` can take.
+  let commit: string;
+  if (opts.range !== undefined) {
+    commit = opts.range;
+  } else {
+    const found = await mergeBaseOf(base.ref, cwd);
+    if (found === null) {
+      console.error(
+        `\n  ${saidAs("INCOMPLETE")}\n\n  no merge base between HEAD and ${base.ref}, so the scope of this task is not established.\n  Pass --range to say what to verify.\n`,
+      );
+      return EXIT_INCOMPLETE;
+    }
+    commit = found;
+  }
 
   // One diff against the merge base covers committed, staged and unstaged, because
   // a diff with no `..` compares the WORKING TREE to the ref. Untracked files are
@@ -96,7 +113,10 @@ export async function runReady(
   const { run, routing, registry } = verified;
   // An EMPTY registry is a gate that could not run, not an uncovered change.
   const outcome = registry.byId.size === 0 ? "incomplete" : outcomeOf(run.verdict, run.selection);
-  const readiness = readinessOf(outcome, files.length > 0, { errored: run.verdict.errored });
+  const readiness = readinessOf(outcome, files.length > 0, {
+    errored: run.verdict.errored,
+    declined: run.selection.declined,
+  });
 
   const results: CheckLine[] = run.verdict.results.map((r) => ({
     id: r.checkId,

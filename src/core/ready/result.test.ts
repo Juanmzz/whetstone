@@ -37,6 +37,19 @@ describe("readinessOf — the gate's outcome as an answer to `is this ready`", (
     expect(readinessOf("blocked", true, { errored: ["lint"] })).toBe("NOT_READY");
   });
 
+  it("is INCOMPLETE when an applicable check was switched off", () => {
+    // Coverage declined is not coverage. The gate tolerates it where something else
+    // ran; readiness cannot, because the check that would have looked at this did
+    // not, and nobody can tell from a green line which.
+    expect(readinessOf("passed", true, { errored: [], declined: ["lint"] })).toBe("INCOMPLETE");
+  });
+
+  it("is still READY when a check was skipped by its own receipt", () => {
+    // A receipt is proof it already passed on these exact inputs. That IS verified,
+    // and refusing it would make every second run report incomplete.
+    expect(readinessOf("passed", true, { errored: [], declined: [] })).toBe("READY");
+  });
+
   it("is NO_CHANGES when the scope held nothing, whatever the gate said", () => {
     for (const outcome of ["passed", "uncovered"] as const) {
       expect(readinessOf(outcome, false)).toBe("NO_CHANGES");
