@@ -29,20 +29,10 @@ export {
   type StrictPath,
 } from "./interview.js";
 export {
-  renderDecisionsMd,
   renderRootGitignoreStanza,
   renderWstGitignore,
-  renderWstGitattributes,
-  CLAUDE_MD,
-  VENDOR_POINTERS,
-  MEMORY_README,
   ROOT_GITIGNORE_ENTRIES,
-  SKILL_FILES,
-  activeSkills,
-  renderAgentsMd,
-  renderConstitution,
   renderWstYaml,
-  skillCopies,
 } from "./payload.js";
 export { planInit, type InitOptions, type InitPlan, type InitPlanInput } from "./plan.js";
 export {
@@ -54,7 +44,6 @@ export {
 export { MAX_DEPTH, MAX_FILES, skipDir, walkDepth } from "./walk.js";
 export {
   buildTriageRules,
-  renderTriageRulesMd,
   renderTriageYaml,
 } from "./triage.js";
 export { collisionsIn, renderCollisions, type Collidable, type Collision } from "./collisions.js";

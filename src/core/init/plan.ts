@@ -19,7 +19,6 @@ import {
 import { auditSelfContained, formatViolations, unauditedCopies } from "./selfcontained.js";
 import {
   buildTriageRules,
-  renderTriageRulesMd,
   renderTriageYaml,
 } from "./triage.js";
 
@@ -60,13 +59,6 @@ export interface InitPlanInput {
    * Read by the shell. Absent on a fresh repo, where the shipped set is right.
    */
   readonly presentSkills?: readonly string[];
-  /**
-   * Whetstone's own skill files, keyed by `from`, read by the shell before
-   * planning. Supplied so the reference-closure audit can read the eight files it
-   * ships verbatim — the ones written for THIS repo and most likely to name a
-   * path a bootstrapped repo does not have.
-   */
-  readonly skillTexts?: ReadonlyMap<string, string>;
   readonly facts: RepoFacts;
   readonly answers: InterviewAnswers;
   readonly clock: ClockPort;

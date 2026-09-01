@@ -22,7 +22,6 @@ import {
 import { createGitAdapter } from "../shell/git.js";
 import { banner } from "../banner.js";
 import { gatherFacts } from "../shell/repo-facts.js";
-import { findPayloadRoot, readSkills } from "../shell/payload.js";
 
 const EXIT_NO_BASE = 2;
 
@@ -78,7 +77,6 @@ export async function runUpdate(
 
   // The SAME answers, re-planned by THIS version. That is the whole comparison:
   // one input, two renderers, and the difference is what the upgrade would change.
-  const payloadRoot = await findPayloadRoot();
   const presentSkills = await readdir(join(root, DEFINITION_DIR, "skills"))
     .then((names) => names.filter((n) => n.endsWith(".md")).sort().map((n) => `skills/${n}`))
     .catch(() => undefined);
@@ -91,7 +89,6 @@ export async function runUpdate(
       facts: await gatherFacts(root),
       answers: base.answers,
       clock: { now: () => new Date(base.generatedAt) },
-      skillTexts: await readSkills(payloadRoot),
       ...(presentSkills === undefined ? {} : { presentSkills }),
     });
   } catch (cause) {

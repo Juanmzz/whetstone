@@ -4,7 +4,6 @@ import { matchesPathGlob } from "../triage/glob.js";
 import { NO_RISK, type InterviewAnswers } from "./interview.js";
 import {
   buildTriageRules,
-  renderTriageRulesMd,
   renderTriageYaml,
 } from "./triage.js";
 
@@ -130,34 +129,3 @@ describe("renderTriageYaml — must round-trip through the real loader", () => {
     expect(first?.tier).toBe("strict");
   });
 });
-
-describe("renderTriageRulesMd", () => {
-  it("is the human table the YAML is compiled from, and says so", () => {
-    const md = renderTriageRulesMd(buildTriageRules(answers()), { date: "2026-08-08" });
-    expect(md).toMatch(/^---\n/);
-    expect(md).toContain("id: triage-rules");
-    expect(md).toContain("2026-08-08");
-    expect(md).toContain("`strict`");
-    expect(md).toContain("`light`");
-    expect(md).toContain("`off`");
-  });
-
-  it("lists every declared strict glob in the strict row", () => {
-    const rules = buildTriageRules({
-      ...answers(),
-      strictPaths: [
-        { glob: "src/billing/**", reason: "moves money" },
-        { glob: "src/auth/**", reason: "a hole is a breach" },
-      ],
-    });
-    const md = renderTriageRulesMd(rules, { date: "2026-08-08" });
-    expect(md).toContain("src/billing/**");
-    expect(md).toContain("src/auth/**");
-  });
-
-  it("says plainly that nothing is strict yet when nothing is", () => {
-    const md = renderTriageRulesMd(buildTriageRules(answers()), { date: "2026-08-08" });
-    expect(md).toMatch(/nothing is strict yet/i);
-  });
-});
-

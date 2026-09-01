@@ -143,62 +143,6 @@ export function renderTriageYaml(rules: readonly TriageRule[]): string {
 
 // ── `.wst/triage-rules.md` ───────────────────────────────────────────────────
 
-/** Markdown table cells cannot contain a raw pipe or a newline. */
-function cell(text: string): string {
-  return oneLine(text).replaceAll("|", "\\|");
-}
-
-export interface TriageRulesMdMeta {
-  readonly date: string;
-}
-
-export function renderTriageRulesMd(
-  rules: readonly TriageRule[],
-  meta: TriageRulesMdMeta,
-): string {
-  const byTier = (tier: TriageRule["tier"]): readonly TriageRule[] =>
-    rules.filter((r) => r.tier === tier);
-
-  const applies = (tier: TriageRule["tier"], fallback: string): string => {
-    const list = byTier(tier);
-    if (list.length === 0) return fallback;
-    return list.map((r) => `\`${cell(r.glob)}\`: ${cell(r.reason)}`).join("<br>");
-  };
-
-  const strictRow = applies(
-    "strict",
-    "**Nothing is strict yet.** No path was named at init. Add the core domain logic here " +
-      "the moment it exists; an empty strict row is a decision to be revisited, not a " +
-      "statement that nothing matters.",
-  );
-
-  return `---
-id: triage-rules
-generated: ${meta.date}
-status: active
----
-# Triage rules
-
-Classify every change into a discipline level BEFORE work starts.
-
-| Level | Applies to | Discipline |
-| ----- | ---------- | ---------- |
-| \`strict\` | ${strictRow} | **Full TDD: RED → GREEN → TRIANGULATE → REFACTOR.** Fresh-context review before it ships. No shortcuts. |
-| \`light\` | ${applies("light", "standard changes not matching strict")} | A failing happy-path test first; reasoned before merge. No full ceremony. |
-| \`off\` | ${applies("off", "trivial changes: typos, formatting, changelog lines")} | No ceremony. |
-
-Default when a change matches nothing above: \`light\`.
-
-**Tier is the MAXIMUM of the files touched.** One \`strict\` file in a diff makes the whole
-change \`strict\`. Size only escalates, never de-escalates.
-
-\`${DEFINITION_DIR}/triage-rules.md\` **is** amendable by the retro: a change that was mis-classified is
-the primary evidence for editing the table.
-
-\`${DEFINITION_DIR}/triage.yaml\` is COMPILED from this table. Change the table first, then
-regenerate, never the reverse.
-`;
-}
 
 /**
  * WHAT USED TO LIVE HERE: `renderStrictPathGuard` and `renderClaudeSettings`, which
