@@ -21,7 +21,8 @@ export interface CheckLine {
 export interface ReadyFacts {
   readonly repo: string;
   readonly branch: string;
-  readonly base: { readonly ref: string; readonly how: string; readonly commit: string };
+  /** `commit` is null where the base is a range, which resolves to no single one. */
+  readonly base: { readonly ref: string; readonly how: string; readonly commit: string | null };
   /** Split, never totalled: a forgotten `git add` is only visible in the breakdown. */
   readonly committed: readonly string[];
   readonly staged: readonly string[];
@@ -76,8 +77,10 @@ export function renderReady(facts: ReadyFacts): string {
     "",
     `  repo        ${facts.repo}`,
     `  branch      ${facts.branch}`,
-    // Both, always. A ref moves; the commit is what was compared.
-    `  base        ${facts.base.ref} at ${facts.base.commit} (${facts.base.how})`,
+    // Both where there are two. A ref moves, so the commit is what was actually
+    // compared; a range resolves to no single commit and truncating it to eight
+    // characters printed `main..HE`.
+    `  base        ${facts.base.ref}${facts.base.commit === null ? "" : ` at ${facts.base.commit}`} (${facts.base.how})`,
     "",
   ];
 

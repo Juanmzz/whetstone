@@ -135,7 +135,7 @@ export async function runReady(
   const facts = {
     repo: repoRoot,
     branch: scope.branch ?? "(detached)",
-    base: { ref: base.ref, how: base.how, commit: commit.slice(0, 8) },
+    base: { ref: base.ref, how: base.how, commit: opts.range === undefined ? commit.slice(0, 8) : null },
     // Already relative to the repository root: that is what git prints, and what
     // every check's `include` glob is written against. Re-relativising them
     // against the process's cwd produced `../../home/...` the moment `ready` ran
