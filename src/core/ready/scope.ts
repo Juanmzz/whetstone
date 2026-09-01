@@ -51,6 +51,16 @@ export function resolveBase(facts: ScopeFacts): BaseResolution {
     return { ok: true, ref: facts.originHead, how: "origin/HEAD" };
   }
 
+  // Standing ON the default branch is not ambiguity. There is no branch to be
+  // ahead of, so the task is whatever is uncommitted, and `HEAD` says exactly
+  // that. Refusing here sent a repo with one branch to `--range` for no reason.
+  const onDefault =
+    (DEFAULTS as readonly string[]).includes(facts.branch) ||
+    facts.originHead === `origin/${facts.branch}`;
+  if (onDefault) {
+    return { ok: true, ref: "HEAD", how: "the working tree, since this is the default branch" };
+  }
+
   const remote = DEFAULTS.map((n) => `origin/${n}`).filter(
     (r) => facts.remoteBranches.includes(r) && !self.has(r),
   );

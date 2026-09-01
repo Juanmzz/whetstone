@@ -19,11 +19,9 @@ import {
   renderWstGitattributes,
   MEMORY_README,
   OUT_OF_SCOPE_README,
-  activeSkills,
   renderAgentsMd,
   renderConstitution,
   renderWstYaml,
-  skillCopies,
 } from "./payload.js";
 import { auditSelfContained, formatViolations, unauditedCopies } from "./selfcontained.js";
 import {
@@ -126,8 +124,9 @@ export function planInit(input: InitPlanInput): InitPlan {
     ...(options.seedAgentLens === true ? { agentLens: true } : {}),
   });
 
-  const skills = activeSkills(input.presentSkills);
-  const copies = skillCopies(input.skillTexts);
+  // NONE. The readiness path reads no skill, so copying eight of them into a repo
+  // installing verification is eight files nobody there has a use for yet.
+  const copies: readonly CopyRequest[] = [];
 
   // Compiled BEFORE the prose, because the prose refers to it: `triage-rules.md`
   // may only name the hook in a repo where the hook actually exists.
@@ -142,93 +141,27 @@ export function planInit(input: InitPlanInput): InitPlan {
   });
   const triageRulesMd = renderTriageRulesMd(rules, { date });
 
+  /**
+   * ONLY what selects and runs a readiness check.
+   *
+   * `init` used to write twenty-eight files: a constitution, a decision record, a
+   * signal log, eight skills, two vendor pointers and a hook. A repo installing
+   * verification for the first time had asked for none of them and could not yet
+   * have a use for any: a signal log with no signals, a retro log with no retro, a
+   * decision record with no decisions. Whetstone verifies a worktree; everything
+   * else was apparatus arriving ahead of a need.
+   */
   const files: GeneratedFile[] = [
-    { path: `${DEFINITION_DIR}/constitution.md`, contents: constitution },
-    { path: `${DEFINITION_DIR}/triage-rules.md`, contents: triageRulesMd },
     { path: `${DEFINITION_DIR}/triage.yaml`, contents: renderTriageYaml(rules) },
     {
       path: `${DEFINITION_DIR}/wst.yaml`,
-      contents: renderWstYaml({
-        backend: options.backend ?? "files",
-        skills,
-        namespace: input.facts.repoName,
-        // The adapter the harnesses named can drive. Null where none of them can,
-        // and then the default stands and the lens simply does not run.
-        ...(judgeFor(options.harnesses ?? []) === null
-          ? {}
-          : { agent: judgeFor(options.harnesses ?? []) as string }),
-      }),
+      contents: renderWstYaml({ backend: options.backend ?? "files", namespace: input.facts.repoName }),
     },
-    // Per-machine runtime state (the compiled check index, the event log, the
-    // receipts cache) must never be committed. `memory/signals.jsonl` below is
-    // NOT covered here on purpose: it is committed, deliberately.
+    // The compiled check index, the event log and the receipts cache are per-machine
+    // and must never be committed.
     { path: `${DEFINITION_DIR}/.gitignore`, contents: renderWstGitignore() },
-    // How git merges the one committed page every worker appends to at once.
-    // N worktrees on one repository; without this, every second worker
-    // conflicts on the last line of the signal log.
-    { path: `${DEFINITION_DIR}/.gitattributes`, contents: renderWstGitattributes() },
     ...checkFiles,
-    { path: `${DEFINITION_DIR}/memory/README.md`, contents: MEMORY_README },
-    // Empty on purpose. A seeded example would be the first line of the log, and
-    // then every count, every "since the last retro" cursor and every cluster is
-    // computed over a fact that never happened.
-    { path: `${DEFINITION_DIR}/memory/signals.jsonl`, contents: "" },
-    {
-      path: `${DEFINITION_DIR}/memory/patterns.md`,
-      contents:
-        "# Patterns\n\nRecurring patterns distilled by a retro. Empty until one has run," +
-        "\nthis file holds conclusions, not observations.\n",
-    },
-    {
-      path: `${DEFINITION_DIR}/memory/retro-log.md`,
-      contents:
-        "# Retro log\n\nOne entry per retro: which signals it read, what it changed, and what" +
-        "\nit deliberately did not change. The next retro starts where the last one stopped.\n",
-    },
-    { path: `${DEFINITION_DIR}/memory/decisions.md`, contents: renderDecisionsMd({ date }) },
-    // No entries, only the home. A seeded refusal would be a decision nobody made,
-    // and it would be read as one — the same reason `signals.jsonl` ships empty.
-    { path: `${DEFINITION_DIR}/memory/out-of-scope/README.md`, contents: OUT_OF_SCOPE_README },
   ];
-
-  // The vendor files are RENDERINGS of `.wst/` (ADR-0002), which is why they can be
-  // withheld without withholding anything: a repo whose harness already owns
-  // `AGENTS.md` gets the definitions and keeps its own front door. Refusing to
-  // install at all used to be the only answer to that.
-  const vendorFiles: GeneratedFile[] = [
-    {
-      path: "AGENTS.md",
-      contents: renderAgentsMd({
-        repoName: input.facts.repoName,
-        constitution,
-        triageRulesMd,
-        activeSkills: skills,
-        checkIds: checkFiles.map((f) =>
-          f.path.replace(`${DEFINITION_DIR}/checks/`, "").replace(/\.md$/, ""),
-        ),
-      }),
-    },
-    // NOT copies of AGENTS.md: a pointer, and only for a harness that cannot
-    // find it on its own. Codex and OpenCode read `AGENTS.md`, so a pointer for
-    // them is a second file saying nothing.
-    ...Object.entries<string>(
-      options.harnesses === undefined ? pointersForAgent(DEFAULT_AGENT) : pointersFor(options.harnesses),
-    ).map(([path, contents]) => ({ path, contents })),
-  ];
-  if (options.definitionsOnly !== true) files.push(...vendorFiles);
-
-  // The hook is the enforcement surface, and it is the one thing `init` used to
-  // leave out: the script lived only in the Claude Code skill, so a repo
-  // bootstrapped any other way had nothing to arm. Arming stays the human's,
-  // because `core.hooksPath` takes ONE value and setting it disarms husky.
-  if (options.definitionsOnly !== true) {
-    files.push({ path: PRE_PUSH_PATH, contents: renderPrePushHook(), executable: true });
-    notes.push(
-      `wrote ${PRE_PUSH_PATH}. It does nothing until you arm it: ` +
-        `\`git config core.hooksPath .githooks\`, and only if nothing else owns that setting ` +
-        `(husky does).`,
-    );
-  }
 
   // No `.claude/` any more (ADR-0010). `init` writes DEFINITIONS; the editor hook is
   // the plugin's, which reads `.wst/triage.yaml` at run time rather than baking the

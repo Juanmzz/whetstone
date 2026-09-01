@@ -23,6 +23,20 @@ describe("readinessOf — the gate's outcome as an answer to `is this ready`", (
     expect(readinessOf("uncovered", true)).toBe("INCOMPLETE");
   });
 
+  it("is INCOMPLETE when ANY check could not run, even a non-blocking one", () => {
+    // Found by running it. `lint` is seeded at `warn`, so a `command not found`
+    // there does not lose gating and the gate says `passed`. Readiness is a
+    // different claim: a check that never ran verified nothing, and answering
+    // `READY` over it is false confidence in the one direction that matters.
+    expect(readinessOf("passed", true, { errored: ["lint"] })).toBe("INCOMPLETE");
+  });
+
+  it("is still NOT_READY when something failed AND something errored", () => {
+    // A real failure is the more actionable fact and it is a verdict on the change,
+    // where an error is not. It wins.
+    expect(readinessOf("blocked", true, { errored: ["lint"] })).toBe("NOT_READY");
+  });
+
   it("is NO_CHANGES when the scope held nothing, whatever the gate said", () => {
     for (const outcome of ["passed", "uncovered"] as const) {
       expect(readinessOf(outcome, false)).toBe("NO_CHANGES");

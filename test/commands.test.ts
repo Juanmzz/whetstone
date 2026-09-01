@@ -354,26 +354,28 @@ describe("wst init", () => {
 
   it("refuses to overwrite a file it did not write, and destroys nothing", async () => {
     // The writer is `mkdir -p` + `writeFile` with no existence check of its own,
-    // so by the time it runs the previous contents are already gone. This guard
-    // is the only thing standing between `wst init` and someone's AGENTS.md.
+    // so by the time it runs the previous contents are already gone. This guard is
+    // the only thing standing between `wst init` and a file somebody wrote.
     const dir = await bare();
-    await writeFile(join(dir, "AGENTS.md"), "# mine, hand-written\n", "utf-8");
+    await mkdir(join(dir, ".wst"), { recursive: true });
+    await writeFile(join(dir, ".wst/triage.yaml"), "# mine, hand-written\n", "utf-8");
 
     expect(await runInit({ purpose: PURPOSE }, dir)).toBe(1);
-    expect(await readFile(join(dir, "AGENTS.md"), "utf-8")).toBe("# mine, hand-written\n");
+    expect(await readFile(join(dir, ".wst/triage.yaml"), "utf-8")).toBe("# mine, hand-written\n");
   });
 
   it("names what --force would destroy instead of doing it silently", async () => {
     const dir = await bare();
-    await writeFile(join(dir, "AGENTS.md"), "# mine\n", "utf-8");
+    await mkdir(join(dir, ".wst"), { recursive: true });
+    await writeFile(join(dir, ".wst/triage.yaml"), "# mine\n", "utf-8");
     await runInit({ purpose: PURPOSE }, dir);
-    expect(stderr()).toContain("AGENTS.md");
+    expect(stderr()).toContain("triage.yaml");
   });
 
   it("writes nothing under --dry-run", async () => {
     const dir = await bare();
     expect(await runInit({ purpose: PURPOSE, dryRun: true }, dir)).toBe(0);
-    await expect(readFile(join(dir, ".wst/constitution.md"), "utf-8")).rejects.toThrow();
+    await expect(readFile(join(dir, ".wst/triage.yaml"), "utf-8")).rejects.toThrow();
     expect(stdout()).toMatch(/--dry-run: nothing written/);
   });
 
@@ -382,7 +384,7 @@ describe("wst init", () => {
     // interview decorative.
     const dir = await bare();
     expect(await runInit({}, dir)).toBe(0);
-    await expect(readFile(join(dir, ".wst/constitution.md"), "utf-8")).rejects.toThrow();
+    await expect(readFile(join(dir, ".wst/triage.yaml"), "utf-8")).rejects.toThrow();
   });
 
   it("rejects a --strict entry that cannot say why it exists", async () => {

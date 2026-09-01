@@ -97,7 +97,7 @@ export async function runReady(
   const { run, routing, registry } = verified;
   // An EMPTY registry is a gate that could not run, not an uncovered change.
   const outcome = registry.byId.size === 0 ? "incomplete" : outcomeOf(run.verdict, run.selection);
-  const readiness = readinessOf(outcome, files.length > 0);
+  const readiness = readinessOf(outcome, files.length > 0, { errored: run.verdict.errored });
 
   const rel = (p: string): string => relative(repoRoot, p) || p;
   const results: CheckLine[] = run.verdict.results.map((r) => ({

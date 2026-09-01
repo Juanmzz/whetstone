@@ -50,11 +50,28 @@ describe("resolveBase — where the task's changes start", () => {
     expect(resolveBase(facts({ localBranches: ["feat/x"], remoteBranches: [] })).ok).toBe(false);
   });
 
-  it("does not take the branch it is standing on as its own base", () => {
-    // A branch literally called `main` has no base among the candidates; saying
-    // `main..main` would report an empty change as verified.
+  it("verifies the working tree when it is standing ON the default branch", () => {
+    // Found by running it: a repo whose only branch is `main` got "pass --range",
+    // which is unhelpful and wrong. Being on the default branch is not ambiguous.
+    // There is no branch to be ahead of, so the task is what is uncommitted.
     const base = resolveBase(facts({ branch: "main", localBranches: ["main"], remoteBranches: [] }));
-    expect(base.ok).toBe(false);
+    expect(base.ok && base.ref).toBe("HEAD");
+    expect(base.ok && base.how).toMatch(/working tree|default branch/i);
+  });
+
+  it("does the same on `master`, and when origin/HEAD names the branch it is on", () => {
+    const master = resolveBase(facts({ branch: "master", localBranches: ["master"], remoteBranches: [] }));
+    expect(master.ok && master.ref).toBe("HEAD");
+
+    const onDefault = resolveBase(facts({ branch: "main", originHead: "origin/main" }));
+    expect(onDefault.ok && onDefault.ref).toBe("HEAD");
+  });
+
+  it("still refuses on a branch that is not a default and has no base", () => {
+    // The control: `feat/x` with nothing to compare against is genuinely ambiguous,
+    // and falling back to the working tree there would silently verify a fraction
+    // of the task.
+    expect(resolveBase(facts({ localBranches: ["feat/x"], remoteBranches: [] })).ok).toBe(false);
   });
 
   it("prefers origin/HEAD over a local main, since the remote is what a PR targets", () => {

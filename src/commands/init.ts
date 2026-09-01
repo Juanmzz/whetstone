@@ -632,13 +632,18 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   // Skipped under --dry-run, which writes nothing and should cost nothing.
   let probes: Probes | undefined;
   if (opts.dryRun !== true && opts.probe !== false) {
-    console.log("\nrunning this repo's own commands once, so a seeded block rests on a run");
+    // STDERR, like the gate's progress: `--json` writes an envelope to stdout and
+    // a machine reading it must not have to strip narration out of the middle.
+    const say = (line: string): void => {
+      if (opts.json !== true) console.error(line);
+    };
+    say("\nrunning this repo's own commands once, so a seeded block rests on a run");
     probes = await probeCommands({ ...stack.commands }, root, (id, command) => {
-      console.log(`  ${id.padEnd(10)} ${command}`);
+      say(`  ${id.padEnd(10)} ${command}`);
     });
     for (const [id, result] of Object.entries(probes)) {
       const said = !result.ran ? `could not run: ${result.why}` : result.ok ? "green" : `exit ${String(result.exitCode)}`;
-      console.log(`  ${id.padEnd(10)} ${said}`);
+      say(`  ${id.padEnd(10)} ${said}`);
     }
   }
 

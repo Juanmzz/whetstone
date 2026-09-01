@@ -18,13 +18,21 @@ export const EXIT_INCOMPLETE = 2;
  * `hadChanges` is separate from the outcome because the gate cannot tell the two
  * apart: an empty diff and a diff nothing matched both reach it as "no results".
  */
-export function readinessOf(outcome: GateOutcome, hadChanges: boolean): Readiness {
+export function readinessOf(
+  outcome: GateOutcome,
+  hadChanges: boolean,
+  /** Checks that could not run. Empty by default; any entry denies READY. */
+  ran: { readonly errored: readonly string[] } = { errored: [] },
+): Readiness {
   if (!hadChanges) return "NO_CHANGES";
   switch (outcome) {
     case "blocked":
       return "NOT_READY";
     case "passed":
-      return "READY";
+      // The gate tolerates a non-blocking check erroring: the push may proceed.
+      // Readiness may not. A check that never ran verified nothing, and `READY`
+      // over it is false confidence, which is the expensive direction to be wrong in.
+      return ran.errored.length > 0 ? "INCOMPLETE" : "READY";
     // `uncovered` exits 0 in the gate (adr-0021), where the question is whether a
     // push may proceed. Here the question is whether the work is ready, and a run
     // that verified nothing has not established that.

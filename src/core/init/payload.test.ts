@@ -63,14 +63,12 @@ describe("skills", () => {
 });
 
 describe("renderWstYaml", () => {
-  const yaml = renderWstYaml({ backend: "files", skills: activeSkills(), namespace: "acme" });
+  const yaml = renderWstYaml({ backend: "files", namespace: "acme" });
 
-  it("is valid YAML with the fields the loader and the retro read", () => {
+  it("is valid YAML with the two fields a new installation actually has", () => {
     const parsed = parseYaml(yaml) as Record<string, unknown>;
     expect(parsed["version"]).toBe(0);
     expect(parsed["backend"]).toBe("files");
-    expect(parsed["skills"]).toHaveLength(8);
-    expect((parsed["retro"] as Record<string, unknown>)["suggest_after"]).toBe(5);
   });
 
   it("pins the memory namespace to this repo — a shared namespace cross-contaminates", () => {
@@ -78,16 +76,18 @@ describe("renderWstYaml", () => {
     expect((parsed["memory"] as Record<string, unknown>)["namespace"]).toBe("acme");
   });
 
-  it("lists the inactive skills as commented-out entries, so they can be switched on later", () => {
-    const y = renderWstYaml({
-      backend: "files",
-      skills: activeSkills().filter((s) => s !== "skills/doc-locations.md"),
-      namespace: "solo",
-    });
-    expect(y).toContain("# - skills/doc-locations.md");
-    expect((parseYaml(y) as Record<string, unknown>)["skills"]).not.toContain(
-      "skills/doc-locations.md",
-    );
+  it("names no judge and no skills, because it installs neither", () => {
+    // A key configuring a lens in a repo with no lens is configuration for
+    // something that is not there, and a reader cannot tell it from a real setting.
+    const parsed = parseYaml(yaml) as Record<string, unknown>;
+    expect(parsed["agent"]).toBeUndefined();
+    expect(parsed["skills"]).toBeUndefined();
+    expect(yaml).not.toContain("skills/");
+  });
+
+  it("still writes a judge where a caller asks for one", () => {
+    const y = renderWstYaml({ backend: "files", namespace: "acme", agent: "codex" });
+    expect((parseYaml(y) as Record<string, unknown>)["agent"]).toBe("codex");
   });
 });
 
