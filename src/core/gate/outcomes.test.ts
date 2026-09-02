@@ -93,10 +93,8 @@ describe("interpretCommandResult — a deterministic check's exit status", () =>
     });
 
     it("does not quote the package manager's echo of its own script", () => {
-      // Seen on a real run: `ERROR lint could not run ... (command not found, exit
-      // 127): > sift@0.1.0 lint`. npm echoes the script it is about to run before
-      // the failure, so the one line that says WHAT is missing was pushed out by
-      // two lines that say nothing the reader did not already know.
+      // Seen on a real run: the detail ended at `> sift@0.1.0 lint`, because npm
+      // echoes its script before failing and that pushed out the missing binary.
       const outcome = interpretCommandResult(
         command({
           exitCode: 127,

@@ -66,14 +66,10 @@ export interface TaskFiles {
 }
 
 /**
- * The repository root, so the scope of a task does not depend on which directory
- * the agent happened to be standing in.
- *
- * Only `ls-files --others` actually needs it: alone among these calls it answers
- * relative to the process cwd, in what it lists AND in the paths it prints, so run
- * from `apps/api` it reported NO CHANGES over a repo with an untracked file in
- * `packages/shared`. Every call takes the root anyway, because the next one added
- * here should not have to know which kind it is.
+ * The repository root. `ls-files --others` alone among these answers relative to
+ * the process cwd, so from `apps/api` it reported NO CHANGES over a repo with an
+ * untracked file in `packages/shared`. Every call takes the root, so the next one
+ * added here need not know which kind it is.
  */
 async function topLevel(cwd: string): Promise<string> {
   return (await git(["rev-parse", "--show-toplevel"], cwd)) ?? cwd;

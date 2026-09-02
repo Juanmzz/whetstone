@@ -54,12 +54,9 @@ function output(result: CommandResult): string {
 }
 
 /**
- * The package manager's echo of the script it is about to run, dropped.
- *
- * npm prints `> pkg@1.0.0 lint` and `> eslint .` before anything happens, so on a
- * missing binary those two lines arrive ahead of the one that says WHAT is missing.
- * Only for a run that could not START: a check that really failed owns every line
- * of its output, and trimming there would hide part of a verdict.
+ * The package manager's echo of its own script, dropped. npm prints `> pkg@1.0.0
+ * lint` before anything happens, so on a missing binary it arrives ahead of the
+ * line saying WHAT is missing. Only here: a check that FAILED owns every line.
  */
 function withoutScriptEcho(printed: string): string {
   const kept = printed

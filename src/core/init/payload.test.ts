@@ -79,9 +79,8 @@ describe("runtime state the target repo must never commit", () => {
 
   describe("renderRootGitignoreStanza", () => {
     it("ignores the draft `--propose` leaves at the root", () => {
-      // `.wst-lane` was here until 2026-09-01. `wst prepare` wrote it and
-      // adr-0023 deleted that command, so init was ignoring a file nothing
-      // writes while leaving `.wst-answers.json`, which it does write, untracked.
+      // `.wst-lane` was here until 2026-09-01: `wst prepare` wrote it, adr-0023
+      // deleted that command, and the file init DOES write went unignored.
       expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-answers.json"]);
       expect(renderRootGitignoreStanza()).toContain(".wst-answers.json");
     });

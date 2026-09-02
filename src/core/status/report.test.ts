@@ -366,10 +366,8 @@ describe("the front doors an agent reads", () => {
   });
 
   it("says nothing when nothing points at it, because no file is lying", () => {
-    // `init` stopped writing AGENTS.md, so this fired on every freshly bootstrapped
-    // repo: a warning that something is missing, moments after the tool decided not
-    // to write it. What the field report on 2026-08-29 actually cost was a POINTER
-    // reading a file that was gone, and that is what is warned about now.
+    // `init` stopped writing AGENTS.md, so this fired on every bootstrapped repo.
+    // The 2026-08-29 field report cost a POINTER reading a file that was gone.
     expect(withDoors({ agentsMd: false, pointers: [] }).warnings.join(" ")).not.toMatch(/AGENTS\.md/);
   });
 

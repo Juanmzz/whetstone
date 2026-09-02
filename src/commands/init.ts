@@ -175,12 +175,10 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
     console.log(`  ${i + 1}. [${q.id}] ${q.prompt}`);
     console.log(`     why: ${q.why}`);
     for (const opt of q.options) console.log(`       - ${opt.value}: ${opt.label}`);
-    // The candidates the tree found. The `why` on the strict-paths question says
-    // "anything offered below arrives unticked", and off a terminal nothing was
-    // offered: the sentence promised a list this branch never printed.
+    // The `why` says "anything offered below", and off a terminal nothing was.
     for (const candidate of q.candidates ?? []) console.log(`       ? ${candidate}`);
-    // Indented as a block. A multi-line default printed its second line in column
-    // zero, which reads as the end of the question rather than part of the answer.
+    // A multi-line default printed its second line in column zero, reading as the
+    // end of the question rather than part of the answer.
     if (q.defaultAnswer !== null) {
       const [head, ...rest] = q.defaultAnswer.split("\n");
       console.log(`     default: ${head ?? ""}`);
@@ -281,10 +279,8 @@ function printPlan(plan: InitPlan, root: string): void {
   }
   for (const copy of plan.copies) console.log(`  + ${copy.to.padEnd(42)}    copied from the payload`);
 
-  // Neither is a plan file, and both used to be written without appearing here:
-  // the base records hashes of the plan, so it cannot be inside the thing it
-  // hashes, and the root ignore appends to a file the repo already owns. A plan
-  // that undercounts what lands on disk is the one thing you read before saying yes.
+  // Neither is a plan file: the base hashes the plan, and the root ignore appends
+  // to a file the repo owns. Both landed on disk without appearing here.
   console.log(`  + ${join(DEFINITION_DIR, BASE_FILE).padEnd(42)}    these answers, for \`wst update\``);
   console.log(`  + ${".gitignore".padEnd(42)}    one line appended, if missing`);
 
@@ -531,16 +527,11 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
         return 1;
       }
 
-      // The judge drafts FIRST, and the questions open on what it wrote.
-      //
-      // This was opt-in until 2026-09-01, on the reasoning that a directory listing
-      // already answers two of the three questions. Measured against a real repo it
-      // does not: the tree offers candidate paths, while the draft argues which of
-      // them earns strict review and names the condition to retire it, and reaches a
-      // risk profile no listing contains. ADR-0003 still holds, because a draft
-      // poured into the questions is signed answer by answer on screen.
-      //
-      // Asked, never assumed: this is the one step that spends money (adr-0032).
+      // The judge drafts FIRST. Opt-in until 2026-09-01, on the reasoning that a
+      // directory listing answers two of the three questions; measured against a
+      // real repo it does not, because the tree offers candidate paths while the
+      // draft argues which of them earns strict review. Asked, never assumed: this
+      // is the one step that spends money (adr-0032).
       let drafted: DraftedAnswers = {};
       if (await judgeAvailable()) {
         console.log(`${banner()}\n\ninit: ${root}`);

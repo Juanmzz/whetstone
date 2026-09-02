@@ -243,10 +243,8 @@ export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusR
     uncommitted: await uncommittedIn(repoRoot ?? cwd),
     agentFiles: await agentFilesIn(repoRoot ?? cwd),
     missingTools: await missingTools(repoRoot ?? cwd),
-    // Omitted, not "unknown", where there is no log: `0 fresh` is a claim about a
-    // backlog, and `init` no longer seeds a signal log, so a repo that has one is
-    // a repo that opted in. Reporting zero over nothing described a subsystem the
-    // reader does not have.
+    // Omitted, not "unknown", where there is no log. `init` no longer seeds one, and
+    // `0 fresh` over nothing described a subsystem the reader does not have.
     ...(definitionPresent && (await exists(join(root, SIGNALS_PATH)))
       ? { freshSignals: await freshSignals(root) }
       : {}),

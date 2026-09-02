@@ -70,21 +70,16 @@ export function unevidencedFlags(proposal: Proposal): readonly string[] {
 
 /** The proposal, reduced to exactly what `AnswersSchema` accepts. Reasoning does not survive. */
 /**
- * The proposal in the shape the interview reads, so the questions can OPEN on it.
- *
- * Distinct from `proposalToAnswers`, which produces a finished answer set for
- * `--propose` to write to a file. ADR-0003 makes the human gate the moat, and a
- * draft poured into the questions still crosses it: every field arrives on screen,
- * labelled as coming from the draft, and one keystroke edits it. A draft written
- * to a file crosses it only if the file is opened.
+ * The proposal in the shape the interview reads, so the questions OPEN on it.
+ * ADR-0003's human gate still holds: every field arrives on screen labelled as
+ * drafted, and one keystroke edits it. A file crosses that gate only if opened.
  */
 export function proposalToDraft(proposal: Proposal): DraftedAnswers {
   return {
     purpose: proposal.purpose,
     stack: proposal.stack,
     sourcePaths: proposal.sourcePaths,
-    // Same rule as `proposalToAnswers`: a flag that cited nothing is an assertion,
-    // and `unevidencedFlags` reports it rather than seeding it.
+    // Same rule as `proposalToAnswers`: a flag that cited nothing is an assertion.
     risk: proposal.risk.filter((r) => r.citedPaths.length > 0).map((r) => r.flag),
     strictPaths: proposal.strictPaths,
   };

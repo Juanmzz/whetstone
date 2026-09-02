@@ -135,11 +135,9 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
   });
 
   it("finds work outside the directory it was run from", async () => {
-    // `git ls-files --others` is the only one of the four git calls that answers
-    // relative to the process cwd, in scope AND in the paths it prints. Run from a
-    // subdirectory it reported NO_CHANGES over a repo that had an untracked file
-    // one directory over: an agent in `apps/api` of a monorepo was told there was
-    // nothing to verify while its new file sat unverified.
+    // Run from a subdirectory this reported NO_CHANGES over a repo with an
+    // untracked file one directory over: `ls-files --others` answers relative to
+    // the process cwd, and the other three git calls do not.
     const dir = await repo();
     await mkdir(join(dir, "sub"), { recursive: true });
     await writeFile(join(dir, "sub/keep.ts"), "export const k = 1;\n", "utf-8");

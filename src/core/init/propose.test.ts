@@ -238,13 +238,9 @@ describe("ProposalSchema", () => {
 });
 
 /**
- * The draft the interview opens on.
- *
- * `proposalToAnswers` produces a finished answer set, which is what `--propose`
- * writes to a file. The interview needs the looser shape, because every field it
- * is handed is still a keystroke away from being edited: the point of drafting
- * into the questions rather than around them is that the human signs each answer
- * on screen instead of signing a file they may not open.
+ * The draft the interview opens on. Looser than `proposalToAnswers`, whose finished
+ * set `--propose` writes to a file: here the human signs each answer on screen
+ * rather than signing a file they may not open.
  */
 describe("proposalToDraft — the proposal in the shape the questions read", () => {
   it("carries purpose, stack and source paths through unchanged", () => {
