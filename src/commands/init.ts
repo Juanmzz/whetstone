@@ -175,7 +175,17 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
     console.log(`  ${i + 1}. [${q.id}] ${q.prompt}`);
     console.log(`     why: ${q.why}`);
     for (const opt of q.options) console.log(`       - ${opt.value}: ${opt.label}`);
-    if (q.defaultAnswer !== null) console.log(`     default: ${q.defaultAnswer}`);
+    // The candidates the tree found. The `why` on the strict-paths question says
+    // "anything offered below arrives unticked", and off a terminal nothing was
+    // offered: the sentence promised a list this branch never printed.
+    for (const candidate of q.candidates ?? []) console.log(`       ? ${candidate}`);
+    // Indented as a block. A multi-line default printed its second line in column
+    // zero, which reads as the end of the question rather than part of the answer.
+    if (q.defaultAnswer !== null) {
+      const [head, ...rest] = q.defaultAnswer.split("\n");
+      console.log(`     default: ${head ?? ""}`);
+      for (const line of rest) console.log(`              ${line}`);
+    }
     console.log("");
   }
   console.log("Answer them, then re-run with either:");
