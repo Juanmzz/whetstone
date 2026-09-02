@@ -77,14 +77,21 @@ describe("runtime state the target repo must never commit", () => {
   });
 
 
-  describe("renderRootGitignoreStanza — .wst-lane", () => {
-    it("ignores the lane file a worker writes at the worktree root", () => {
-      expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-lane"]);
-      expect(renderRootGitignoreStanza()).toContain(".wst-lane");
+  describe("renderRootGitignoreStanza", () => {
+    it("ignores the draft `--propose` leaves at the root", () => {
+      // `.wst-lane` was here until 2026-09-01. `wst prepare` wrote it and
+      // adr-0023 deleted that command, so init was ignoring a file nothing
+      // writes while leaving `.wst-answers.json`, which it does write, untracked.
+      expect(ROOT_GITIGNORE_ENTRIES).toEqual([".wst-answers.json"]);
+      expect(renderRootGitignoreStanza()).toContain(".wst-answers.json");
+    });
+
+    it("names nothing `wst prepare` used to write", () => {
+      expect(renderRootGitignoreStanza()).not.toContain(".wst-lane");
     });
 
     it("renders only what it is given, so init can append just what is missing", () => {
-      expect(renderRootGitignoreStanza([])).not.toContain(".wst-lane");
+      expect(renderRootGitignoreStanza([])).not.toContain(".wst-answers.json");
     });
 
     it("uses no em-dash", () => {

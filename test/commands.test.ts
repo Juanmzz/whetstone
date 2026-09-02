@@ -409,12 +409,12 @@ describe("wst init", () => {
       expect(gitignore).not.toMatch(/signals\.jsonl/);
     });
 
-    it("creates a root .gitignore excluding .wst-lane when none exists", async () => {
+    it("creates a root .gitignore excluding the --propose draft when none exists", async () => {
       const dir = await bare();
       await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
 
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      expect(gitignore).toContain(".wst-lane");
+      expect(gitignore).toContain(".wst-answers.json");
     });
 
     it("appends to an existing root .gitignore rather than overwriting it", async () => {
@@ -426,17 +426,17 @@ describe("wst init", () => {
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
       expect(gitignore).toContain("node_modules/");
       expect(gitignore).toContain("dist/");
-      expect(gitignore).toContain(".wst-lane");
+      expect(gitignore).toContain(".wst-answers.json");
     });
 
     it("does not duplicate entries a .gitignore already has", async () => {
       const dir = await bare();
-      await writeFile(join(dir, ".gitignore"), ".wst-lane\n", "utf-8");
+      await writeFile(join(dir, ".gitignore"), ".wst-answers.json\n", "utf-8");
 
       await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
 
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      const occurrences = gitignore.split("\n").filter((l) => l.trim() === ".wst-lane").length;
+      const occurrences = gitignore.split("\n").filter((l) => l.trim() === ".wst-answers.json").length;
       expect(occurrences).toBe(1);
     });
 

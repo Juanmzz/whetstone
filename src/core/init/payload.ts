@@ -104,14 +104,14 @@ receipts/
 `;
 }
 
-/** Written at the worktree root by a worker, never committed to the branch. */
-export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([".wst-lane"]);
+/** Written at the repo root by `init --propose`, and never committed. */
+export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([".wst-answers.json"]);
 
 /**
  * The stanza `init` ensures is present in the target repo's OWN `.gitignore`.
  *
- * Unlike \`.wst/.gitignore\` this cannot be a plain generated file: \`.wst-lane\`
- * lives at the repo root, and almost every repo already has a root
+ * Unlike \`.wst/.gitignore\` this cannot be a plain generated file: the entries
+ * live at the repo root, and almost every repo already has a root
  * \`.gitignore\` with content worth keeping. The shell reads it and appends only
  * what is missing (source: \`src/commands/init.ts\`) rather than treating a
  * pre-existing \`.gitignore\` as a collision.
@@ -123,10 +123,9 @@ export const ROOT_GITIGNORE_ENTRIES: readonly string[] = Object.freeze([".wst-la
 export function renderRootGitignoreStanza(
   entries: readonly string[] = ROOT_GITIGNORE_ENTRIES,
 ): string {
-  return `# The lane a worker is confined to, written at the root of ITS worktree.
-# It belongs to the worktree and not to the branch: committed, it would scope
-# every clone to one lane, and a formatter's --check step would fail on a file
-# nobody meant to check in.
+  return `# The draft \`wst init --propose\` writes for you to edit and sign. It is a
+# working file and not a definition: what the repo keeps is \`${DEFINITION_DIR}/\`,
+# which the draft was only used to generate.
 ${entries.join("\n")}
 `;
 }
