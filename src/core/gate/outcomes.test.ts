@@ -92,6 +92,24 @@ describe("interpretCommandResult — a deterministic check's exit status", () =>
       expect(outcome.status).toBe("errored");
     });
 
+    it("does not quote the package manager's echo of its own script", () => {
+      // Seen on a real run: `ERROR lint could not run ... (command not found, exit
+      // 127): > sift@0.1.0 lint`. npm echoes the script it is about to run before
+      // the failure, so the one line that says WHAT is missing was pushed out by
+      // two lines that say nothing the reader did not already know.
+      const outcome = interpretCommandResult(
+        command({
+          exitCode: 127,
+          stdout: "> sift@0.1.0 lint\n> eslint .\n",
+          stderr: "sh: eslint: command not found",
+        }),
+      );
+      expect(outcome.status).toBe("errored");
+      const detail = outcome.status === "errored" ? outcome.detail : "";
+      expect(detail).toContain("sh: eslint: command not found");
+      expect(detail).not.toContain("sift@0.1.0");
+    });
+
     it("errors on the shell's `command not found` (127) and `not executable` (126)", () => {
       // Found by running the gate on this repo. A deterministic check runs through a
       // shell, so a missing binary does NOT arrive as a spawn error — the shell

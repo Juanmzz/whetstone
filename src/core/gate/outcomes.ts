@@ -53,6 +53,23 @@ function output(result: CommandResult): string {
   return tail([result.stdout, result.stderr].filter((s) => s.trim() !== "").join("\n"));
 }
 
+/**
+ * The package manager's echo of the script it is about to run, dropped.
+ *
+ * npm prints `> pkg@1.0.0 lint` and `> eslint .` before anything happens, so on a
+ * missing binary those two lines arrive ahead of the one that says WHAT is missing.
+ * Only for a run that could not START: a check that really failed owns every line
+ * of its output, and trimming there would hide part of a verdict.
+ */
+function withoutScriptEcho(printed: string): string {
+  const kept = printed
+    .split("\n")
+    .filter((line) => !/^\s*>\s/.test(line))
+    .join("\n")
+    .trim();
+  return kept === "" ? printed : kept;
+}
+
 export function interpretCommandResult(result: CommandResult): CheckOutcome {
   // Order matters, and every branch above the exit code is deliberate: a broken run
   // often ALSO reports a non-zero exit, and reading the code first would turn a
@@ -82,7 +99,7 @@ export function interpretCommandResult(result: CommandResult): CheckOutcome {
   // in that range.
   if (result.exitCode === 126 || result.exitCode === 127) {
     const why = result.exitCode === 127 ? "command not found" : "command not executable";
-    const printed = output(result);
+    const printed = withoutScriptEcho(output(result));
     return {
       status: "errored",
       detail: `the check could not be run (${why}, exit ${result.exitCode})${
