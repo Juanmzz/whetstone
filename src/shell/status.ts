@@ -17,6 +17,7 @@ import { resolveJudge } from "./judge.js";
 import { describePlugin, pluginHookRoot } from "./plugin.js";
 import { readCursorResult } from "./retro.js";
 import { resolveMemory } from "./memory.js";
+import { SIGNALS_PATH } from "./signals.js";
 import { signalsSince } from "../core/retro/cluster.js";
 import { mentionsGate, sourcedPaths } from "../core/status/prepush.js";
 import {
@@ -242,8 +243,13 @@ export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusR
     uncommitted: await uncommittedIn(repoRoot ?? cwd),
     agentFiles: await agentFilesIn(repoRoot ?? cwd),
     missingTools: await missingTools(repoRoot ?? cwd),
-    // Omitted, not "unknown", without a `.wst/`: there is no retro to be behind.
-    ...(definitionPresent ? { freshSignals: await freshSignals(root) } : {}),
+    // Omitted, not "unknown", where there is no log: `0 fresh` is a claim about a
+    // backlog, and `init` no longer seeds a signal log, so a repo that has one is
+    // a repo that opted in. Reporting zero over nothing described a subsystem the
+    // reader does not have.
+    ...(definitionPresent && (await exists(join(root, SIGNALS_PATH)))
+      ? { freshSignals: await freshSignals(root) }
+      : {}),
   });
 }
 

@@ -218,14 +218,18 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
 
   // Warned, never blocked: a repo whose harness owns that surface is a legitimate
   // `--definitions-only` install, and `status` may not call that broken.
+  //
+  // Only when something POINTS at it. `init` stopped writing AGENTS.md, so an
+  // absent one is now the ordinary state of a bootstrapped repo, and warning about
+  // it there is a warning about a decision rather than a fault. A pointer left
+  // reading a file that is gone is a fault either way, and that is the case the
+  // 2026-08-29 field report actually described.
   const doors = facts.agentFiles;
-  if (doors !== undefined && !doors.agentsMd) {
+  if (doors !== undefined && !doors.agentsMd && doors.pointers.length > 0) {
     const dangling =
-      doors.pointers.length === 0
-        ? ""
-        : doors.pointers.length === 1
-          ? ` ${doors.pointers[0] ?? ""} still points at it, so it reads a file that is gone.`
-          : ` ${doors.pointers.join(" and ")} still point at it, so they read a file that is gone.`;
+      doors.pointers.length === 1
+        ? ` ${doors.pointers[0] ?? ""} still points at it, so it reads a file that is gone.`
+        : ` ${doors.pointers.join(" and ")} still point at it, so they read a file that is gone.`;
     warnings.push(
       `AGENTS.md is missing: an agent working in this repo has no project rules to read.` +
         dangling,
