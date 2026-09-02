@@ -269,6 +269,13 @@ function printPlan(plan: InitPlan, root: string): void {
   }
   for (const copy of plan.copies) console.log(`  + ${copy.to.padEnd(42)}    copied from the payload`);
 
+  // Neither is a plan file, and both used to be written without appearing here:
+  // the base records hashes of the plan, so it cannot be inside the thing it
+  // hashes, and the root ignore appends to a file the repo already owns. A plan
+  // that undercounts what lands on disk is the one thing you read before saying yes.
+  console.log(`  + ${join(DEFINITION_DIR, BASE_FILE).padEnd(42)}    these answers, for \`wst update\``);
+  console.log(`  + ${".gitignore".padEnd(42)}    one line appended, if missing`);
+
   if (plan.notes.length > 0) {
     console.log("\nnotes");
     for (const note of plan.notes) console.log(`  · ${note}`);
@@ -431,7 +438,7 @@ async function writePlan(plan: InitPlan, root: string): Promise<void> {
  * actually missing are appended, so a second `wst init` does not duplicate a
  * line a first run (or the repo's own history) already added.
  */
-async function ensureRootGitignored(root: string): Promise<void> {
+async function ensureRootGitignored(root: string): Promise<boolean> {
   const target = join(root, ".gitignore");
   let current: string | null;
   try {
@@ -442,15 +449,16 @@ async function ensureRootGitignored(root: string): Promise<void> {
 
   const present = new Set((current ?? "").split("\n").map((line) => line.trim()));
   const missing = ROOT_GITIGNORE_ENTRIES.filter((entry) => !present.has(entry));
-  if (missing.length === 0) return;
+  if (missing.length === 0) return false;
 
   const stanza = renderRootGitignoreStanza(missing);
   if (current === null) {
     await writeFile(target, stanza, "utf-8");
-    return;
+    return true;
   }
   const sep = current.length === 0 || current.endsWith("\n") ? "" : "\n";
   await writeFile(target, `${current}${sep}\n${stanza}`, "utf-8");
+  return true;
 }
 
 // ── the command ──────────────────────────────────────────────────────────────
@@ -633,16 +641,18 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   // a terminal, where there is nobody to ask and the caller already meant it.
   if (
     !(await confirm(
-      `\n  write ${String(plan.files.length + plan.copies.length)} file(s) into ${root}?`,
+      `\n  write ${String(plan.files.length + plan.copies.length + 1)} file(s) into ${root}?`,
     ))
   ) {
     console.log("  nothing written.");
     return 0;
   }
 
+  // Counted, because the closing line names a number and a number has to be true.
+  let touchedRootIgnore = false;
   try {
     await writePlan(plan, root);
-    await ensureRootGitignored(root);
+    touchedRootIgnore = await ensureRootGitignored(root);
     // LAST, and only on success. A base written before the files it describes
     // would survive a crash and claim hashes for content nobody wrote.
     await writeBase(plan, answers, root);
@@ -651,7 +661,8 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 1;
   }
 
-  console.log(`\nwrote ${String(plan.files.length)} files. Review them, then commit:`);
+  const written = plan.files.length + 1 + (touchedRootIgnore ? 1 : 0);
+  console.log(`\nwrote ${String(written)} files. Review them, then commit:`);
   console.log(`  git add ${stagePaths(plan).join(" ")}`);
   console.log('  git commit -m "chore: bootstrap verification"');
   return 0;
