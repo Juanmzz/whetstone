@@ -234,7 +234,7 @@ program
   .option("--source <glob...>", "where this project's code lives: scopes the checks and the triage rules")
   .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
   .option("--stack <text>", "what the project is built with, for the constitution")
-  .option("--propose", "draft the answers with the judge: you edit and sign (one model call)")
+  .option("--propose", "write the judge's draft to a file instead of into the questions")
   .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
   .option("--llm", "also seed an uncalibrated review lens (capped at warn)")
   .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else: no AGENTS.md, no CLAUDE.md`)

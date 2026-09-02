@@ -5,7 +5,7 @@
 
 import { z } from "zod";
 import type { RepoFacts, StackFacts } from "./detect.js";
-import { NO_RISK, type InterviewAnswers, type RiskProfile } from "./interview.js";
+import { NO_RISK, type DraftedAnswers, type InterviewAnswers, type RiskProfile } from "./interview.js";
 
 /** The five flags, as the schema sees them. Same keys as `RiskProfile`. */
 const RISK_FLAGS = [
@@ -69,6 +69,27 @@ export function unevidencedFlags(proposal: Proposal): readonly string[] {
 }
 
 /** The proposal, reduced to exactly what `AnswersSchema` accepts. Reasoning does not survive. */
+/**
+ * The proposal in the shape the interview reads, so the questions can OPEN on it.
+ *
+ * Distinct from `proposalToAnswers`, which produces a finished answer set for
+ * `--propose` to write to a file. ADR-0003 makes the human gate the moat, and a
+ * draft poured into the questions still crosses it: every field arrives on screen,
+ * labelled as coming from the draft, and one keystroke edits it. A draft written
+ * to a file crosses it only if the file is opened.
+ */
+export function proposalToDraft(proposal: Proposal): DraftedAnswers {
+  return {
+    purpose: proposal.purpose,
+    stack: proposal.stack,
+    sourcePaths: proposal.sourcePaths,
+    // Same rule as `proposalToAnswers`: a flag that cited nothing is an assertion,
+    // and `unevidencedFlags` reports it rather than seeding it.
+    risk: proposal.risk.filter((r) => r.citedPaths.length > 0).map((r) => r.flag),
+    strictPaths: proposal.strictPaths,
+  };
+}
+
 export function proposalToAnswers(proposal: Proposal): InterviewAnswers {
   const evidenced = new Set(
     proposal.risk.filter((r) => r.citedPaths.length > 0).map((r) => r.flag),

@@ -29,7 +29,9 @@ import {
   ProposalSchema,
   buildProposalPrompt,
   proposalToAnswers,
+  proposalToDraft,
   renderProposal,
+  type Proposal,
 } from "../core/init/propose.js";
 // `init` runs BEFORE a definition layer exists, so there is no `agent:` key to
 // read. It uses the default adapter, which is the only one that ships.
@@ -328,14 +330,12 @@ async function judgeAvailable(): Promise<boolean> {
  * reading of the project the project's constitution, with no moment where anyone
  * had to look at it. ADR-0003 calls the human gate the moat.
  */
-async function proposeAnswers(
+/** One judge call for a draft, or null when it could not produce one. */
+async function draftProposal(
   facts: RepoFacts,
   stack: ReturnType<typeof detectStack>,
   root: string,
-  outPath: string,
-): Promise<number> {
-  console.log(`${banner()}\n\ninit --propose: ${root}`);
-  printDetection(stack);
+): Promise<{ readonly proposal: Proposal; readonly costUsd: number } | null> {
   console.log("\nasking the judge to draft the answers...\n");
 
   // The judge asked for this on the first live run and could not go and get it.
@@ -351,21 +351,37 @@ async function proposeAnswers(
   });
 
   if (!result.ok) {
-    // The judge failing is the DRAFTER being broken, not a fact about the repo —
-    // the same distinction the gate draws. Fall back to the questions rather than
-    // writing a half-answer.
+    // The judge failing is the DRAFTER being broken, not a fact about the repo:
+    // the same distinction the gate draws. The caller falls back to the questions
+    // rather than writing a half-answer.
     console.error(
-      `the judge could not produce a draft (${result.error.kind}): ${result.error.detail}\n` +
-        `  Nothing was written. Answer the questions yourself with \`wst init\`.`,
+      `the judge could not produce a draft (${result.error.kind}): ${result.error.detail}`,
     );
+    return null;
+  }
+  return { proposal: result.value, costUsd: result.costUsd };
+}
+
+async function proposeAnswers(
+  facts: RepoFacts,
+  stack: ReturnType<typeof detectStack>,
+  root: string,
+  outPath: string,
+): Promise<number> {
+  console.log(`${banner()}\n\ninit --propose: ${root}`);
+  printDetection(stack);
+
+  const drafted = await draftProposal(facts, stack, root);
+  if (drafted === null) {
+    console.error(`  Nothing was written. Answer the questions yourself with \`wst init\`.`);
     return 1;
   }
 
   const target = resolve(root, outPath);
-  await writeFile(target, `${JSON.stringify(proposalToAnswers(result.value), null, 2)}\n`, "utf-8");
+  await writeFile(target, `${JSON.stringify(proposalToAnswers(drafted.proposal), null, 2)}\n`, "utf-8");
 
-  console.log(renderProposal(result.value));
-  console.log(`\nwrote ${outPath} ($${result.costUsd.toFixed(4)})`);
+  console.log(renderProposal(drafted.proposal));
+  console.log(`\nwrote ${outPath} ($${drafted.costUsd.toFixed(4)})`);
   console.log(`  Edit it, then: wst init --answers ${outPath}`);
   return 0;
 }
@@ -505,13 +521,34 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
         return 1;
       }
 
-      // NO harness question, and no model call. Naming a harness decided the
-      // pointer files and who drafted; `init` writes no pointer any more, and the
-      // three questions left are a risk profile nothing can read off disk plus two
-      // path lists the tree already proposes candidates for. A call that costs
-      // money to draft answers a directory listing already has is a call to skip.
-      // `--propose` still asks a judge, for whoever wants one.
-      const filled = await askInterview(stack, {});
+      // The judge drafts FIRST, and the questions open on what it wrote.
+      //
+      // This was opt-in until 2026-09-01, on the reasoning that a directory listing
+      // already answers two of the three questions. Measured against a real repo it
+      // does not: the tree offers candidate paths, while the draft argues which of
+      // them earns strict review and names the condition to retire it, and reaches a
+      // risk profile no listing contains. ADR-0003 still holds, because a draft
+      // poured into the questions is signed answer by answer on screen.
+      //
+      // Asked, never assumed: this is the one step that spends money (adr-0032).
+      let drafted: DraftedAnswers = {};
+      if (await judgeAvailable()) {
+        console.log(`${banner()}\n\ninit: ${root}`);
+        printDetection(stack);
+        if (
+          await confirm(
+            "\n  let the judge read this repo and draft the answers first? (one model call, ~$0.25)",
+          )
+        ) {
+          const proposal = await draftProposal(facts, stack, root);
+          if (proposal !== null) {
+            console.log(`  drafted ($${proposal.costUsd.toFixed(4)}). Every answer below is editable.`);
+            drafted = proposalToDraft(proposal.proposal);
+          }
+        }
+      }
+
+      const filled = await askInterview(stack, drafted);
       if (filled === null) return 0;
       answers = filled;
     }
