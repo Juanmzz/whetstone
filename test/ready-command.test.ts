@@ -134,6 +134,24 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
     expect(said()).toContain("master");
   });
 
+  it("finds work outside the directory it was run from", async () => {
+    // `git ls-files --others` is the only one of the four git calls that answers
+    // relative to the process cwd, in scope AND in the paths it prints. Run from a
+    // subdirectory it reported NO_CHANGES over a repo that had an untracked file
+    // one directory over: an agent in `apps/api` of a monorepo was told there was
+    // nothing to verify while its new file sat unverified.
+    const dir = await repo();
+    await mkdir(join(dir, "sub"), { recursive: true });
+    await writeFile(join(dir, "sub/keep.ts"), "export const k = 1;\n", "utf-8");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "sub");
+    await writeFile(join(dir, "src/new.ts"), "export const n = 1;\n", "utf-8");
+
+    expect(await runReady({}, join(dir, "sub"))).toBe(0);
+    expect(said()).not.toContain("No changes to verify");
+    expect(said()).toMatch(/untracked\s+src\/new\.ts/);
+  });
+
   it("says NO_CHANGES on a clean tree, and never says it passed", async () => {
     const dir = await repo();
 

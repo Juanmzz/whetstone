@@ -65,6 +65,20 @@ export interface TaskFiles {
   readonly untracked: readonly string[];
 }
 
+/**
+ * The repository root, so the scope of a task does not depend on which directory
+ * the agent happened to be standing in.
+ *
+ * Only `ls-files --others` actually needs it: alone among these calls it answers
+ * relative to the process cwd, in what it lists AND in the paths it prints, so run
+ * from `apps/api` it reported NO CHANGES over a repo with an untracked file in
+ * `packages/shared`. Every call takes the root anyway, because the next one added
+ * here should not have to know which kind it is.
+ */
+async function topLevel(cwd: string): Promise<string> {
+  return (await git(["rev-parse", "--show-toplevel"], cwd)) ?? cwd;
+}
+
 /** Just the paths, from `--name-status` output. */
 const pathsOf = (out: string | null): string[] =>
   lines(out).map((l) => {
@@ -82,8 +96,9 @@ const pathsOf = (out: string | null): string[] =>
  * override is the CI path, so it broke exactly where nobody was watching.
  */
 export async function rangeFiles(range: string, cwd: string): Promise<TaskFiles> {
+  const root = await topLevel(cwd);
   return {
-    committed: pathsOf(await git(["diff", "--name-status", range], cwd)),
+    committed: pathsOf(await git(["diff", "--name-status", range], root)),
     staged: [],
     unstaged: [],
     untracked: [],
@@ -91,11 +106,12 @@ export async function rangeFiles(range: string, cwd: string): Promise<TaskFiles>
 }
 
 export async function taskFilesFrom(mergeBase: string, cwd: string): Promise<TaskFiles> {
+  const root = await topLevel(cwd);
   const [committed, staged, unstaged, untracked] = await Promise.all([
-    git(["diff", "--name-status", `${mergeBase}..HEAD`], cwd),
-    git(["diff", "--name-status", "--cached"], cwd),
-    git(["diff", "--name-status"], cwd),
-    git(["ls-files", "--others", "--exclude-standard"], cwd),
+    git(["diff", "--name-status", `${mergeBase}..HEAD`], root),
+    git(["diff", "--name-status", "--cached"], root),
+    git(["diff", "--name-status"], root),
+    git(["ls-files", "--others", "--exclude-standard"], root),
   ]);
   return {
     committed: pathsOf(committed),
