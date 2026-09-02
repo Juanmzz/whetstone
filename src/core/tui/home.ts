@@ -55,8 +55,8 @@ const PRIMARY: readonly Spec[] = [
     entry: "ready",
     what: "Check readiness",
     detail: [
-      "resolves what this task changed and runs the checks over it. Nothing",
-      "to pass. Answers Ready, Needs work, or Verification incomplete.",
+      "resolves what this task changed and runs the checks over it. It takes no",
+      "arguments. Answers Ready, Needs work, or Verification incomplete.",
     ],
     needsDefinition: true,
   },
