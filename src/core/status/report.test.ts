@@ -365,6 +365,12 @@ describe("the front doors an agent reads", () => {
     expect(said).toMatch(/CLAUDE\.md/);
   });
 
+  it("says nothing when nothing points at it, because no file is lying", () => {
+    // `init` stopped writing AGENTS.md, so this fired on every bootstrapped repo.
+    // The 2026-08-29 field report cost a POINTER reading a file that was gone.
+    expect(withDoors({ agentsMd: false, pointers: [] }).warnings.join(" ")).not.toMatch(/AGENTS\.md/);
+  });
+
   it("says nothing at all when nobody asked, so an old caller is unchanged", () => {
     expect(buildStatusReport(base).warnings.join(" ")).not.toMatch(/AGENTS\.md/);
   });

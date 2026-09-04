@@ -14,25 +14,19 @@ import { openHome, pressHome, renderHome, type HomeCommand } from "../core/tui/h
 import { afterRunning } from "../core/tui/outcome.js";
 import { clear, paint, play, rawKeys, restore, type Keys } from "../shell/tui.js";
 import { runCheck } from "./check.js";
-import { runConfig } from "./config.js";
-import { runGate } from "./gate.js";
 import { runInit } from "./init.js";
-import { runRetro } from "./retro.js";
+import { runReady } from "./ready.js";
 import { runStatus } from "./status.js";
 import { gatherStatus } from "../shell/status.js";
 import { runTriage } from "./triage.js";
-import { runUpdate } from "./update.js";
 
 /** Defaults everywhere: the screen picks a command, never its flags. */
 const RUN: Readonly<Record<HomeCommand, (cwd: string) => Promise<number>>> = {
-  status: (cwd) => runStatus(cwd),
-  init: (cwd) => runInit({}, cwd),
-  gate: (cwd) => runGate({}, cwd),
-  triage: (cwd) => runTriage({}, cwd),
-  check: (cwd) => runCheck({}, cwd),
-  config: (cwd) => runConfig(cwd, { entrance: false }),
-  update: (cwd) => runUpdate({}, cwd),
-  retro: (cwd) => runRetro({}, cwd),
+  status: (cwd: string) => runStatus(cwd),
+  init: (cwd: string) => runInit({}, cwd),
+  ready: (cwd: string) => runReady({}, cwd),
+  triage: (cwd: string) => runTriage({}, cwd),
+  check: (cwd: string) => runCheck({}, cwd),
 };
 
 function openKeys(): Keys {

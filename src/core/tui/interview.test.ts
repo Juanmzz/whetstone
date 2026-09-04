@@ -14,7 +14,7 @@ const type = (s: InterviewState, text: string): InterviewState =>
 describe("moving between questions", () => {
   it("opens on the first one", () => {
     expect(START().at).toBe(0);
-    expect(renderInterview(START()).join("\n")).toMatch(/purpose/i);
+    expect(renderInterview(START()).join("\n")).toMatch(/risk/i);
   });
 
   it("goes forward and back, and stops at the ends", () => {
@@ -28,26 +28,28 @@ describe("moving between questions", () => {
 });
 
 describe("a text answer", () => {
-  it("takes typed characters and shows them", () => {
-    const s = type(START(), "a task app");
+  /** `source-paths`, which is the first question with a field to type in. */
+  const paths = (): InterviewState => at(START(), ["return"]);
 
-    expect(answersOf(s).purpose).toBe("a task app");
-    expect(renderInterview(s).join("\n")).toContain("a task app");
+  it("takes typed characters and shows them", () => {
+    const s = type(paths(), "apps/*/src/**");
+
+    expect(renderInterview(s).join("\n")).toContain("apps/*/src/**");
   });
 
   it("deletes with backspace and stops at empty", () => {
-    const s = at(type(START(), "abc"), ["backspace", "backspace", "backspace", "backspace"]);
+    const s = at(type(paths(), "abc"), ["backspace", "backspace", "backspace", "backspace"]);
 
-    expect(answersOf(s).purpose).toBe("");
+    expect(answersOf(at(s, ["return"])).sourcePaths).toEqual([]);
   });
 
   it("ignores a keypress that is not a character", () => {
-    expect(answersOf(at(START(), ["f5"])).purpose).toBe("");
+    expect(answersOf(at(paths(), ["f5", "return"])).sourcePaths).toEqual([]);
   });
 });
 
 describe("the risk flags", () => {
-  const risk = (): InterviewState => at(START(), ["return"]);
+  const risk = (): InterviewState => START();
 
   it("starts with every flag off, which is the honest default", () => {
     expect(answersOf(risk()).risk.money).toBe(false);
@@ -64,12 +66,12 @@ describe("the risk flags", () => {
 
     expect(answersOf(s).risk.money).toBe(false);
     expect(answersOf(s).risk.personalData).toBe(true);
-    expect(s.fields[1]!.option).toBe(1);
+    expect(s.fields[0]!.option).toBe(1);
   });
 });
 
 describe("a list answer", () => {
-  const paths = (): InterviewState => at(START(), ["return", "return"]);
+  const paths = (): InterviewState => at(START(), ["return"]);
 
   it("commits a line with ctrl-n and starts the next", () => {
     // `enter` advances the question, here and everywhere else. Adding a line is
@@ -96,24 +98,25 @@ describe("leaving", () => {
   });
 
   it("will not submit while a required answer is missing", () => {
-    // `purpose` is required by validateAnswers; submitting without it would
-    // send the caller into an error it can see coming.
+    // A source path is what every seeded check scopes itself to. Submitting with
+    // none installs a definition layer that verifies nothing, and the caller would
+    // walk into an error it could see coming.
     expect(pressIn(START(), "ctrl-s").action.kind).toBe("none");
-    expect(renderInterview(pressIn(START(), "ctrl-s").state).join("\n")).toMatch(/purpose/i);
+    expect(renderInterview(pressIn(START(), "ctrl-d").state).join("\n")).toMatch(/source path/i);
   });
 
   it("takes ctrl-d as well, because ctrl-s is XOFF in some terminals", () => {
-    const s = type(START(), "a task app");
+    const s = type(at(START(), ["return"]), "src/**");
 
     expect(pressIn(s, "ctrl-d").action.kind).toBe("write");
   });
 
   it("submits once the required answers are there", () => {
-    const s = type(START(), "a task app");
+    const s = type(at(START(), ["return"]), "src/**");
     const result = pressIn(s, "ctrl-d");
 
     expect(result.action.kind).toBe("write");
-    expect(result.action.kind === "write" && result.action.answers.purpose).toBe("a task app");
+    expect(result.action.kind === "write" && result.action.answers.sourcePaths).toEqual(["src/**"]);
   });
 });
 

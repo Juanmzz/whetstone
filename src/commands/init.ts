@@ -16,12 +16,10 @@ import { createGitAdapter } from "../shell/git.js";
 import { probeCommands } from "../shell/probe.js";
 import type { Probes } from "../core/init/probe.js";
 import { gatherFacts } from "../shell/repo-facts.js";
-import { findPayloadRoot, readSkills } from "../shell/payload.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import { openInterview, pressIn, renderInterview } from "../core/tui/interview.js";
 import { openPicker, pressPicker, renderPicker } from "../core/tui/picker.js";
-import { HARNESSES, judgeFor as adapterFor } from "../core/init/harness.js";
 import type { Agent } from "../core/config/schema.js";
 import { confirm } from "../shell/confirm.js";
 import { startSpinner } from "../shell/spinner.js";
@@ -31,7 +29,9 @@ import {
   ProposalSchema,
   buildProposalPrompt,
   proposalToAnswers,
+  proposalToDraft,
   renderProposal,
+  type Proposal,
 } from "../core/init/propose.js";
 // `init` runs BEFORE a definition layer exists, so there is no `agent:` key to
 // read. It uses the default adapter, which is the only one that ships.
@@ -50,7 +50,6 @@ import {
   detectStack,
   planInit,
   renderRootGitignoreStanza,
-  skillCopies,
   skipDir,
   walkDepth,
   type InitPlan,
@@ -111,7 +110,10 @@ export interface InitOptions {
 const RISK_KEYS = ["money", "personalData", "productionData", "authn", "safetyCritical"] as const;
 
 function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
-  if (opts.purpose === undefined) return null;
+  // `--source` is the trigger, because it is the only required answer: every
+  // seeded check scopes its `include` to it. `--purpose` used to be, back when it
+  // reached the constitution.
+  if (opts.source === undefined || opts.source.length === 0) return null;
 
   const flags = (opts.risk ?? "")
     .split(",")
@@ -136,7 +138,7 @@ function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
   });
 
   return {
-    purpose: opts.purpose,
+    purpose: opts.purpose ?? "",
     risk: {
       ...NO_RISK,
       ...Object.fromEntries(RISK_KEYS.map((k) => [k, flags.includes(k)])),
@@ -173,7 +175,15 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
     console.log(`  ${i + 1}. [${q.id}] ${q.prompt}`);
     console.log(`     why: ${q.why}`);
     for (const opt of q.options) console.log(`       - ${opt.value}: ${opt.label}`);
-    if (q.defaultAnswer !== null) console.log(`     default: ${q.defaultAnswer}`);
+    // The `why` says "anything offered below", and off a terminal nothing was.
+    for (const candidate of q.candidates ?? []) console.log(`       ? ${candidate}`);
+    // A multi-line default printed its second line in column zero, reading as the
+    // end of the question rather than part of the answer.
+    if (q.defaultAnswer !== null) {
+      const [head, ...rest] = q.defaultAnswer.split("\n");
+      console.log(`     default: ${head ?? ""}`);
+      for (const line of rest) console.log(`              ${line}`);
+    }
     console.log("");
   }
   console.log("Answer them, then re-run with either:");
@@ -185,46 +195,6 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
   console.log("\nNothing was written.");
 }
 
-/**
- * Which harnesses read this repo. One screen, before anything else.
- *
- * It decides two things `init` used to decide for you: which front-door pointer
- * gets written, and which adapter may draft the answers. Null when the human
- * backed out.
- */
-async function askHarnesses(): Promise<readonly string[] | null> {
-  let state = openPicker(
-    "wst init  ·  your harnesses",
-    "Which agent harnesses read this repo? `AGENTS.md` is written either way; " +
-      "one of these will be asked to draft your answers.",
-    HARNESSES.map((h) => ({
-      value: h.id,
-      label: h.label,
-      detail: h.readsAgentsMd
-        ? "reads AGENTS.md on its own, so nothing else is written for it"
-        : `writes ${String(h.pointer)}, one line pointing at AGENTS.md`,
-    })),
-  );
-
-  const keys = rawKeys(process.stdin, () => {
-    keys.close();
-    restore(process.stdout);
-    process.exit(130);
-  });
-
-  try {
-    for (;;) {
-      paint(process.stdout, renderPicker(state));
-      const result = pressPicker(state, await keys.next());
-      state = result.state;
-      if (result.action.kind === "cancel") return null;
-      if (result.action.kind === "done") return result.action.picked;
-    }
-  } finally {
-    keys.close();
-    restore(process.stdout);
-  }
-}
 
 /**
  * Which of the seeded checks stay on. One screen, after the plan is known.
@@ -273,46 +243,6 @@ async function askChecks(checks: InitPlan["checks"]): Promise<readonly string[] 
   }
 }
 
-/**
- * The judge reads the repo and drafts what no file declares.
- *
- * A failure here is the DRAFTER being broken and not a fact about the project,
- * so it falls back to blank fields rather than to half an answer. The same
- * distinction the gate draws between `blocked` and `incomplete`.
- */
-async function draftAnswers(
-  facts: RepoFacts,
-  stack: ReturnType<typeof detectStack>,
-  root: string,
-  agent: Agent,
-): Promise<DraftedAnswers> {
-  const readme = await readFirst(root, ["README.md", "readme.md", "README", "docs/README.md"]);
-  const spinner = startSpinner(process.stdout, `${agent} is reading this repo`);
-
-  const result = await judgeFor({ ...DEFAULT_CONFIG, agent }).judge({
-    lens:
-      "You draft project definitions for review by the project's owner. You argue " +
-      "from evidence you were given and never from assumption. You propose; you do " +
-      "not decide.",
-    prompt: buildProposalPrompt(facts, stack, readme),
-    schema: ProposalSchema,
-  });
-
-  if (!result.ok) {
-    spinner.stop(`  could not draft (${result.error.kind}). Answer them yourself.`);
-    return {};
-  }
-
-  spinner.stop(`  drafted in ${agent} for $${result.costUsd.toFixed(4)}. Check every field.`);
-  const answers = proposalToAnswers(result.value);
-  return {
-    purpose: answers.purpose,
-    risk: RISK_KEYS.filter((k) => answers.risk[k]),
-    sourcePaths: answers.sourcePaths,
-    strictPaths: answers.strictPaths,
-    ...(answers.stack === null ? {} : { stack: answers.stack }),
-  };
-}
 
 /** The interview, answered in the terminal. Null when the human backed out. */
 async function askInterview(
@@ -348,6 +278,11 @@ function printPlan(plan: InitPlan, root: string): void {
     console.log(`  + ${file.path.padEnd(42)} ${String(bytes).padStart(6)} bytes${mode}`);
   }
   for (const copy of plan.copies) console.log(`  + ${copy.to.padEnd(42)}    copied from the payload`);
+
+  // Neither is a plan file: the base hashes the plan, and the root ignore appends
+  // to a file the repo owns. Both landed on disk without appearing here.
+  console.log(`  + ${join(DEFINITION_DIR, BASE_FILE).padEnd(42)}    these answers, for \`wst update\``);
+  console.log(`  + ${".gitignore".padEnd(42)}    one line appended, if missing`);
 
   if (plan.notes.length > 0) {
     console.log("\nnotes");
@@ -401,14 +336,12 @@ async function judgeAvailable(): Promise<boolean> {
  * reading of the project the project's constitution, with no moment where anyone
  * had to look at it. ADR-0003 calls the human gate the moat.
  */
-async function proposeAnswers(
+/** One judge call for a draft, or null when it could not produce one. */
+async function draftProposal(
   facts: RepoFacts,
   stack: ReturnType<typeof detectStack>,
   root: string,
-  outPath: string,
-): Promise<number> {
-  console.log(`${banner()}\n\ninit --propose: ${root}`);
-  printDetection(stack);
+): Promise<{ readonly proposal: Proposal; readonly costUsd: number } | null> {
   console.log("\nasking the judge to draft the answers...\n");
 
   // The judge asked for this on the first live run and could not go and get it.
@@ -424,21 +357,37 @@ async function proposeAnswers(
   });
 
   if (!result.ok) {
-    // The judge failing is the DRAFTER being broken, not a fact about the repo —
-    // the same distinction the gate draws. Fall back to the questions rather than
-    // writing a half-answer.
+    // The judge failing is the DRAFTER being broken, not a fact about the repo:
+    // the same distinction the gate draws. The caller falls back to the questions
+    // rather than writing a half-answer.
     console.error(
-      `the judge could not produce a draft (${result.error.kind}): ${result.error.detail}\n` +
-        `  Nothing was written. Answer the questions yourself with \`wst init\`.`,
+      `the judge could not produce a draft (${result.error.kind}): ${result.error.detail}`,
     );
+    return null;
+  }
+  return { proposal: result.value, costUsd: result.costUsd };
+}
+
+async function proposeAnswers(
+  facts: RepoFacts,
+  stack: ReturnType<typeof detectStack>,
+  root: string,
+  outPath: string,
+): Promise<number> {
+  console.log(`${banner()}\n\ninit --propose: ${root}`);
+  printDetection(stack);
+
+  const drafted = await draftProposal(facts, stack, root);
+  if (drafted === null) {
+    console.error(`  Nothing was written. Answer the questions yourself with \`wst init\`.`);
     return 1;
   }
 
   const target = resolve(root, outPath);
-  await writeFile(target, `${JSON.stringify(proposalToAnswers(result.value), null, 2)}\n`, "utf-8");
+  await writeFile(target, `${JSON.stringify(proposalToAnswers(drafted.proposal), null, 2)}\n`, "utf-8");
 
-  console.log(renderProposal(result.value));
-  console.log(`\nwrote ${outPath} ($${result.costUsd.toFixed(4)})`);
+  console.log(renderProposal(drafted.proposal));
+  console.log(`\nwrote ${outPath} ($${drafted.costUsd.toFixed(4)})`);
   console.log(`  Edit it, then: wst init --answers ${outPath}`);
   return 0;
 }
@@ -511,7 +460,7 @@ async function writePlan(plan: InitPlan, root: string): Promise<void> {
  * actually missing are appended, so a second `wst init` does not duplicate a
  * line a first run (or the repo's own history) already added.
  */
-async function ensureRootGitignored(root: string): Promise<void> {
+async function ensureRootGitignored(root: string): Promise<boolean> {
   const target = join(root, ".gitignore");
   let current: string | null;
   try {
@@ -522,15 +471,16 @@ async function ensureRootGitignored(root: string): Promise<void> {
 
   const present = new Set((current ?? "").split("\n").map((line) => line.trim()));
   const missing = ROOT_GITIGNORE_ENTRIES.filter((entry) => !present.has(entry));
-  if (missing.length === 0) return;
+  if (missing.length === 0) return false;
 
   const stanza = renderRootGitignoreStanza(missing);
   if (current === null) {
     await writeFile(target, stanza, "utf-8");
-    return;
+    return true;
   }
   const sep = current.length === 0 || current.endsWith("\n") ? "" : "\n";
   await writeFile(target, `${current}${sep}\n${stanza}`, "utf-8");
+  return true;
 }
 
 // ── the command ──────────────────────────────────────────────────────────────
@@ -542,7 +492,6 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   const stack = detectStack(facts);
 
   let answers: InterviewAnswers | null;
-  let harnesses: readonly string[] | undefined;
   try {
     answers = await loadAnswers(opts, cwd);
   } catch (cause) {
@@ -578,16 +527,27 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
         return 1;
       }
 
-      // The order is the point: you say who reads this repo, that decides who may
-      // draft, and only then are you asked anything. `init` used to ask five
-      // questions from a blank page and write a front door for a harness nobody
-      // named (adr-0040).
-      const picked = await askHarnesses();
-      if (picked === null) return 0;
-      harnesses = picked;
-
-      const agent = adapterFor(picked);
-      const drafted = agent === null ? {} : await draftAnswers(facts, stack, root, agent);
+      // The judge drafts FIRST. Opt-in until 2026-09-01, on the reasoning that a
+      // directory listing answers two of the three questions; measured against a
+      // real repo it does not, because the tree offers candidate paths while the
+      // draft argues which of them earns strict review. Asked, never assumed: this
+      // is the one step that spends money (adr-0032).
+      let drafted: DraftedAnswers = {};
+      if (await judgeAvailable()) {
+        console.log(`${banner()}\n\ninit: ${root}`);
+        printDetection(stack);
+        if (
+          await confirm(
+            "\n  let the judge read this repo and draft the answers first? (one model call, ~$0.25)",
+          )
+        ) {
+          const proposal = await draftProposal(facts, stack, root);
+          if (proposal !== null) {
+            console.log(`  drafted ($${proposal.costUsd.toFixed(4)}). Every answer below is editable.`);
+            drafted = proposalToDraft(proposal.proposal);
+          }
+        }
+      }
 
       const filled = await askInterview(stack, drafted);
       if (filled === null) return 0;
@@ -609,36 +569,23 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 0;
   }
 
-  // Resolved BEFORE the plan, not at write time: the reference-closure audit runs
-  // inside `planInit`, and it cannot audit the eight copied skills without their
-  // text. Missing text is reported as unaudited, never as clean.
-  const payloadRoot = await findPayloadRoot();
-  const skillTexts = await readSkills(payloadRoot);
-
-  // What the TARGET repo already has, which is not the same as what Whetstone
-  // ships. Only `--force` re-renders AGENTS.md, and until now that re-render
-  // listed the eight shipped names — so a skill written by hand after init was
-  // invisible to every agent that read the file.
-  // `undefined` when there is no directory yet, which is every first init.
-  // Collapsing that into `[]` told `activeSkills` the directory had been read
-  // and was empty, and every bootstrapped repo got a config declaring all eight
-  // skills INACTIVE while the files sat beside it.
-  const presentSkills = await readdir(join(root, DEFINITION_DIR, "skills"))
-    .then((names) => names.filter((n) => n.endsWith(".md")).sort().map((n) => `skills/${n}`))
-    .catch(() => undefined);
-
   // Measured, not asserted. `init` already holds the three commands this repo
   // declares; running them once is what lets a seeded `block` rest on something.
   // Skipped under --dry-run, which writes nothing and should cost nothing.
   let probes: Probes | undefined;
   if (opts.dryRun !== true && opts.probe !== false) {
-    console.log("\nrunning this repo's own commands once, so a seeded block rests on a run");
+    // STDERR, like the gate's progress: `--json` writes an envelope to stdout and
+    // a machine reading it must not have to strip narration out of the middle.
+    const say = (line: string): void => {
+      if (opts.json !== true) console.error(line);
+    };
+    say("\nrunning this repo's own commands once, so a seeded block rests on a run");
     probes = await probeCommands({ ...stack.commands }, root, (id, command) => {
-      console.log(`  ${id.padEnd(10)} ${command}`);
+      say(`  ${id.padEnd(10)} ${command}`);
     });
     for (const [id, result] of Object.entries(probes)) {
       const said = !result.ran ? `could not run: ${result.why}` : result.ok ? "green" : `exit ${String(result.exitCode)}`;
-      console.log(`  ${id.padEnd(10)} ${said}`);
+      say(`  ${id.padEnd(10)} ${said}`);
     }
   }
 
@@ -648,13 +595,10 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       facts,
       answers,
       clock: { now: () => new Date() },
-      skillTexts,
       ...(probes === undefined ? {} : { probes }),
-      ...(presentSkills === undefined ? {} : { presentSkills }),
       options: {
         ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
-        ...(harnesses === undefined ? {} : { harnesses }),
       },
     });
   } catch (cause) {
@@ -682,15 +626,12 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
         facts,
         answers,
         clock: { now: () => new Date() },
-        skillTexts,
         disabledChecks,
         ...(probes === undefined ? {} : { probes }),
-        ...(presentSkills === undefined ? {} : { presentSkills }),
-        options: {
+          options: {
           ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
           ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
-          ...(harnesses === undefined ? {} : { harnesses }),
-        },
+          },
       });
     }
   }
@@ -738,24 +679,18 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   // a terminal, where there is nobody to ask and the caller already meant it.
   if (
     !(await confirm(
-      `\n  write ${String(plan.files.length + plan.copies.length)} file(s) into ${root}?`,
+      `\n  write ${String(plan.files.length + plan.copies.length + 1)} file(s) into ${root}?`,
     ))
   ) {
     console.log("  nothing written.");
     return 0;
   }
 
-  if (payloadRoot === null) {
-    console.error(
-      "\ncould not locate Whetstone's own skills directory, so the skills were NOT copied.\n" +
-        `  Everything else was written. Copy \`${DEFINITION_DIR}/skills/\` across by hand, or re-run from a\n` +
-        "  checkout rather than a published package.",
-    );
-  }
-
+  // Counted, because the closing line names a number and a number has to be true.
+  let touchedRootIgnore = false;
   try {
     await writePlan(plan, root);
-    await ensureRootGitignored(root);
+    touchedRootIgnore = await ensureRootGitignored(root);
     // LAST, and only on success. A base written before the files it describes
     // would survive a crash and claim hashes for content nobody wrote.
     await writeBase(plan, answers, root);
@@ -764,9 +699,9 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
     return 1;
   }
 
-  const written = plan.files.length + (payloadRoot === null ? 0 : plan.copies.length);
-  console.log(`\nwrote ${written} files. Review them, then commit:`);
+  const written = plan.files.length + 1 + (touchedRootIgnore ? 1 : 0);
+  console.log(`\nwrote ${String(written)} files. Review them, then commit:`);
   console.log(`  git add ${stagePaths(plan).join(" ")}`);
-  console.log('  git commit -m "chore: bootstrap the agent workflow"');
-  return payloadRoot === null ? 1 : 0;
+  console.log('  git commit -m "chore: bootstrap verification"');
+  return 0;
 }

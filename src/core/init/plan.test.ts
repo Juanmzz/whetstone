@@ -50,45 +50,6 @@ const at = (p: InitPlan, path: string): string | undefined =>
 describe("planInit — what a typical TypeScript repo gets", () => {
   const p = plan({ answers: MONEY });
 
-  it("writes the whole .wst/ substrate plus one front door per harness, and nothing else", () => {
-    // No `.claude/` (ADR-0010). This list IS the contract with a target repo: every
-    // path here is one somebody else has to live with, and the ones outside `.wst/`
-    // are the ones that collide.
-    expect(p.files.map((f) => f.path).sort()).toEqual(
-      [
-        ".githooks/pre-push",
-        ".wst/.gitattributes",
-        ".wst/.gitignore",
-        ".wst/checks/comment-density.md",
-    ".wst/checks/commit-message.md",
-        ".wst/checks/lint.md",
-        ".wst/checks/test.md",
-        ".wst/checks/typecheck.md",
-        ".wst/constitution.md",
-        ".wst/memory/README.md",
-        ".wst/memory/decisions.md",
-        ".wst/memory/out-of-scope/README.md",
-        ".wst/memory/patterns.md",
-        ".wst/memory/retro-log.md",
-        ".wst/memory/signals.jsonl",
-        ".wst/triage-rules.md",
-        ".wst/triage.yaml",
-        ".wst/wst.yaml",
-        "AGENTS.md",
-        "CLAUDE.md",
-      ].sort(),
-    );
-  });
-
-  it("copies the eight skills rather than generating them", () => {
-    expect(p.copies).toHaveLength(8);
-    expect(p.copies.map((c) => c.to)).toContain(".wst/skills/tdd-discipline.md");
-  });
-
-  it("starts signals.jsonl empty — the first line must be a real event", () => {
-    expect(at(p, ".wst/memory/signals.jsonl")).toBe("");
-  });
-
   /**
    * ADR-0012 part 3: `memory/out-of-scope/` is the fourth memory artifact.
    *
@@ -97,41 +58,6 @@ describe("planInit — what a typical TypeScript repo gets", () => {
    * recorded what was deliberately REFUSED, and a refusal without a file gets
    * re-proposed every six months with the argument re-derived from scratch.
    */
-  describe("memory/out-of-scope/", () => {
-    const readme = at(p, ".wst/memory/out-of-scope/README.md");
-
-    it("ships with a README, because an empty directory does not survive git", () => {
-      expect(readme).not.toBeUndefined();
-    });
-
-    it("states all four things an entry must record", () => {
-      const text = (readme ?? "").toLowerCase();
-      for (const field of ["what was asked", "why", "escape hatch", "request"]) {
-        expect(text).toContain(field);
-      }
-    });
-
-    /**
-     * Hard rule 7. The form is borrowed from `mattpocock/skills` (MIT), and the
-     * attribution has to be IN the emitted file: a pointer to this project's own
-     * LICENSE dangles the moment the file lands in a repo that has never heard of
-     * it, which is the exact bug class `selfcontained.ts` exists to catch.
-     */
-    it("carries its attribution inline, not as a reference", () => {
-      expect(readme).toContain("mattpocock/skills");
-      expect(readme).toContain("MIT");
-    });
-
-    it("ships no entries — the directory is a home, not a claim", () => {
-      const entries = p.files.filter(
-        (f) =>
-          f.path.startsWith(".wst/memory/out-of-scope/") &&
-          !f.path.endsWith("/README.md"),
-      );
-      expect(entries).toEqual([]);
-    });
-  });
-
   it("emits no duplicate paths", () => {
     const paths = p.files.map((f) => f.path);
     expect(new Set(paths).size).toBe(paths.length);
@@ -163,14 +89,6 @@ describe("planInit — everything generated must load through the real loaders",
       }
     });
 
-    it(`wst.yaml is valid YAML naming only skills that get installed: ${name}`, () => {
-      const parsed = parseYaml(at(p, ".wst/wst.yaml") ?? "") as Record<string, unknown>;
-      const installed = new Set(p.copies.map((c) => c.to));
-      for (const skill of parsed["skills"] as string[]) {
-        expect(installed.has(`.wst/${skill}`)).toBe(true);
-      }
-    });
-
     it(`the payload is self-contained: ${name}`, () => {
       expect(auditSelfContained({ files: p.files, copies: p.copies })).toEqual([]);
     });
@@ -195,7 +113,7 @@ describe("planInit — everything generated must load through the real loaders",
 
 describe("planInit — refuses to produce a broken payload", () => {
   it("throws when the answers do not validate", () => {
-    expect(() => plan({ answers: answers({ purpose: "" }) })).toThrow(/purpose/i);
+    expect(() => plan({ answers: answers({ sourcePaths: ["   "] }) })).toThrow(/blank/i);
   });
 
   it("throws when an elevated risk profile names no strict path", () => {
@@ -205,11 +123,17 @@ describe("planInit — refuses to produce a broken payload", () => {
   });
 
   it("throws when the human's own words smuggle in a dangling reference", () => {
-    // Free text flows into the constitution verbatim. An agent running the
-    // interview will happily paste "as described in docs/PARALLEL.md" — and that
-    // path does not exist in the repo being bootstrapped.
+    // A strict path's REASON is free text and it lands in `triage.yaml` verbatim.
+    // An agent running the interview will happily paste "as described in
+    // docs/PARALLEL.md", and that path does not exist in the repo being
+    // bootstrapped. It is the only route human prose still takes into a generated
+    // file, now that the constitution is not one of them.
     expect(() =>
-      plan({ answers: answers({ purpose: "A billing service, as specced in docs/PARALLELSPEC.md." }) }),
+      plan({
+        answers: answers({
+          strictPaths: [{ glob: "src/pay/**", reason: "moves money, as specced in docs/PARALLELSPEC.md" }],
+        }),
+      }),
     ).toThrow(/self-contained/i);
   });
 });
@@ -243,31 +167,27 @@ describe("planInit — the declared source paths reach both places that need the
     }
   });
 
-  it("seeds no check at all when nobody said where the code lives", () => {
-    const blind = plan({ answers: answers({ sourcePaths: [] }) });
-    expect(blind.files.filter((f) => f.path.startsWith(".wst/checks/"))).toEqual([]);
-    expect(blind.notes.join("\n")).toMatch(/source path/i);
+  it("refuses to plan at all when nobody said where the code lives", () => {
+    // It used to plan and seed no checks, which writes a definition layer that
+    // verifies nothing. Nothing downstream can recover from that: `ready` can only
+    // ever answer INCOMPLETE, and the reason is three commands away.
+    expect(() => plan({ answers: answers({ sourcePaths: [] }) })).toThrow(/source path/i);
   });
 });
 
 describe("planInit — a repo with nothing to detect", () => {
   const p = plan({
     facts: facts(),
-    answers: answers({ purpose: "Not started yet.", sourcePaths: [], stack: null }),
+    answers: answers({ purpose: "Not started yet.", sourcePaths: ["src/**"], stack: null }),
   });
 
   it("seeds no checks rather than commands that would error on every run", () => {
+    // The paths are declared; what is missing is a script to run over them.
     expect(p.files.filter((f) => f.path.startsWith(".wst/checks/"))).toEqual([]);
   });
 
   it("still produces a working triage document", () => {
     expect(parseTriageRules(at(p, ".wst/triage.yaml") ?? "").length).toBeGreaterThan(0);
-  });
-
-  it("still produces a constitution, the memory substrate and the vendor files", () => {
-    for (const path of [".wst/constitution.md", ".wst/memory/README.md", "AGENTS.md", "CLAUDE.md"]) {
-      expect(at(p, path)).toBeDefined();
-    }
   });
 
   it("tells the human what it could NOT do, rather than pretending it is done", () => {
@@ -283,96 +203,53 @@ describe("planInit — notes", () => {
   });
 });
 
-describe("the check Whetstone brings (adr-0030)", () => {
-  const file = (): { path: string; contents: string } | undefined =>
-    plan({ answers: answers() }).files.find((f) => f.path.endsWith("comment-density.md"));
+describe("what a new installation is, after the readiness cut", () => {
+  const at = (p: ReturnType<typeof plan>): string[] => p.files.map((f) => f.path).sort();
 
-  it("writes it without asking, because it cannot run until somebody enables it", () => {
-    expect(file()?.path).toBe(".wst/checks/comment-density.md");
-    expect(file()?.contents).toContain("enabled: false");
+  it("writes only what is needed to select and run readiness checks", () => {
+    // The product is verification. Everything `init` used to add beyond that was
+    // apparatus a new repo had not asked for and could not yet have a use for.
+    expect(at(plan({ answers: MONEY }))).toEqual([
+      ".wst/.gitignore",
+      ".wst/checks/lint.md",
+      ".wst/checks/test.md",
+      ".wst/checks/typecheck.md",
+      ".wst/triage.yaml",
+      ".wst/wst.yaml",
+    ]);
   });
 
-  it("names a command the target repo has, not a script nobody wrote", () => {
-    expect(file()?.contents).toContain("wst check run comment-density");
-    expect(file()?.contents).not.toContain("npm run check");
+  it("copies no skills, because nothing in the readiness path reads one", () => {
+    expect(plan({ answers: MONEY }).copies).toEqual([]);
   });
 
-  it("refuses a receipt, because its answer depends on the range", () => {
-    expect(file()?.contents).toContain("skippable: false");
-  });
-});
-
-describe("the harnesses a bootstrapped repo is legible to", () => {
-  const vendor = (p: InitPlan): string[] =>
-    p.files.map((f) => f.path).filter((path) => /\.md$/.test(path) && !path.includes("/"));
-
-  it("writes a front door only for the harness the judge belongs to", () => {
-    // Gemini CLI reads GEMINI.md and nothing else, so a repo that runs it needs
-    // that file. A repo that does not run it needs a door for a harness nobody
-    // there has, which is what `init` used to leave behind.
-    expect(vendor(plan()).sort()).toEqual(["AGENTS.md", "CLAUDE.md"]);
+  it("writes no memory, no signal log and no decision record", () => {
+    const paths = at(plan({ answers: MONEY })).join("\n");
+    for (const gone of ["memory", "signals.jsonl", "retro-log", "decisions.md", "patterns"]) {
+      expect(paths).not.toContain(gone);
+    }
   });
 
-  it("points it at the one source rather than copying it", () => {
-    const contents = plan().files.find((f) => f.path === "CLAUDE.md")?.contents ?? "";
-    expect(contents.trim()).toBe("@AGENTS.md");
+  it("writes no vendor file and no front door", () => {
+    const paths = at(plan({ answers: MONEY })).join("\n");
+    for (const gone of ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]) expect(paths).not.toContain(gone);
   });
 
-  it("writes none of them under --definitions-only", () => {
-    // A repo another harness already owns keeps its own front door.
-    expect(vendor(plan({ options: { definitionsOnly: true } }))).toEqual([]);
-  });
-});
-
-describe("the front doors follow the harnesses you name (adr-0040)", () => {
-  const paths = (harnesses?: readonly string[]): string[] =>
-    plan(harnesses === undefined ? {} : { options: { harnesses } }).files.map((f) => f.path);
-
-  it("writes only the pointer for the harness that was named", () => {
-    // It wrote `GEMINI.md` into a repo whose owner uses Claude, and nobody was
-    // asked. That file is a front door for a harness nobody here runs.
-    const only = paths(["claude-code"]);
-    expect(only).toContain("CLAUDE.md");
-    expect(only).not.toContain("GEMINI.md");
+  it("writes no hook, because arming one is not installing verification", () => {
+    expect(at(plan({ answers: MONEY })).join("\n")).not.toContain(".githooks");
   });
 
-  it("writes AGENTS.md whatever was named, because it is the source and not a door", () => {
-    for (const picks of [["claude-code"], ["codex"], []]) expect(paths(picks)).toContain("AGENTS.md");
+  it("writes no constitution and no triage prose, since `triage.yaml` is the source", () => {
+    const paths = at(plan({ answers: MONEY })).join("\n");
+    expect(paths).not.toContain("constitution");
+    expect(paths).not.toContain("triage-rules");
   });
 
-  it("writes no pointer at all for a harness that reads AGENTS.md itself", () => {
-    const codex = paths(["codex"]);
-    expect(codex).not.toContain("CLAUDE.md");
-    expect(codex).not.toContain("GEMINI.md");
-  });
-
-  it("falls back to the default judge's harness when nobody was asked", () => {
-    // It used to write both unconditionally. The judge is the only signal left
-    // when the question was never put, and it says claude.
-    expect(paths()).toContain("CLAUDE.md");
-    expect(paths()).not.toContain("GEMINI.md");
-  });
-});
-
-describe("the judge follows the harness that can run one (adr-0040)", () => {
-  const yaml = (harnesses?: readonly string[]): string =>
-    at(plan(harnesses === undefined ? {} : { options: { harnesses } }), ".wst/wst.yaml") ?? "";
-
-  it("writes the adapter the pick can actually drive", () => {
-    expect(yaml(["antigravity"])).toMatch(/^agent: antigravity/m);
-  });
-
-  it("leaves the default where no pick has an adapter", () => {
-    // Codex is a harness this writes for and cannot judge with. The lens simply
-    // does not run; naming one here would name a judge that cannot exist.
-    expect(yaml(["opencode"])).toMatch(/^agent: claude/m);
-  });
-
-  it("takes the first pick that has one, so the order on screen decides", () => {
-    expect(yaml(["opencode", "antigravity", "claude-code"])).toMatch(/^agent: antigravity/m);
-  });
-
-  it("leaves the default when nobody was asked", () => {
-    expect(yaml()).toMatch(/^agent: claude/m);
+  it("seeds no check the repo did not declare a command for", () => {
+    // adr-0030's two brought rules are apparatus in a repo installing verification
+    // for the first time. What it gets is its own scripts, checked.
+    const paths = at(plan({ answers: MONEY })).join("\n");
+    expect(paths).not.toContain("comment-density");
+    expect(paths).not.toContain("commit-message");
   });
 });

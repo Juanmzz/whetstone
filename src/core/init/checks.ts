@@ -186,20 +186,10 @@ export function seedChecks(
     drafts.push(agentLensDraft(options));
   }
 
-  // LAST, and only where a typecheck script was declared: the runner reads `.ts`
-  // and nothing else, so seeding it beside a Python repo writes a check that can
-  // never see a file. adr-0016 allows this, since a declared script is a fact and
-  // not a guess off file extensions.
-  if (stack.commands.typecheck !== null) drafts.push(commentDensityDraft(include));
-  // Gated on a declared layout like every other seeded check, and NOT on a
-  // language: a commit message is not one. The gate is the registry's, not this
-  // rule's. Selection is by changed path, so a repo that never said where its
-  // code lives has nothing to scope the check to, and `**` is the catch-all this
-  // file already refused for being neither catch-all nor harmless.
-  // Only where `init` understood the repo at all. A checkout that declared no
-  // layout and no runner told it nothing, and adr-0016's rule is that `init`
-  // writes what a repo DECLARES: a commit convention is not among those facts.
-  if (drafts.length > 0 && include.length > 0) drafts.push(commitMessageDraft(include));
+  // The two rules Whetstone BROUGHT are no longer seeded. adr-0030 argued they were
+  // an offer sitting where the friction would be felt; a repo installing
+  // verification for the first time has felt no friction yet, and what it gets is
+  // its own declared scripts, checked. Both remain in this repo's own registry.
 
   const off = new Set(options.disabled ?? []);
   return drafts.map((d) => render(off.has(d.id) ? { ...d, enabled: false } : d));

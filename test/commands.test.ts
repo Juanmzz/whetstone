@@ -354,26 +354,28 @@ describe("wst init", () => {
 
   it("refuses to overwrite a file it did not write, and destroys nothing", async () => {
     // The writer is `mkdir -p` + `writeFile` with no existence check of its own,
-    // so by the time it runs the previous contents are already gone. This guard
-    // is the only thing standing between `wst init` and someone's AGENTS.md.
+    // so by the time it runs the previous contents are already gone. This guard is
+    // the only thing standing between `wst init` and a file somebody wrote.
     const dir = await bare();
-    await writeFile(join(dir, "AGENTS.md"), "# mine, hand-written\n", "utf-8");
+    await mkdir(join(dir, ".wst"), { recursive: true });
+    await writeFile(join(dir, ".wst/triage.yaml"), "# mine, hand-written\n", "utf-8");
 
-    expect(await runInit({ purpose: PURPOSE }, dir)).toBe(1);
-    expect(await readFile(join(dir, "AGENTS.md"), "utf-8")).toBe("# mine, hand-written\n");
+    expect(await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir)).toBe(1);
+    expect(await readFile(join(dir, ".wst/triage.yaml"), "utf-8")).toBe("# mine, hand-written\n");
   });
 
   it("names what --force would destroy instead of doing it silently", async () => {
     const dir = await bare();
-    await writeFile(join(dir, "AGENTS.md"), "# mine\n", "utf-8");
-    await runInit({ purpose: PURPOSE }, dir);
-    expect(stderr()).toContain("AGENTS.md");
+    await mkdir(join(dir, ".wst"), { recursive: true });
+    await writeFile(join(dir, ".wst/triage.yaml"), "# mine\n", "utf-8");
+    await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
+    expect(stderr()).toContain("triage.yaml");
   });
 
   it("writes nothing under --dry-run", async () => {
     const dir = await bare();
-    expect(await runInit({ purpose: PURPOSE, dryRun: true }, dir)).toBe(0);
-    await expect(readFile(join(dir, ".wst/constitution.md"), "utf-8")).rejects.toThrow();
+    expect(await runInit({ purpose: PURPOSE, source: ["src/**"], dryRun: true }, dir)).toBe(0);
+    await expect(readFile(join(dir, ".wst/triage.yaml"), "utf-8")).rejects.toThrow();
     expect(stdout()).toMatch(/--dry-run: nothing written/);
   });
 
@@ -382,21 +384,21 @@ describe("wst init", () => {
     // interview decorative.
     const dir = await bare();
     expect(await runInit({}, dir)).toBe(0);
-    await expect(readFile(join(dir, ".wst/constitution.md"), "utf-8")).rejects.toThrow();
+    await expect(readFile(join(dir, ".wst/triage.yaml"), "utf-8")).rejects.toThrow();
   });
 
   it("rejects a --strict entry that cannot say why it exists", async () => {
     // Same rule the triage schema enforces: a rule with no reason cannot be
     // reviewed, and therefore cannot ever be retired.
     const dir = await bare();
-    expect(await runInit({ purpose: PURPOSE, strict: ["src/core/**"] }, dir)).toBe(1);
+    expect(await runInit({ purpose: PURPOSE, source: ["src/**"], strict: ["src/core/**"] }, dir)).toBe(1);
     expect(stderr()).toMatch(/has no reason/);
   });
 
   describe("runtime state is gitignored, not just written", () => {
     it("writes .wst/.gitignore covering the compiled index and receipts", async () => {
       const dir = await bare();
-      await runInit({ purpose: PURPOSE }, dir);
+      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
 
       const gitignore = await readFile(join(dir, ".wst/.gitignore"), "utf-8");
       const lines = gitignore.split("\n").map((l) => l.trim());
@@ -407,40 +409,40 @@ describe("wst init", () => {
       expect(gitignore).not.toMatch(/signals\.jsonl/);
     });
 
-    it("creates a root .gitignore excluding .wst-lane when none exists", async () => {
+    it("creates a root .gitignore excluding the --propose draft when none exists", async () => {
       const dir = await bare();
-      await runInit({ purpose: PURPOSE }, dir);
+      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
 
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      expect(gitignore).toContain(".wst-lane");
+      expect(gitignore).toContain(".wst-answers.json");
     });
 
     it("appends to an existing root .gitignore rather than overwriting it", async () => {
       const dir = await bare();
       await writeFile(join(dir, ".gitignore"), "node_modules/\ndist/\n", "utf-8");
 
-      await runInit({ purpose: PURPOSE }, dir);
+      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
 
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
       expect(gitignore).toContain("node_modules/");
       expect(gitignore).toContain("dist/");
-      expect(gitignore).toContain(".wst-lane");
+      expect(gitignore).toContain(".wst-answers.json");
     });
 
     it("does not duplicate entries a .gitignore already has", async () => {
       const dir = await bare();
-      await writeFile(join(dir, ".gitignore"), ".wst-lane\n", "utf-8");
+      await writeFile(join(dir, ".gitignore"), ".wst-answers.json\n", "utf-8");
 
-      await runInit({ purpose: PURPOSE }, dir);
+      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
 
       const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      const occurrences = gitignore.split("\n").filter((l) => l.trim() === ".wst-lane").length;
+      const occurrences = gitignore.split("\n").filter((l) => l.trim() === ".wst-answers.json").length;
       expect(occurrences).toBe(1);
     });
 
     it("leaves the root .gitignore untouched under --dry-run", async () => {
       const dir = await bare();
-      expect(await runInit({ purpose: PURPOSE, dryRun: true }, dir)).toBe(0);
+      expect(await runInit({ purpose: PURPOSE, source: ["src/**"], dryRun: true }, dir)).toBe(0);
       await expect(readFile(join(dir, ".gitignore"), "utf-8")).rejects.toThrow();
     });
   });
