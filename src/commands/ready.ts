@@ -14,7 +14,7 @@
  */
 
 import { createGitAdapter } from "../shell/git.js";
-import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom } from "../shell/scope.js";
+import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths } from "../shell/scope.js";
 import { verifyRange } from "../shell/verify.js";
 import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
@@ -47,11 +47,24 @@ export async function runReady(
   cwd: string = process.cwd(),
 ): Promise<number> {
   const began = Date.now();
+  const incomplete = (reason: string, conflicts: readonly string[] = []): number => {
+    if (opts.json === true) console.log(JSON.stringify({ result: "INCOMPLETE", reason, conflicts, results: [] }));
+    else console.error(`\n  ${saidAs("INCOMPLETE")}\n\n  ${reason}\n`);
+    return EXIT_INCOMPLETE;
+  };
   const git = createGitAdapter(cwd);
   const repoRoot = await git.repoRoot();
   if (repoRoot === null) {
-    console.error("not inside a git repository: readiness is measured against a base, so it needs one");
-    return EXIT_INCOMPLETE;
+    return incomplete("not inside a git repository: readiness is measured against a base, so it needs one");
+  }
+
+  try {
+    const conflicts = await conflictedPaths(repoRoot);
+    if (conflicts.length > 0) {
+      return incomplete(`unresolved conflicts: ${conflicts.join(", ")}`, conflicts);
+    }
+  } catch (cause) {
+    return incomplete((cause as Error).message);
   }
 
   const scope = await readScopeFacts(cwd);
@@ -59,8 +72,7 @@ export async function runReady(
   if (!base.ok) {
     // Ambiguous scope is INCOMPLETE, never NOT_READY: nothing about the change was
     // judged, so calling it not ready would name the wrong problem.
-    console.error(`\n  ${saidAs("INCOMPLETE")}\n\n  ${base.why}\n`);
-    return EXIT_INCOMPLETE;
+    return incomplete(base.why);
   }
 
   // A merge base that will not resolve means the scope was never established. Two
@@ -74,10 +86,7 @@ export async function runReady(
   } else {
     const found = await mergeBaseOf(base.ref, cwd);
     if (found === null) {
-      console.error(
-        `\n  ${saidAs("INCOMPLETE")}\n\n  no merge base between HEAD and ${base.ref}, so the scope of this task is not established.\n  Pass --range to say what to verify.\n`,
-      );
-      return EXIT_INCOMPLETE;
+      return incomplete(`no merge base between HEAD and ${base.ref}, so the scope of this task is not established.\n  Pass --range to say what to verify.`);
     }
     commit = found;
   }
@@ -90,8 +99,7 @@ export async function runReady(
   try {
     tracked = parseNameStatus(await git.diffNameStatus(commit));
   } catch (cause) {
-    console.error(`\n  ${saidAs("INCOMPLETE")}\n\n  could not read the diff against ${commit}\n  ${(cause as Error).message}\n`);
-    return EXIT_INCOMPLETE;
+    return incomplete(`could not read the diff against ${commit}\n  ${(cause as Error).message}`);
   }
   const where =
     opts.range === undefined ? await taskFilesFrom(commit, cwd) : await rangeFiles(opts.range, cwd);
@@ -102,17 +110,18 @@ export async function runReady(
     {
       range: commit,
       files,
+      untracked: where.untracked,
       json: opts.json ?? false,
       noLens: opts.lens !== true,
       noEvidence: opts.noEvidence ?? false,
       fast: opts.fast ?? false,
+      noReceipts: true,
     },
     repoRoot,
     cwd,
   );
   if (!verified.ok) {
-    console.error(`\n  ${saidAs("INCOMPLETE")}\n\n  ${verified.why}\n`);
-    return EXIT_INCOMPLETE;
+    return incomplete(verified.why);
   }
 
   const { run, routing, registry } = verified;
@@ -121,6 +130,12 @@ export async function runReady(
   const readiness = readinessOf(outcome, files.length > 0, {
     errored: run.verdict.errored,
     declined: run.selection.declined,
+    pending: [
+      ...verified.omitted.filter((r) => r.severity === "block").map((r) => r.id),
+      ...run.verdict.results.filter((r) => r.severity === "block" &&
+        ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
+        .map((r) => r.checkId),
+    ],
   });
 
   const results: CheckLine[] = run.verdict.results.map((r) => ({
@@ -130,7 +145,9 @@ export async function runReady(
     ...(r.outcome.status === "fail" || r.outcome.status === "errored"
       ? { detail: firstMeaningfulLine(r.outcome.detail ?? "") }
       : {}),
+    ...(r.outcome.status === "skipped" ? { detail: r.outcome.reason } : {}),
   }));
+  results.push(...verified.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: r.reason })));
 
   const facts = {
     repo: repoRoot,
@@ -147,6 +164,7 @@ export async function runReady(
     tier: routing.tier,
     applicable: run.selection.selected.map((s) => s.check.id),
     results,
+    warnings: run.verdict.warnings,
     uncovered: run.selection.declined,
     evidence: [] as string[],
     elapsedMs: Date.now() - began,

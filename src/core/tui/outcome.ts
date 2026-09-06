@@ -6,7 +6,7 @@
  * carries NO number at all. The semantic states are the product's words.
  */
 
-const READY = "Ready. Everything that applied ran and passed";
+const FINISHED = "Verification finished. Read the result above";
 const NOT_READY = "Needs work. A check failed on this change";
 const INCOMPLETE = "Verification incomplete. Something could not be established";
 
@@ -19,7 +19,7 @@ function sentenceFor(command: string, code: number): string {
   if (command === "ready") {
     // Hard rule 3, in the one line a menu reader sees: a check that could not run
     // is verification being incomplete, and never a verdict on the change.
-    if (code === 0) return READY;
+    if (code === 0) return FINISHED;
     return code === 1 ? NOT_READY : INCOMPLETE;
   }
   if (code === 0) return `${command} done`;

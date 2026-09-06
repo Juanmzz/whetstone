@@ -31,6 +31,7 @@ export interface ReadyFacts {
   readonly tier: string;
   readonly applicable: readonly string[];
   readonly results: readonly CheckLine[];
+  readonly warnings?: readonly string[];
   readonly uncovered: readonly string[];
   readonly evidence: readonly string[];
   readonly elapsedMs: number;
@@ -71,9 +72,15 @@ const MARK: Readonly<Record<ResultStatus, string>> = {
 };
 
 export function renderReady(facts: ReadyFacts): string {
+  const warnings = facts.warnings?.length ?? 0;
+  const omitted = facts.results.filter((r) => r.status === "skipped" && r.detail !== "receipt").length;
+  const notes = [
+    ...(warnings === 0 ? [] : [`${warnings} warning${warnings === 1 ? "" : "s"} failed`]),
+    ...(omitted === 0 ? [] : [`${omitted} check${omitted === 1 ? "" : "s"} omitted`]),
+  ];
   const lines: string[] = [
     "",
-    `  ${saidAs(facts.readiness)}`,
+    `  ${saidAs(facts.readiness)}${notes.length === 0 ? "" : `: ${notes.join(", ")}`}`,
     "",
     `  repo        ${facts.repo}`,
     `  branch      ${facts.branch}`,

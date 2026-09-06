@@ -15,7 +15,7 @@ const run = promisify(execFile);
 
 async function git(args: readonly string[], cwd: string): Promise<string | null> {
   try {
-    const { stdout } = await run("git", [...args], { cwd, env: gitEnv(), maxBuffer: 16 * 1024 * 1024 });
+    const { stdout } = await run("git", ["-c", "core.quotePath=false", ...args], { cwd, env: gitEnv(), maxBuffer: 16 * 1024 * 1024 });
     return stdout.trim();
   } catch {
     return null;
@@ -49,6 +49,12 @@ export async function readScopeFacts(cwd: string): Promise<ScopeFacts> {
 /** The commit a base ref resolves to, so the report names what it actually compared. */
 export async function mergeBaseOf(base: string, cwd: string): Promise<string | null> {
   return git(["merge-base", base, "HEAD"], cwd);
+}
+
+export async function conflictedPaths(cwd: string): Promise<readonly string[]> {
+  const out = await git(["diff", "--name-only", "--diff-filter=U"], cwd);
+  if (out === null) throw new Error("could not inspect unresolved conflicts");
+  return lines(out);
 }
 
 /**

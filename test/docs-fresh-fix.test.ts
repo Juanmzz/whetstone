@@ -44,7 +44,7 @@ async function repoWith(status: string): Promise<string> {
 }
 
 const run = (dir: string, args: string[] = []): Promise<{ code: number; stderr: string }> =>
-  exec("npx", ["tsx", SCRIPT, ...args], { cwd: dir })
+  exec(process.execPath, ["--import", import.meta.resolve("tsx"), SCRIPT, ...args], { cwd: dir })
     .then(({ stderr }) => ({ code: 0, stderr }))
     .catch((e: { code?: number; stderr?: string }) => ({ code: e.code ?? 1, stderr: e.stderr ?? "" }));
 

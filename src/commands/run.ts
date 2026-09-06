@@ -132,9 +132,8 @@ async function commentDensity(cwd: string): Promise<number> {
  * subject is written by git and by the forge, not by the person being checked.
  */
 async function commitsIn(range: string, cwd: string): Promise<Commit[]> {
-  const args = range.includes("..")
-    ? ["log", "--no-merges", "--format=%H%x00%s%x00%b%x1e", range]
-    : ["log", "--no-merges", "-1", "--format=%H%x00%s%x00%b%x1e", "HEAD"];
+  const args = ["log", "--no-merges", "--format=%H%x00%s%x00%b%x1e",
+    ...(range === "HEAD" ? ["-1", "HEAD"] : [range.includes("..") ? range : `${range}..HEAD`])];
 
   const out = await git(args, cwd);
   return out

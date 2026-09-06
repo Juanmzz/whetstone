@@ -182,7 +182,7 @@ export function buildInterview(
         "reason it earns that (`src/billing/** : moves money`).",
       why:
         "Which part of the code is dangerous is a judgement about what you are willing to " +
-        "lose. No layout states it, so anything offered below arrives unticked.",
+        "lose. Review the judge's ticked suggestions; additional candidates start unticked.",
       kind: "paths",
       options: [],
       defaultAnswer: blank(
@@ -316,4 +316,3 @@ export const AnswersSchema = z.preprocess((raw) => {
     .default([]),
   stack: z.string().nullable().default(null),
 }));
-

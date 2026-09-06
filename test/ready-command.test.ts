@@ -14,8 +14,10 @@ import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runReady } from "../src/commands/ready.js";
+import { runGate } from "../src/commands/gate.js";
 import { gitEnv } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
 
@@ -32,6 +34,22 @@ beforeEach(() => {
 afterEach(() => void vi.restoreAllMocks());
 
 const said = (): string => `${out.join("\n")}\n${err.join("\n")}`;
+
+const envelope = (): {
+  result: string; untracked: string[]; applicable: string[]; warnings: string[];
+  results: { id: string; status: string; detail?: string }[]; conflicts: string[];
+} => JSON.parse(out.at(-1)!);
+
+async function checkFile(
+  dir: string, id: string, command: string,
+  extra = "", include = "src/**", severity = "block",
+): Promise<void> {
+  await writeFile(join(dir, `.wst/checks/${id}.md`), [
+    "---", `id: ${id}`, "description: Regression check.", "kind: deterministic",
+    `severity: ${severity}`, "tiers: [strict, light]", `include: [${JSON.stringify(include)}]`,
+    `command: ${JSON.stringify(command)}`, "origin: []", "version: 1", extra, "---", "Regression check.",
+  ].join("\n"));
+}
 
 const ENV = {
   ...gitEnv(),
@@ -208,8 +226,9 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
     await git(dir, "branch", "-q", "-M", "main-2");
     await git(dir, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main").catch(() => undefined);
 
-    const code = await runReady({ range: "definitely-not-a-ref" }, dir);
+    const code = await runReady({}, dir);
     expect(code).toBe(2);
+    expect(said()).toContain("no merge base");
   });
 
   it("refuses on a detached HEAD rather than guessing a base", async () => {
@@ -259,7 +278,161 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
   });
 });
 
+describe("readiness does not hide missing verification", () => {
+  it.each([".", "src"])("checks untracked Unicode paths from %s", async (cwd) => {
+    const dir = await repo();
+    await git(dir, "config", "core.quotePath", "true");
+    await checkFile(dir, "unicode", 'node -e "process.exit(1)"', "", "src/señal.ts");
+    await writeFile(join(dir, "src/señal.ts"), "broken");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    const code = await runReady({ json: true }, join(dir, cwd));
+
+    expect(code).toBe(1);
+    expect(envelope().untracked).toContain("src/señal.ts");
+    expect(envelope().applicable).toContain("unicode");
+  });
+
+  it("reruns a previously receipted suite when a dependency outside include changes", async () => {
+    const dir = await repo();
+    await checkFile(dir, "suite", 'node -e "process.exit(Number(require(\'fs\').readFileSync(\'dependency.txt\',\'utf8\')))"');
+    await writeFile(join(dir, "dependency.txt"), "0");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "fixture");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir)).toBe(0);
+    await writeFile(join(dir, "dependency.txt"), "1");
+
+    const code = await runReady({ json: true }, dir);
+
+    expect(code).toBe(1);
+    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "suite", status: "fail" }));
+  });
+
+  it.each([
+    ["block", 2, "INCOMPLETE"],
+    ["warn", 0, "READY"],
+  ])("reports a %s check omitted by fast", async (severity, expectedCode, result) => {
+    const dir = await repo();
+    await checkFile(dir, "slow", 'node -e "process.exit(1)"', "slow: true", "src/**", String(severity));
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    const code = await runReady({ json: true, fast: true }, dir);
+
+    expect(code).toBe(expectedCode);
+    expect(envelope().result).toBe(result);
+    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "slow", status: "skipped", detail: "fast" }));
+  });
+
+  it("does not omit slow checks without fast", async () => {
+    const dir = await repo();
+    await checkFile(dir, "slow", 'node -e "process.exit(1)"', "slow: true");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    const code = await runReady({ json: true }, dir);
+
+    expect(code).toBe(1);
+    expect(envelope().result).toBe("NOT_READY");
+  });
+
+  it("reports missing evidence through the actual CLI option", async () => {
+    const dir = await repo();
+    await checkFile(dir, "evidence-review", 'node -e "process.exit(1)"');
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    const result = await exec(process.execPath, [
+      "--import", import.meta.resolve("tsx"),
+      fileURLToPath(new URL("../src/cli.ts", import.meta.url)), "ready", "--json", "--no-evidence",
+    ], { cwd: dir }).catch((e: { stdout: string; stderr: string }) => e);
+
+    const report = JSON.parse(result.stdout);
+    expect(report.result).toBe("INCOMPLETE");
+    expect(report.results).toContainEqual(expect.objectContaining({ id: "evidence-review", status: "skipped", detail: "no-evidence" }));
+  });
+
+  it("reports a lens as incomplete when it cannot read an untracked file", async () => {
+    const dir = await repo();
+    await writeFile(join(dir, ".wst/checks/review.md"), [
+      "---", "id: review", "description: Review source.", "kind: llm", "severity: warn",
+      "tiers: [light, strict]", 'include: ["src/**"]', "review_lens: Review the diff.", "version: 1", "---",
+    ].join("\n"));
+    await writeFile(join(dir, "src/new.ts"), "untracked content");
+
+    const code = await runReady({ json: true, lens: true }, dir);
+
+    expect(code).toBe(2);
+    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "review", status: "errored", detail: expect.stringContaining("untracked") }));
+  });
+
+  it("keeps failed warnings non-blocking and lists them in JSON", async () => {
+    const dir = await repo();
+    await checkFile(dir, "advisory", 'node -e "process.exit(1)"', "", "src/**", "warn");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    const code = await runReady({ json: true }, dir);
+
+    expect(code).toBe(0);
+    expect(envelope().warnings).toEqual(["advisory"]);
+  });
+
+  it("includes failed warnings in the headline", async () => {
+    const dir = await repo();
+    await checkFile(dir, "advisory", 'node -e "process.exit(1)"', "", "src/**", "warn");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    await runReady({}, dir);
+
+    expect(said()).toContain("Ready: 1 warning failed");
+  });
+
+  it.each([undefined, "main..HEAD"])("refuses an unresolved merge with range %s", async (range) => {
+    const dir = await repo();
+    await git(dir, "checkout", "-qb", "feature");
+    await writeFile(join(dir, "src/a.ts"), "feature");
+    await git(dir, "commit", "-qam", "feature");
+    await git(dir, "checkout", "-q", "main");
+    await writeFile(join(dir, "src/a.ts"), "main");
+    await git(dir, "commit", "-qam", "main");
+    await expect(git(dir, "merge", "feature")).rejects.toThrow();
+
+    const code = await runReady({ json: true, ...(range === undefined ? {} : { range }) }, dir);
+
+    expect(code).toBe(2);
+    expect(envelope().result).toBe("INCOMPLETE");
+    expect(envelope().conflicts).toEqual(["src/a.ts"]);
+    expect(envelope().results).toEqual([]);
+  });
+});
+
 describe("wst ready --json", () => {
+  it("returns an envelope when an explicit range cannot be read", async () => {
+    const dir = await repo();
+
+    const code = await runReady({ json: true, range: "missing-ref" }, dir);
+
+    expect(code).toBe(2);
+    expect(envelope().result).toBe("INCOMPLETE");
+    expect(envelope().results).toEqual([]);
+  });
+
+  it("returns an envelope outside a repository", async () => {
+    const dir = await tempDir("wst-no-repo-");
+
+    const code = await runReady({ json: true }, dir);
+
+    expect(code).toBe(2);
+    expect(envelope().result).toBe("INCOMPLETE");
+  });
+
+  it("returns an envelope when the base is ambiguous", async () => {
+    const dir = await repo();
+    await git(dir, "checkout", "--detach", "-q");
+
+    const code = await runReady({ json: true }, dir);
+
+    expect(code).toBe(2);
+    expect(envelope().result).toBe("INCOMPLETE");
+  });
   it("carries the semantic result as a field, not as a number to infer from", async () => {
     const dir = await repo();
     await writeFile(join(dir, "src/a.ts"), "export const a = 5;\n", "utf-8");

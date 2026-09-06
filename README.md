@@ -1,80 +1,68 @@
 # Whetstone
 
-**Self-sharpening standards for coding agents.**
+**Check the work before handing it back.**
 
-Whetstone captures what *correct* means in your repo as plain files in git, then
-enforces it with a deterministic engine that calls a model only where judgment is
-irreducible. The exit code is the enforcement: it runs at push and in CI, so it does
-not depend on an agent choosing to cooperate.
+Whetstone finds what changed in a Git worktree, runs the project's applicable
+checks, and reports what passed, failed or could not be verified. Configuration
+is plain files under `.wst/`, versioned with the project.
 
-[What it is, on one page](https://juanmzz.github.io/whetstone/)
-
-## Install
+## Use
 
 ```bash
 npm install -g @juanmzz/whetstone
-
 cd your-repo
-wst init      # interview the repo, write .wst/
-wst status    # what is armed, and what is not
+wst init
+wst ready
 ```
 
-Node 22 or newer. `init` shows you the plan before it writes anything, and
-`--dry-run` shows it without writing at all.
+Node 22 or newer. `init` reads the test, typecheck and lint commands the repo
+declares, asks about risk and code paths, and shows a plan before writing.
+It probes those commands; a command that does not pass starts as a warning.
 
-## The loop
+A new installation creates configuration, triage rules and available checks.
+It installs no hooks, agent instructions, skills or memory system. Ask your
+agent to run `wst ready` before handing work back, or connect verification to
+your existing CI. `wst status` inspects the installation, not the change.
 
-```
-wst init     interview the project, generate .wst/
-wst gate     select the checks that apply, skip what receipts prove unchanged, pass or block
-wst signal   record the friction a run hit
-wst retro    cluster the signals, propose rule changes, never apply them
-```
+## Read the result
 
-Everything lands as files you can read, diff and revert. Delete `.wst/` and the tool
-is gone; nothing else knows you installed it.
+| Result | Meaning | Exit |
+|---|---|---|
+| `READY` | Verification completed under the configured policy. Failed warnings and omitted advisory checks remain visible. | 0 |
+| `NOT_READY` | A blocking check ran and failed. | 1 |
+| `INCOMPLETE` | Verification could not finish, a required check was omitted, coverage was declined, or nothing verified the change. | 2 |
+| `NO_CHANGES` | Nothing changed against the reported base. | 0 |
 
-## Four outcomes, not two
-
-| | |
-|---|---|
-| `0` **passed** | every check that applied ran, and none failed |
-| `0` **uncovered** | no check matched these paths, and it says so rather than implying a pass |
-| `1` **blocked** | a check ran and failed |
-| `2` **incomplete** | a check that could have blocked never ran, so the gate is broken, not your change |
-
-Splitting *failed* from *could not run* is the difference between a gate you trust and
-one you learn to route around.
-
-## The judgment check
-
-One check asks a model whether a diff introduces a correctness bug. It earned the right to
-block by measurement: 100 correct verdicts out of 100, unanimous on ten fixtures, recorded in
-a receipt that binds the prompt, the fixtures, the model and the runtime. Change any one and
-the authority lapses.
-
-**It blocks nowhere today.** The pre-push hook skips it because a gate that costs fifty
-seconds and real money every push is one people bypass; CI skips it because a runner has no
-interactive session. So it runs when you run it: `wst gate`, without `--no-lens`. The decision
-that promoted it carries `· unbuilt` for that reason.
-
-## Documentation
-
-- [Architecture](./docs/architecture.md): what is true now, in the present tense
-- [Design](./docs/design.md): where to read about each part, and a check file field by field
-- [Vision](./VISION.md): what this is, and what it deliberately is not
-
-An `llm` check needs the CLI it names, `claude` or `agy`. Nothing else is bundled.
-
-## Contributing
-
-Read [VISION.md](./VISION.md) first, especially *What Whetstone is NOT*. One concern
-per pull request.
+`ready` resolves its base from local Git references and includes committed,
+staged, unstaged and untracked changes. It refuses unresolved conflicts and
+reruns checks without trusting cached receipts. It never fetches; use
+`--range main..HEAD` when CI needs an explicit commit range.
 
 ```bash
-npm install && npm test
+wst ready --json   # semantic result, scope, check results and warning IDs
+wst ready --fast   # omit slow checks; blocking omissions leave INCOMPLETE
+wst ready --lens   # also run configured model reviews
 ```
 
-## License
+No lens is installed by default. A lens cannot review untracked content yet:
+stage those files and rerun. An explicit commit range covers committed work
+only. Tests, types and lint only prove what they check; readiness does not
+guarantee that the requested feature is complete or visually correct.
 
-MIT
+## Try it on one project
+
+Start with a project that already has tests and a typechecker. Review what
+`init` proposes, use `ready` for several real tasks alongside your usual checks,
+and compare scope, findings and time spent. In an isolated copy, introduce one
+known failure at a time, confirm detection, fix it and confirm recovery.
+Add automatic enforcement after this pilot.
+
+## Other commands
+
+`check` and `triage` are diagnostics. `gate` remains compatible with existing
+hooks and CI, including its receipt cache and push policy. Unlike `ready`,
+an uncovered change may pass the gate. `signal`, `retro` and `update` remain
+on standby for existing installations; `config` is removed.
+
+- [Architecture](docs/architecture.md)
+- [Decisions](.wst/memory/decisions.md)

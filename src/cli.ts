@@ -94,8 +94,8 @@ program
   .option("--fast", "run only the checks that do not declare themselves slow")
   .option("--no-evidence", "no evidence store on this machine, so those checks cannot answer")
   .option("--lens", "run llm checks too; off by default")
-  .action(async (opts: Parameters<typeof runReady>[0]) => {
-    process.exitCode = await runReady(opts);
+  .action(async (opts: NonNullable<Parameters<typeof runReady>[0]> & { evidence?: boolean }) => {
+    process.exitCode = await runReady({ ...opts, noEvidence: opts.evidence === false });
   });
 
 program

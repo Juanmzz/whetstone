@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { afterRunning } from "./outcome.js";
 
 describe("afterRunning", () => {
-  it("gives `ready` the product's own three words", () => {
-    expect(afterRunning("ready", 0)).toContain("Ready");
+  it("does not infer readiness from a successful exit", () => {
+    expect(afterRunning("ready", 0)).not.toContain("Ready");
+    expect(afterRunning("ready", 0)).not.toContain("passed");
+    expect(afterRunning("ready", 0)).toContain("result above");
+  });
+
+  it("names a failed or incomplete verification", () => {
     expect(afterRunning("ready", 1)).toContain("Needs work");
     expect(afterRunning("ready", 2)).toContain("Verification incomplete");
   });

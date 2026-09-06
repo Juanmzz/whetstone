@@ -11,6 +11,30 @@ const at = (s: InterviewState, keys: string[]): InterviewState =>
 const type = (s: InterviewState, text: string): InterviewState =>
   at(s, [...text].map((c) => (c === " " ? "space" : c)));
 
+describe("reviewing drafted fields before writing", () => {
+  const drafted = () => openInterview(buildInterview(undefined, {
+    sourcePaths: ["src/**"],
+    strictPaths: [{ glob: "src/auth/**", reason: "authentication" }],
+  }));
+
+  it("refuses ctrl-d while a drafted field has not been visited", () => {
+    const s = drafted();
+
+    const result = pressIn(s, "ctrl-d");
+
+    expect(result.action.kind).toBe("none");
+    expect(result.state.complaint).toContain("Review");
+  });
+
+  it("accepts ctrl-d after all drafted fields have been visited, including after going back", () => {
+    const s = at(drafted(), ["return", "return", "shift-tab"]);
+
+    const result = pressIn(s, "ctrl-d");
+
+    expect(result.action.kind).toBe("write");
+  });
+});
+
 describe("moving between questions", () => {
   it("opens on the first one", () => {
     expect(START().at).toBe(0);

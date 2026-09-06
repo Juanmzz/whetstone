@@ -17,7 +17,7 @@ import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { startLive, type Live } from "./live.js";
 import { createCheckRunner, DEFAULT_MAX_LENS_TOTAL_USD, DEFAULT_TIMEOUT_MS } from "./check-runner.js";
-import { fastOnly } from "../core/gate/select.js";
+import { fastOnly, selectChecks } from "../core/gate/select.js";
 import { answerableHere } from "../core/gate/environment.js";
 import { runGate as executeGate, type CheckRunner, type GateRun } from "../core/gate/run.js";
 import { classify, route } from "../core/triage/index.js";
@@ -49,10 +49,12 @@ export interface VerifyOptions {
    * rather than asking for a range that cannot express it.
    */
   readonly files?: readonly ChangedFile[];
+  readonly untracked?: readonly string[];
 }
 
 export interface Verified {
   readonly ok: true;
+  readonly omitted: readonly { readonly id: string; readonly severity: LoadedCheck["severity"]; readonly reason: string }[];
   readonly run: GateRun;
   readonly registry: Registry;
   readonly routing: Routing;
@@ -98,7 +100,7 @@ export async function verifyRange(
   repoRoot: string,
   cwd: string,
 ): Promise<Verified | NotVerified> {
-  const git = createGitAdapter(cwd);
+  const git = createGitAdapter(repoRoot);
   const range = opts.range;
 
   // Resolved on its own, ahead of everything else, because the event log lives
@@ -148,6 +150,13 @@ export async function verifyRange(
   );
   const eligible = opts.fast === true ? fastOnly(runnable) : runnable;
   const routing = route(opts.tier ?? triage.tier, eligible);
+  const omitted = selectChecks(route(routing.tier, registry.active), registry, files).selected
+    .filter(({ check }) => !eligible.includes(check))
+    .map(({ check }) => ({
+      id: check.id,
+      severity: check.severity,
+      reason: answerableHere(check, { noEvidence: opts.noEvidence ?? false }) ? "fast" : "no-evidence",
+    }));
 
   // ONE line for however many checks are in flight, closed whatever happens: an
   // interval left running holds an animation over the report it is under.
@@ -170,6 +179,7 @@ export async function verifyRange(
         maxLensUsd: opts.maxLensUsd ?? DEFAULT_MAX_LENS_USD,
         maxLensTotalUsd: opts.maxLensTotalUsd ?? DEFAULT_MAX_LENS_TOTAL_USD,
         noLens: opts.noLens ?? false,
+        untracked: opts.untracked ?? [],
         timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       }),
       opts.json === true ? { quiet: true } : {},
@@ -183,5 +193,5 @@ export async function verifyRange(
   });
 
 
-  return { ok: true, run, registry, routing, files, definitionRoot, repoRoot };
+  return { ok: true, run, registry, routing, files, definitionRoot, repoRoot, omitted };
 }
