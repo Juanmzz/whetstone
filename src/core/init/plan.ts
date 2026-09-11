@@ -9,7 +9,6 @@ import type { ClockPort } from "../ports.js";
 import type { CopyRequest, GeneratedFile } from "./artifact.js";
 import { seedChecks, seededChecks, type SeededCheck } from "./checks.js";
 import type { Probes } from "./probe.js";
-import { judgeFor, pointersFor, pointersForAgent } from "./harness.js";
 import { detectStack, type RepoFacts, type StackFacts } from "./detect.js";
 import { validateAnswers, type InterviewAnswers } from "./interview.js";
 import {

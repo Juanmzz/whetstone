@@ -34,7 +34,10 @@ const program = new Command();
 
 program
   .name("wst")
-  .description("Whetstone: a self-sharpening standards layer for AI coding agents")
+  .description(
+    "Whetstone: check the work before handing it back. Finds what changed in a worktree,\n" +
+      "runs the project's applicable checks, and says what passed, failed or could not be verified.",
+  )
   .version(VERSION)
   // Only on the bare `wst`, where a human is looking at the tool rather than at a
   // result. Commander prints this above the usage text.
@@ -42,6 +45,7 @@ program
 
 program
   .command("status")
+  .helpGroup("Commands:")
   .description(`show repo, ${DEFINITION_DIR}/ and judge-adapter health`)
   .option("--quiet", "print only the final ready / NOT ready line")
   .option("--json", "the same answer as data, for an agent rather than a reader")
@@ -54,6 +58,7 @@ program
 
 const check = program
   .command("check")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .description(`diagnostic: list the check registry from ${DEFINITION_DIR}/checks/`)
   .option("--json", "print the compiled index as JSON")
   .option("--compile", `write ${DEFINITION_DIR}/checks/_index.json`)
@@ -65,6 +70,7 @@ const check = program
 // `command:`, and the noun it runs under should be the noun the thing is.
 check
   .command("run")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .argument("[id]", "which check Whetstone ships the logic for")
   .description("run a check whose logic ships with wst rather than with this repo")
   .action(async (id: string | undefined) => {
@@ -73,6 +79,7 @@ check
 
 program
   .command("triage")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .description("diagnostic: classify a change into a tier and show which checks apply")
   // No commander default: a default --range makes --paths look like both were
   // passed. runTriage still falls back to HEAD when neither is given.
@@ -88,6 +95,7 @@ program
   });
 program
   .command("ready")
+  .helpGroup("Commands:")
   .description("is this task's work ready? resolves its own scope, no range needed")
   .option("--json", "the report as a JSON envelope, with a semantic `result` field")
   .option("--range <range>", "advanced: verify this range instead of the resolved scope")
@@ -100,6 +108,7 @@ program
 
 program
   .command("gate")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .description("compatibility: run the checks over a range. `ready` resolves its own")
   .option("--range <range>", "git diff range", "HEAD")
   .option("--tier <tier>", "provisional triage tier override")
@@ -135,6 +144,7 @@ program
 
 program
   .command("retro")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .description("standby: cluster new signals and propose rule changes (human-gated)")
   .option("--dry-run", "cluster only: no LLM calls, nothing written")
   .option("--yes", "do not ask before spending: for a script, and for meaning it")
@@ -148,6 +158,7 @@ program
 // other route into `signals.jsonl` is the engine recording what it observed.
 program
   .command("signal")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .argument("[type]", "kebab-case type, e.g. triage-miss; the retro clusters on it")
   .argument("[detail...]", "one or two sentences a reader can reconstruct the event from")
   .description(`standby: record an observation in ${DEFINITION_DIR}/memory/signals.jsonl (human-gated)`)
@@ -219,6 +230,7 @@ program
 
 program
   .command("update")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .description("standby: what changed since init wrote this repo. Reports, never writes")
   .option("--json", "print the verdicts as JSON")
   .action(async (opts: { json?: boolean }) => {
@@ -227,6 +239,7 @@ program
 
 program
   .command("init")
+  .helpGroup("Commands:")
   .description(`interview this repo and generate its ${DEFINITION_DIR}/`)
   .option("--answers <file>", "JSON file of interview answers")
   .option("--purpose <text>", "one-line project purpose")
