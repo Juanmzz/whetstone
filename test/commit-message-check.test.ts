@@ -41,6 +41,28 @@ async function commit(dir: string, message: string): Promise<void> {
 }
 
 describe("wst check run commit-message", () => {
+  it("checks every commit after a supplied base SHA", async () => {
+    const dir = await repo();
+    const { stdout } = await run("git", ["rev-parse", "HEAD"], { cwd: dir });
+    await commit(dir, "invalid subject");
+    await commit(dir, "fix: valid last subject");
+    process.env["WST_GATE_RANGE"] = stdout.trim();
+
+    const code = await runShippedCheck("commit-message", dir);
+
+    expect(code).toBe(1);
+    expect(err.join("\n")).toContain("2 commit message(s)");
+  });
+
+  it("does not judge a bad base commit when later messages are valid", async () => {
+    const dir = await repo();
+    await commit(dir, "invalid base");
+    const { stdout } = await run("git", ["rev-parse", "HEAD"], { cwd: dir });
+    await commit(dir, "fix: valid work");
+    process.env["WST_GATE_RANGE"] = stdout.trim();
+
+    expect(await runShippedCheck("commit-message", dir)).toBe(0);
+  });
   it("passes a conventional subject", async () => {
     const dir = await repo();
     await commit(dir, "feat(gate): a thing");

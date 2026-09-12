@@ -1427,3 +1427,60 @@ file sits and not what the mechanism does.
 Rejected: an `enforces: skills/x.md` field pointing a lens at the skill it makes
 enforceable. It is the natural next step and it is a field somebody has to keep true, for a
 benefit that needs a second lens to exist before it means anything. Revisit then.
+
+### adr-0048 — Whetstone verifies a worktree, and `wst ready` is the whole question
+`proposed` · 2026-09-01
+
+Supersedes the product shape adr-0031 and adr-0032 built, and narrows adr-0021 and adr-0030.
+
+The tool had ten commands and an installer that wrote twenty-eight files. A human delegating
+a task to an agent needed none of that: they needed the agent to be able to answer one
+question, honestly, before handing work back. Everything else was apparatus arriving ahead
+of a need, and a new repo received a signal log with no signals, a retro log with no retro,
+a decision record with no decisions and eight skills nothing there read.
+
+So the product is three commands. `init` writes what selects and runs a check, and nothing
+else. `ready` answers whether the current worktree is ready. `status` says what is here.
+`triage` and `check` remain as diagnostics behind one key. `gate` remains as a compatibility
+surface while CI and hooks name it. `signal`, `retro` and `update` go on standby: off the
+product path, still working, deleted by nobody because deleting them would make this an
+unrelated rewrite. `config` is deleted outright, and this is the test it failed: it edited
+four keys an agent can edit directly, so an interactive editor had to demonstrate exclusive
+value and had none.
+
+**`ready` takes no arguments, and that is the decision.** An agent that has to be told a
+range gets told the wrong one. It resolves the repository, the branch, the base and the
+merge base itself, includes committed, staged, unstaged and untracked work, and REPORTS the
+base ref and the commit it used so the answer can be checked afterwards.
+
+**Four semantic results, because three exit codes cannot carry the meaning.** `READY`,
+`NOT_READY`, `INCOMPLETE`, `NO_CHANGES`. The numbers stay as protocol for shells and CI;
+the JSON envelope carries the result as a field so nothing has to infer meaning from a
+number, and the TUI shows no number at all.
+
+**Narrowing adr-0021.** It ruled that "nothing covers this" must not block, because a
+markdown-only commit had no legitimate way through a pre-push hook and that pressure teaches
+`--no-verify`. That still holds for `gate`, which answers whether a push may proceed.
+`ready` answers whether work is ready, and a run that verified nothing has not established
+that, so it reports `INCOMPLETE`. Two questions, two answers, one engine.
+
+**Narrowing adr-0030.** The two checks Whetstone brings are no longer seeded. A repo
+installing verification for the first time has hit no friction yet, so an offer sitting
+where friction will be felt is a rule arriving before its reason. Both remain in this
+repo's own registry, which is where they were earned.
+
+Rejected: a `--verification-only` flag. Verification-only is the product, and a flag would
+have kept the old generator alive as the thing the default still did.
+
+Rejected: deleting `retro`, `signal` and the memory substrate now. It is the honest end
+state and it turns a product cut into a rewrite of an unrelated subsystem. They are off the
+path; what they cost while standing there is a `--help` line each, and the help says which
+of them are standby.
+
+Rejected: keeping the eight-row launcher and reordering it. Eight equal rows answer "what
+can this tool do", which is a question asked once; the reduced product has four entries and
+a drawer, and nothing was removed from the drawer that anybody was using.
+
+Cost accepted: an existing `.wst/` still carries skills, memory and a constitution that a
+new installation would not create. Nothing reads them on the readiness path, so they are
+inert rather than broken, and `update` is the command that would reconcile them.

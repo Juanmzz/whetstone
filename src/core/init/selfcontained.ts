@@ -162,18 +162,6 @@ export function auditSelfContained(input: AuditInput): readonly SelfContainmentV
   return violations;
 }
 
-/**
- * Copies whose text never arrived, so nothing about them was verified.
- *
- * Deliberately NOT a violation. A dangling reference is a defect in the payload;
- * an unread file is the audit failing to run, and merging the two would either
- * block a legitimate init (a published package without its skills) or let
- * "nothing was examined" render as "nothing was wrong" — hard rule 3, at the
- * level of one audit.
- */
-export function unauditedCopies(copies: readonly CopyRequest[]): readonly string[] {
-  return copies.filter((c) => c.contents === undefined).map((c) => c.to);
-}
 
 /** One readable block, for a thrown error or a CLI report. */
 export function formatViolations(violations: readonly SelfContainmentViolation[]): string {

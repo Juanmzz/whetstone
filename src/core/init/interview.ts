@@ -148,15 +148,6 @@ export function buildInterview(
     drafted_ !== undefined && drafted_ !== null ? "draft" : declared_ === null || declared_ === undefined ? null : "repo";
   const questions: InitQuestion[] = [
     {
-      id: "purpose",
-      prompt: "What is this project, in one or two sentences?",
-      why: "Intent is not on disk. A README describes what exists; this asks what it is FOR.",
-      kind: "text",
-      options: [],
-      defaultAnswer: drafted.purpose ?? declared.purpose ?? null,
-      defaultFrom: from(drafted.purpose, declared.purpose),
-    },
-    {
       id: "risk",
       prompt:
         "Where is a bug expensive here? Select every one that applies, or none if a bug " +
@@ -191,7 +182,7 @@ export function buildInterview(
         "reason it earns that (`src/billing/** : moves money`).",
       why:
         "Which part of the code is dangerous is a judgement about what you are willing to " +
-        "lose. No layout states it, so anything offered below arrives unticked.",
+        "lose. Review the judge's ticked suggestions; additional candidates start unticked.",
       kind: "paths",
       options: [],
       defaultAnswer: blank(
@@ -199,20 +190,6 @@ export function buildInterview(
       ),
       defaultFrom: (drafted.strictPaths ?? []).length === 0 ? null : "draft",
       candidates: declared.strictCandidates,
-    },
-    {
-      id: "stack",
-      prompt:
-        "What is this project built with? Language, runtime, framework, where it runs. " +
-        "the two lines a new contributor needs.",
-      why:
-        "A repo declares its scripts and its package manager, and `init` reads both. What " +
-        "it is WRITTEN in is not stated anywhere; it used to be counted off file " +
-        "extensions, which is exactly the guess that breaks on an unusual stack.",
-      kind: "text",
-      options: [],
-      defaultAnswer: drafted.stack ?? declared.stack,
-      defaultFrom: from(drafted.stack, declared.stack),
     },
   ];
 
@@ -251,8 +228,14 @@ export function renderRiskProfile(risk: RiskProfile): string {
 export function validateAnswers(answers: InterviewAnswers): readonly string[] {
   const errors: string[] = [];
 
-  if (answers.purpose.trim().length === 0) {
-    errors.push("purpose is blank; the constitution would ship with a hole where its intent goes");
+  // The one required answer left, and the only one that ever mattered: every
+  // seeded check scopes its `include` to these, so a repo that names none gets a
+  // `.wst/` with no checks in it, and `ready` can only ever answer INCOMPLETE.
+  if (answers.sourcePaths.length === 0) {
+    errors.push(
+      "no source path. Every check scopes its `include` to these, so naming none " +
+        "installs a definition layer that verifies nothing.",
+    );
   }
 
   if (riskIsElevated(answers.risk) && answers.strictPaths.length === 0) {
@@ -333,4 +316,3 @@ export const AnswersSchema = z.preprocess((raw) => {
     .default([]),
   stack: z.string().nullable().default(null),
 }));
-

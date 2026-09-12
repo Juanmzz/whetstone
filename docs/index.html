@@ -130,7 +130,7 @@
       <div class="step"><span class="n">04</span><span class="cmd">wst retro</span><span class="d">Clusters the signals and proposes rule changes. It never applies them.</span></div>
     </div>
     <p class="note">In a terminal, <span class="mono">wst</span> with no arguments opens a launcher over these commands. One row each, saying what it reads, what it writes and what its exit code means; the rows this repo cannot run yet say what they are waiting for. It runs the one you pick and comes back. Off a terminal it prints the help, because a menu waiting for a keypress in a CI job hangs where nobody can see it.</p>
-    <p class="note">Four more commands maintain an install rather than run the loop. <span class="mono">wst status</span> says what is armed and what is not, <span class="mono">wst triage</span> shows which discipline a change earns before the gate acts on it, <span class="mono">wst config</span> chooses which judge runs the llm checks, and <span class="mono">wst update</span> reports what has drifted since <span class="mono">init</span> wrote the repo, without writing anything back.</p>
+    <p class="note">The product is three commands. <span class="mono">wst init</span> writes what a repo needs to verify itself, <span class="mono">wst ready</span> answers whether the current work is ready without being told what changed, and <span class="mono">wst status</span> says what is here and what is missing. <span class="mono">wst triage</span> and <span class="mono">wst check</span> remain as diagnostics.</p>
   </section>
 
   <section class="sec">

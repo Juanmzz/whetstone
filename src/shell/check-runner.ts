@@ -104,6 +104,7 @@ export function createCheckRunner(deps: {
   readonly maxLensUsd: number;
   readonly maxLensTotalUsd: number;
   readonly noLens: boolean;
+  readonly untracked?: readonly string[];
   readonly timeoutMs: number;
 }): CheckRunner {
   return async (check: LoadedCheck, files: readonly ChangedFile[]): Promise<CheckRun> => {
@@ -124,6 +125,10 @@ export function createCheckRunner(deps: {
       // Reported as SKIPPED, never as passed. The change was not reviewed by this
       // check, and saying otherwise is the exact collapse the gate exists to stop.
       return { outcome: { status: "skipped", reason: "disabled" } };
+    }
+    const unseen = files.filter((f) => deps.untracked?.includes(f.path));
+    if (unseen.length > 0) {
+      return { outcome: { status: "errored", detail: `lens cannot review untracked files: ${unseen.map((f) => f.path).join(", ")}. Stage them and rerun.` } };
     }
     if (check.review_lens === undefined) {
       return {

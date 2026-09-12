@@ -19,16 +19,20 @@ import {
 const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
   purpose: "A billing service for widget subscriptions.",
   risk: NO_RISK,
-  sourcePaths: [],
+  sourcePaths: ["src/**"],
   strictPaths: [],
   stack: null,
   ...over,
 });
 
 describe("buildInterview — everything not declared on disk is asked", () => {
-  it("asks the five questions the repo cannot answer about itself", () => {
+  it("asks only what reaches a generated file", () => {
+    // It asked five. `purpose` reached the constitution and `stack` reached nothing
+    // else; neither is written any more, so both were asked, validated and thrown
+    // away. `risk` stays because it is the question that makes somebody name a
+    // strict path, and strict paths become triage rules.
     const ids = buildInterview().map((q) => q.id);
-    expect(ids).toEqual(["purpose", "risk", "source-paths", "strict-paths", "stack"]);
+    expect(ids).toEqual(["risk", "source-paths", "strict-paths"]);
   });
 
   /**
@@ -51,11 +55,6 @@ describe("buildInterview — everything not declared on disk is asked", () => {
     const q = buildInterview().find((x) => x.id === "source-paths");
     expect(q?.kind).toBe("paths");
     expect(q?.defaultAnswer).toBeNull();
-  });
-
-  it("asks what the project is built with — no file states that", () => {
-    const q = buildInterview().find((x) => x.id === "stack");
-    expect(q?.kind).toBe("text");
   });
 
   it("never asks for the memory backend — `files` is the default and the recommendation", () => {
@@ -105,14 +104,17 @@ describe("risk profile", () => {
 });
 
 describe("validateAnswers", () => {
-  it("accepts a complete low-risk answer set", () => {
-    expect(validateAnswers(answers())).toEqual([]);
+  it("rejects an answer set that names no source path", () => {
+    // The only required answer left. Every seeded check scopes its `include` to
+    // these, so naming none installs a definition layer that verifies nothing and
+    // `ready` can then only ever answer INCOMPLETE.
+    expect(validateAnswers(answers({ sourcePaths: [] }))).toContainEqual(
+      expect.stringContaining("source path"),
+    );
   });
 
-  it("rejects a blank purpose — the constitution would ship with a hole in it", () => {
-    expect(validateAnswers(answers({ purpose: "   " }))).toContainEqual(
-      expect.stringContaining("purpose"),
-    );
+  it("accepts a complete low-risk answer set", () => {
+    expect(validateAnswers(answers())).toEqual([]);
   });
 
   it("rejects an elevated risk profile with no strict path", () => {
@@ -199,13 +201,13 @@ describe("buildInterview — a declared fact arrives pre-filled, an inferred one
   const question = (id: string, d: DeclaredAnswers) =>
     buildInterview(d).find((q) => q.id === id);
 
-  it("still asks the same five questions, whatever the repo declared", () => {
+  it("asks the same three, whatever the repo declared", () => {
     // An interview that shrinks when a reading gets lucky is one whose coverage
     // nobody can state. Pre-filling is not skipping.
     const ids = buildInterview(declared({ sourceGlobs: ["apps/*/src/**"], stack: "TypeScript" }))
       .map((q) => q.id);
 
-    expect(ids).toEqual(["purpose", "risk", "source-paths", "strict-paths", "stack"]);
+    expect(ids).toEqual(["risk", "source-paths", "strict-paths"]);
   });
 
   it("pre-fills the source paths a repo's workspaces declare", () => {
@@ -213,22 +215,15 @@ describe("buildInterview — a declared fact arrives pre-filled, an inferred one
     expect(q?.defaultAnswer).toBe("apps/*/src/**");
   });
 
-  it("pre-fills the stack from what the repo names, not from what it counts", () => {
-    expect(question("stack", declared({ stack: "TypeScript, Node >=22" }))?.defaultAnswer).toBe(
-      "TypeScript, Node >=22",
-    );
-  });
-
-  it("leaves both blank when the repo declared nothing", () => {
+  it("leaves the source paths blank when the repo declared none", () => {
     expect(question("source-paths", declared())?.defaultAnswer).toBeNull();
-    expect(question("stack", declared())?.defaultAnswer).toBeNull();
   });
 
   it("never pre-fills what no file can state", () => {
-    // Purpose, risk and strict paths are judgements about what you are willing
-    // to lose. A repo cannot declare them, so a reading may not answer them.
+    // Risk and strict paths are judgements about what you are willing to lose. A
+    // repo cannot declare them, so a reading may not answer them.
     const all = declared({ sourceGlobs: ["src/**"], stack: "TypeScript" });
-    for (const id of ["purpose", "risk", "strict-paths"]) {
+    for (const id of ["risk", "strict-paths"]) {
       expect(question(id, all)?.defaultAnswer).toBeNull();
     }
   });
@@ -250,11 +245,6 @@ describe("buildInterview — a reading and a guess are labelled apart", () => {
 
   it("calls a workspace glob a reading", () => {
     expect(at("source-paths")?.defaultFrom).toBe("repo");
-    expect(at("stack")?.defaultFrom).toBe("repo");
-  });
-
-  it("calls the judge's purpose a draft, never a reading", () => {
-    expect(at("purpose", { purpose: "a task app" })?.defaultFrom).toBe("draft");
   });
 
   it("calls a drafted path a draft even where the repo also declared one", () => {
@@ -262,7 +252,7 @@ describe("buildInterview — a reading and a guess are labelled apart", () => {
   });
 
   it("labels nothing where nothing was pre-filled", () => {
-    for (const id of ["purpose", "risk", "strict-paths"]) {
+    for (const id of ["risk", "strict-paths"]) {
       expect(at(id)?.defaultFrom).toBeNull();
     }
   });

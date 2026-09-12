@@ -78,12 +78,12 @@ describe("wst update", () => {
 
   it("calls a hand-edited file drifted, and says regenerating would lose it", async () => {
     const dir = await bootstrapped();
-    await appendFile(join(dir, DEFINITION_DIR, "constitution.md"), "\nA line I added.\n", "utf-8");
+    await appendFile(join(dir, DEFINITION_DIR, "triage.yaml"), "\nA line I added.\n", "utf-8");
 
     await runUpdate({}, dir);
 
     expect(stdout()).toContain("drifted");
-    expect(stdout()).toContain(`${DEFINITION_DIR}/constitution.md`);
+    expect(stdout()).toContain(`${DEFINITION_DIR}/triage.yaml`);
     expect(stdout()).toContain("regenerating would lose that");
   });
 
@@ -99,12 +99,12 @@ describe("wst update", () => {
 
   it("writes nothing, which is the whole contract until a merge is earned", async () => {
     const dir = await bootstrapped();
-    const before = await readFile(join(dir, DEFINITION_DIR, "constitution.md"), "utf-8");
-    await appendFile(join(dir, DEFINITION_DIR, "constitution.md"), "\nMine.\n", "utf-8");
+    const before = await readFile(join(dir, DEFINITION_DIR, "triage.yaml"), "utf-8");
+    await appendFile(join(dir, DEFINITION_DIR, "triage.yaml"), "\nMine.\n", "utf-8");
 
     await runUpdate({}, dir);
 
-    const after = await readFile(join(dir, DEFINITION_DIR, "constitution.md"), "utf-8");
+    const after = await readFile(join(dir, DEFINITION_DIR, "triage.yaml"), "utf-8");
     expect(after).toBe(`${before}\nMine.\n`);
   });
 
@@ -114,7 +114,8 @@ describe("wst update", () => {
       await readFile(join(dir, DEFINITION_DIR, "base.json"), "utf-8"),
     ) as { files: Record<string, string>; answers: { purpose: string } };
 
-    expect(Object.keys(base.files).length).toBeGreaterThan(10);
+    // A new installation is four files, not the twenty-eight it used to be.
+    expect(Object.keys(base.files).length).toBeGreaterThan(3);
     // The answers travel with it, which is what lets update re-plan rather than diff blind.
     expect(base.answers.purpose).toBe("A demo repo");
   });

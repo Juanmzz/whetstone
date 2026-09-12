@@ -7,7 +7,6 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { activeSkills, renderConstitution } from "./payload.js";
 import { detectStack } from "./detect.js";
 import { NO_RISK } from "./interview.js";
 import { classifyUpdate, parseBase, renderBase, renderUpdate, type RecordedBase } from "./update.js";
@@ -184,41 +183,3 @@ describe("renderUpdate", () => {
   });
 });
 
-/**
- * `update` re-plans from the recorded answers and calls the difference what an
- * upgrade would change. Two of its inputs were not the ones `init` used, so the
- * first run in a freshly bootstrapped repo reported two files as outdated whose
- * bytes on disk matched the hash the base itself recorded.
- */
-describe("re-planning has to use the inputs init used", () => {
-  it("an unread skills directory is not an empty one", () => {
-    // `init` passes `undefined` when there is no directory yet; `update` passed
-    // `[]`, which says it looked and found none. `init.ts` carries a comment
-    // about exactly this: every bootstrapped repo got a config declaring all
-    // eight skills INACTIVE while the files sat beside it.
-    expect(activeSkills([])).toEqual([]);
-    expect(activeSkills(undefined).length).toBeGreaterThan(0);
-  });
-
-  it("the recorded date is part of the answers, not of the day update runs", () => {
-    // Anything the payload stamps with a date differs on any other day, and a
-    // date that always differs hides the changes that matter.
-    const then = renderConstitution({
-      repoName: "acme",
-      date: "2026-01-01",
-      purpose: "p",
-      risk: NO_RISK,
-      detected: detectStack({
-        repoName: "acme",
-        files: [],
-        packageJson: null,
-        commitSubjects: [],
-        contributors: null,
-      }),
-      declared: null,
-    });
-
-    expect(then).toContain("2026-01-01");
-    expect(then).not.toContain(new Date().toISOString().slice(0, 10));
-  });
-});

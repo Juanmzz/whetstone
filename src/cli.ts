@@ -10,12 +10,12 @@ import { runStatus } from "./commands/status.js";
 import { runCheck } from "./commands/check.js";
 import { runTriage } from "./commands/triage.js";
 import { runGate } from "./commands/gate.js";
+import { runReady } from "./commands/ready.js";
 import { runRetro } from "./commands/retro.js";
 import { runSignal } from "./commands/signal.js";
 import { DEFAULT_PHASE, DEFAULT_SEVERITY } from "./core/signals/human.js";
 import { runInit } from "./commands/init.js";
 import { runShippedCheck } from "./commands/run.js";
-import { runConfig } from "./commands/config.js";
 import { runHome } from "./commands/home.js";
 import { runUpdate } from "./commands/update.js";
 import { TIERS, type Tier } from "./core/checks/schema.js";
@@ -34,7 +34,10 @@ const program = new Command();
 
 program
   .name("wst")
-  .description("Whetstone: a self-sharpening standards layer for AI coding agents")
+  .description(
+    "Whetstone: check the work before handing it back. Finds what changed in a worktree,\n" +
+      "runs the project's applicable checks, and says what passed, failed or could not be verified.",
+  )
   .version(VERSION)
   // Only on the bare `wst`, where a human is looking at the tool rather than at a
   // result. Commander prints this above the usage text.
@@ -42,6 +45,7 @@ program
 
 program
   .command("status")
+  .helpGroup("Commands:")
   .description(`show repo, ${DEFINITION_DIR}/ and judge-adapter health`)
   .option("--quiet", "print only the final ready / NOT ready line")
   .option("--json", "the same answer as data, for an agent rather than a reader")
@@ -54,7 +58,8 @@ program
 
 const check = program
   .command("check")
-  .description(`list the check registry from ${DEFINITION_DIR}/checks/`)
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .description(`diagnostic: list the check registry from ${DEFINITION_DIR}/checks/`)
   .option("--json", "print the compiled index as JSON")
   .option("--compile", `write ${DEFINITION_DIR}/checks/_index.json`)
   .action(async (opts: { json?: boolean; compile?: boolean }) => {
@@ -65,6 +70,7 @@ const check = program
 // `command:`, and the noun it runs under should be the noun the thing is.
 check
   .command("run")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .argument("[id]", "which check Whetstone ships the logic for")
   .description("run a check whose logic ships with wst rather than with this repo")
   .action(async (id: string | undefined) => {
@@ -73,7 +79,8 @@ check
 
 program
   .command("triage")
-  .description("classify a diff, or paths you declare, into a tier and show which checks apply")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .description("diagnostic: classify a change into a tier and show which checks apply")
   // No commander default: a default --range makes --paths look like both were
   // passed. runTriage still falls back to HEAD when neither is given.
   .option("--range <range>", "git diff range (default: HEAD)")
@@ -87,8 +94,22 @@ program
     process.exitCode = await runTriage(opts);
   });
 program
+  .command("ready")
+  .helpGroup("Commands:")
+  .description("is this task's work ready? resolves its own scope, no range needed")
+  .option("--json", "the report as a JSON envelope, with a semantic `result` field")
+  .option("--range <range>", "advanced: verify this range instead of the resolved scope")
+  .option("--fast", "run only the checks that do not declare themselves slow")
+  .option("--no-evidence", "no evidence store on this machine, so those checks cannot answer")
+  .option("--lens", "run llm checks too; off by default")
+  .action(async (opts: NonNullable<Parameters<typeof runReady>[0]> & { evidence?: boolean }) => {
+    process.exitCode = await runReady({ ...opts, noEvidence: opts.evidence === false });
+  });
+
+program
   .command("gate")
-  .description("run the verification gate over a diff")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .description("compatibility: run the checks over a range. `ready` resolves its own")
   .option("--range <range>", "git diff range", "HEAD")
   .option("--tier <tier>", "provisional triage tier override")
   .option("--json", "print the verdict as JSON")
@@ -123,7 +144,8 @@ program
 
 program
   .command("retro")
-  .description("cluster new signals and propose rule changes (human-gated, never applied)")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .description("standby: cluster new signals and propose rule changes (human-gated)")
   .option("--dry-run", "cluster only: no LLM calls, nothing written")
   .option("--yes", "do not ask before spending: for a script, and for meaning it")
   .option("--model <model>", "model for the proposal step")
@@ -136,9 +158,10 @@ program
 // other route into `signals.jsonl` is the engine recording what it observed.
 program
   .command("signal")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
   .argument("[type]", "kebab-case type, e.g. triage-miss; the retro clusters on it")
   .argument("[detail...]", "one or two sentences a reader can reconstruct the event from")
-  .description(`record an observation in ${DEFINITION_DIR}/memory/signals.jsonl (you are the human gate)`)
+  .description(`standby: record an observation in ${DEFINITION_DIR}/memory/signals.jsonl (human-gated)`)
   // The defaults come from `commands/signal.ts` rather than being written out
   // again here: the help text and the fallback the command applies are the same
   // fact, and two copies of a fact drift.
@@ -206,15 +229,9 @@ program
   );
 
 program
-  .command("config")
-  .description(`edit ${DEFINITION_DIR}/wst.yaml: which judge runs llm checks, which skills are active`)
-  .action(async () => {
-    process.exitCode = await runConfig(process.cwd());
-  });
-
-program
   .command("update")
-  .description("what changed since init wrote this repo: reports, never writes")
+  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .description("standby: what changed since init wrote this repo. Reports, never writes")
   .option("--json", "print the verdicts as JSON")
   .action(async (opts: { json?: boolean }) => {
     process.exitCode = await runUpdate({ ...(opts.json !== undefined ? { json: opts.json } : {}) });
@@ -222,6 +239,7 @@ program
 
 program
   .command("init")
+  .helpGroup("Commands:")
   .description(`interview this repo and generate its ${DEFINITION_DIR}/`)
   .option("--answers <file>", "JSON file of interview answers")
   .option("--purpose <text>", "one-line project purpose")
@@ -229,7 +247,8 @@ program
   .option("--source <glob...>", "where this project's code lives: scopes the checks and the triage rules")
   .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
   .option("--stack <text>", "what the project is built with, for the constitution")
-  .option("--propose", "draft the answers with the judge: you edit and sign (one model call)")
+  .option("--propose", "write the judge's draft to a file instead of into the questions")
+  .option("--enforce", "also write the pre-push hook and the agent stanza, without asking")
   .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
   .option("--llm", "also seed an uncalibrated review lens (capped at warn)")
   .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else: no AGENTS.md, no CLAUDE.md`)

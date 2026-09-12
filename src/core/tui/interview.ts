@@ -33,6 +33,7 @@ interface Field {
 
 export interface InterviewState {
   readonly questions: readonly InitQuestion[];
+  readonly visited: readonly number[];
   /** Which question. The option inside one lives in that question's field. */
   readonly at: number;
   readonly fields: readonly Field[];
@@ -79,6 +80,7 @@ function seed(question: InitQuestion): Field {
 export function openInterview(questions: readonly InitQuestion[]): InterviewState {
   return {
     questions,
+    visited: [0],
     at: 0,
     fields: questions.map(seed),
     complaint: null,
@@ -133,9 +135,12 @@ export function answersOf(s: InterviewState): InterviewAnswers {
 }
 
 /** What `validateAnswers` would reject, asked before the caller has to see it. */
+/** What `validateAnswers` would reject, asked before the caller has to see it. */
 function missing(s: InterviewState): string | null {
   const a = answersOf(s);
-  if (a.purpose === "") return "purpose is still empty, and the constitution needs it";
+  if (a.sourcePaths.length === 0) {
+    return "no source path yet: every check scopes itself to these, so naming none installs nothing that verifies";
+  }
   return null;
 }
 
@@ -164,7 +169,7 @@ function commit(s: InterviewState): InterviewState {
 
 function step(s: InterviewState, delta: number): InterviewState {
   const at = Math.min(Math.max(s.at + delta, 0), s.questions.length - 1);
-  return { ...s, at, complaint: null };
+  return { ...s, at, visited: [...new Set([...s.visited, at])], complaint: null };
 }
 
 export function pressIn(s: InterviewState, key: string): { state: InterviewState; action: InterviewAction } {
@@ -180,9 +185,16 @@ export function pressIn(s: InterviewState, key: string): { state: InterviewState
   if (key === "escape") return { state: s, action: { kind: "cancel" } };
 
   if (key === "ctrl-d") {
-    const complaint = missing(s);
-    if (complaint !== null) return { state: { ...s, complaint, at: 0 }, action: NONE };
-    return { state: s, action: { kind: "write", answers: answersOf(s) } };
+    if (s.questions.some((q, i) => q.defaultFrom === "draft" && !s.visited.includes(i))) {
+      return { state: { ...s, complaint: "Review every drafted field before writing. Use enter to continue." }, action: NONE };
+    }
+    // COMMITS what is being typed first. Without it, typing a source path and
+    // pressing write dropped the path and refused the write for the field it had
+    // just discarded: the same silent loss `enter` used to cause on the way out.
+    const ready = commit(s);
+    const complaint = missing(ready);
+    if (complaint !== null) return { state: { ...ready, complaint, at: 0 }, action: NONE };
+    return { state: ready, action: { kind: "write", answers: answersOf(ready) } };
   }
 
   const q = current(s);

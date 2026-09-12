@@ -26,22 +26,34 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 ## The commands
 
+Three of them are the product. The rest are diagnostics, compatibility, or standby
+(adr-0048).
+
 | | |
 |---|---|
-| `wst` | with no arguments and in a terminal: a launcher showing which commands this repo can run now, and what the rest wait for. It runs one and comes back. Off a terminal, the help |
-| `wst status` | repo, `.wst/`, judge health, version drift, whether the pre-push gate is armed |
-| `wst check` | the check registry; refuses to load an uncalibrated blocking lens. `check run <id>` runs one whose logic ships with `wst` |
-| `wst triage` | classify a diff → tier → which checks apply |
-| `wst gate` | run the checks, skip what receipts prove unchanged, pass or block, emit signals |
-| `wst signal` | record an observation in `signals.jsonl`. **For the human to type**. It IS the [RC3] gate; an agent still proposes and waits |
-| `wst retro` | cluster signals → propose rule changes → **never applies them** |
-| `wst init` | interview a repo and generate its `.wst/`, recording a base beside it |
-| `wst config` | edit `.wst/wst.yaml` in a terminal: which judge runs llm checks, which skills are active |
-| `wst update` | what changed since `init` wrote this repo: drifted, outdated, missing. Reports, never writes |
+| `wst init` | interview a repo and write `.wst/`: the checks it can run, and how to route them. Nothing else |
+| `wst ready` | **zero arguments.** Resolves what this task changed, runs the checks, answers READY, NOT_READY, INCOMPLETE or NO_CHANGES |
+| `wst status` | repo, `.wst/`, judge health, version drift, whether the push gate is armed |
+| `wst` | with no arguments and in a terminal: a four-row launcher over those three, plus a diagnostics drawer. Off a terminal, the help |
 
-Useful flags: `gate --no-lens` (skip llm checks) · `gate --fast` (skip whatever declares
-itself slow, 6s against 50s here) · `gate --no-emit` (do not
-record signals; for when you are testing the gate itself) · `retro --dry-run`.
+**Diagnostic**, for agents and maintainers, behind one key in the launcher:
+
+| | |
+|---|---|
+| `wst triage` | classify a change → tier → which checks apply. Runs none of them |
+| `wst check` | the check registry; refuses to load an uncalibrated blocking lens. `check run <id>` runs one whose logic ships with `wst` |
+
+**Compatibility**: `wst gate` runs the checks over a range somebody passes. `ready` reuses
+its engine and resolves the range itself; the hook and CI still name `gate`.
+
+**Standby**, off the product path and still working: `wst signal` (it IS the [RC3] gate,
+for a human to type), `wst retro` (clusters signals, proposes, never applies), `wst update`
+(reports what drifted since `init`).
+
+**Deleted**: `wst config`. It edited four keys an agent edits directly.
+
+Useful flags: `ready --json` (an envelope with a semantic `result` field) · `ready --range`
+(an override for CI and diagnostics) · `gate --no-lens` · `gate --fast` · `gate --no-emit`.
 
 ## Where things live
 
@@ -97,7 +109,7 @@ Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
-## Status: branch `main` · 47 ADRs · 66 signals · 10 commands
+## Status: branch `main` · 48 ADRs · 66 signals · 10 commands
 
 ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
 `init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was

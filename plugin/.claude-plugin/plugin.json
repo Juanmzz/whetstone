@@ -1,7 +1,7 @@
 {
   "name": "whetstone",
   "description": "Gates AI-written changes against a project's own definition of correct, and proves the verdict.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "author": {
     "name": "Juan Ignacio Munoz"
   },

@@ -4,6 +4,7 @@ import {
   ProposalSchema,
   buildProposalPrompt,
   proposalToAnswers,
+  proposalToDraft,
   renderProposal,
   unevidencedFlags,
   type Proposal,
@@ -233,5 +234,38 @@ describe("ProposalSchema", () => {
   it("rejects a proposal that skips the stack — it is asked for, not optional", () => {
     const { stack: _dropped, ...rest } = proposal();
     expect(ProposalSchema.safeParse(rest).success).toBe(false);
+  });
+});
+
+/**
+ * The draft the interview opens on. Looser than `proposalToAnswers`, whose finished
+ * set `--propose` writes to a file: here the human signs each answer on screen
+ * rather than signing a file they may not open.
+ */
+describe("proposalToDraft — the proposal in the shape the questions read", () => {
+  it("carries purpose, stack and source paths through unchanged", () => {
+    const draft = proposalToDraft(proposal());
+    expect(draft.purpose).toBe("A personal task manager with quick capture and daily review.");
+    expect(draft.stack).toBe("TypeScript on Node, Vitest, and a CI workflow.");
+    expect(draft.sourcePaths).toEqual(["apps/*/src/**"]);
+  });
+
+  it("carries only the risk flags that cited a path", () => {
+    const draft = proposalToDraft(
+      proposal({
+        risk: [
+          { flag: "money", why: "moves money", citedPaths: ["apps/api/src/routes/webhooks.ts"] },
+          { flag: "authn", why: "guards the door", citedPaths: [] },
+        ],
+      }),
+    );
+    expect(draft.risk).toEqual(["money"]);
+  });
+
+  it("carries strict paths with the reason that earned them", () => {
+    const draft = proposalToDraft(
+      proposal({ strictPaths: [{ glob: "apps/api/src/db/**", reason: "rewrites the only copy" }] }),
+    );
+    expect(draft.strictPaths).toEqual([{ glob: "apps/api/src/db/**", reason: "rewrites the only copy" }]);
   });
 });
