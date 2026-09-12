@@ -248,6 +248,7 @@ program
   .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
   .option("--stack <text>", "what the project is built with, for the constitution")
   .option("--propose", "write the judge's draft to a file instead of into the questions")
+  .option("--enforce", "also write the pre-push hook and the agent stanza, without asking")
   .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
   .option("--llm", "also seed an uncalibrated review lens (capped at warn)")
   .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else: no AGENTS.md, no CLAUDE.md`)

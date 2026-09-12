@@ -26,6 +26,13 @@ import { startSpinner } from "../shell/spinner.js";
 import { paint, rawKeys, restore } from "../shell/tui.js";
 import { stagePaths } from "../core/init/stage.js";
 import {
+  AGENTS_FILE,
+  HOOKS_DIR,
+  agentsStanzaPresent,
+  renderAgentsStanza,
+  renderPrePushHook,
+} from "../core/init/enforcement.js";
+import {
   ProposalSchema,
   buildProposalPrompt,
   proposalToAnswers,
@@ -83,6 +90,8 @@ export interface InitOptions {
   readonly json?: boolean;
   /** Draft the answers with the judge instead of asking the human to type them. */
   readonly propose?: boolean;
+  /** Write the pre-push hook and the agent stanza without asking. */
+  readonly enforce?: boolean;
   /** Where --propose writes its draft. */
   readonly out?: string;
   readonly agentLens?: boolean;
@@ -703,5 +712,98 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   console.log(`\nwrote ${String(written)} files. Review them, then commit:`);
   console.log(`  git add ${stagePaths(plan).join(" ")}`);
   console.log('  git commit -m "chore: bootstrap verification"');
+
+  await offerEnforcement(root, opts.enforce === true);
   return 0;
+}
+
+/**
+ * Point git at the hook. Separate from writing it: an unarmed hook is a file, and
+ * `status` already reports the difference rather than assuming one implies the other.
+ */
+async function armHooksPath(root: string): Promise<void> {
+  await promisify(execFile)("git", ["config", "core.hooksPath", HOOKS_DIR], { cwd: root });
+}
+
+/**
+ * What makes any of it run, asked for separately.
+ *
+ * The plan writes definitions and adr-0048 keeps it that way; this changes what
+ * happens on someone's machine, so it is a second act with its own question. Each
+ * half is declined independently, and `status` reports which one is live.
+ */
+async function offerEnforcement(root: string, always: boolean): Promise<void> {
+  console.log(`
+nothing above makes a check RUN. Two ways, and they catch different moments:`);
+  console.log(`  ${HOOKS_DIR}/pre-push   nothing leaves unverified. Universal, but after the fact`);
+  console.log(`  ${AGENTS_FILE}          asks the agent to verify before it reports done`);
+
+  // Off a terminal, `confirm` answers YES (adr-0032), which is right for writing the
+  // plan the caller asked for and wrong here: arming `core.hooksPath` changes what
+  // git does in someone's repo, and a scripted `init` never asked for that.
+  if (!always && process.stdin.isTTY !== true) {
+    console.log(`
+  not a terminal, so neither was written. To add them:
+    wst init --enforce        (or run \`wst init\` from a terminal)`);
+    return;
+  }
+  const wanted = async (question: string): Promise<boolean> => (always ? true : await confirm(question));
+
+  if (await wanted(`\n  write ${HOOKS_DIR}/pre-push and arm it?`)) {
+    try {
+      const hook = join(root, HOOKS_DIR, "pre-push");
+      await mkdir(dirname(hook), { recursive: true });
+      await writeFile(hook, renderPrePushHook(), "utf-8");
+      await chmod(hook, 0o755);
+      await armHooksPath(root);
+      console.log(`  wrote ${HOOKS_DIR}/pre-push and set core.hooksPath`);
+      // Said here rather than discovered later: a blocked push records what it saw,
+      // which creates the signal log adr-0048 deliberately does not seed empty.
+      console.log(`  a blocked push records what it observed in ${DEFINITION_DIR}/memory/`);
+    } catch (cause) {
+      // Reported, never fatal: the definitions are already on disk and correct.
+      console.error(`  could not arm the hook: ${(cause as Error).message}`);
+    }
+  }
+
+  const agentsPath = join(root, AGENTS_FILE);
+  let current: string | null;
+  try {
+    current = await readFile(agentsPath, "utf-8");
+  } catch {
+    current = null;
+  }
+
+  if (agentsStanzaPresent(current)) {
+    console.log(`  ${AGENTS_FILE} already carries the verification stanza`);
+    await noteHarnessHook(root);
+    return;
+  }
+
+  if (await wanted(`  add the verification stanza to ${AGENTS_FILE}?`)) {
+    try {
+      const sep = current === null || current === "" || current.endsWith("\n") ? "" : "\n";
+      await writeFile(agentsPath, `${current ?? ""}${sep}\n${renderAgentsStanza()}`, "utf-8");
+      console.log(`  ${current === null ? "wrote" : "appended to"} ${AGENTS_FILE}`);
+    } catch (cause) {
+      console.error(`  could not write ${AGENTS_FILE}: ${(cause as Error).message}`);
+    }
+  }
+
+  await noteHarnessHook(root);
+}
+
+/**
+ * The third way, named and never written.
+ *
+ * A harness hook is the only one that fires at the moment an agent says it is done,
+ * and it lives in that harness's own configuration. Writing into someone's editor
+ * config is not this tool's to do, so it points and stops.
+ */
+async function noteHarnessHook(root: string): Promise<void> {
+  if (!(await exists(join(root, ".claude")))) return;
+  console.log(`
+  this repo has \`.claude/\`, so a Stop hook can run the check at the moment the
+  agent reports done, which neither of the above catches:
+    claude plugin install whetstone`);
 }
