@@ -13,6 +13,7 @@ include:
   - ".githooks/**"
   - ".claude/**"
 command: npm run check:commit-message
+exit_codes: whetstone
 skippable: false
 origin: []
 version: 1

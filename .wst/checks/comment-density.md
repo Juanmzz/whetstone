@@ -9,6 +9,7 @@ include:
   - "scripts/**/*.ts"
   - "test/**/*.ts"
 command: npm run check:comments
+exit_codes: whetstone
 skippable: false
 origin: [sig-4a2610fb]
 version: 1

@@ -23,6 +23,8 @@ export const SEVERITIES = ["block", "warn", "annotate"] as const;
  * registry instead of a second one.
  */
 export const KINDS = ["deterministic", "llm", "method"] as const;
+/** See `exit_codes` below, and `core/gate/outcomes.ts`, which applies it. */
+export const EXIT_CONVENTIONS = ["plain", "whetstone"] as const;
 
 /**
  * Where the measurement lives, and a note for whoever reads the file.
@@ -90,6 +92,21 @@ const BaseCheck = z.strictObject({
 
   /** Required when kind === "deterministic". */
   command: z.string().min(1).optional(),
+  /**
+   * Whether `command` distinguishes "I could not run" from "this change failed".
+   *
+   * `plain`, the default, is every command a project already had: non-zero is a
+   * verdict. `whetstone` adds exit 2 for "could not run", which is what a check
+   * whose logic ships with `wst` returns when there is nothing for it to read.
+   *
+   * OPT-IN, never inferred from the command string. A stranger's linter exiting 2
+   * for "8 problems found" means the opposite, and guessing wrong in that direction
+   * lets a real failure through.
+   *
+   * Optional rather than defaulted, unlike `enabled` and `slow`: those mean
+   * something for every kind, and this one only for a check that runs a command.
+   */
+  exit_codes: z.enum(EXIT_CONVENTIONS).optional(),
   /** Required when kind === "llm". Appended to the system prompt. */
   review_lens: z.string().min(1).optional(),
   /**

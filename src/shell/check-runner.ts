@@ -118,7 +118,7 @@ export function createCheckRunner(deps: {
         };
       }
       const result = await runShellCommand(check.command, deps.cwd, deps.timeoutMs, deps.range);
-      return { outcome: interpretCommandResult(result) };
+      return { outcome: interpretCommandResult(result, check.exit_codes ?? "plain") };
     }
 
     if (deps.noLens) {
