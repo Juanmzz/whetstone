@@ -230,3 +230,38 @@ describe("tail — the truncation boundary", () => {
     }
   });
 });
+
+/**
+ * Reproduced 2026-09-21: `wst check run commit-message` exited 2 saying it could
+ * not read the commits; the same check through `ready` became `fail`, exit 1. The
+ * exit code alone cannot settle it, hence the declared convention.
+ */
+describe("interpretCommandResult — exit 2, under the whetstone convention", () => {
+  it("calls exit 2 errored for a command that declares the convention", () => {
+    const outcome = interpretCommandResult(
+      command({ exitCode: 2, stderr: "could not read the commits" }),
+      "whetstone",
+    );
+    expect(outcome.status).toBe("errored");
+    expect(outcome.status === "errored" && outcome.detail).toContain("could not read the commits");
+  });
+
+  it("still calls exit 2 a failure for a plain command, which is most of them", () => {
+    // A stranger's linter exiting 2 for "errors found" is a verdict. Reading it as
+    // a broken gate would let a real failure through, which is the same class of
+    // bug pointing the other way.
+    expect(interpretCommandResult(command({ exitCode: 2, stdout: "8 problems" })).status).toBe("fail");
+    expect(interpretCommandResult(command({ exitCode: 2, stdout: "8 problems" }), "plain").status).toBe("fail");
+  });
+
+  it("leaves every other exit code alone under the convention", () => {
+    expect(interpretCommandResult(command({ exitCode: 0 }), "whetstone")).toEqual({ status: "pass" });
+    expect(interpretCommandResult(command({ exitCode: 1, stdout: "no" }), "whetstone").status).toBe("fail");
+    expect(interpretCommandResult(command({ exitCode: 127 }), "whetstone").status).toBe("errored");
+  });
+
+  it("says the check could not run, not that it errored on its own terms", () => {
+    const outcome = interpretCommandResult(command({ exitCode: 2, stdout: "" }), "whetstone");
+    expect(outcome.status === "errored" && outcome.detail).toMatch(/could not run/i);
+  });
+});

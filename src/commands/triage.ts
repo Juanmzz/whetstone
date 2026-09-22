@@ -4,6 +4,7 @@
  * classification decisions are made here.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { relative } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
 import {
@@ -12,7 +13,7 @@ import {
   resolveDefinitionRoot,
   type LoadedTriageRules,
 } from "../shell/sdd.js";
-import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
+import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 import { classify, route } from "../core/triage/index.js";
 import { wrap, wrapped } from "../core/text.js";
 
@@ -61,7 +62,7 @@ function declaredFiles(paths: readonly string[]): ChangedFile[] {
 
 export async function runTriage(
   opts: TriageOptions = {},
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = (await git.repoRoot()) ?? cwd;
@@ -98,7 +99,7 @@ export async function runTriage(
     files = declaredFiles(declared);
   } else {
     try {
-      files = parseNameStatus(await git.diffNameStatus(range));
+      files = parseNameStatusZ(await git.diffNameStatusZ(range));
     } catch (cause) {
       // `parseNameStatus` throws rather than dropping a line it cannot read, so
       // that an unparsed path can never end up silently unclassified. Reporting it

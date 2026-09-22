@@ -87,7 +87,7 @@ function unifiedDiff(range: string, paths: readonly string[], cwd: string): Prom
       "git",
       ["-c", "core.quotePath=false", "diff", range, "--", ...paths],
       // Same stripped environment as `shell/git.ts`, and the same `quotePath`: the
-      // paths arrive unquoted from `diffNameStatus`, so git must be told not to
+      // paths arrive unquoted from `diffNameStatusZ`, so git must be told not to
       // re-quote them in the `diff --git` headers the lens reads.
       { cwd, env: gitEnv(), maxBuffer: MAX_BUFFER },
       (error, stdout) => (error === null ? resolve(stdout) : reject(error)),
@@ -118,7 +118,7 @@ export function createCheckRunner(deps: {
         };
       }
       const result = await runShellCommand(check.command, deps.cwd, deps.timeoutMs, deps.range);
-      return { outcome: interpretCommandResult(result) };
+      return { outcome: interpretCommandResult(result, check.exit_codes ?? "plain") };
     }
 
     if (deps.noLens) {

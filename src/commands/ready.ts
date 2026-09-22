@@ -13,14 +13,16 @@
  * Composition root. Every decision it looks like it makes is in `core/ready/`.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { createGitAdapter } from "../shell/git.js";
-import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths } from "../shell/scope.js";
+import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths, type TaskFiles } from "../shell/scope.js";
 import { verifyRange } from "../shell/verify.js";
 import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
 import { firstMeaningfulLine, renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
 import { outcomeOf } from "../core/gate/report.js";
-import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
+import { leavesWorkUndone } from "../core/gate/select.js";
+import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 
 export interface ReadyOptions {
   readonly json?: boolean;
@@ -44,7 +46,7 @@ const STATUS: Readonly<Record<string, ResultStatus>> = {
 
 export async function runReady(
   opts: ReadyOptions = {},
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const began = Date.now();
   const incomplete = (reason: string, conflicts: readonly string[] = []): number => {
@@ -97,12 +99,18 @@ export async function runReady(
   // that is not the one the agent made.
   let tracked: readonly ChangedFile[];
   try {
-    tracked = parseNameStatus(await git.diffNameStatus(commit));
+    tracked = parseNameStatusZ(await git.diffNameStatusZ(commit));
   } catch (cause) {
     return incomplete(`could not read the diff against ${commit}\n  ${(cause as Error).message}`);
   }
-  const where =
-    opts.range === undefined ? await taskFilesFrom(commit, cwd) : await rangeFiles(opts.range, cwd);
+  let where: TaskFiles;
+  try {
+    where = opts.range === undefined ? await taskFilesFrom(commit, cwd) : await rangeFiles(opts.range, cwd);
+  } catch (cause) {
+    // INCOMPLETE, never NO_CHANGES. A scan that did not run leaves the same empty
+    // list a clean tree does, and that reading is the one that lets work through.
+    return incomplete((cause as Error).message);
+  }
   const untracked = where.untracked.map((path): ChangedFile => ({ path, status: "added" }));
   const files = [...tracked, ...untracked];
 
@@ -131,7 +139,7 @@ export async function runReady(
     errored: run.verdict.errored,
     declined: run.selection.declined,
     pending: [
-      ...verified.omitted.filter((r) => r.severity === "block").map((r) => r.id),
+      ...run.selection.omitted.filter(leavesWorkUndone).map((r) => r.id),
       ...run.verdict.results.filter((r) => r.severity === "block" &&
         ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
         .map((r) => r.checkId),
@@ -147,7 +155,7 @@ export async function runReady(
       : {}),
     ...(r.outcome.status === "skipped" ? { detail: r.outcome.reason } : {}),
   }));
-  results.push(...verified.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: r.reason })));
+  results.push(...run.selection.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: r.reason })));
 
   const facts = {
     repo: repoRoot,

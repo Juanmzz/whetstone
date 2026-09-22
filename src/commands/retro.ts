@@ -8,6 +8,7 @@
  * Applying it is a human act — constitution non-negotiable 3.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { retroEnvelope } from "../core/retro/machine.js";
 import { join } from "node:path";
 import { z } from "zod";
@@ -117,7 +118,7 @@ async function listSkills(definitionRoot: string): Promise<string> {
   }
 }
 
-export async function runRetro(opts: RetroOptions = {}, cwd = process.cwd()): Promise<number> {
+export async function runRetro(opts: RetroOptions = {}, cwd = requireCwd()): Promise<number> {
   const repoRoot = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
   const definitionRoot = await resolveDefinitionRoot(repoRoot);
 

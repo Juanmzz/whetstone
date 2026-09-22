@@ -60,7 +60,30 @@ export interface Selection {
    * not declined coverage for a change it would never have looked at.
    */
   readonly declined: readonly string[];
+  /**
+   * Checks that applied and were never offered to the run: `--fast` drops the slow
+   * ones, `--no-evidence` the ones needing a human. Neither produces a result, so
+   * the run just has less in it and reads as a clean pass. It lives HERE rather than
+   * beside the run because `gate` dropped the sibling version, reporting "passed"
+   * where `ready` said INCOMPLETE over the same tree. The pre-push hook calls `gate`.
+   */
+  readonly omitted: readonly OmittedCheck[];
 }
+
+/** Why a check that applied was never offered to the run. Not a verdict about it. */
+export interface OmittedCheck {
+  readonly id: string;
+  readonly severity: Check["severity"];
+  readonly reason: "fast" | "no-evidence";
+}
+
+/**
+ * Whether the omission leaves something the caller can act on. `fast` does: rerun
+ * without it. `no-evidence` does not, and adr-0038 settled that on measurement.
+ * One predicate, because `gate` and `ready` both ask.
+ */
+export const leavesWorkUndone = (o: OmittedCheck): boolean =>
+  o.severity === "block" && o.reason === "fast";
 
 function assertUsableGlob(pattern: string, checkId: string, field: "include" | "exclude"): void {
   if (pattern.trim() === "") {
@@ -153,7 +176,8 @@ export function selectChecks(
     declined.push(check.id);
   }
 
-  return { selected, excluded, missingFromRegistry, unmatched, declined };
+  // Always empty here: omission happens before selection, in the caller.
+  return { selected, excluded, missingFromRegistry, unmatched, declined, omitted: [] };
 }
 
 /** The checks that can answer while somebody is waiting. */

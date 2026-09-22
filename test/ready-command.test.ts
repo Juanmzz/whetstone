@@ -335,7 +335,9 @@ describe("readiness does not hide missing verification", () => {
     expect(envelope().result).toBe("NOT_READY");
   });
 
-  it("reports missing evidence through the actual CLI option", async () => {
+  it("names an evidence check it could not run, without calling the work unready", async () => {
+    // adr-0038: `--no-evidence` reports the check as EXCLUDED rather than as
+    // passed, which is the second assertion. It decides nothing.
     const dir = await repo();
     await checkFile(dir, "evidence-review", 'node -e "process.exit(1)"');
     await writeFile(join(dir, "src/a.ts"), "changed");
@@ -346,8 +348,20 @@ describe("readiness does not hide missing verification", () => {
     ], { cwd: dir }).catch((e: { stdout: string; stderr: string }) => e);
 
     const report = JSON.parse(result.stdout);
-    expect(report.result).toBe("INCOMPLETE");
+    expect(report.result).not.toBe("INCOMPLETE");
     expect(report.results).toContainEqual(expect.objectContaining({ id: "evidence-review", status: "skipped", detail: "no-evidence" }));
+  });
+
+  it("but the same check blocks when nobody claimed the store is missing", async () => {
+    // The half that keeps the check worth having.
+    const dir = await repo();
+    await checkFile(dir, "evidence-review", 'node -e "process.exit(1)"');
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    const code = await runReady({ json: true }, dir);
+
+    expect(code).toBe(1);
+    expect(envelope().result).toBe("NOT_READY");
   });
 
   it("reports a lens as incomplete when it cannot read an untracked file", async () => {

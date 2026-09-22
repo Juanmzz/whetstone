@@ -16,7 +16,8 @@ export interface GitPort {
   repoRoot(): Promise<string | null>;
   currentBranch(): Promise<string | null>;
   /** Raw `git diff --name-status <range>` output, for `core/diff/parse`. */
-  diffNameStatus(range: string): Promise<string>;
+  /** `git diff --name-status -z`, raw. NUL-delimited; read with `parseNameStatusZ`. */
+  diffNameStatusZ(range: string): Promise<string>;
   /** Content hash of a path at HEAD — the input to a receipt. */
   hashFile(path: string): Promise<string>;
 }

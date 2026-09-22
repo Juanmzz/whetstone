@@ -13,9 +13,9 @@ import {
 import type { GateRun } from "./run.js";
 import type { Selection } from "./select.js";
 
-const coverage = (over: Partial<Coverage> = {}): Coverage => ({ declined: [], ...over });
+const coverage = (over: Partial<Coverage> = {}): Coverage => ({ declined: [], omitted: [], ...over });
 
-const EMPTY_SELECTION: Selection = { selected: [], excluded: [], missingFromRegistry: [], unmatched: [], declined: [] };
+const EMPTY_SELECTION: Selection = { selected: [], excluded: [], missingFromRegistry: [], unmatched: [], declined: [], omitted: [] };
 
 function result(
   checkId: string,
@@ -481,5 +481,98 @@ describe("the pass says what stood behind it, and says it once", () => {
 
     expect(text).toMatch(/^ +skipped {2}test/m);
     expect(text).not.toMatch(/^ +skipped:/m);
+  });
+});
+
+/**
+ * Found by two blind reviewers at once, 2026-09-20: over one fast passing check and
+ * one slow blocking one, `ready --fast` said INCOMPLETE/2 and `gate --fast` said
+ * "passed: 1 check ran"/0. The pre-push hook calls `gate`.
+ */
+describe("outcomeOf — a check that was never given the chance to run", () => {
+  it("is INCOMPLETE when a blocking check was omitted, even though another passed", () => {
+    const outcome = outcomeOf(
+      aggregate([result("fast", "block", { status: "pass" })]),
+      coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+    );
+    expect(outcome).toBe("incomplete");
+  });
+
+  it("exits 2, not 0, so CI and the hook cannot read it as a pass", () => {
+    expect(
+      exitCodeFor(
+        aggregate([result("fast", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+      ),
+    ).toBe(EXIT_INCOMPLETE);
+  });
+
+  it("still passes when only a WARNING check was omitted, which blocks nothing", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("fast", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "slow", severity: "warn", reason: "fast" }] }),
+      ),
+    ).toBe("passed");
+  });
+
+  it("a REAL failure still outranks it: the verdict names the thing that broke", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("fast", "block", { status: "fail", detail: "no" })]),
+        coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+      ),
+    ).toBe("blocked");
+  });
+
+  it("is unchanged when nothing was omitted", () => {
+    expect(outcomeOf(aggregate([result("fast", "block", { status: "pass" })]), coverage())).toBe("passed");
+  });
+});
+
+/**
+ * adr-0038: an evidence store never travels, so an ephemeral runner can never clear
+ * the check. Counting every blocking omission reintroduced the red it fixed.
+ */
+describe("outcomeOf — which omissions have a remedy here", () => {
+  it("is INCOMPLETE for one --fast dropped, which is one rerun away", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+      ),
+    ).toBe("incomplete");
+  });
+
+  it("is not INCOMPLETE for one --no-evidence dropped, which nothing here can clear", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "launcher", severity: "block", reason: "no-evidence" }] }),
+      ),
+    ).toBe("passed");
+  });
+
+  it("still blocks on a real failure beside a no-evidence omission", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "fail", detail: "no" })]),
+        coverage({ omitted: [{ id: "launcher", severity: "block", reason: "no-evidence" }] }),
+      ),
+    ).toBe("blocked");
+  });
+
+  it("one fast omission is enough, whatever was dropped alongside it", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "pass" })]),
+        coverage({
+          omitted: [
+            { id: "launcher", severity: "block", reason: "no-evidence" },
+            { id: "slow", severity: "block", reason: "fast" },
+          ],
+        }),
+      ),
+    ).toBe("incomplete");
   });
 });

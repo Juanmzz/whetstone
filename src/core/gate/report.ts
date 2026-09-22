@@ -4,6 +4,7 @@
 
 import type { CheckResult, GateVerdict } from "../contracts.js";
 import type { GateRun } from "./run.js";
+import { leavesWorkUndone, type OmittedCheck } from "./select.js";
 import { wrap } from "../text.js";
 
 export const EXIT_PASS = 0;
@@ -81,11 +82,18 @@ export interface Coverage {
    * genuine absence of coverage.
    */
   readonly declined: readonly string[];
+  /** From `Selection`. They produce no result, so the run just has less in it. */
+  readonly omitted: readonly OmittedCheck[];
 }
 
 export function outcomeOf(verdict: GateVerdict, coverage: Coverage): GateOutcome {
   if (verdict.verdict === "block") return "blocked";
   if (lostGating(verdict)) return "incomplete";
+
+  // BEFORE `verifiedSomething`: one passing check used to end the question, so a
+  // blocking check dropped by `--fast` left no trace in the outcome.
+  if (coverage.omitted.some(leavesWorkUndone)) return "incomplete";
+
   if (verifiedSomething(verdict)) return "passed";
 
   // Everything below is "nothing was verified".
@@ -158,7 +166,12 @@ export function renderGateRun(run: GateRun): string {
     for (const line of rest) lines.push(`${" ".repeat(lead.length)}${line}`);
   }
 
-  if (verdict.results.length === 0) {
+  for (const { id, severity, reason } of selection.omitted) {
+    // Named, so a flag's cost is visible: which checks bought that speed.
+    lines.push(`  omitted  ${id.padEnd(14)} (not run: ${reason})${severity === "block" ? " — blocking" : ""}`);
+  }
+
+  if (verdict.results.length === 0 && selection.omitted.length === 0) {
     lines.push("  no checks applied to this change");
   }
 
@@ -177,6 +190,9 @@ export function renderGateRun(run: GateRun): string {
       // Something tried to run and broke. Hard rule 3 forbids this sharing a
       // sentence with `passed`, and the exit code says the same (2).
       lines.push("  INCOMPLETE: a check never ran, so this change is unverified");
+      for (const o of selection.omitted) {
+        if (leavesWorkUndone(o)) lines.push(`    ${o.id} was not run (${o.reason}) and it blocks`);
+      }
       break;
     case "uncovered":
       // Exits 0, so the WORDS are the whole of the honesty. It must never read
