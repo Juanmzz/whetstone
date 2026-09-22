@@ -284,10 +284,8 @@ describe("the definition directory has one owner (ADR-0012)", () => {
       "plugin/hooks/strict-path-guard.mjs",
       "plugin/hooks/gate-on-stop.mjs",
       ".claude/hooks/lane-guard.mjs",
-      // `package.json` was here while `files` shipped `.wst/skills`. Nothing reads
-      // those from the installed package — `plan.ts` returns `copies: []`, so `init`
-      // copies no skill — so the payload went and with it the only reason the
-      // manifest named the directory.
+      // `package.json` was here while `files` shipped `.wst/skills`. `plan.ts`
+      // returns `copies: []`, so nothing ever read them; the payload went.
     ];
 
     const disagreements: string[] = [];

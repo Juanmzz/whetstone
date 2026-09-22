@@ -95,13 +95,8 @@ export interface InitOptions {
   readonly enforce?: boolean;
   /** Where --propose writes its draft. */
   readonly out?: string;
-  /**
-   * Named for the FLAG, `--llm`, not for what it seeds.
-   *
-   * It was `agentLens` while commander parsed `--llm`, so nothing connected the
-   * two and the flag was accepted and dropped: the plan came out identical with it
-   * and without it. Every other option here works because the two names are one.
-   */
+  /** Named for the FLAG. It was `agentLens` while commander parsed `--llm`, so
+   * nothing connected the two and the flag was accepted and dropped. */
   readonly llm?: boolean;
   /**
    * Write `.wst/` and nothing else.
@@ -742,9 +737,8 @@ async function armHooksPath(root: string): Promise<void> {
  */
 async function offerEnforcement(root: string, always: boolean, definitionsOnly: boolean): Promise<void> {
   if (definitionsOnly) {
-    // Both halves live outside the definition directory, and `--definitions-only`
-    // promises nothing outside it. `--enforce` used to override that, so the one
-    // flag whose whole point is "touch nothing else" broke it on request.
+    // Both halves live outside the definition directory, which this flag promises
+    // not to touch. `--enforce` used to override that.
     console.log(`
   --definitions-only, so neither the hook nor the ${AGENTS_FILE} stanza was written.
   Both live outside ${DEFINITION_DIR}/. Run \`wst init --enforce\` when you want them.`);

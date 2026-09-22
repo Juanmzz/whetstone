@@ -354,9 +354,7 @@ describe("wst init", () => {
   }
 
   it("--llm seeds the review lens the flag advertises, and nothing does without it", async () => {
-    // Through the CLI on purpose: the option was declared as `--llm` and read as
-    // `agentLens`, so the plan came out identical with and without it. Calling
-    // `runInit` directly would have passed while the flag stayed dead.
+    // Through the CLI on purpose: `runInit` would have passed while the flag stayed dead.
     const dir = await bare();
     const plan = async (...extra: string[]): Promise<string[]> => {
       const { stdout } = await exec(process.execPath, [
@@ -375,9 +373,6 @@ describe("wst init", () => {
   });
 
   it("--definitions-only writes no AGENTS.md, even with --enforce", async () => {
-    // The flag says "`.wst/` and nothing else". `--enforce` skipped the question
-    // and wrote the stanza anyway, so the one flag whose whole promise is "touch
-    // nothing outside the definition directory" broke that promise on request.
     const dir = await bare();
 
     await runInit(

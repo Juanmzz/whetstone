@@ -348,11 +348,7 @@ describe("a block the owner signed instead of measuring", () => {
   });
 });
 
-/**
- * `init` seeds no `calibrate` script and there is no `wst calibrate`, so in a
- * bootstrapped repo the remedy this named did not exist. The two that do exist
- * everywhere are dropping the severity and signing the block (adr-0047).
- */
+/** The remedy this named, `npm run calibrate`, does not exist in a seeded repo. */
 describe("the remedy a stranger's repo can actually run", () => {
   it("does not send anyone to `npm run calibrate`, which only exists here", () => {
     const verdict = blockAuthority(LENS, null, "");
