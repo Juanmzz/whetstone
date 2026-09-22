@@ -10,6 +10,7 @@
  * Grouped by adapter, and each case names the failure it stands in front of.
  */
 
+import { parseNameStatusZ } from "../src/core/diff/parse.js";
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -86,10 +87,12 @@ describe("the git adapter", () => {
     await git(dir, "add", "-A");
     await git(dir, "commit", "-qm", "add a non-ascii path");
 
-    const out = await createGitAdapter(dir).diffNameStatus("HEAD~1..HEAD");
+    const out = await createGitAdapter(dir).diffNameStatusZ("HEAD~1..HEAD");
 
     expect(out).toContain("señal.txt");
     expect(out).not.toContain("\\303");
+    // And through the reader, which is what the registry actually matches against.
+    expect(parseNameStatusZ(out).map((f) => f.path)).toContain("señal.txt");
   });
 
   it("hashes content, so an edited file cannot reuse its receipt", async () => {
@@ -113,7 +116,7 @@ describe("the git adapter", () => {
     // `repoRoot` and `currentBranch` keep swallowing, and that is not an
     // inconsistency: their errors have a meaning ("not a repository", "detached"),
     // and this one does not.
-    await expect(createGitAdapter(await seeded()).diffNameStatus("nope..alsonope")).rejects.toThrow(
+    await expect(createGitAdapter(await seeded()).diffNameStatusZ("nope..alsonope")).rejects.toThrow(
       /nope\.\.alsonope/,
     );
   });
@@ -121,7 +124,7 @@ describe("the git adapter", () => {
   it("still reports a genuinely empty diff as empty", async () => {
     // The other side of the line. A clean tree is not an error, and turning it into
     // one would make every gate run on an unchanged range fail.
-    expect(await createGitAdapter(await seeded()).diffNameStatus("HEAD")).toBe("");
+    expect(await createGitAdapter(await seeded()).diffNameStatusZ("HEAD")).toBe("");
   });
 
   it("throws on a file it cannot hash rather than returning something plausible", async () => {

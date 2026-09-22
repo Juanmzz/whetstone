@@ -26,7 +26,7 @@ import {
   judgeEvidence,
   type FoundEvidence,
 } from "../core/checks/evidence.js";
-import { parseNameStatus } from "../core/diff/parse.js";
+import { parseNameStatusZ } from "../core/diff/parse.js";
 import { matchFiles } from "../core/gate/select.js";
 import { loadRegistry, resolveDefinitionRoot } from "../shell/sdd.js";
 import { gitEnv } from "../shell/git.js";
@@ -191,7 +191,7 @@ async function evidence(checkId: string, cwd: string): Promise<number> {
   }
 
   const range = process.env["WST_GATE_RANGE"] ?? "HEAD";
-  const matched = matchFiles(check, parseNameStatus(await git(["diff", "--name-status", range], cwd)));
+  const matched = matchFiles(check, parseNameStatusZ(await git(["diff", "--name-status", "-z", range], cwd)));
   let newestSourceMs: number | null = null;
   for (const file of matched) {
     const info = await stat(join(worktree, file.path)).catch(() => null);

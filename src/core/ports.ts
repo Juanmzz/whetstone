@@ -16,7 +16,13 @@ export interface GitPort {
   repoRoot(): Promise<string | null>;
   currentBranch(): Promise<string | null>;
   /** Raw `git diff --name-status <range>` output, for `core/diff/parse`. */
-  diffNameStatus(range: string): Promise<string>;
+  /**
+   * `git diff --name-status -z` over the range, raw. NUL-delimited and NOT lines:
+   * the line format escapes a path holding a tab or a newline, and every glob in
+   * the registry then fails to match a file that is really there. Read it with
+   * `parseNameStatusZ`.
+   */
+  diffNameStatusZ(range: string): Promise<string>;
   /** Content hash of a path at HEAD — the input to a receipt. */
   hashFile(path: string): Promise<string>;
 }

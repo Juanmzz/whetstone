@@ -20,7 +20,7 @@ import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
 import { firstMeaningfulLine, renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
 import { outcomeOf } from "../core/gate/report.js";
-import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
+import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 
 export interface ReadyOptions {
   readonly json?: boolean;
@@ -97,7 +97,7 @@ export async function runReady(
   // that is not the one the agent made.
   let tracked: readonly ChangedFile[];
   try {
-    tracked = parseNameStatus(await git.diffNameStatus(commit));
+    tracked = parseNameStatusZ(await git.diffNameStatusZ(commit));
   } catch (cause) {
     return incomplete(`could not read the diff against ${commit}\n  ${(cause as Error).message}`);
   }

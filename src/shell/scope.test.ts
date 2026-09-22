@@ -90,3 +90,44 @@ describe("rangeFiles", () => {
     await expect(rangeFiles("HEAD~0..HEAD", dir)).rejects.toThrow(/could not read/i);
   });
 });
+
+/**
+ * The other half of the 2026-09-21 reproduction. The path arrived quoted and
+ * escaped, no glob matched it, and the blocking check covering it was absent from
+ * the report entirely — under a heading that said `Ready`.
+ */
+describe("paths git would otherwise quote", () => {
+  it("reports a tab in an untracked path as the tab it is", async () => {
+    const dir = await tempDir("wst-scope-odd-");
+    await run("git", ["init", "-q", "-b", "main"], { cwd: dir });
+    await run("git", ["config", "user.email", "t@example.com"], { cwd: dir });
+    await run("git", ["config", "user.name", "T"], { cwd: dir });
+    await writeFile(join(dir, "kept.txt"), "one\n");
+    await run("git", ["add", "."], { cwd: dir });
+    await run("git", ["commit", "-qm", "chore: first"], { cwd: dir });
+    await mkdir(join(dir, "special"), { recursive: true });
+    await writeFile(join(dir, "special", "a\tb.js"), "x\n");
+
+    const files = await taskFilesFrom("HEAD", dir);
+
+    expect(files.untracked).toEqual(["special/a\tb.js"]);
+    expect(files.untracked[0]).not.toContain('"');
+  });
+
+  it("reports a tab in a STAGED path the same way", async () => {
+    const dir = await tempDir("wst-scope-staged-");
+    await run("git", ["init", "-q", "-b", "main"], { cwd: dir });
+    await run("git", ["config", "user.email", "t@example.com"], { cwd: dir });
+    await run("git", ["config", "user.name", "T"], { cwd: dir });
+    await writeFile(join(dir, "kept.txt"), "one\n");
+    await run("git", ["add", "."], { cwd: dir });
+    await run("git", ["commit", "-qm", "chore: first"], { cwd: dir });
+    await mkdir(join(dir, "special"), { recursive: true });
+    await writeFile(join(dir, "special", "a\tb.js"), "x\n");
+    await run("git", ["add", "-A"], { cwd: dir });
+
+    const files = await taskFilesFrom("HEAD", dir);
+
+    expect(files.staged).toEqual(["special/a\tb.js"]);
+  });
+});

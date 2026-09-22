@@ -9,6 +9,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { gitEnv } from "./git.js";
+import { parseNameStatusZ } from "../core/diff/parse.js";
 import type { ScopeFacts } from "../core/ready/scope.js";
 
 const run = promisify(execFile);
@@ -83,9 +84,9 @@ export async function mergeBaseOf(base: string, cwd: string): Promise<string | n
 }
 
 export async function conflictedPaths(cwd: string): Promise<readonly string[]> {
-  const out = await git(["diff", "--name-only", "--diff-filter=U"], cwd);
+  const out = await git(["diff", "--name-only", "--diff-filter=U", "-z"], cwd);
   if (out === null) throw new Error("could not inspect unresolved conflicts");
-  return lines(out);
+  return zPaths(out);
 }
 
 /**
@@ -112,13 +113,18 @@ async function topLevel(cwd: string): Promise<string> {
   return (await git(["rev-parse", "--show-toplevel"], cwd)) ?? cwd;
 }
 
-/** Just the paths, from `--name-status` output. */
-const pathsOf = (out: string | null): string[] =>
-  lines(out).map((l) => {
-    const parts = l.split("\t");
-    // A rename gives `R100 old new`; the path after the change is what triage reads.
-    return parts.at(-1) ?? "";
-  }).filter((p) => p !== "");
+/**
+ * Just the paths, from `--name-status -z`.
+ *
+ * `-z` and not lines, for the reason in `core/diff/parse.ts`: the line format
+ * quotes a path holding a tab or a newline, and a quoted path matches no glob in
+ * the registry, so the file goes through ungated while the run reports success.
+ */
+const pathsOf = (out: string): string[] =>
+  parseNameStatusZ(out).map((f) => f.path);
+
+/** `ls-files -z` and friends: NUL-terminated paths, no escaping to undo. */
+const zPaths = (out: string): string[] => out.split("\0").filter((p) => p !== "");
 
 /**
  * The files a caller-supplied RANGE names. All reported as committed, because a
@@ -131,7 +137,7 @@ const pathsOf = (out: string | null): string[] =>
 export async function rangeFiles(range: string, cwd: string): Promise<TaskFiles> {
   const root = await topLevel(cwd);
   return {
-    committed: pathsOf(await gitRead(["diff", "--name-status", range], root, `the files in ${range}`)),
+    committed: pathsOf(await gitRead(["diff", "--name-status", "-z", range], root, `the files in ${range}`)),
     staged: [],
     unstaged: [],
     untracked: [],
@@ -141,15 +147,15 @@ export async function rangeFiles(range: string, cwd: string): Promise<TaskFiles>
 export async function taskFilesFrom(mergeBase: string, cwd: string): Promise<TaskFiles> {
   const root = await topLevel(cwd);
   const [committed, staged, unstaged, untracked] = await Promise.all([
-    gitRead(["diff", "--name-status", `${mergeBase}..HEAD`], root, "the committed files"),
-    gitRead(["diff", "--name-status", "--cached"], root, "the staged files"),
-    gitRead(["diff", "--name-status"], root, "the unstaged files"),
-    gitRead(["ls-files", "--others", "--exclude-standard"], root, "the untracked files"),
+    gitRead(["diff", "--name-status", "-z", `${mergeBase}..HEAD`], root, "the committed files"),
+    gitRead(["diff", "--name-status", "-z", "--cached"], root, "the staged files"),
+    gitRead(["diff", "--name-status", "-z"], root, "the unstaged files"),
+    gitRead(["ls-files", "--others", "--exclude-standard", "-z"], root, "the untracked files"),
   ]);
   return {
     committed: pathsOf(committed),
     staged: pathsOf(staged),
     unstaged: pathsOf(unstaged),
-    untracked: lines(untracked),
+    untracked: zPaths(untracked),
   };
 }

@@ -13,7 +13,7 @@
 
 import type { LoadedCheck, Registry } from "../core/checks/registry.js";
 import type { Tier } from "../core/checks/schema.js";
-import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
+import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { startLive, type Live } from "./live.js";
 import { createCheckRunner, DEFAULT_MAX_LENS_TOTAL_USD, DEFAULT_TIMEOUT_MS } from "./check-runner.js";
@@ -130,7 +130,7 @@ export async function verifyRange(
 
   let files: readonly ChangedFile[];
   try {
-    files = opts.files ?? parseNameStatus(await git.diffNameStatus(range));
+    files = opts.files ?? parseNameStatusZ(await git.diffNameStatusZ(range));
   } catch (cause) {
     // `parseNameStatus` throws rather than dropping a line it cannot read, because
     // a dropped line is a file that silently went ungated.

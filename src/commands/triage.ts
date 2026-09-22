@@ -12,7 +12,7 @@ import {
   resolveDefinitionRoot,
   type LoadedTriageRules,
 } from "../shell/sdd.js";
-import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
+import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 import { classify, route } from "../core/triage/index.js";
 import { wrap, wrapped } from "../core/text.js";
 
@@ -98,7 +98,7 @@ export async function runTriage(
     files = declaredFiles(declared);
   } else {
     try {
-      files = parseNameStatus(await git.diffNameStatus(range));
+      files = parseNameStatusZ(await git.diffNameStatusZ(range));
     } catch (cause) {
       // `parseNameStatus` throws rather than dropping a line it cannot read, so
       // that an unparsed path can never end up silently unclassified. Reporting it

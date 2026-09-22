@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseNameStatus } from "./parse.js";
+import { parseNameStatus, parseNameStatusZ } from "./parse.js";
 
 describe("parseNameStatus", () => {
   it("returns nothing for an empty diff", () => {
@@ -51,5 +51,82 @@ describe("parseNameStatus", () => {
 
   it("throws on a line with no tab", () => {
     expect(() => parseNameStatus("garbage")).toThrow(/unparseable/i);
+  });
+});
+
+/**
+ * Reproduced on 2026-09-21: staged `special/a<TAB>b.js` alongside an ordinary
+ * modified file, with a blocking check covering `special/**`. `wst ready` said
+ * `Ready`, exit 0, and the blocking check was not in the report at all.
+ *
+ * `--name-status` QUOTES a path holding a tab, a newline or a quote, and it always
+ * will: `core.quotePath=false` governs non-ASCII bytes only. So the path arrived as
+ * the literal ten characters `"special/a\tb.js"`, no glob matched it, and the file
+ * went through ungated while the run reported success.
+ *
+ * `-z` is the only real fix. It has no escaping to undo, because it needs none.
+ */
+describe("parseNameStatusZ — the NUL-delimited format, where a path is bytes", () => {
+  const z = (...tokens: string[]): string => `${tokens.join("\0")}\0`;
+
+  it("reads a path containing a tab, which the line format cannot", () => {
+    expect(parseNameStatusZ(z("M", "special/a\tb.js"))).toEqual([
+      { path: "special/a\tb.js", status: "modified" },
+    ]);
+  });
+
+  it("reads a path containing a newline", () => {
+    expect(parseNameStatusZ(z("A", "weird/two\nlines.ts"))).toEqual([
+      { path: "weird/two\nlines.ts", status: "added" },
+    ]);
+  });
+
+  it("leaves a quote in the path alone instead of unescaping it", () => {
+    expect(parseNameStatusZ(z("M", 'say"hi".ts'))[0]?.path).toBe('say"hi".ts');
+  });
+
+  it("takes two paths for a rename and reports the destination", () => {
+    expect(parseNameStatusZ(z("R100", "old.ts", "new.ts"))).toEqual([
+      { path: "new.ts", status: "renamed", oldPath: "old.ts" },
+    ]);
+  });
+
+  it("takes two paths for a copy", () => {
+    expect(parseNameStatusZ(z("C75", "src.ts", "copy.ts"))).toEqual([
+      { path: "copy.ts", status: "copied", oldPath: "src.ts" },
+    ]);
+  });
+
+  it("reads a rename followed by a plain entry without losing the boundary", () => {
+    expect(parseNameStatusZ(z("R100", "plain.js", "renamed.js", "M", "special/a\tb.js"))).toEqual([
+      { path: "renamed.js", status: "renamed", oldPath: "plain.js" },
+      { path: "special/a\tb.js", status: "modified" },
+    ]);
+  });
+
+  it("reads every simple status letter", () => {
+    expect(parseNameStatusZ(z("A", "a", "M", "b", "D", "c", "T", "d")).map((f) => f.status)).toEqual([
+      "added",
+      "modified",
+      "deleted",
+      "modified",
+    ]);
+  });
+
+  it("is empty for an empty diff", () => {
+    expect(parseNameStatusZ("")).toEqual([]);
+    expect(parseNameStatusZ("\0")).toEqual([]);
+  });
+
+  it("THROWS on a status it does not know, rather than leaving the file ungated", () => {
+    expect(() => parseNameStatusZ(z("X", "mystery.ts"))).toThrow(/unknown git status/i);
+  });
+
+  it("THROWS on a rename missing its destination", () => {
+    expect(() => parseNameStatusZ(z("R100", "only-one.ts"))).toThrow(/destination/i);
+  });
+
+  it("THROWS on a status with no path after it", () => {
+    expect(() => parseNameStatusZ(z("M"))).toThrow();
   });
 });
