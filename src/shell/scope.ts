@@ -13,12 +13,43 @@ import type { ScopeFacts } from "../core/ready/scope.js";
 
 const run = promisify(execFile);
 
+/**
+ * A read whose FAILURE IS AN ANSWER. `@{upstream}` exits non-zero on a branch that
+ * has none, and `origin/HEAD` on a clone that never wrote one; both are facts.
+ *
+ * Only use it where null means "there is no such thing", never where it would mean
+ * "I could not look".
+ */
 async function git(args: readonly string[], cwd: string): Promise<string | null> {
   try {
     const { stdout } = await run("git", ["-c", "core.quotePath=false", ...args], { cwd, env: gitEnv(), maxBuffer: 16 * 1024 * 1024 });
     return stdout.trim();
   } catch {
     return null;
+  }
+}
+
+/**
+ * A read whose failure is NOT an answer.
+ *
+ * Reproduced on 2026-09-21: with an untracked file present and `git ls-files`
+ * exiting 128, `wst ready` said `No changes to verify` and exited 0. Every scan
+ * below came back null, `lines(null)` is `[]`, and an empty scope is exactly what
+ * a clean tree produces — so a read that never happened arrived as the most
+ * reassuring verdict the tool has.
+ *
+ * It throws, and `ready` turns that into INCOMPLETE. Nobody gets to confuse "I saw
+ * nothing" with "I could not see".
+ */
+async function gitRead(args: readonly string[], cwd: string, what: string): Promise<string> {
+  try {
+    const { stdout } = await run("git", ["-c", "core.quotePath=false", ...args], { cwd, env: gitEnv(), maxBuffer: 16 * 1024 * 1024 });
+    return stdout.trim();
+  } catch (cause) {
+    const said = (cause as { stderr?: string }).stderr?.trim();
+    throw new Error(
+      `could not read ${what}: git ${args.join(" ")} failed${said === undefined || said === "" ? "" : `\n  ${said}`}`,
+    );
   }
 }
 
@@ -100,7 +131,7 @@ const pathsOf = (out: string | null): string[] =>
 export async function rangeFiles(range: string, cwd: string): Promise<TaskFiles> {
   const root = await topLevel(cwd);
   return {
-    committed: pathsOf(await git(["diff", "--name-status", range], root)),
+    committed: pathsOf(await gitRead(["diff", "--name-status", range], root, `the files in ${range}`)),
     staged: [],
     unstaged: [],
     untracked: [],
@@ -110,10 +141,10 @@ export async function rangeFiles(range: string, cwd: string): Promise<TaskFiles>
 export async function taskFilesFrom(mergeBase: string, cwd: string): Promise<TaskFiles> {
   const root = await topLevel(cwd);
   const [committed, staged, unstaged, untracked] = await Promise.all([
-    git(["diff", "--name-status", `${mergeBase}..HEAD`], root),
-    git(["diff", "--name-status", "--cached"], root),
-    git(["diff", "--name-status"], root),
-    git(["ls-files", "--others", "--exclude-standard"], root),
+    gitRead(["diff", "--name-status", `${mergeBase}..HEAD`], root, "the committed files"),
+    gitRead(["diff", "--name-status", "--cached"], root, "the staged files"),
+    gitRead(["diff", "--name-status"], root, "the unstaged files"),
+    gitRead(["ls-files", "--others", "--exclude-standard"], root, "the untracked files"),
   ]);
   return {
     committed: pathsOf(committed),

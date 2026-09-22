@@ -14,7 +14,7 @@
  */
 
 import { createGitAdapter } from "../shell/git.js";
-import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths } from "../shell/scope.js";
+import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths, type TaskFiles } from "../shell/scope.js";
 import { verifyRange } from "../shell/verify.js";
 import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
@@ -101,8 +101,14 @@ export async function runReady(
   } catch (cause) {
     return incomplete(`could not read the diff against ${commit}\n  ${(cause as Error).message}`);
   }
-  const where =
-    opts.range === undefined ? await taskFilesFrom(commit, cwd) : await rangeFiles(opts.range, cwd);
+  let where: TaskFiles;
+  try {
+    where = opts.range === undefined ? await taskFilesFrom(commit, cwd) : await rangeFiles(opts.range, cwd);
+  } catch (cause) {
+    // INCOMPLETE, never NO_CHANGES. A scan that did not run leaves the same empty
+    // list a clean tree does, and that reading is the one that lets work through.
+    return incomplete((cause as Error).message);
+  }
   const untracked = where.untracked.map((path): ChangedFile => ({ path, status: "added" }));
   const files = [...tracked, ...untracked];
 
