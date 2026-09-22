@@ -21,6 +21,7 @@ import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
 import { firstMeaningfulLine, renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
 import { outcomeOf } from "../core/gate/report.js";
+import { leavesWorkUndone } from "../core/gate/select.js";
 import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 
 export interface ReadyOptions {
@@ -138,7 +139,7 @@ export async function runReady(
     errored: run.verdict.errored,
     declined: run.selection.declined,
     pending: [
-      ...run.selection.omitted.filter((r) => r.severity === "block").map((r) => r.id),
+      ...run.selection.omitted.filter(leavesWorkUndone).map((r) => r.id),
       ...run.verdict.results.filter((r) => r.severity === "block" &&
         ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
         .map((r) => r.checkId),

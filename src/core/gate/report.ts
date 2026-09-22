@@ -4,7 +4,7 @@
 
 import type { CheckResult, GateVerdict } from "../contracts.js";
 import type { GateRun } from "./run.js";
-import type { OmittedCheck } from "./select.js";
+import { leavesWorkUndone, type OmittedCheck } from "./select.js";
 import { wrap } from "../text.js";
 
 export const EXIT_PASS = 0;
@@ -92,7 +92,7 @@ export function outcomeOf(verdict: GateVerdict, coverage: Coverage): GateOutcome
 
   // BEFORE `verifiedSomething`: one passing check used to end the question, so a
   // blocking check dropped by `--fast` left no trace in the outcome.
-  if (coverage.omitted.some((o) => o.severity === "block")) return "incomplete";
+  if (coverage.omitted.some(leavesWorkUndone)) return "incomplete";
 
   if (verifiedSomething(verdict)) return "passed";
 
@@ -190,8 +190,8 @@ export function renderGateRun(run: GateRun): string {
       // Something tried to run and broke. Hard rule 3 forbids this sharing a
       // sentence with `passed`, and the exit code says the same (2).
       lines.push("  INCOMPLETE: a check never ran, so this change is unverified");
-      for (const { id, severity, reason } of selection.omitted) {
-        if (severity === "block") lines.push(`    ${id} was not run (${reason}) and it blocks`);
+      for (const o of selection.omitted) {
+        if (leavesWorkUndone(o)) lines.push(`    ${o.id} was not run (${o.reason}) and it blocks`);
       }
       break;
     case "uncovered":

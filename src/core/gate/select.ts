@@ -77,6 +77,14 @@ export interface OmittedCheck {
   readonly reason: "fast" | "no-evidence";
 }
 
+/**
+ * Whether the omission leaves something the caller can act on. `fast` does: rerun
+ * without it. `no-evidence` does not, and adr-0038 settled that on measurement.
+ * One predicate, because `gate` and `ready` both ask.
+ */
+export const leavesWorkUndone = (o: OmittedCheck): boolean =>
+  o.severity === "block" && o.reason === "fast";
+
 function assertUsableGlob(pattern: string, checkId: string, field: "include" | "exclude"): void {
   if (pattern.trim() === "") {
     throw new Error(

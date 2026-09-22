@@ -529,3 +529,50 @@ describe("outcomeOf — a check that was never given the chance to run", () => {
     expect(outcomeOf(aggregate([result("fast", "block", { status: "pass" })]), coverage())).toBe("passed");
   });
 });
+
+/**
+ * adr-0038: an evidence store never travels, so an ephemeral runner can never clear
+ * the check. Counting every blocking omission reintroduced the red it fixed.
+ */
+describe("outcomeOf — which omissions have a remedy here", () => {
+  it("is INCOMPLETE for one --fast dropped, which is one rerun away", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+      ),
+    ).toBe("incomplete");
+  });
+
+  it("is not INCOMPLETE for one --no-evidence dropped, which nothing here can clear", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "launcher", severity: "block", reason: "no-evidence" }] }),
+      ),
+    ).toBe("passed");
+  });
+
+  it("still blocks on a real failure beside a no-evidence omission", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "fail", detail: "no" })]),
+        coverage({ omitted: [{ id: "launcher", severity: "block", reason: "no-evidence" }] }),
+      ),
+    ).toBe("blocked");
+  });
+
+  it("one fast omission is enough, whatever was dropped alongside it", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("quick", "block", { status: "pass" })]),
+        coverage({
+          omitted: [
+            { id: "launcher", severity: "block", reason: "no-evidence" },
+            { id: "slow", severity: "block", reason: "fast" },
+          ],
+        }),
+      ),
+    ).toBe("incomplete");
+  });
+});
