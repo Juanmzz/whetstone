@@ -485,18 +485,9 @@ describe("the pass says what stood behind it, and says it once", () => {
 });
 
 /**
- * Found by two blind reviewers at once, on 2026-09-20:
- *
- *   ready --fast                       -> INCOMPLETE / 2
- *   gate --fast --no-lens --no-emit    -> "passed: 1 check ran" / 0
- *
- * over the same tree, one fast passing check and one slow BLOCKING one. Both read
- * the same run; only `ready` knew a blocking check had been dropped, because the
- * fact lived beside `run` as a sibling and `outcomeOf` takes `run`. One of the two
- * consumers forgot it, and the pre-push hook calls that one.
- *
- * So it moved INTO `Selection`, which is what `Coverage` is satisfied by. No call
- * site can drop it again without the type system saying so.
+ * Found by two blind reviewers at once, 2026-09-20: over one fast passing check and
+ * one slow blocking one, `ready --fast` said INCOMPLETE/2 and `gate --fast` said
+ * "passed: 1 check ran"/0. The pre-push hook calls `gate`.
  */
 describe("outcomeOf — a check that was never given the chance to run", () => {
   it("is INCOMPLETE when a blocking check was omitted, even though another passed", () => {

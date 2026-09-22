@@ -15,11 +15,8 @@ import type { ScopeFacts } from "../core/ready/scope.js";
 const run = promisify(execFile);
 
 /**
- * A read whose FAILURE IS AN ANSWER. `@{upstream}` exits non-zero on a branch that
- * has none, and `origin/HEAD` on a clone that never wrote one; both are facts.
- *
- * Only use it where null means "there is no such thing", never where it would mean
- * "I could not look".
+ * A read whose FAILURE IS AN ANSWER: `@{upstream}` exits non-zero on a branch with
+ * none. Only where null means "there is no such thing", never "I could not look".
  */
 async function git(args: readonly string[], cwd: string): Promise<string | null> {
   try {
@@ -31,16 +28,9 @@ async function git(args: readonly string[], cwd: string): Promise<string | null>
 }
 
 /**
- * A read whose failure is NOT an answer.
- *
- * Reproduced on 2026-09-21: with an untracked file present and `git ls-files`
- * exiting 128, `wst ready` said `No changes to verify` and exited 0. Every scan
- * below came back null, `lines(null)` is `[]`, and an empty scope is exactly what
- * a clean tree produces — so a read that never happened arrived as the most
- * reassuring verdict the tool has.
- *
- * It throws, and `ready` turns that into INCOMPLETE. Nobody gets to confuse "I saw
- * nothing" with "I could not see".
+ * A read whose failure is NOT an answer, so it throws and `ready` calls it
+ * INCOMPLETE. With `git ls-files` exiting 128 over an untracked file, the swallowed
+ * null gave the same empty scope a clean tree does: `No changes to verify`, exit 0.
  */
 async function gitRead(args: readonly string[], cwd: string, what: string): Promise<string> {
   try {
@@ -113,13 +103,7 @@ async function topLevel(cwd: string): Promise<string> {
   return (await git(["rev-parse", "--show-toplevel"], cwd)) ?? cwd;
 }
 
-/**
- * Just the paths, from `--name-status -z`.
- *
- * `-z` and not lines, for the reason in `core/diff/parse.ts`: the line format
- * quotes a path holding a tab or a newline, and a quoted path matches no glob in
- * the registry, so the file goes through ungated while the run reports success.
- */
+/** Just the paths, from `--name-status -z`. See `core/diff/parse.ts` for the `-z`. */
 const pathsOf = (out: string): string[] =>
   parseNameStatusZ(out).map((f) => f.path);
 

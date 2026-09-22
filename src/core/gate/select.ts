@@ -61,16 +61,11 @@ export interface Selection {
    */
   readonly declined: readonly string[];
   /**
-   * Checks that applied to this change and were never offered to the run.
-   *
-   * `--fast` drops the slow ones, `--no-evidence` drops the ones that need a human.
-   * Neither is a verdict about the change and neither produces a result, so without
-   * this the run simply has less in it and reads as a clean pass.
-   *
-   * It lives HERE rather than beside the run, which is the whole repair: two
-   * commands both computed an outcome from `Selection`, the fact sat as a sibling
-   * of it, and `gate` dropped it — reporting "passed: 1 check ran" where `ready`
-   * over the same tree said INCOMPLETE. The pre-push hook calls `gate`.
+   * Checks that applied and were never offered to the run: `--fast` drops the slow
+   * ones, `--no-evidence` the ones needing a human. Neither produces a result, so
+   * the run just has less in it and reads as a clean pass. It lives HERE rather than
+   * beside the run because `gate` dropped the sibling version, reporting "passed"
+   * where `ready` said INCOMPLETE over the same tree. The pre-push hook calls `gate`.
    */
   readonly omitted: readonly OmittedCheck[];
 }
@@ -173,8 +168,7 @@ export function selectChecks(
     declined.push(check.id);
   }
 
-  // Always empty here. Omission happens BEFORE selection — the caller narrows the
-  // registry and then routes — so this is the field's declared zero, not a finding.
+  // Always empty here: omission happens before selection, in the caller.
   return { selected, excluded, missingFromRegistry, unmatched, declined, omitted: [] };
 }
 

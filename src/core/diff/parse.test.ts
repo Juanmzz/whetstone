@@ -55,16 +55,9 @@ describe("parseNameStatus", () => {
 });
 
 /**
- * Reproduced on 2026-09-21: staged `special/a<TAB>b.js` alongside an ordinary
- * modified file, with a blocking check covering `special/**`. `wst ready` said
- * `Ready`, exit 0, and the blocking check was not in the report at all.
- *
- * `--name-status` QUOTES a path holding a tab, a newline or a quote, and it always
- * will: `core.quotePath=false` governs non-ASCII bytes only. So the path arrived as
- * the literal ten characters `"special/a\tb.js"`, no glob matched it, and the file
- * went through ungated while the run reported success.
- *
- * `-z` is the only real fix. It has no escaping to undo, because it needs none.
+ * Reproduced 2026-09-21: a staged `special/a<TAB>b.js` arrived quoted, the blocking
+ * check covering `special/**` matched nothing and was absent from the report, and
+ * `ready` said `Ready`, exit 0.
  */
 describe("parseNameStatusZ — the NUL-delimited format, where a path is bytes", () => {
   const z = (...tokens: string[]): string => `${tokens.join("\0")}\0`;

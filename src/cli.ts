@@ -277,23 +277,14 @@ program.action(async () => {
 });
 
 /**
- * EXIT 2 for every throw, a stack for the unexpected ones.
- *
- * A misconfigured repo gets a sentence. An unexpected throw is a bug in Whetstone
- * and keeps its trace, because the trace is the report. But it exits 2 either way,
- * and that is hard rule 3 applied to Whetstone itself: rethrowing let node exit 1,
- * which is the code for "a check failed" — so a crash that ran nothing at all told
- * an agent its correct code was broken. It happened nine times in one session.
- *
- * Nothing here decides a verdict. The only exits that mean one come from a command
- * that finished.
+ * EXIT 2 for every throw, a stack for the unexpected ones. Hard rule 3 applied to
+ * Whetstone itself: rethrowing let node exit 1, the code for "a check failed", so a
+ * crash that ran nothing told an agent its correct code was broken.
  */
 try {
   await program.parseAsync(process.argv);
 } catch (cause) {
   const message = cause instanceof Error ? cause.message : String(cause);
-  // A DIAGNOSED condition gets the sentence it earned. Only an unexplained throw
-  // is a bug in Whetstone, and only a bug is worth a stack trace.
   if (message.startsWith("wst.yaml:") || message.startsWith(CWD_FAILURE)) {
     console.error(message);
   } else {

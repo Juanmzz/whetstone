@@ -49,13 +49,9 @@ async function realGit(): Promise<string> {
 }
 
 /**
- * Reproduced on 2026-09-21: with an untracked file present and a PATH shim making
- * `git ls-files` exit 128, `wst ready` answered `No changes to verify`, exit 0.
- *
- * `git()` here catches every failure and returns null, and `lines(null)` is `[]`,
- * so a read that never happened is indistinguishable from a repository with
- * nothing in it. That is hard rule 3: a broken gate reported as a verdict, and the
- * most reassuring verdict there is.
+ * Reproduced 2026-09-21: with an untracked file present and `git ls-files` exiting
+ * 128, `ready` answered `No changes to verify`, exit 0. A swallowed null is the
+ * same empty list a clean tree gives.
  */
 describe("taskFilesFrom", () => {
   it("reports an untracked file when git answers", async () => {
@@ -91,11 +87,7 @@ describe("rangeFiles", () => {
   });
 });
 
-/**
- * The other half of the 2026-09-21 reproduction. The path arrived quoted and
- * escaped, no glob matched it, and the blocking check covering it was absent from
- * the report entirely — under a heading that said `Ready`.
- */
+/** The other half: a quoted path matched no glob, and its blocking check vanished. */
 describe("paths git would otherwise quote", () => {
   it("reports a tab in an untracked path as the tab it is", async () => {
     const dir = await tempDir("wst-scope-odd-");

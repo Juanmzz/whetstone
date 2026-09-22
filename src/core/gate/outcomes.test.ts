@@ -232,18 +232,9 @@ describe("tail — the truncation boundary", () => {
 });
 
 /**
- * Reproduced on 2026-09-21 against a shipped check, with a PATH shim breaking
- * `git log`:
- *
- *   wst check run commit-message  ->  exit 2, "could not read the commits"
- *   the same check through `ready` ->  exit 1, NOT_READY, "fail commit-message"
- *
- * The check told the truth and the gate relabelled it. Hard rule 3, broken by the
- * component whose entire job is that rule.
- *
- * The exit code alone cannot settle it, which is why this takes a convention: a
- * stranger's `npm test` exiting 2 is a plain failure and must stay one. Only a
- * command that DECLARES it distinguishes the two gets the second reading.
+ * Reproduced 2026-09-21: `wst check run commit-message` exited 2 saying it could
+ * not read the commits; the same check through `ready` became `fail`, exit 1. The
+ * exit code alone cannot settle it, hence the declared convention.
  */
 describe("interpretCommandResult — exit 2, under the whetstone convention", () => {
   it("calls exit 2 errored for a command that declares the convention", () => {

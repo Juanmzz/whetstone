@@ -75,18 +75,11 @@ export function parseNameStatus(raw: string): ChangedFile[] {
 /**
  * The same statuses, read from `git diff --name-status -z`.
  *
- * `-z` and not the line format, because the line format ESCAPES: a path holding a
- * tab, a newline or a quote comes back as `"special/a\tb.js"`, quotes and
- * backslash-t included, and every glob in the registry then fails to match a file
- * that is really there. It went through ungated and the run reported `Ready`.
- *
- * `core.quotePath=false` does not fix it — that flag governs non-ASCII bytes, and
- * git quotes the control characters regardless. A path is bytes, so the only
- * correct reader is the one with no escaping to undo.
- *
- * The stream is flat: `STATUS NUL path NUL`, and `R100 NUL old NUL new NUL` for a
- * rename or copy. The status letter is what says how many paths follow, which is
- * why this walks tokens rather than splitting into records.
+ * The line format ESCAPES: a path holding a tab arrives as `"special/a\tb.js"`,
+ * quotes included, no glob matches it, and the file goes through ungated under a
+ * report saying `Ready`. `core.quotePath=false` governs non-ASCII bytes only; git
+ * quotes control characters regardless, so `-z` is the only reader with nothing to
+ * undo. The stream is flat: `STATUS NUL path NUL`, plus a second path for R and C.
  */
 export function parseNameStatusZ(raw: string): ChangedFile[] {
   const tokens = raw.split("\0");

@@ -150,9 +150,8 @@ export async function verifyRange(
   );
   const eligible = opts.fast === true ? fastOnly(runnable) : runnable;
   const routing = route(opts.tier ?? triage.tier, eligible);
-  // What routing WOULD have selected over the whole active registry, minus what is
-  // eligible here. Computed before the run and folded into its selection below, so
-  // the one function that decides the outcome cannot be handed a run without it.
+  // What routing would select over the whole active registry, minus what is
+  // eligible here. Folded into the run's selection below.
   const omitted: readonly OmittedCheck[] = selectChecks(route(routing.tier, registry.active), registry, files).selected
     .filter(({ check }) => !eligible.includes(check))
     .map(({ check }) => ({
@@ -196,11 +195,8 @@ export async function verifyRange(
   });
 
 
-  // INTO the selection, not beside it. `outcomeOf` and `exitCodeFor` both take a
-  // `Coverage`, which `Selection` satisfies — so every caller gets this whether it
-  // remembered to or not. It used to ride alongside as a sibling field, and `gate`
-  // dropped it: one passing fast check reported "passed / 0" where `ready` over the
-  // same tree said INCOMPLETE. The pre-push hook calls `gate`.
+  // INTO the selection, not beside it: `outcomeOf` takes a `Coverage`, which
+  // `Selection` satisfies, so every caller gets this whether it remembered to or not.
   const verified = { ...run, selection: { ...run.selection, omitted } };
 
   return { ok: true, run: verified, registry, routing, files, definitionRoot, repoRoot };

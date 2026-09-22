@@ -82,11 +82,7 @@ export interface Coverage {
    * genuine absence of coverage.
    */
   readonly declined: readonly string[];
-  /**
-   * Checks that applied and were never offered to the run — `--fast` dropped them,
-   * or `--no-evidence` did. Also from `Selection`, and for the same reason: they
-   * produce no result, so the run just has less in it.
-   */
+  /** From `Selection`. They produce no result, so the run just has less in it. */
   readonly omitted: readonly OmittedCheck[];
 }
 
@@ -94,10 +90,8 @@ export function outcomeOf(verdict: GateVerdict, coverage: Coverage): GateOutcome
   if (verdict.verdict === "block") return "blocked";
   if (lostGating(verdict)) return "incomplete";
 
-  // BEFORE `verifiedSomething`, which is the whole bug: one check running and
-  // passing used to end the question, so a blocking check dropped by `--fast` left
-  // no trace in the outcome. A real failure still outranks it — that is the `block`
-  // line above.
+  // BEFORE `verifiedSomething`: one passing check used to end the question, so a
+  // blocking check dropped by `--fast` left no trace in the outcome.
   if (coverage.omitted.some((o) => o.severity === "block")) return "incomplete";
 
   if (verifiedSomething(verdict)) return "passed";
@@ -173,9 +167,7 @@ export function renderGateRun(run: GateRun): string {
   }
 
   for (const { id, severity, reason } of selection.omitted) {
-    // Named in the body, not just in the verdict. `--fast` and `--no-evidence` are
-    // flags somebody passed, so the one thing the report owes them is WHICH checks
-    // they bought their speed with.
+    // Named, so a flag's cost is visible: which checks bought that speed.
     lines.push(`  omitted  ${id.padEnd(14)} (not run: ${reason})${severity === "block" ? " — blocking" : ""}`);
   }
 

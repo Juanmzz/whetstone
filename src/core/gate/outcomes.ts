@@ -68,16 +68,10 @@ function withoutScriptEcho(printed: string): string {
 }
 
 /**
- * Whose exit codes these are.
- *
- * `plain` is every command a project already had: 0 passes, anything else is a
- * verdict, and 126/127 are the shell saying it never started one.
- *
- * `whetstone` adds ONE code. A check whose logic ships with `wst` exits 2 when it
- * could not answer — no commits to read, no range, a git that would not run — and
- * without this the gate read that as the change having failed. It is opt-in and not
- * inferred, because a stranger's linter exiting 2 for "8 problems found" is a real
- * verdict, and reading THAT as a broken gate lets a failure through.
+ * Whose exit codes these are. `plain` is every command a project already had.
+ * `whetstone` adds one: a check whose logic ships with `wst` exits 2 for "could not
+ * answer". Opt-in and never inferred, because a stranger's linter exiting 2 for
+ * "8 problems found" means the opposite.
  */
 export type ExitConvention = "plain" | "whetstone";
 

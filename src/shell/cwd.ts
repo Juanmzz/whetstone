@@ -1,14 +1,10 @@
 /**
  * Where we are, asked once and safely.
  *
- * `process.cwd()` throws. macOS refuses it when the terminal has lost permission to
- * the directory (`EPERM: uv_cwd`), and it throws `ENOENT` when the directory was
- * deleted under a running process, which a worktree being removed does routinely.
- *
- * It was a DEFAULT PARAMETER on every command, and a default is evaluated before the
- * function body, so nothing inside could catch it: the process died with an uncaught
- * throw, exited 1, and a crash that ran no checks became indistinguishable from a
- * check that failed.
+ * `process.cwd()` throws: macOS refuses it after the terminal loses permission
+ * (`EPERM: uv_cwd`), and it is `ENOENT` for a directory deleted under a running
+ * process. It was a DEFAULT PARAMETER on every command, and a default is evaluated
+ * before the function body, so no `try` inside could reach it.
  */
 
 export interface CwdSource {
@@ -25,25 +21,20 @@ const usable = (value: string | undefined): string | null => {
 };
 
 /**
- * The working directory, or null when nothing can say where we are.
- *
- * Null rather than a guess like `/` or the home directory: a command that verifies
- * the wrong tree and reports on it is worse than one that refuses and says why. The
- * caller turns null into an exit 2, never an exit 1.
+ * The working directory, or null when nothing can say where we are. Null rather
+ * than a guess: verifying the wrong tree is worse than refusing and saying why.
  */
 export function resolveCwd(source: CwdSource = { cwd: () => process.cwd(), env: process.env }): string | null {
   try {
     const here = usable(source.cwd());
     if (here !== null) return here;
   } catch {
-    // Every way of not knowing lands the same: fall through to what the environment
-    // still remembers. The reason is not actionable and the fallbacks are.
+    // The reason is never actionable; the fallbacks are.
   }
 
-  // PWD FIRST. It follows `cd`, so it still means "here". `CLAUDE_PROJECT_DIR` names
-  // the SESSION root and is set on every command inside one, so preferring it verified
-  // a different repository than the caller was standing in and reported READY over it.
-  // Both reviewers found that independently; it is worse than the crash it replaced.
+  // PWD FIRST: it follows `cd`, so it still means "here". `CLAUDE_PROJECT_DIR` names
+  // the SESSION root, so preferring it verified a repository the caller was not
+  // standing in and reported READY over it.
   const fallbacks = [
     { name: "PWD", value: usable(source.env["PWD"]) },
     { name: "CLAUDE_PROJECT_DIR", value: usable(source.env["CLAUDE_PROJECT_DIR"]) },
@@ -51,8 +42,7 @@ export function resolveCwd(source: CwdSource = { cwd: () => process.cwd(), env: 
 
   for (const { name, value } of fallbacks) {
     if (value === null) continue;
-    // ANNOUNCED. A fallback can name the wrong tree, and a wrong tree verified in
-    // silence is the failure this whole class keeps producing.
+    // Announced, because a fallback can name the wrong tree.
     const warn = source.warn ?? ((m: string): void => void process.stderr.write(`${m}\n`));
     warn(`whetstone: could not read the working directory; using ${name} (${value}).`);
     return value;
@@ -63,15 +53,9 @@ export function resolveCwd(source: CwdSource = { cwd: () => process.cwd(), env: 
 
 /**
  * The working directory, or a readable failure. The default on every command.
- *
- * It throws rather than returning null so a command's signature stays `string`, and
- * the message is what a person needs: `cli.ts` turns any throw into exit 2, so this
- * can never again be read as a check having failed.
+ * Throws rather than returning null, so a command's signature stays `string`.
  */
-/**
- * How `cli.ts` tells this apart from an unexpected throw. Both exit 2; only one of
- * them is a bug, and only a bug is worth a stack trace.
- */
+/** How `cli.ts` tells this apart from a bug. Both exit 2; only a bug gets a stack. */
 export const CWD_FAILURE = "cannot read the working directory";
 
 export function requireCwd(source?: CwdSource): string {

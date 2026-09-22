@@ -2,16 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { requireCwd, resolveCwd } from "./cwd.js";
 
 /**
- * Found in the field on 2026-09-15, in a published version, on a real session.
- *
- * `process.cwd()` was a DEFAULT PARAMETER on all eleven commands. A default is
- * evaluated before the function body, so no `try/catch` inside could reach it: when
- * macOS refused the directory (`EPERM: uv_cwd`), node died with an uncaught throw and
- * exited 1. The Stop hook treats 1 as "a check failed" and 2 as "could not run", so a
- * crash that ran no checks at all told an agent its correct code was broken, nine
- * times, until the harness overrode it.
- *
- * That is hard rule 3 broken in the outermost layer of the tool that declares it.
+ * Found in the field 2026-09-15, in a published version. `EPERM: uv_cwd` killed
+ * node with an uncaught throw and exit 1, which the Stop hook reads as "a check
+ * failed" — so a crash that ran nothing told an agent its correct code was broken.
  */
 describe("resolveCwd", () => {
   it("returns the working directory when it can be read", () => {
@@ -19,10 +12,8 @@ describe("resolveCwd", () => {
   });
 
   it("falls back to PWD first, because PWD follows `cd` and the harness root does not", () => {
-    // Both reviewers, independently: `CLAUDE_PROJECT_DIR` is set on every command in a
-    // Claude session and always names the SESSION root, so preferring it verified a
-    // different repository than the one the caller was standing in and called it READY.
-    // PWD tracks `cd`, so it is the one that still means "here".
+    // `CLAUDE_PROJECT_DIR` names the SESSION root, so preferring it called another
+    // repository READY. Both reviewers found that independently.
     const cwd = (): string => {
       throw Object.assign(new Error("EPERM: uv_cwd"), { code: "EPERM" });
     };
@@ -64,8 +55,6 @@ describe("resolveCwd", () => {
   });
 
   it("returns null when nothing can say where we are", () => {
-    // Null rather than a guess. A command that verifies the wrong directory and
-    // reports on it is worse than one that refuses and says why.
     const cwd = (): string => {
       throw new Error("EPERM");
     };

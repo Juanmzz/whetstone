@@ -94,17 +94,8 @@ const BaseCheck = z.strictObject({
   command: z.string().min(1).optional(),
   /**
    * Whether `command` distinguishes "I could not run" from "this change failed".
-   *
-   * `plain`, the default, is every command a project already had: non-zero is a
-   * verdict. `whetstone` adds exit 2 for "could not run", which is what a check
-   * whose logic ships with `wst` returns when there is nothing for it to read.
-   *
-   * OPT-IN, never inferred from the command string. A stranger's linter exiting 2
-   * for "8 problems found" means the opposite, and guessing wrong in that direction
-   * lets a real failure through.
-   *
-   * Optional rather than defaulted, unlike `enabled` and `slow`: those mean
-   * something for every kind, and this one only for a check that runs a command.
+   * `whetstone` adds exit 2 for the first, which is what `wst check run` returns.
+   * Opt-in, never inferred: a stranger's linter exiting 2 means the opposite.
    */
   exit_codes: z.enum(EXIT_CONVENTIONS).optional(),
   /** Required when kind === "llm". Appended to the system prompt. */
