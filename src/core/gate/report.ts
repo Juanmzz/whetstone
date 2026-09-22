@@ -4,6 +4,7 @@
 
 import type { CheckResult, GateVerdict } from "../contracts.js";
 import type { GateRun } from "./run.js";
+import type { OmittedCheck } from "./select.js";
 import { wrap } from "../text.js";
 
 export const EXIT_PASS = 0;
@@ -81,11 +82,24 @@ export interface Coverage {
    * genuine absence of coverage.
    */
   readonly declined: readonly string[];
+  /**
+   * Checks that applied and were never offered to the run — `--fast` dropped them,
+   * or `--no-evidence` did. Also from `Selection`, and for the same reason: they
+   * produce no result, so the run just has less in it.
+   */
+  readonly omitted: readonly OmittedCheck[];
 }
 
 export function outcomeOf(verdict: GateVerdict, coverage: Coverage): GateOutcome {
   if (verdict.verdict === "block") return "blocked";
   if (lostGating(verdict)) return "incomplete";
+
+  // BEFORE `verifiedSomething`, which is the whole bug: one check running and
+  // passing used to end the question, so a blocking check dropped by `--fast` left
+  // no trace in the outcome. A real failure still outranks it — that is the `block`
+  // line above.
+  if (coverage.omitted.some((o) => o.severity === "block")) return "incomplete";
+
   if (verifiedSomething(verdict)) return "passed";
 
   // Everything below is "nothing was verified".
@@ -158,7 +172,14 @@ export function renderGateRun(run: GateRun): string {
     for (const line of rest) lines.push(`${" ".repeat(lead.length)}${line}`);
   }
 
-  if (verdict.results.length === 0) {
+  for (const { id, severity, reason } of selection.omitted) {
+    // Named in the body, not just in the verdict. `--fast` and `--no-evidence` are
+    // flags somebody passed, so the one thing the report owes them is WHICH checks
+    // they bought their speed with.
+    lines.push(`  omitted  ${id.padEnd(14)} (not run: ${reason})${severity === "block" ? " — blocking" : ""}`);
+  }
+
+  if (verdict.results.length === 0 && selection.omitted.length === 0) {
     lines.push("  no checks applied to this change");
   }
 
@@ -177,6 +198,9 @@ export function renderGateRun(run: GateRun): string {
       // Something tried to run and broke. Hard rule 3 forbids this sharing a
       // sentence with `passed`, and the exit code says the same (2).
       lines.push("  INCOMPLETE: a check never ran, so this change is unverified");
+      for (const { id, severity, reason } of selection.omitted) {
+        if (severity === "block") lines.push(`    ${id} was not run (${reason}) and it blocks`);
+      }
       break;
     case "uncovered":
       // Exits 0, so the WORDS are the whole of the honesty. It must never read

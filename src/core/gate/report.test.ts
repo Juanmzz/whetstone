@@ -13,9 +13,9 @@ import {
 import type { GateRun } from "./run.js";
 import type { Selection } from "./select.js";
 
-const coverage = (over: Partial<Coverage> = {}): Coverage => ({ declined: [], ...over });
+const coverage = (over: Partial<Coverage> = {}): Coverage => ({ declined: [], omitted: [], ...over });
 
-const EMPTY_SELECTION: Selection = { selected: [], excluded: [], missingFromRegistry: [], unmatched: [], declined: [] };
+const EMPTY_SELECTION: Selection = { selected: [], excluded: [], missingFromRegistry: [], unmatched: [], declined: [], omitted: [] };
 
 function result(
   checkId: string,
@@ -481,5 +481,60 @@ describe("the pass says what stood behind it, and says it once", () => {
 
     expect(text).toMatch(/^ +skipped {2}test/m);
     expect(text).not.toMatch(/^ +skipped:/m);
+  });
+});
+
+/**
+ * Found by two blind reviewers at once, on 2026-09-20:
+ *
+ *   ready --fast                       -> INCOMPLETE / 2
+ *   gate --fast --no-lens --no-emit    -> "passed: 1 check ran" / 0
+ *
+ * over the same tree, one fast passing check and one slow BLOCKING one. Both read
+ * the same run; only `ready` knew a blocking check had been dropped, because the
+ * fact lived beside `run` as a sibling and `outcomeOf` takes `run`. One of the two
+ * consumers forgot it, and the pre-push hook calls that one.
+ *
+ * So it moved INTO `Selection`, which is what `Coverage` is satisfied by. No call
+ * site can drop it again without the type system saying so.
+ */
+describe("outcomeOf — a check that was never given the chance to run", () => {
+  it("is INCOMPLETE when a blocking check was omitted, even though another passed", () => {
+    const outcome = outcomeOf(
+      aggregate([result("fast", "block", { status: "pass" })]),
+      coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+    );
+    expect(outcome).toBe("incomplete");
+  });
+
+  it("exits 2, not 0, so CI and the hook cannot read it as a pass", () => {
+    expect(
+      exitCodeFor(
+        aggregate([result("fast", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+      ),
+    ).toBe(EXIT_INCOMPLETE);
+  });
+
+  it("still passes when only a WARNING check was omitted, which blocks nothing", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("fast", "block", { status: "pass" })]),
+        coverage({ omitted: [{ id: "slow", severity: "warn", reason: "fast" }] }),
+      ),
+    ).toBe("passed");
+  });
+
+  it("a REAL failure still outranks it: the verdict names the thing that broke", () => {
+    expect(
+      outcomeOf(
+        aggregate([result("fast", "block", { status: "fail", detail: "no" })]),
+        coverage({ omitted: [{ id: "slow", severity: "block", reason: "fast" }] }),
+      ),
+    ).toBe("blocked");
+  });
+
+  it("is unchanged when nothing was omitted", () => {
+    expect(outcomeOf(aggregate([result("fast", "block", { status: "pass" })]), coverage())).toBe("passed");
   });
 });

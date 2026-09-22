@@ -60,6 +60,26 @@ export interface Selection {
    * not declined coverage for a change it would never have looked at.
    */
   readonly declined: readonly string[];
+  /**
+   * Checks that applied to this change and were never offered to the run.
+   *
+   * `--fast` drops the slow ones, `--no-evidence` drops the ones that need a human.
+   * Neither is a verdict about the change and neither produces a result, so without
+   * this the run simply has less in it and reads as a clean pass.
+   *
+   * It lives HERE rather than beside the run, which is the whole repair: two
+   * commands both computed an outcome from `Selection`, the fact sat as a sibling
+   * of it, and `gate` dropped it — reporting "passed: 1 check ran" where `ready`
+   * over the same tree said INCOMPLETE. The pre-push hook calls `gate`.
+   */
+  readonly omitted: readonly OmittedCheck[];
+}
+
+/** Why a check that applied was never offered to the run. Not a verdict about it. */
+export interface OmittedCheck {
+  readonly id: string;
+  readonly severity: Check["severity"];
+  readonly reason: "fast" | "no-evidence";
 }
 
 function assertUsableGlob(pattern: string, checkId: string, field: "include" | "exclude"): void {
@@ -153,7 +173,9 @@ export function selectChecks(
     declined.push(check.id);
   }
 
-  return { selected, excluded, missingFromRegistry, unmatched, declined };
+  // Always empty here. Omission happens BEFORE selection — the caller narrows the
+  // registry and then routes — so this is the field's declared zero, not a finding.
+  return { selected, excluded, missingFromRegistry, unmatched, declined, omitted: [] };
 }
 
 /** The checks that can answer while somebody is waiting. */

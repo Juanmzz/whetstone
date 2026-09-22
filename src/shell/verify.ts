@@ -17,7 +17,7 @@ import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { startLive, type Live } from "./live.js";
 import { createCheckRunner, DEFAULT_MAX_LENS_TOTAL_USD, DEFAULT_TIMEOUT_MS } from "./check-runner.js";
-import { fastOnly, selectChecks } from "../core/gate/select.js";
+import { fastOnly, selectChecks, type OmittedCheck } from "../core/gate/select.js";
 import { answerableHere } from "../core/gate/environment.js";
 import { runGate as executeGate, type CheckRunner, type GateRun } from "../core/gate/run.js";
 import { classify, route } from "../core/triage/index.js";
@@ -54,7 +54,7 @@ export interface VerifyOptions {
 
 export interface Verified {
   readonly ok: true;
-  readonly omitted: readonly { readonly id: string; readonly severity: LoadedCheck["severity"]; readonly reason: string }[];
+  /** Omissions are inside `run.selection`, which is what `outcomeOf` reads. */
   readonly run: GateRun;
   readonly registry: Registry;
   readonly routing: Routing;
@@ -150,7 +150,10 @@ export async function verifyRange(
   );
   const eligible = opts.fast === true ? fastOnly(runnable) : runnable;
   const routing = route(opts.tier ?? triage.tier, eligible);
-  const omitted = selectChecks(route(routing.tier, registry.active), registry, files).selected
+  // What routing WOULD have selected over the whole active registry, minus what is
+  // eligible here. Computed before the run and folded into its selection below, so
+  // the one function that decides the outcome cannot be handed a run without it.
+  const omitted: readonly OmittedCheck[] = selectChecks(route(routing.tier, registry.active), registry, files).selected
     .filter(({ check }) => !eligible.includes(check))
     .map(({ check }) => ({
       id: check.id,
@@ -193,5 +196,12 @@ export async function verifyRange(
   });
 
 
-  return { ok: true, run, registry, routing, files, definitionRoot, repoRoot, omitted };
+  // INTO the selection, not beside it. `outcomeOf` and `exitCodeFor` both take a
+  // `Coverage`, which `Selection` satisfies — so every caller gets this whether it
+  // remembered to or not. It used to ride alongside as a sibling field, and `gate`
+  // dropped it: one passing fast check reported "passed / 0" where `ready` over the
+  // same tree said INCOMPLETE. The pre-push hook calls `gate`.
+  const verified = { ...run, selection: { ...run.selection, omitted } };
+
+  return { ok: true, run: verified, registry, routing, files, definitionRoot, repoRoot };
 }

@@ -137,7 +137,7 @@ export async function runReady(
     errored: run.verdict.errored,
     declined: run.selection.declined,
     pending: [
-      ...verified.omitted.filter((r) => r.severity === "block").map((r) => r.id),
+      ...run.selection.omitted.filter((r) => r.severity === "block").map((r) => r.id),
       ...run.verdict.results.filter((r) => r.severity === "block" &&
         ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
         .map((r) => r.checkId),
@@ -153,7 +153,7 @@ export async function runReady(
       : {}),
     ...(r.outcome.status === "skipped" ? { detail: r.outcome.reason } : {}),
   }));
-  results.push(...verified.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: r.reason })));
+  results.push(...run.selection.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: r.reason })));
 
   const facts = {
     repo: repoRoot,
