@@ -347,3 +347,23 @@ describe("a block the owner signed instead of measuring", () => {
     expect(blockAuthority(LENS, perfect(), current, ["opus"], signature).ok).toBe(true);
   });
 });
+
+/**
+ * `init` seeds no `calibrate` script and there is no `wst calibrate`, so in a
+ * bootstrapped repo the remedy this named did not exist. The two that do exist
+ * everywhere are dropping the severity and signing the block (adr-0047).
+ */
+describe("the remedy a stranger's repo can actually run", () => {
+  it("does not send anyone to `npm run calibrate`, which only exists here", () => {
+    const verdict = blockAuthority(LENS, null, "");
+    expect(verdict.ok).toBe(false);
+    expect(verdict.ok === false && verdict.reason).not.toContain("npm run");
+  });
+
+  it("names `warn` and `signed_block`, which are true in any repo", () => {
+    const verdict = blockAuthority(LENS, null, "");
+    const reason = verdict.ok === false ? verdict.reason : "";
+    expect(reason).toContain("warn");
+    expect(reason).toContain("signed_block");
+  });
+});

@@ -215,7 +215,10 @@ export function blockAuthority(
   if (receipt === null || receipt === undefined) {
     return {
       ok: false,
-      reason: "no calibration receipt: run `npm run calibrate`, or drop it to `warn`",
+      // Not `npm run calibrate`: `init` seeds no such script and there is no
+      // `wst calibrate`, so in a bootstrapped repo that named a remedy nobody has.
+      // These two are true everywhere.
+      reason: "no calibration receipt: drop it to `warn`, or grant the block on your own judgement with `signed_block` (adr-0047)",
     };
   }
   if (receipt.lensHash !== lensHash(lens)) {
