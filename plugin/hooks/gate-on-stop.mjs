@@ -49,8 +49,11 @@ try {
 
   const out = `${cause.stdout ?? ""}${cause.stderr ?? ""}`.trim();
 
-  // 2 is EXIT_MISCONFIGURED: the gate could not start. Not a verdict about the work,
-  // so it must not read to Claude as "you broke something".
+  // 2 is every way of NOT having a verdict: the gate could not start, a check could
+  // not run, or `wst` itself crashed — which it now exits 2 for rather than 1, so
+  // this branch catches it without the hook having to recognise a stack trace.
+  // None of them are a verdict about the work, so none may read as "you broke
+  // something". 1 is the only code that does.
   if (code === 2) process.exit(0);
 
   console.log(

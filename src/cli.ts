@@ -4,6 +4,7 @@
  * no logic lives here, so the CLI surface stays swappable.
  */
 
+import { requireCwd } from "./shell/cwd.js";
 import { Command } from "commander";
 import { banner } from "./banner.js";
 import { runStatus } from "./commands/status.js";
@@ -50,7 +51,7 @@ program
   .option("--quiet", "print only the final ready / NOT ready line")
   .option("--json", "the same answer as data, for an agent rather than a reader")
   .action(async (opts: { quiet?: boolean; json?: boolean }) => {
-    process.exitCode = await runStatus(process.cwd(), {
+    process.exitCode = await runStatus(requireCwd(), {
       quiet: opts.quiet ?? false,
       json: opts.json ?? false,
     });
@@ -272,16 +273,30 @@ program.action(async () => {
     program.outputHelp();
     return;
   }
-  process.exitCode = await runHome(process.cwd());
+  process.exitCode = await runHome(requireCwd());
 });
 
-// A misconfigured repo gets a sentence, not a stack. Anything else keeps its
-// trace: an unexpected throw is a bug in Whetstone and the trace is the report.
+/**
+ * EXIT 2 for every throw, a stack for the unexpected ones.
+ *
+ * A misconfigured repo gets a sentence. An unexpected throw is a bug in Whetstone
+ * and keeps its trace, because the trace is the report. But it exits 2 either way,
+ * and that is hard rule 3 applied to Whetstone itself: rethrowing let node exit 1,
+ * which is the code for "a check failed" — so a crash that ran nothing at all told
+ * an agent its correct code was broken. It happened nine times in one session.
+ *
+ * Nothing here decides a verdict. The only exits that mean one come from a command
+ * that finished.
+ */
 try {
   await program.parseAsync(process.argv);
 } catch (cause) {
   const message = cause instanceof Error ? cause.message : String(cause);
-  if (!message.startsWith("wst.yaml:")) throw cause;
-  console.error(message);
+  if (message.startsWith("wst.yaml:")) {
+    console.error(message);
+  } else {
+    console.error(cause instanceof Error && cause.stack !== undefined ? cause.stack : message);
+    console.error("\nwhetstone crashed before it could finish. Nothing was verified by this run.");
+  }
   process.exitCode = 2;
 }

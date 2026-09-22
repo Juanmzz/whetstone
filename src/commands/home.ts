@@ -6,6 +6,7 @@
  * (adr-0032). This only chooses one.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { MARK_ENTRANCE, MARK_HOME } from "../banner.js";
 import { honingFrames } from "../core/tui/honing.js";
 import { renderMark } from "../core/tui/mark.js";
@@ -38,7 +39,7 @@ function openKeys(): Keys {
   return keys;
 }
 
-export async function runHome(cwd: string = process.cwd()): Promise<number> {
+export async function runHome(cwd: string = requireCwd()): Promise<number> {
   let state = openHome(await gatherStatus(cwd));
   let keys = openKeys();
 

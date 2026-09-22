@@ -4,6 +4,7 @@
  * classification decisions are made here.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { relative } from "node:path";
 import { createGitAdapter } from "../shell/git.js";
 import {
@@ -61,7 +62,7 @@ function declaredFiles(paths: readonly string[]): ChangedFile[] {
 
 export async function runTriage(
   opts: TriageOptions = {},
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = (await git.repoRoot()) ?? cwd;

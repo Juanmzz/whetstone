@@ -7,6 +7,7 @@
  * binary that wrote the check file is the one thing it can count on being there.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { execFile } from "node:child_process";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -242,7 +243,7 @@ async function evidence(checkId: string, cwd: string): Promise<number> {
 
 export async function runShippedCheck(
   id: string | undefined,
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const ids = [...Object.keys(RUNNERS), `${EVIDENCE_PREFIX}*`];
 

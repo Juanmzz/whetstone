@@ -4,6 +4,7 @@
  * appears in this file it is in the wrong layer.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
@@ -494,7 +495,7 @@ async function ensureRootGitignored(root: string): Promise<boolean> {
 
 // ── the command ──────────────────────────────────────────────────────────────
 
-export async function runInit(opts: InitOptions, cwd: string = process.cwd()): Promise<number> {
+export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Promise<number> {
   const root = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
 
   const facts = await gatherFacts(root);

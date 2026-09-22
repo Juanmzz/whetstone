@@ -13,6 +13,7 @@
  * Composition root. Every decision it looks like it makes is in `core/ready/`.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { createGitAdapter } from "../shell/git.js";
 import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths, type TaskFiles } from "../shell/scope.js";
 import { verifyRange } from "../shell/verify.js";
@@ -44,7 +45,7 @@ const STATUS: Readonly<Record<string, ResultStatus>> = {
 
 export async function runReady(
   opts: ReadyOptions = {},
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const began = Date.now();
   const incomplete = (reason: string, conflicts: readonly string[] = []): number => {
