@@ -19,6 +19,7 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runCheck } from "../src/commands/check.js";
@@ -351,6 +352,27 @@ describe("wst init", () => {
     await writeFile(join(dir, "package.json"), '{"name":"fixture"}\n', "utf-8");
     return dir;
   }
+
+  it("--llm seeds the review lens the flag advertises, and nothing does without it", async () => {
+    // Through the CLI on purpose: the option was declared as `--llm` and read as
+    // `agentLens`, so the plan came out identical with and without it. Calling
+    // `runInit` directly would have passed while the flag stayed dead.
+    const dir = await bare();
+    const plan = async (...extra: string[]): Promise<string[]> => {
+      const { stdout } = await exec(process.execPath, [
+        "--import", import.meta.resolve("tsx"),
+        fileURLToPath(new URL("../src/cli.ts", import.meta.url)),
+        "init", "--purpose", PURPOSE, "--source", "src/**", "--dry-run", "--json", ...extra,
+      ], { cwd: dir, maxBuffer: 8 * 1024 * 1024 });
+      return (JSON.parse(stdout) as { files: { path: string }[] }).files.map((f) => f.path);
+    };
+
+    const withLens = await plan("--llm");
+    const without = await plan();
+
+    expect(withLens).toContain(".wst/checks/correctness.md");
+    expect(without).not.toContain(".wst/checks/correctness.md");
+  });
 
   it("refuses to overwrite a file it did not write, and destroys nothing", async () => {
     // The writer is `mkdir -p` + `writeFile` with no existence check of its own,

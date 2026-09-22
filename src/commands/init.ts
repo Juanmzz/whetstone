@@ -95,7 +95,14 @@ export interface InitOptions {
   readonly enforce?: boolean;
   /** Where --propose writes its draft. */
   readonly out?: string;
-  readonly agentLens?: boolean;
+  /**
+   * Named for the FLAG, `--llm`, not for what it seeds.
+   *
+   * It was `agentLens` while commander parsed `--llm`, so nothing connected the
+   * two and the flag was accepted and dropped: the plan came out identical with it
+   * and without it. Every other option here works because the two names are one.
+   */
+  readonly llm?: boolean;
   /**
    * Write `.wst/` and nothing else.
    *
@@ -607,7 +614,7 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
       clock: { now: () => new Date() },
       ...(probes === undefined ? {} : { probes }),
       options: {
-        ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
+        ...(opts.llm !== undefined ? { seedAgentLens: opts.llm } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
       },
     });
@@ -639,7 +646,7 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
         disabledChecks,
         ...(probes === undefined ? {} : { probes }),
           options: {
-          ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
+          ...(opts.llm !== undefined ? { seedAgentLens: opts.llm } : {}),
           ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
           },
       });
