@@ -68,11 +68,17 @@ export function resolveCwd(source: CwdSource = { cwd: () => process.cwd(), env: 
  * the message is what a person needs: `cli.ts` turns any throw into exit 2, so this
  * can never again be read as a check having failed.
  */
+/**
+ * How `cli.ts` tells this apart from an unexpected throw. Both exit 2; only one of
+ * them is a bug, and only a bug is worth a stack trace.
+ */
+export const CWD_FAILURE = "cannot read the working directory";
+
 export function requireCwd(source?: CwdSource): string {
   const here = source === undefined ? resolveCwd() : resolveCwd(source);
   if (here !== null) return here;
   throw new Error(
-    "cannot read the working directory (the process was denied it, or it was deleted). " +
+    `${CWD_FAILURE} (the process was denied it, or it was deleted). ` +
       "Nothing was verified. On macOS, grant your terminal access under Privacy & Security > " +
       "Files and Folders, or run from a directory that still exists.",
   );

@@ -4,7 +4,7 @@
  * no logic lives here, so the CLI surface stays swappable.
  */
 
-import { requireCwd } from "./shell/cwd.js";
+import { CWD_FAILURE, requireCwd } from "./shell/cwd.js";
 import { Command } from "commander";
 import { banner } from "./banner.js";
 import { runStatus } from "./commands/status.js";
@@ -292,7 +292,9 @@ try {
   await program.parseAsync(process.argv);
 } catch (cause) {
   const message = cause instanceof Error ? cause.message : String(cause);
-  if (message.startsWith("wst.yaml:")) {
+  // A DIAGNOSED condition gets the sentence it earned. Only an unexplained throw
+  // is a bug in Whetstone, and only a bug is worth a stack trace.
+  if (message.startsWith("wst.yaml:") || message.startsWith(CWD_FAILURE)) {
     console.error(message);
   } else {
     console.error(cause instanceof Error && cause.stack !== undefined ? cause.stack : message);
