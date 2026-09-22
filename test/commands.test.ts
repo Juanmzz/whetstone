@@ -374,6 +374,28 @@ describe("wst init", () => {
     expect(without).not.toContain(".wst/checks/correctness.md");
   });
 
+  it("--definitions-only writes no AGENTS.md, even with --enforce", async () => {
+    // The flag says "`.wst/` and nothing else". `--enforce` skipped the question
+    // and wrote the stanza anyway, so the one flag whose whole promise is "touch
+    // nothing outside the definition directory" broke that promise on request.
+    const dir = await bare();
+
+    await runInit(
+      { purpose: PURPOSE, source: ["src/**"], definitionsOnly: true, enforce: true },
+      dir,
+    );
+
+    await expect(readFile(join(dir, "AGENTS.md"), "utf-8")).rejects.toThrow();
+  });
+
+  it("--enforce alone still writes the stanza, which is what it is for", async () => {
+    const dir = await bare();
+
+    await runInit({ purpose: PURPOSE, source: ["src/**"], enforce: true }, dir);
+
+    expect(await readFile(join(dir, "AGENTS.md"), "utf-8")).toMatch(/whetstone:verification/);
+  });
+
   it("refuses to overwrite a file it did not write, and destroys nothing", async () => {
     // The writer is `mkdir -p` + `writeFile` with no existence check of its own,
     // so by the time it runs the previous contents are already gone. This guard is

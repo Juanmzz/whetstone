@@ -721,7 +721,7 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
   console.log(`  git add ${stagePaths(plan).join(" ")}`);
   console.log('  git commit -m "chore: bootstrap verification"');
 
-  await offerEnforcement(root, opts.enforce === true);
+  await offerEnforcement(root, opts.enforce === true, opts.definitionsOnly === true);
   return 0;
 }
 
@@ -740,7 +740,16 @@ async function armHooksPath(root: string): Promise<void> {
  * happens on someone's machine, so it is a second act with its own question. Each
  * half is declined independently, and `status` reports which one is live.
  */
-async function offerEnforcement(root: string, always: boolean): Promise<void> {
+async function offerEnforcement(root: string, always: boolean, definitionsOnly: boolean): Promise<void> {
+  if (definitionsOnly) {
+    // Both halves live outside the definition directory, and `--definitions-only`
+    // promises nothing outside it. `--enforce` used to override that, so the one
+    // flag whose whole point is "touch nothing else" broke it on request.
+    console.log(`
+  --definitions-only, so neither the hook nor the ${AGENTS_FILE} stanza was written.
+  Both live outside ${DEFINITION_DIR}/. Run \`wst init --enforce\` when you want them.`);
+    return;
+  }
   console.log(`
 nothing above makes a check RUN. Two ways, and they catch different moments:`);
   console.log(`  ${HOOKS_DIR}/pre-push   nothing leaves unverified. Universal, but after the fact`);
