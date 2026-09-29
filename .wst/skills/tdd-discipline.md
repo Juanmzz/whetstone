@@ -1,6 +1,6 @@
 ---
 id: tdd-discipline
-version: 8
+version: 9
 status: active
 ---
 # TDD discipline
@@ -78,6 +78,9 @@ strict TDD regardless of how small it looks.
    stale status line, a broken type. All three had a local check that would have found them
    first. Where the plugin is installed its Stop hook already does this, so this rule is for
    everywhere it is not.
+   - **Evidence is captured last.** A check that requires an artifact (a capture of the
+     launcher running) compares it to the newest changed file, so produce it after the final
+     edit and immediately before the gate, never mid-session.
 
 ## Defining a strict path (worked example)
 
@@ -102,6 +105,11 @@ project's own config (`CLAUDE.md` / `AGENTS.md`), not here. Cross-cutting E2E su
 CI or pre-release. They are NOT part of the per-change TDD loop.
 
 ## Changelog
+
+- v9 (2026-09-29, retro-0006): [TD10] gains "evidence is captured last". Three
+  `evidence-launcher` blocks shared one cause: the artifact predated the code it showed, or
+  was never made. Proposed for `recording`, which governs memory writes; moved here because
+  it is a step in declaring done.
 
 - v8 (2026-08-28, retro-0005): added [TD10]. Three `gate-blocked` signals shared one root
   cause: work declared done on a green test suite while a local check that would have caught
