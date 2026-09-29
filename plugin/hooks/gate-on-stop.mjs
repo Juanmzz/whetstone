@@ -19,6 +19,8 @@
  */
 
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -49,12 +51,22 @@ try {
 
   const out = `${cause.stdout ?? ""}${cause.stderr ?? ""}`.trim();
 
-  // 2 is every way of NOT having a verdict: the gate could not start, a check could
-  // not run, or `wst` itself crashed — which it now exits 2 for rather than 1, so
-  // this branch catches it without the hook having to recognise a stack trace.
-  // None of them are a verdict about the work, so none may read as "you broke
-  // something". 1 is the only code that does.
-  if (code === 2) process.exit(0);
+  // 2 is every way of NOT having a verdict. It must not read as "you broke something",
+  // and silence would read as a pass, so it is told as neither.
+  if (code === 2) {
+    if (!existsSync(join(root, ".wst"))) process.exit(0);
+    console.log(
+      JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: "Stop",
+          additionalContext:
+            `The Whetstone gate could not run, so this change was NOT verified. ` +
+            `This is not a failed check. Do not report the work as verified.\n\n${out}`,
+        },
+      }),
+    );
+    process.exit(0);
+  }
 
   console.log(
     JSON.stringify({
