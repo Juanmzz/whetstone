@@ -172,3 +172,17 @@ cursor: sig-39f4aa1e · 61 signals · 5 clusters, 5 actionable · $0.2994
 loop cannot see what already shipped: one fix landed in code, the other in a hook. And one
 signal produced two identical proposals under two cluster keys. `resolved_by` is what would
 have prevented the first; nothing yet prevents the second.
+
+## retro-0006
+
+cursor: sig-22235f66 · 66 signals · 1 clusters, 1 actionable · $0.0652
+
+**Accepted 1 of 1, re-homed.**
+
+- **Proposal 1, accepted in `tdd-discipline` [TD10]**, not `recording`: evidence is captured
+  after the final edit and immediately before the gate. Three `evidence-launcher` blocks
+  shared that cause. `recording` governs memory writes, and capturing evidence is a step in
+  declaring done, which is what TD10 already is. `resolved_by` set on the three signals.
+
+The other two signals in the cluster (`sig-575c1b99`, `sig-22235f66`) were single
+occurrences with unrelated causes, and the retro rightly left them alone.
