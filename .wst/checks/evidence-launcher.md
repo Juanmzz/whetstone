@@ -9,6 +9,7 @@ include:
   - "src/commands/home.ts"
   - "src/banner.ts"
 command: npm run check:evidence -- evidence-launcher
+exit_codes: whetstone
 skippable: false
 origin: [adr-0036, adr-0038]
 version: 1

@@ -347,3 +347,19 @@ describe("a block the owner signed instead of measuring", () => {
     expect(blockAuthority(LENS, perfect(), current, ["opus"], signature).ok).toBe(true);
   });
 });
+
+/** The remedy this named, `npm run calibrate`, does not exist in a seeded repo. */
+describe("the remedy a stranger's repo can actually run", () => {
+  it("does not send anyone to `npm run calibrate`, which only exists here", () => {
+    const verdict = blockAuthority(LENS, null, "");
+    expect(verdict.ok).toBe(false);
+    expect(verdict.ok === false && verdict.reason).not.toContain("npm run");
+  });
+
+  it("names `warn` and `signed_block`, which are true in any repo", () => {
+    const verdict = blockAuthority(LENS, null, "");
+    const reason = verdict.ok === false ? verdict.reason : "";
+    expect(reason).toContain("warn");
+    expect(reason).toContain("signed_block");
+  });
+});

@@ -83,9 +83,9 @@ export function createGitAdapter(cwd: string = process.cwd()): GitPort {
       const branch = await git(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
       return branch === "HEAD" ? null : branch; // detached
     },
-    async diffNameStatus(range: string) {
+    async diffNameStatusZ(range: string) {
       // THROWS on a range git rejected, rather than reporting an empty diff.
-      const out = await git(["diff", "--name-status", range], cwd);
+      const out = await git(["diff", "--name-status", "-z", range], cwd);
       if (out === null) {
         throw new Error(`git could not read the range \`${range}\`: check that it exists`);
       }

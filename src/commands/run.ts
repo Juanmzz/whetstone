@@ -7,6 +7,7 @@
  * binary that wrote the check file is the one thing it can count on being there.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { execFile } from "node:child_process";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -26,7 +27,7 @@ import {
   judgeEvidence,
   type FoundEvidence,
 } from "../core/checks/evidence.js";
-import { parseNameStatus } from "../core/diff/parse.js";
+import { parseNameStatusZ } from "../core/diff/parse.js";
 import { matchFiles } from "../core/gate/select.js";
 import { loadRegistry, resolveDefinitionRoot } from "../shell/sdd.js";
 import { gitEnv } from "../shell/git.js";
@@ -191,7 +192,7 @@ async function evidence(checkId: string, cwd: string): Promise<number> {
   }
 
   const range = process.env["WST_GATE_RANGE"] ?? "HEAD";
-  const matched = matchFiles(check, parseNameStatus(await git(["diff", "--name-status", range], cwd)));
+  const matched = matchFiles(check, parseNameStatusZ(await git(["diff", "--name-status", "-z", range], cwd)));
   let newestSourceMs: number | null = null;
   for (const file of matched) {
     const info = await stat(join(worktree, file.path)).catch(() => null);
@@ -242,7 +243,7 @@ async function evidence(checkId: string, cwd: string): Promise<number> {
 
 export async function runShippedCheck(
   id: string | undefined,
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const ids = [...Object.keys(RUNNERS), `${EVIDENCE_PREFIX}*`];
 

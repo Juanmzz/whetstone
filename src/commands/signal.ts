@@ -2,6 +2,7 @@
  * `wst signal` — a human records an observation, at the moment they have it.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { access } from "node:fs/promises";
 import { exists } from "../shell/fs.js";
 import { DEFINITION_DIR } from "../core/paths.js";
@@ -162,7 +163,7 @@ async function runResolve(id: string, by: string, repoRoot: string): Promise<num
 
 export async function runSignal(
   opts: SignalOptions,
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = await git.repoRoot();

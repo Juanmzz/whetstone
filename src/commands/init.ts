@@ -4,6 +4,7 @@
  * appears in this file it is in the wrong layer.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
@@ -94,7 +95,9 @@ export interface InitOptions {
   readonly enforce?: boolean;
   /** Where --propose writes its draft. */
   readonly out?: string;
-  readonly agentLens?: boolean;
+  /** Named for the FLAG. It was `agentLens` while commander parsed `--llm`, so
+   * nothing connected the two and the flag was accepted and dropped. */
+  readonly llm?: boolean;
   /**
    * Write `.wst/` and nothing else.
    *
@@ -494,7 +497,7 @@ async function ensureRootGitignored(root: string): Promise<boolean> {
 
 // ── the command ──────────────────────────────────────────────────────────────
 
-export async function runInit(opts: InitOptions, cwd: string = process.cwd()): Promise<number> {
+export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Promise<number> {
   const root = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
 
   const facts = await gatherFacts(root);
@@ -606,7 +609,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
       clock: { now: () => new Date() },
       ...(probes === undefined ? {} : { probes }),
       options: {
-        ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
+        ...(opts.llm !== undefined ? { seedAgentLens: opts.llm } : {}),
         ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
       },
     });
@@ -638,7 +641,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
         disabledChecks,
         ...(probes === undefined ? {} : { probes }),
           options: {
-          ...(opts.agentLens !== undefined ? { seedAgentLens: opts.agentLens } : {}),
+          ...(opts.llm !== undefined ? { seedAgentLens: opts.llm } : {}),
           ...(opts.definitionsOnly === true ? { definitionsOnly: true } : {}),
           },
       });
@@ -713,7 +716,7 @@ export async function runInit(opts: InitOptions, cwd: string = process.cwd()): P
   console.log(`  git add ${stagePaths(plan).join(" ")}`);
   console.log('  git commit -m "chore: bootstrap verification"');
 
-  await offerEnforcement(root, opts.enforce === true);
+  await offerEnforcement(root, opts.enforce === true, opts.definitionsOnly === true);
   return 0;
 }
 
@@ -732,7 +735,15 @@ async function armHooksPath(root: string): Promise<void> {
  * happens on someone's machine, so it is a second act with its own question. Each
  * half is declined independently, and `status` reports which one is live.
  */
-async function offerEnforcement(root: string, always: boolean): Promise<void> {
+async function offerEnforcement(root: string, always: boolean, definitionsOnly: boolean): Promise<void> {
+  if (definitionsOnly) {
+    // Both halves live outside the definition directory, which this flag promises
+    // not to touch. `--enforce` used to override that.
+    console.log(`
+  --definitions-only, so neither the hook nor the ${AGENTS_FILE} stanza was written.
+  Both live outside ${DEFINITION_DIR}/. Run \`wst init --enforce\` when you want them.`);
+    return;
+  }
   console.log(`
 nothing above makes a check RUN. Two ways, and they catch different moments:`);
   console.log(`  ${HOOKS_DIR}/pre-push   nothing leaves unverified. Universal, but after the fact`);

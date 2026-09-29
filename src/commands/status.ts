@@ -3,12 +3,13 @@
  * core, print. No decisions are made here, and no reading either.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { statusEnvelope } from "../core/status/machine.js";
 import { renderStatusReport } from "../core/status/report.js";
 import { gatherStatus } from "../shell/status.js";
 
 export async function runStatus(
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
   options: { readonly quiet?: boolean; readonly json?: boolean } = {},
 ): Promise<number> {
   const report = await gatherStatus(cwd);

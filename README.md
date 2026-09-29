@@ -15,7 +15,7 @@ wst init
 wst ready
 ```
 
-Node 22 or newer. `init` reads the test, typecheck and lint commands the repo
+Node 22.12 or newer. `init` reads the test, typecheck and lint commands the repo
 declares, asks about risk and code paths, and shows a plan before writing.
 It probes those commands; a command that does not pass starts as a warning.
 

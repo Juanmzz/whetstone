@@ -281,7 +281,7 @@ export function buildStatusReport(facts: StatusFacts): StatusReport {
   if (facts.judge.version !== null && validated !== null && facts.judge.version !== validated) {
     warnings.push(
       `${facts.judge.name} ${facts.judge.version} differs from the version the adapter was ` +
-        `validated against (${validated}); re-run \`npm run calibrate\` if verdicts look wrong`,
+        `validated against (${validated}); re-calibrate if verdicts look wrong`,
     );
   }
 

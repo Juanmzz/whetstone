@@ -7,6 +7,7 @@
  * needed, rather than assumed.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -54,7 +55,7 @@ export interface UpdateOptions {
 
 export async function runUpdate(
   opts: UpdateOptions,
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const root = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
 

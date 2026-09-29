@@ -40,7 +40,7 @@ available to the readiness report with their reasons.
 | Result | Policy | Exit |
 |---|---|---|
 | `NOT_READY` | A blocking check failed. | 1 |
-| `INCOMPLETE` | An execution errored, a required check was omitted, coverage was declined, or nothing verified the change. Scope/configuration failures also produce this result. | 2 |
+| `INCOMPLETE` | An execution errored, a blocking check was omitted by `--fast`, coverage was declined, or nothing verified the change. Scope/configuration failures also produce this result. | 2 |
 | `READY` | Verification completed under this policy. Failed warnings and advisory omissions remain visible. | 0 |
 | `NO_CHANGES` | No changed files were found against the base. | 0 |
 
@@ -49,8 +49,10 @@ outside its triggering `include` globs; hashing only matched files cannot prove
 that a previous suite result still applies.
 
 `--fast` omits slow checks, `--no-evidence` omits checks requiring an unavailable
-evidence store, and model reviews run only with `--lens`. Blocking omissions
-leave readiness incomplete. A lens matching untracked files reports an error
+evidence store, and model reviews run only with `--lens`. A blocking check omitted
+by `--fast` leaves readiness incomplete, since rerunning without the flag clears it.
+One omitted by `--no-evidence` is reported as excluded and does not, since nothing
+in that environment can clear it (adr-0038). A lens matching untracked files reports an error
 without calling the judge; stage those files before requesting model review.
 
 The report names the branch, base and resolved commit, splits files by Git state,

@@ -5,6 +5,7 @@
  * `src/core/gate/`, where the tests can reach them.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { exec, execFile } from "node:child_process";
 import { join } from "node:path";
 import type { LoadedCheck, Registry } from "../core/checks/registry.js";
@@ -103,7 +104,7 @@ const EXIT_MISCONFIGURED = 2;
 
 export async function runGate(
   opts: GateOptions = {},
-  cwd: string = process.cwd(),
+  cwd: string = requireCwd(),
 ): Promise<number> {
   const git = createGitAdapter(cwd);
   const repoRoot = await git.repoRoot();

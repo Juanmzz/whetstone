@@ -44,6 +44,8 @@ interface Draft {
   readonly include: readonly string[];
   readonly exclude?: readonly string[];
   readonly command?: string;
+  /** Set when `command` exits 2 for "could not run", which `wst check run` does. */
+  readonly exitCodes?: "whetstone";
   /** Omitted means enabled. Written only to turn a check OFF, with the reason in the body. */
   readonly enabled?: false;
   /** Written only to REFUSE a receipt, where the answer depends on the range. */
@@ -69,6 +71,7 @@ function render(draft: Draft): GeneratedFile {
     lines.push(`exclude: ${yamlList(draft.exclude)}`);
   }
   if (draft.command !== undefined) lines.push(`command: ${yamlString(draft.command)}`);
+  if (draft.exitCodes !== undefined) lines.push(`exit_codes: ${draft.exitCodes}`);
   if (draft.enabled === false) lines.push("enabled: false");
   if (draft.skippable === false) lines.push("skippable: false");
   if (draft.reviewLens !== undefined) {
@@ -289,6 +292,7 @@ function commentDensityDraft(include: readonly string[]): Draft {
     tiers: ["strict", "light"],
     include,
     command: "wst check run comment-density",
+    exitCodes: "whetstone",
     // The answer depends on the range, not on the contents of a file, so a
     // receipt from an earlier run proves nothing about this one.
     skippable: false,
@@ -332,6 +336,7 @@ function commitMessageDraft(include: readonly string[]): Draft {
     tiers: ["strict", "light"],
     include,
     command: "wst check run commit-message",
+    exitCodes: "whetstone",
     // The same tree over two ranges is two different sets of messages.
     skippable: false,
     origin: [],

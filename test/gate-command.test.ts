@@ -226,6 +226,30 @@ describe("a check that could not run", () => {
     expect(emitted.map((s) => s.type)).toEqual(["check-could-not-run"]);
     expect(emitted[0]?.severity).toBe("high");
   });
+
+  it("reads exit 2 as could-not-run from a check that declares whetstone exit codes", async () => {
+    const check = deterministicCheck("shipped", "exit 2").replace("version: 1", "exit_codes: whetstone\nversion: 1");
+    const dir = await repo({ checks: { "shipped.md": check } });
+
+    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir)).toBe(2);
+    expect(stdout()).toMatch(/errored\s+shipped/);
+  });
+
+  it("reads exit 2 as a failure from a plain check, which is the control", async () => {
+    const dir = await repo({ checks: { "plain.md": deterministicCheck("plain", "exit 2") } });
+
+    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir)).toBe(1);
+  });
+});
+
+describe("--fast", () => {
+  it("names a blocking check it omitted and does not call the run passed", async () => {
+    const slow = deterministicCheck("slow", "exit 1").replace("version: 1", "slow: true\nversion: 1");
+    const dir = await repo({ checks: { "green.md": deterministicCheck("green", "exit 0"), "slow.md": slow } });
+
+    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true, fast: true }, dir)).toBe(2);
+    expect(stdout()).toMatch(/omitted\s+slow/);
+  });
 });
 
 describe("--no-lens", () => {

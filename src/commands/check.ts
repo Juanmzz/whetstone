@@ -3,6 +3,7 @@
  * compiles the index. No decisions here.
  */
 
+import { requireCwd } from "../shell/cwd.js";
 import { createGitAdapter } from "../shell/git.js";
 import { loadRegistry, resolveDefinitionRoot, writeIndex } from "../shell/sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
@@ -13,7 +14,7 @@ export interface CheckOptions {
   readonly compile?: boolean;
 }
 
-export async function runCheck(opts: CheckOptions, cwd: string = process.cwd()): Promise<number> {
+export async function runCheck(opts: CheckOptions, cwd: string = requireCwd()): Promise<number> {
   const repoRoot = (await createGitAdapter(cwd).repoRoot()) ?? cwd;
   let definitionRoot: string;
   let registry;

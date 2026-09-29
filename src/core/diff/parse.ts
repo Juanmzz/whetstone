@@ -71,3 +71,52 @@ export function parseNameStatus(raw: string): ChangedFile[] {
 
   return files;
 }
+
+/**
+ * The same statuses, read from `git diff --name-status -z`.
+ *
+ * The line format ESCAPES: a path holding a tab arrives as `"special/a\tb.js"`,
+ * quotes included, no glob matches it, and the file goes through ungated under a
+ * report saying `Ready`. `core.quotePath=false` governs non-ASCII bytes only; git
+ * quotes control characters regardless, so `-z` is the only reader with nothing to
+ * undo. The stream is flat: `STATUS NUL path NUL`, plus a second path for R and C.
+ */
+export function parseNameStatusZ(raw: string): ChangedFile[] {
+  const tokens = raw.split("\0");
+  // A trailing NUL terminates the last field rather than starting a new one.
+  if (tokens.at(-1) === "") tokens.pop();
+
+  const files: ChangedFile[] = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const code = tokens[i];
+    i += 1;
+    if (code === undefined || code === "") continue;
+
+    const letter = code[0];
+    if (letter === "R" || letter === "C") {
+      const oldPath = tokens[i];
+      const newPath = tokens[i + 1];
+      i += 2;
+      if (oldPath === undefined || newPath === undefined || newPath === "") {
+        throw new Error(`rename/copy entry is missing its destination path: ${JSON.stringify(code)}`);
+      }
+      files.push({ path: newPath, status: letter === "R" ? "renamed" : "copied", oldPath });
+      continue;
+    }
+
+    const status = letter === undefined ? undefined : SIMPLE_STATUS[letter];
+    if (status === undefined) {
+      throw new Error(`unknown git status ${JSON.stringify(code)} in a -z diff`);
+    }
+
+    const path = tokens[i];
+    i += 1;
+    if (path === undefined || path === "") {
+      throw new Error(`git status ${JSON.stringify(code)} with no path after it`);
+    }
+    files.push({ path, status });
+  }
+
+  return files;
+}

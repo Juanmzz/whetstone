@@ -13,11 +13,11 @@
 
 import type { LoadedCheck, Registry } from "../core/checks/registry.js";
 import type { Tier } from "../core/checks/schema.js";
-import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
+import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
 import { startLive, type Live } from "./live.js";
 import { createCheckRunner, DEFAULT_MAX_LENS_TOTAL_USD, DEFAULT_TIMEOUT_MS } from "./check-runner.js";
-import { fastOnly, selectChecks } from "../core/gate/select.js";
+import { fastOnly, selectChecks, type OmittedCheck } from "../core/gate/select.js";
 import { answerableHere } from "../core/gate/environment.js";
 import { runGate as executeGate, type CheckRunner, type GateRun } from "../core/gate/run.js";
 import { classify, route } from "../core/triage/index.js";
@@ -54,7 +54,7 @@ export interface VerifyOptions {
 
 export interface Verified {
   readonly ok: true;
-  readonly omitted: readonly { readonly id: string; readonly severity: LoadedCheck["severity"]; readonly reason: string }[];
+  /** Omissions are inside `run.selection`, which is what `outcomeOf` reads. */
   readonly run: GateRun;
   readonly registry: Registry;
   readonly routing: Routing;
@@ -130,7 +130,7 @@ export async function verifyRange(
 
   let files: readonly ChangedFile[];
   try {
-    files = opts.files ?? parseNameStatus(await git.diffNameStatus(range));
+    files = opts.files ?? parseNameStatusZ(await git.diffNameStatusZ(range));
   } catch (cause) {
     // `parseNameStatus` throws rather than dropping a line it cannot read, because
     // a dropped line is a file that silently went ungated.
@@ -150,7 +150,9 @@ export async function verifyRange(
   );
   const eligible = opts.fast === true ? fastOnly(runnable) : runnable;
   const routing = route(opts.tier ?? triage.tier, eligible);
-  const omitted = selectChecks(route(routing.tier, registry.active), registry, files).selected
+  // What routing would select over the whole active registry, minus what is
+  // eligible here. Folded into the run's selection below.
+  const omitted: readonly OmittedCheck[] = selectChecks(route(routing.tier, registry.active), registry, files).selected
     .filter(({ check }) => !eligible.includes(check))
     .map(({ check }) => ({
       id: check.id,
@@ -193,5 +195,9 @@ export async function verifyRange(
   });
 
 
-  return { ok: true, run, registry, routing, files, definitionRoot, repoRoot, omitted };
+  // INTO the selection, not beside it: `outcomeOf` takes a `Coverage`, which
+  // `Selection` satisfies, so every caller gets this whether it remembered to or not.
+  const verified = { ...run, selection: { ...run.selection, omitted } };
+
+  return { ok: true, run: verified, registry, routing, files, definitionRoot, repoRoot };
 }

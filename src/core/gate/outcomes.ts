@@ -67,7 +67,21 @@ function withoutScriptEcho(printed: string): string {
   return kept === "" ? printed : kept;
 }
 
-export function interpretCommandResult(result: CommandResult): CheckOutcome {
+/**
+ * Whose exit codes these are. `plain` is every command a project already had.
+ * `whetstone` adds one: a check whose logic ships with `wst` exits 2 for "could not
+ * answer". Opt-in and never inferred, because a stranger's linter exiting 2 for
+ * "8 problems found" means the opposite.
+ */
+export type ExitConvention = "plain" | "whetstone";
+
+/** The code a `whetstone` command uses for "I could not run". */
+const EXIT_COULD_NOT_RUN = 2;
+
+export function interpretCommandResult(
+  result: CommandResult,
+  convention: ExitConvention = "plain",
+): CheckOutcome {
   // Order matters, and every branch above the exit code is deliberate: a broken run
   // often ALSO reports a non-zero exit, and reading the code first would turn a
   // timeout or a missing binary into a blocking "failure".
@@ -102,6 +116,14 @@ export function interpretCommandResult(result: CommandResult): CheckOutcome {
       detail: `the check could not be run (${why}, exit ${result.exitCode})${
         printed === "" ? "" : `: ${printed}`
       }`,
+    };
+  }
+
+  if (convention === "whetstone" && result.exitCode === EXIT_COULD_NOT_RUN) {
+    const printed = withoutScriptEcho(output(result));
+    return {
+      status: "errored",
+      detail: `the check could not run${printed === "" ? "" : `: ${printed}`}`,
     };
   }
 
