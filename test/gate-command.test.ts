@@ -1,22 +1,8 @@
 /**
  * `wst gate` end to end, against a real repository on a real filesystem.
  *
- * `src/commands/` is light tier and its header calls itself a composition root
- * with no decisions in it. Most of that is true, and the parts that are NOT true
- * are what this file covers — the branching that a pure test of `core/gate/`
- * cannot reach because it is about ORDER and about which of two independent
- * bookkeeping channels failed:
- *
- *  - the event log is created BEFORE the registry loads, so a configuration
- *    failure can still be recorded. Move one line and that evidence disappears
- *    with nothing failing.
- *  - `signalError` and `eventError` are reported separately and neither may ever
- *    change the verdict. Hard rule 3 says a broken gate and a failed check must
- *    never share a message; these two warnings are the same rule applied to the
- *    bookkeeping, and merging them is a one-line edit.
- *  - `--no-emit` must silence the signal log. Hard rule 10 tells an agent breaking
- *    something on purpose to use it, and a `--no-emit` that still wrote events
- *    would contaminate the evidence log in exactly the runs it exists to protect.
+ * `src/commands/` is light tier; this covers the branching a pure test of `core/gate/`
+ * cannot reach: exit codes end to end, omissions, receipts and ranges.
  *
  * Every run here is `--no-lens`: free, offline, and what the pre-push hook runs.
  */
@@ -26,7 +12,6 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { parseSignalLog, type SignalRecord } from "../src/core/signals/parse.js";
 import { runGate } from "../src/commands/gate.js";
 import { createCheckRunner } from "../src/shell/check-runner.js";
 import type { LoadedCheck } from "../src/core/checks/registry.js";
@@ -143,46 +128,10 @@ const read = async (dir: string, rel: string): Promise<string | null> => {
   }
 };
 
-const signals = async (dir: string): Promise<SignalRecord[]> => {
-  const text = await read(dir, ".wst/memory/signals.jsonl");
-  return text === null ? [] : parseSignalLog(text);
-};
 
 // ── the two bookkeeping channels ─────────────────────────────────────────────
 
-describe("--no-emit", () => {
-  it("writes neither log, so a negative control leaves no trace in either", async () => {
-    // Hard rule 10 exists because a deliberate defect has twice contaminated
-    // something else, once the evidence log itself. `--no-emit` is the flag that
-    // is supposed to make that impossible; a version that only covered signals
-    // would still write a run into `events.jsonl`.
-    const dir = await repo({ checks: { "red.md": deterministicCheck("red", "exit 1") } });
-    await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir);
 
-    expect(await read(dir, ".wst/memory/signals.jsonl")).toBeNull();
-    expect(await read(dir, ".wst/events.jsonl")).toBeNull();
-    expect(stdout()).not.toMatch(/events:/);
-  });
-
-});
-
-describe("a signal log that cannot be read", () => {
-  /** One corrupt line, which is what `parseSignalLog` fails closed on. */
-  async function withCorruptSignals(): Promise<string> {
-    const dir = await repo({ checks: { "red.md": deterministicCheck("red", "exit 1") } });
-    await mkdir(join(dir, ".wst/memory"), { recursive: true });
-    await writeFile(join(dir, ".wst/memory/signals.jsonl"), "{ not json\n", "utf-8");
-    return dir;
-  }
-
-  it("does not change the verdict — the gate's answer is the product", async () => {
-    const clean = await repo({ checks: { "red.md": deterministicCheck("red", "exit 1") } });
-    expect(await runGate({ range: "HEAD", noLens: true }, await withCorruptSignals())).toBe(
-      await runGate({ range: "HEAD", noLens: true }, clean),
-    );
-  });
-
-});
 
 describe("outside a repository", () => {
   it("says the gate needs one instead of reporting an empty diff as clean", async () => {
@@ -215,30 +164,19 @@ describe("a check that could not run", () => {
     expect(stdout()).not.toMatch(/FAIL\s+slow/); // errored is not a failure of the change
   });
 
-  it("emits check-could-not-run at high severity, not gate-blocked", async () => {
-    // The signal a broken gate leaves behind has to be distinguishable from the
-    // one a caught defect leaves, or the retro clusters the two together and
-    // proposes a rule about the wrong thing.
-    const dir = await repo({ checks: { "slow.md": deterministicCheck("slow", "sleep 30") } });
-    await runGate({ range: "HEAD", noLens: true, timeoutMs: 300 }, dir);
-
-    const emitted = await signals(dir);
-    expect(emitted.map((s) => s.type)).toEqual(["check-could-not-run"]);
-    expect(emitted[0]?.severity).toBe("high");
-  });
 
   it("reads exit 2 as could-not-run from a check that declares whetstone exit codes", async () => {
     const check = deterministicCheck("shipped", "exit 2").replace("version: 1", "exit_codes: whetstone\nversion: 1");
     const dir = await repo({ checks: { "shipped.md": check } });
 
-    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir)).toBe(2);
+    expect(await runGate({ range: "HEAD", noLens: true }, dir)).toBe(2);
     expect(stdout()).toMatch(/errored\s+shipped/);
   });
 
   it("reads exit 2 as a failure from a plain check, which is the control", async () => {
     const dir = await repo({ checks: { "plain.md": deterministicCheck("plain", "exit 2") } });
 
-    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir)).toBe(1);
+    expect(await runGate({ range: "HEAD", noLens: true }, dir)).toBe(1);
   });
 });
 
@@ -247,7 +185,7 @@ describe("--fast", () => {
     const slow = deterministicCheck("slow", "exit 1").replace("version: 1", "slow: true\nversion: 1");
     const dir = await repo({ checks: { "green.md": deterministicCheck("green", "exit 0"), "slow.md": slow } });
 
-    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true, fast: true }, dir)).toBe(2);
+    expect(await runGate({ range: "HEAD", noLens: true, fast: true }, dir)).toBe(2);
     expect(stdout()).toMatch(/omitted\s+slow/);
   });
 });

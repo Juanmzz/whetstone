@@ -21,9 +21,6 @@ import {
   DEFAULT_MAX_LENS_TOTAL_USD,
   DEFAULT_TIMEOUT_MS,
 } from "../shell/check-runner.js";
-import { dedupe, signalsFromGate } from "../core/signals/emit.js";
-import { appendSignals } from "../shell/signals.js";
-import { resolveMemory } from "../shell/memory.js";
 import { checkEnv } from "../core/gate/env.js";
 import { fastOnly } from "../core/gate/select.js";
 import { answerableHere } from "../core/gate/environment.js";
@@ -78,8 +75,6 @@ export interface GateOptions {
   readonly noEvidence?: boolean;
   /** Run only the checks that can answer while somebody is waiting. */
   readonly fast?: boolean;
-  /** Suppress signal emission. For dry runs and tests, not for normal use. */
-  readonly noEmit?: boolean;
   /**
    * Ignore receipts entirely: skip nothing, record nothing.
    *
@@ -123,28 +118,7 @@ export async function runGate(
     console.error(verified.why);
     return EXIT_MISCONFIGURED;
   }
-  const { run, registry, routing, definitionRoot } = verified;
-
-  // Bookkeeping must never fail the run, and must never fail QUIETLY: emitting
-  // over an unreadable log re-emits everything it holds, and skipping in silence
-  // loses the evidence of the run that finally broke the build.
-  let emitted: string[] = [];
-  let signalError: string | null = null;
-  if (opts.noEmit !== true) {
-    try {
-      const candidates = signalsFromGate(run.verdict, range);
-      // The branch is read HERE, from the same adapter that read the diff, so the
-      // signal records the unit of work the verdict was actually about.
-      emitted = await appendSignals(
-        definitionRoot,
-        dedupe(candidates, await (await resolveMemory(definitionRoot)).all()),
-        new Date(),
-        await git.currentBranch(),
-      );
-    } catch (cause) {
-      signalError = (cause as Error).message;
-    }
-  }
+  const { run, registry, routing } = verified;
 
   // A repo with an EMPTY registry is not an uncovered change — it is a gate that
   // could not run, and adr-0021 unblocks the first case only. `wst init` is the
@@ -155,22 +129,13 @@ export async function runGate(
   if (opts.json === true) {
     console.log(
       JSON.stringify(
-        { range, tier: routing.tier, emitted, signalError, ...run.verdict },
+        { range, tier: routing.tier, ...run.verdict },
         null,
         2,
       ),
     );
   } else {
     console.log(renderGateRun(run));
-    if (emitted.length > 0) {
-      console.log(`\n  signals emitted: ${emitted.join(", ")}`);
-    }
-  }
-  if (signalError !== null) {
-    console.error(
-      `\n  ⚠ no signals were recorded for this run: ${signalError}\n` +
-        `    The verdict above still stands; only the bookkeeping was skipped.`,
-    );
   }
 
   return exit;

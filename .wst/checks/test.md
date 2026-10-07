@@ -18,7 +18,7 @@ include:
 command: npm test
 slow: true
 origin: [adr-0008, sig-0005, sig-0006]
-version: 4
+version: 5
 ---
 
 **The `include` is the whole repository, because the suite reads the whole repository.**
@@ -40,8 +40,8 @@ those nine files assert, and exactly where the old `include` reported a verified
 had not earned.
 
 The longer-term shape is to move repo-invariant assertions out of the suite and register
-them as their own checks, the way `adr-refs`, `docs-fresh`, `provenance` and
-`skill-shape` already are. Then `test` gets a bounded surface back. Until then, an
+them as their own checks, the way `adr-refs`, `docs-fresh` and `skill-shape`
+already are. Then `test` gets a bounded surface back. Until then, an
 honest wide `include` beats a narrow one that lies.
 
 Version bumped 2 → 3 so receipts minted against the narrower `include` are re-earned.
@@ -76,6 +76,7 @@ run it, and it still blocks there.
 > Entries before 2026-08-30 were reconstructed from the commits that changed
 > `version:`, not written at the time. adr-0047 made the log required.
 
+- v5 (2026-10-06): drops `provenance` from the list of split-out checks; adr-0049 deleted it.
 - v4 (2026-08-28): Follows `package.json`, now that the plugin version is derived from it.
 - v3 (2026-08-19): Declares what its suite actually reads, rather than a guess at it.
 - v2 (2026-08-15): Covers `package.json`, which no check watched.

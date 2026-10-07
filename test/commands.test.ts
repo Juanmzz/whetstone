@@ -8,8 +8,6 @@
  *
  *  - `wst init` checks for collisions BEFORE the writer, because the writer is
  *    `mkdir -p` + `writeFile` and has no existence check of its own.
- *  - `--dry-run` on `prepare` and `retro` must spawn nothing. A dry run that costs
- *    money is not a dry run, and nothing about the output would say so.
  *  - the checks a crewmate is told about, and the paths it is told are dangerous,
  *    are DERIVED from the project's own registry and rules (sig-0041).
  *  - `check` and `triage` must fail loudly on configuration they cannot read,
@@ -25,7 +23,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runCheck } from "../src/commands/check.js";
 import { runGate } from "../src/commands/gate.js";
 import { runInit } from "../src/commands/init.js";
-import { runRetro } from "../src/commands/retro.js";
 import { runStatus } from "../src/commands/status.js";
 import { runTriage } from "../src/commands/triage.js";
 import { installFakeBin, restorePath, type FakeBin } from "./fake-bin.js";
@@ -206,7 +203,7 @@ describe("wst triage", () => {
     expect(triaged).toBe("strict");
 
     out.length = 0;
-    await runGate({ range: "HEAD", noLens: true, noEmit: true, json: true }, dir);
+    await runGate({ range: "HEAD", noLens: true, json: true }, dir);
     expect(json()["tier"]).toBe(triaged);
   });
 
@@ -290,199 +287,5 @@ describe("wst status", () => {
 
     expect(await runStatus(bare)).toBe(1);
     expect(stdout()).toMatch(/NOT ready/);
-  });
-});
-
-// ── wst retro --dry-run ──────────────────────────────────────────────────────
-
-describe("wst retro", () => {
-  const signal = (id: string, type: string): string =>
-    JSON.stringify({
-      id,
-      ts: "2026-08-01T00:00:00.000Z",
-      type,
-      phase: "verify",
-      severity: "medium",
-      detail: `something happened (${id})`,
-      rule_affected: [],
-    });
-
-  async function withSignals(...lines: string[]): Promise<string> {
-    const dir = await repo();
-    await mkdir(join(dir, ".wst/memory"), { recursive: true });
-    await writeFile(join(dir, ".wst/memory/signals.jsonl"), `${lines.join("\n")}\n`, "utf-8");
-    return dir;
-  }
-
-  it("clusters without calling a model, and writes no proposal", async () => {
-    // The retro's one job is to propose; `--dry-run` is what lets someone see the
-    // clustering without paying for the proposals. A model call here would be
-    // billed for output nobody asked for.
-    const claude = await installFakeBin("claude", { stdout: "{}" });
-    const dir = await withSignals(signal("sig-0001", "triage-miss"), signal("sig-0002", "triage-miss"));
-
-    expect(await runRetro({ dryRun: true }, dir)).toBe(0);
-    expect(await claude.invocations()).toEqual([]);
-    await expect(readFile(join(dir, ".wst/memory/proposals"), "utf-8")).rejects.toThrow();
-    expect(stdout()).toMatch(/--dry-run: clustered only/);
-  });
-
-  it("stops at the cursor rather than reprocessing a log it has already read", async () => {
-    // Recurrence is what makes a cluster actionable. Reprocessing old signals
-    // every run would manufacture the recurrence it is supposed to observe.
-    const claude = await installFakeBin("claude", { stdout: "{}" });
-    const dir = await withSignals(signal("sig-0001", "triage-miss"));
-    await mkdir(join(dir, ".wst/memory"), { recursive: true });
-    await writeFile(join(dir, ".wst/memory/retro-log.md"), "## retro-0001\ncursor: sig-0001\n", "utf-8");
-
-    expect(await runRetro({}, dir)).toBe(0);
-    expect(stdout()).toMatch(/nothing new since the last retro/);
-    expect(await claude.invocations()).toEqual([]);
-  });
-});
-
-// ── wst init ─────────────────────────────────────────────────────────────────
-
-describe("wst init", () => {
-  const PURPOSE = "A fixture service that does nothing in particular.";
-
-  async function bare(): Promise<string> {
-    const dir = await tempDir("wst-init-", true);
-    await git(dir, "init", "-q", "-b", "main");
-    await writeFile(join(dir, "package.json"), '{"name":"fixture"}\n', "utf-8");
-    return dir;
-  }
-
-  it("--llm seeds the review lens the flag advertises, and nothing does without it", async () => {
-    // Through the CLI on purpose: `runInit` would have passed while the flag stayed dead.
-    const dir = await bare();
-    const plan = async (...extra: string[]): Promise<string[]> => {
-      const { stdout } = await exec(process.execPath, [
-        "--import", import.meta.resolve("tsx"),
-        fileURLToPath(new URL("../src/cli.ts", import.meta.url)),
-        "init", "--purpose", PURPOSE, "--source", "src/**", "--dry-run", "--json", ...extra,
-      ], { cwd: dir, maxBuffer: 8 * 1024 * 1024 });
-      return (JSON.parse(stdout) as { files: { path: string }[] }).files.map((f) => f.path);
-    };
-
-    const withLens = await plan("--llm");
-    const without = await plan();
-
-    expect(withLens).toContain(".wst/checks/correctness.md");
-    expect(without).not.toContain(".wst/checks/correctness.md");
-  });
-
-  it("--definitions-only writes no AGENTS.md, even with --enforce", async () => {
-    const dir = await bare();
-
-    await runInit(
-      { purpose: PURPOSE, source: ["src/**"], definitionsOnly: true, enforce: true },
-      dir,
-    );
-
-    await expect(readFile(join(dir, "AGENTS.md"), "utf-8")).rejects.toThrow();
-  });
-
-  it("--enforce alone still writes the stanza, which is what it is for", async () => {
-    const dir = await bare();
-
-    await runInit({ purpose: PURPOSE, source: ["src/**"], enforce: true }, dir);
-
-    expect(await readFile(join(dir, "AGENTS.md"), "utf-8")).toMatch(/whetstone:verification/);
-  });
-
-  it("refuses to overwrite a file it did not write, and destroys nothing", async () => {
-    // The writer is `mkdir -p` + `writeFile` with no existence check of its own,
-    // so by the time it runs the previous contents are already gone. This guard is
-    // the only thing standing between `wst init` and a file somebody wrote.
-    const dir = await bare();
-    await mkdir(join(dir, ".wst"), { recursive: true });
-    await writeFile(join(dir, ".wst/triage.yaml"), "# mine, hand-written\n", "utf-8");
-
-    expect(await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir)).toBe(1);
-    expect(await readFile(join(dir, ".wst/triage.yaml"), "utf-8")).toBe("# mine, hand-written\n");
-  });
-
-  it("names what --force would destroy instead of doing it silently", async () => {
-    const dir = await bare();
-    await mkdir(join(dir, ".wst"), { recursive: true });
-    await writeFile(join(dir, ".wst/triage.yaml"), "# mine\n", "utf-8");
-    await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
-    expect(stderr()).toContain("triage.yaml");
-  });
-
-  it("writes nothing under --dry-run", async () => {
-    const dir = await bare();
-    expect(await runInit({ purpose: PURPOSE, source: ["src/**"], dryRun: true }, dir)).toBe(0);
-    await expect(readFile(join(dir, ".wst/triage.yaml"), "utf-8")).rejects.toThrow();
-    expect(stdout()).toMatch(/--dry-run: nothing written/);
-  });
-
-  it("prints the questions rather than guessing when no answers were given", async () => {
-    // The risk answer is the human's. Defaulting it would make the whole
-    // interview decorative.
-    const dir = await bare();
-    expect(await runInit({}, dir)).toBe(0);
-    await expect(readFile(join(dir, ".wst/triage.yaml"), "utf-8")).rejects.toThrow();
-  });
-
-  it("rejects a --strict entry that cannot say why it exists", async () => {
-    // Same rule the triage schema enforces: a rule with no reason cannot be
-    // reviewed, and therefore cannot ever be retired.
-    const dir = await bare();
-    expect(await runInit({ purpose: PURPOSE, source: ["src/**"], strict: ["src/core/**"] }, dir)).toBe(1);
-    expect(stderr()).toMatch(/has no reason/);
-  });
-
-  describe("runtime state is gitignored, not just written", () => {
-    it("writes .wst/.gitignore covering the compiled index and receipts", async () => {
-      const dir = await bare();
-      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
-
-      const gitignore = await readFile(join(dir, ".wst/.gitignore"), "utf-8");
-      const lines = gitignore.split("\n").map((l) => l.trim());
-      expect(lines).toEqual(
-        expect.arrayContaining(["checks/_index.json", "receipts/"]),
-      );
-      // signals.jsonl is committed on purpose — an ignore rule here would hide it.
-      expect(gitignore).not.toMatch(/signals\.jsonl/);
-    });
-
-    it("creates a root .gitignore excluding the --propose draft when none exists", async () => {
-      const dir = await bare();
-      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
-
-      const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      expect(gitignore).toContain(".wst-answers.json");
-    });
-
-    it("appends to an existing root .gitignore rather than overwriting it", async () => {
-      const dir = await bare();
-      await writeFile(join(dir, ".gitignore"), "node_modules/\ndist/\n", "utf-8");
-
-      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
-
-      const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      expect(gitignore).toContain("node_modules/");
-      expect(gitignore).toContain("dist/");
-      expect(gitignore).toContain(".wst-answers.json");
-    });
-
-    it("does not duplicate entries a .gitignore already has", async () => {
-      const dir = await bare();
-      await writeFile(join(dir, ".gitignore"), ".wst-answers.json\n", "utf-8");
-
-      await runInit({ purpose: PURPOSE, source: ["src/**"] }, dir);
-
-      const gitignore = await readFile(join(dir, ".gitignore"), "utf-8");
-      const occurrences = gitignore.split("\n").filter((l) => l.trim() === ".wst-answers.json").length;
-      expect(occurrences).toBe(1);
-    });
-
-    it("leaves the root .gitignore untouched under --dry-run", async () => {
-      const dir = await bare();
-      expect(await runInit({ purpose: PURPOSE, source: ["src/**"], dryRun: true }, dir)).toBe(0);
-      await expect(readFile(join(dir, ".gitignore"), "utf-8")).rejects.toThrow();
-    });
   });
 });

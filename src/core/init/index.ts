@@ -54,13 +54,3 @@ export {
   unevidencedFlags,
   type Proposal,
 } from "./propose.js";
-export {
-  BASE_FILE,
-  classifyUpdate,
-  renderUpdate,
-  parseBase,
-  renderBase,
-  type Disposition,
-  type FileVerdict,
-  type RecordedBase,
-} from "./update.js";

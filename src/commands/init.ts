@@ -48,8 +48,6 @@ import { DEFAULT_CONFIG } from "../core/config/schema.js";
 import { exists } from "../shell/fs.js";
 import {
   AnswersSchema,
-  BASE_FILE,
-  renderBase,
   MAX_FILES,
   NO_RISK,
   ROOT_GITIGNORE_ENTRIES,
@@ -291,9 +289,7 @@ function printPlan(plan: InitPlan, root: string): void {
   }
   for (const copy of plan.copies) console.log(`  + ${copy.to.padEnd(42)}    copied from the payload`);
 
-  // Neither is a plan file: the base hashes the plan, and the root ignore appends
-  // to a file the repo owns. Both landed on disk without appearing here.
-  console.log(`  + ${join(DEFINITION_DIR, BASE_FILE).padEnd(42)}    these answers, for \`wst update\``);
+  // Not a plan file: it appends to a file the repo owns.
   console.log(`  + ${".gitignore".padEnd(42)}    one line appended, if missing`);
 
   if (plan.notes.length > 0) {
@@ -402,38 +398,6 @@ async function proposeAnswers(
   console.log(`\nwrote ${outPath} ($${drafted.costUsd.toFixed(4)})`);
   console.log(`  Edit it, then: wst init --answers ${outPath}`);
   return 0;
-}
-
-/**
- * What `wst update` compares against later: the answers, and a hash per file.
- *
- * Committed, not runtime state. `renderWstGitignore` must never learn about it —
- * a base only one machine has answers a question only that machine can ask.
- */
-/** The same number `wst --version` prints: what wrote this base. */
-const VERSION = (createRequire(import.meta.url)("../../package.json") as { version: string }).version;
-
-const sha256 = (text: string): string =>
-  createHash("sha256").update(text, "utf8").digest("hex");
-
-async function writeBase(
-  plan: InitPlan,
-  answers: InterviewAnswers,
-  root: string,
-): Promise<void> {
-  const files: Record<string, string> = {};
-  for (const file of plan.files) files[file.path] = sha256(file.contents);
-  for (const copy of plan.copies) {
-    if (copy.contents !== undefined) files[copy.to] = sha256(copy.contents);
-  }
-
-  const target = join(root, DEFINITION_DIR, BASE_FILE);
-  await mkdir(dirname(target), { recursive: true });
-  await writeFile(
-    target,
-    renderBase({ version: VERSION, generatedAt: new Date().toISOString().slice(0, 10), answers, files }),
-    "utf-8",
-  );
 }
 
 async function writePlan(plan: InitPlan, root: string): Promise<void> {
@@ -705,7 +669,6 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
     touchedRootIgnore = await ensureRootGitignored(root);
     // LAST, and only on success. A base written before the files it describes
     // would survive a crash and claim hashes for content nobody wrote.
-    await writeBase(plan, answers, root);
   } catch (cause) {
     console.error(`\nwrite failed: ${(cause as Error).message}`);
     return 1;
