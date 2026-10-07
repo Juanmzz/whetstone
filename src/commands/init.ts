@@ -636,7 +636,7 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
   // a terminal, where there is nobody to ask and the caller already meant it.
   if (
     !(await confirm(
-      `\n  write ${String(plan.files.length + plan.copies.length + 1)} file(s) into ${root}?`,
+      `\n  write ${String(plan.files.length + plan.copies.length)} file(s) into ${root}?`,
     ))
   ) {
     console.log("  nothing written.");

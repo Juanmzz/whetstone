@@ -300,6 +300,22 @@ describe("wst init", () => {
     return dir;
   }
 
+  it("accepts the flags 0.9 printed in its own example, and the hooks it wrote", async () => {
+    const dir = await bare();
+    const cli = (...args: string[]) =>
+      exec(process.execPath, [
+        "--import", import.meta.resolve("tsx"),
+        fileURLToPath(new URL("../src/cli.ts", import.meta.url)),
+        ...args,
+      ], { cwd: dir }).then(() => 0, (e: { code: number }) => e.code);
+
+    const init = await cli("init", "--purpose", "p", "--stack", "s", "--source", "src/**", "--dry-run");
+    const gate = await cli("gate", "--no-lens", "--no-emit");
+
+    expect(init).toBe(0);
+    expect(gate).not.toBe(1);
+  });
+
   it("--llm seeds the review lens the flag advertises, and nothing does without it", async () => {
     // Through the CLI on purpose: `runInit` would have passed while the flag stayed dead.
     const dir = await bare();

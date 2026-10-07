@@ -164,6 +164,8 @@ describe("AnswersSchema — a base written by an older Whetstone still parses", 
    */
   it("drops the questions it stopped asking instead of refusing the file", () => {
     const older = {
+      purpose: "A billing service.",
+      stack: "TypeScript on Node",
       sourcePaths: ["src/**"],
       conventions: ["code and docs in English"],
       opinions: ["comment-density"],
@@ -172,6 +174,7 @@ describe("AnswersSchema — a base written by an older Whetstone still parses", 
     const parsed = AnswersSchema.parse(older);
 
     expect(parsed).not.toHaveProperty("purpose");
+    expect(parsed).not.toHaveProperty("stack");
     expect(parsed).not.toHaveProperty("conventions");
     expect(parsed).not.toHaveProperty("opinions");
   });

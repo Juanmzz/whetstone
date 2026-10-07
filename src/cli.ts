@@ -5,7 +5,7 @@
  */
 
 import { CWD_FAILURE, requireCwd } from "./shell/cwd.js";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { banner } from "./banner.js";
 import { runStatus } from "./commands/status.js";
 import { runCheck } from "./commands/check.js";
@@ -46,6 +46,10 @@ program
   .option("--answers <file>", "JSON file of interview answers")
   .option("--risk <flags>", "comma-separated: money,personalData,productionData,authn,safetyCritical")
   .option("--source <glob...>", "where this project's code lives: scopes the checks and the triage rules")
+  // Accepted and ignored: 0.9 printed them in its own example, and an agent following it
+  // would otherwise be told "did you mean --propose?", the one flag that spends money.
+  .addOption(new Option("--purpose <text>").hideHelp())
+  .addOption(new Option("--stack <text>").hideHelp())
   .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
   .option("--propose", "write the judge's draft to a file instead of into the questions")
   .option("--enforce", "also write a pre-push hook and an AGENTS.md stanza, without asking")
@@ -81,7 +85,7 @@ program
   .command("status")
   .helpGroup("Commands:")
   .description(`show repo, ${DEFINITION_DIR}/ and judge-adapter health`)
-  .option("--quiet", "print only the final ready / NOT ready line")
+  .option("--quiet", "print only the final installation ok / NOT ok line")
   .option("--json", "the same answer as data, for an agent rather than a reader")
   .action(async (opts: { quiet?: boolean; json?: boolean }) => {
     process.exitCode = await runStatus(requireCwd(), {
