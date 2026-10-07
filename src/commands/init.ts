@@ -6,12 +6,9 @@
 
 import { requireCwd } from "../shell/cwd.js";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
-import { chmod, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { z } from "zod";
 import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
 import { probeCommands } from "../shell/probe.js";
@@ -21,9 +18,7 @@ import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import { openInterview, pressIn, renderInterview } from "../core/tui/interview.js";
 import { openPicker, pressPicker, renderPicker } from "../core/tui/picker.js";
-import type { Agent } from "../core/config/schema.js";
 import { confirm } from "../shell/confirm.js";
-import { startSpinner } from "../shell/spinner.js";
 import { paint, rawKeys, restore } from "../shell/tui.js";
 import { stagePaths } from "../core/init/stage.js";
 import {
@@ -48,7 +43,6 @@ import { DEFAULT_CONFIG } from "../core/config/schema.js";
 import { exists } from "../shell/fs.js";
 import {
   AnswersSchema,
-  MAX_FILES,
   NO_RISK,
   ROOT_GITIGNORE_ENTRIES,
   buildInterview,
@@ -56,15 +50,10 @@ import {
   detectStack,
   planInit,
   renderRootGitignoreStanza,
-  skipDir,
-  walkDepth,
   type InitPlan,
   type InterviewAnswers,
-  type PackageJson,
   type RepoFacts,
 } from "../core/init/index.js";
-
-const run = promisify(execFile);
 
 export interface InitOptions {
   /** Path to a JSON file holding `InterviewAnswers`. */

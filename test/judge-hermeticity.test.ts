@@ -36,19 +36,6 @@ import { emptyPath, installFakeBin, restorePath, type Invocation } from "./fake-
 
 afterEach(() => restorePath());
 
-/**
- * The flags that make a call hermetic. Named once, then asserted PRESENT on the
- * judge. The ABSENT-on-the-crewmate half left with ADR-0014; the list stays named
- * once so a refactor cannot quietly shorten it.
- */
-const ISOLATION_FLAGS = [
-  "--strict-mcp-config",
-  "--mcp-config",
-  "--setting-sources",
-  "--settings",
-  "--tools",
-] as const;
-
 const valueOf = (argv: readonly string[], flag: string): string | undefined =>
   argv[argv.indexOf(flag) + 1];
 

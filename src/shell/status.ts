@@ -4,7 +4,6 @@
  */
 
 import { execFile } from "node:child_process";
-import { access } from "node:fs/promises";
 import { promisify } from "node:util";
 import { isAbsolute, join, relative } from "node:path";
 import { createGitAdapter, gitEnv } from "./git.js";

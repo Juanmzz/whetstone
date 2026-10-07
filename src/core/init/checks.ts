@@ -3,7 +3,6 @@
  */
 
 import type { Check } from "../checks/schema.js";
-import { MAX_PERCENT } from "../checks/comment-density.js";
 import { DEFINITION_DIR } from "../paths.js";
 import { yamlBlock, yamlList, yamlString, type GeneratedFile } from "./artifact.js";
 import type { StackFacts } from "./detect.js";
@@ -267,105 +266,5 @@ function agentLensDraft(options: SeedChecksOptions): Draft {
       "**When it fails:** read the named input. If the lens cannot point at a concrete value " +
       "that misbehaves, the lens is wrong, not the code. Record that, because a pattern of " +
       "false positives is the evidence that retires this check or rewrites its prompt.",
-  };
-}
-
-
-/**
- * The one rule Whetstone brings rather than reads (adr-0030).
- *
- * It arrives ON, at `warn`. It used to arrive `enabled: false` so that a repo
- * gained no check nobody asked for, which is the "pile of config from guesses"
- * adr-0016 prevents. What that produced instead was a rule nobody ever saw: an
- * offer in a file, waiting to be found. `init` shows the checks it is about to
- * seed in the plan, before it writes, so the offer is made where it can be
- * declined and the default no longer has to be off.
- */
-function commentDensityDraft(include: readonly string[]): Draft {
-  return {
-    id: "comment-density",
-    description: "A change adds more code than commentary about it.",
-    kind: "deterministic",
-    // Earned somewhere else, so it starts at `warn` here until it has caught
-    // something in THIS repo.
-    severity: "warn",
-    tiers: ["strict", "light"],
-    include,
-    command: "wst check run comment-density",
-    exitCodes: "whetstone",
-    // The answer depends on the range, not on the contents of a file, so a
-    // receipt from an earlier run proves nothing about this one.
-    skippable: false,
-    origin: ["sig-4a2610fb"],
-    body:
-      "**Seeded at `warn`.** Nothing in this repo asked for it. It is here because it was " +
-      "earned elsewhere and it is as true in a payments API as it was there: a rule stated twice, " +
-      "applied by hand once, and back two days later on a branch written by the same person " +
-      "who applied it. Nothing held it, which is `sig-4a2610fb`.\n\n" +
-      "It reads `.ts` files only. To switch it off, add `enabled: false`.\n\n" +
-      "Comments belong where the code cannot be made clear on its own. History, a rejected " +
-      "alternative, and what a module used to do belong in the pull request description or " +
-      "in the decision record. A comment that recounts a change is stale the moment the " +
-      "next one lands.\n\n" +
-      "**It reads the diff, not the tree.** One branch at 33% moves a repo average by a " +
-      "tenth of a point and passes, so the rule is not expressible over a whole checkout.\n\n" +
-      `**The ceiling was measured, not chosen**, over thirty commits of the repo this came ` +
-      `from: 19, 20, 21, 22, 29, 30, 39, 39, 47. ${String(MAX_PERCENT)} sits in the gap. Move it here, ` +
-      "where the next reader can see that you did.\n\n" +
-      "**What it refuses to judge:** a change with fewer than fifteen added lines, and one " +
-      "that removes at least as many comment lines as it adds in the files it also added to. " +
-      "Without the second, a commit that CLEANS comments scores 100%.\n\n" +
-      "**When it fails:** cut the commentary, do not raise the ceiling. If the comment is " +
-      "the only thing making the code readable, the code is what needs the change.",
-  };
-}
-
-/**
- * The second rule Whetstone brings rather than reads (adr-0030).
- *
- * On at `warn`, like the first, and for the same reason: an offer nobody sees is
- * not an offer. The plan screen shows it before `init` writes anything.
- */
-function commitMessageDraft(include: readonly string[]): Draft {
-  return {
-    id: "commit-message",
-    description:
-      "A commit names its kind in a conventional subject, and credits nobody who did not write it.",
-    kind: "deterministic",
-    severity: "warn",
-    tiers: ["strict", "light"],
-    include,
-    command: "wst check run commit-message",
-    exitCodes: "whetstone",
-    // The same tree over two ranges is two different sets of messages.
-    skippable: false,
-    origin: [],
-    body:
-      "**Seeded at `warn`.** Nothing in this repo asked for it. Add `enabled: false` to " +
-      "switch it off.\n\n" +
-      "**The subject is conventional.** `type(scope): description`, with a type from the " +
-      "standard set. Measured where this came from: 332 of 333 commits already matched, so " +
-      "it holds a rule rather than introducing one.\n\n" +
-      "**No commit credits a model.** A `Co-Authored-By:` naming an assistant, or the " +
-      "`Generated with` footer. The commit carries the author's name, and a model is not a " +
-      "co-author of it.\n\n" +
-      "**It matches attribution, not mention.** Of the nine lines naming the tool where this " +
-      "came from, five were prose ABOUT it. A pattern that cannot tell `Co-Authored-By: " +
-      "Claude` from \"the Claude Code skill\" makes the subject undiscussable in the messages " +
-      "that discuss it.\n\n" +
-      "**What it does NOT judge:** subject length, and whether a body exists. Both are house " +
-      "style rather than measurable defects, and where this came from the repo did the " +
-      "opposite of its own rule on each: 10 of the last 60 subjects ran past 72 characters " +
-      "and 23 of them carried a prose body. A check that blocks a third of what a repo " +
-      "actually does teaches `--no-verify`. Decide those yourself and add them here.\n\n" +
-      "**It reads the range, not the tree**, so no receipt stands in for it.\n\n" +
-      "**Its `include` is this repo's source layout, and that is a compromise.** A commit " +
-      "always has a message, so this would run on every change; the registry selects by " +
-      "changed PATH and has no way to say `always`. Scoped like this, a commit touching only " +
-      "documentation is not checked. Widen the globs if that matters to you.\n\n" +
-      "**When it fails:** amend the message. `git commit --amend` for the last one, an " +
-      "interactive rebase for anything older. The rationale a long body wanted to carry " +
-      "belongs in the pull request description, where a reader looking at the change will " +
-      "actually find it.",
   };
 }

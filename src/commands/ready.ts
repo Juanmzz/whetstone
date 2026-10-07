@@ -126,7 +126,6 @@ export async function runReady(
       noReceipts: true,
     },
     repoRoot,
-    cwd,
   );
   if (!verified.ok) {
     return incomplete(verified.why);

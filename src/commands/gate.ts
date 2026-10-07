@@ -6,45 +6,10 @@
  */
 
 import { requireCwd } from "../shell/cwd.js";
-import { exec, execFile } from "node:child_process";
-import { join } from "node:path";
-import type { LoadedCheck, Registry } from "../core/checks/registry.js";
 import type { Tier } from "../core/checks/schema.js";
-import type { CheckOutcome, Routing } from "../core/contracts.js";
-import { aggregateChunkOutcomes, chunkDiff } from "../core/gate/chunk.js";
-import { parseNameStatus, type ChangedFile } from "../core/diff/parse.js";
 import { EXIT_INCOMPLETE, exitCodeFor, renderGateRun } from "../core/gate/report.js";
-import { progressLines, type ProgressTarget } from "../core/gate/progress.js";
-import { startLive, type Live } from "../shell/live.js";
-import {
-  createCheckRunner,
-  DEFAULT_MAX_LENS_TOTAL_USD,
-  DEFAULT_TIMEOUT_MS,
-} from "../shell/check-runner.js";
-import { checkEnv } from "../core/gate/env.js";
-import { fastOnly } from "../core/gate/select.js";
-import { answerableHere } from "../core/gate/environment.js";
-import { runGate as executeGate, type CheckRunner } from "../core/gate/run.js";
-import {
-  LensVerdictSchema,
-  interpretCommandResult,
-  interpretJudgeResult,
-  type CommandResult,
-  type LensVerdict,
-  type CheckRun,
-} from "../core/gate/outcomes.js";
-import type { Agent } from "../core/config/schema.js";
-import type { JudgeResult, LlmJudge } from "../core/ports.js";
 import { verifyRange } from "../shell/verify.js";
-import { resolveJudges } from "../shell/judge.js";
-import { createGitAdapter, gitEnv } from "../shell/git.js";
-import { createDistrustfulReceiptStore, createReceiptStore } from "../shell/receipts.js";
-import {
-  loadRegistry,
-  loadTriageRules,
-  resolveDefinitionRoot,
-  type LoadedTriageRules,
-} from "../shell/sdd.js";
+import { createGitAdapter } from "../shell/git.js";
 
 export interface GateOptions {
   /** A `git diff` range. Default `HEAD` — the working tree against the last commit. */
@@ -112,7 +77,6 @@ export async function runGate(
   const verified = await verifyRange(
     { ...opts, range },
     repoRoot,
-    cwd,
   );
   if (!verified.ok) {
     console.error(verified.why);

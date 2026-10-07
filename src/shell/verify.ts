@@ -98,7 +98,6 @@ function withProgress(
 export async function verifyRange(
   opts: VerifyOptions,
   repoRoot: string,
-  cwd: string,
 ): Promise<Verified | NotVerified> {
   const git = createGitAdapter(repoRoot);
   const range = opts.range;

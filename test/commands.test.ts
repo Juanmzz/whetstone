@@ -17,12 +17,10 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runCheck } from "../src/commands/check.js";
 import { runGate } from "../src/commands/gate.js";
-import { runInit } from "../src/commands/init.js";
 import { runStatus } from "../src/commands/status.js";
 import { runTriage } from "../src/commands/triage.js";
 import { installFakeBin, restorePath, type FakeBin } from "./fake-bin.js";

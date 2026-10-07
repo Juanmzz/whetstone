@@ -3,9 +3,6 @@
  */
 
 import { DEFINITION_DIR } from "../paths.js";
-import type { CopyRequest } from "./artifact.js";
-import type { StackFacts } from "./detect.js";
-import { renderRiskProfile, type RiskProfile } from "./interview.js";
 
 /**
  * All eight ship, always — a skill left out cannot be switched on later without a

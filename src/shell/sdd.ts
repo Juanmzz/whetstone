@@ -2,7 +2,7 @@
  * `.wst/` filesystem adapter. THIN: reads files, hands text to the pure core.
  */
 
-import { access, readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { exists } from "./fs.js";
 import { buildRegistry, parseCheckFile, type Registry } from "../core/checks/registry.js";

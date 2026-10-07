@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { parse as parseYaml } from "yaml";
 import { buildRegistry, parseCheckFile } from "../checks/registry.js";
 import { parseTriageRules } from "../triage/rules.js";
 import { classify } from "../triage/classify.js";

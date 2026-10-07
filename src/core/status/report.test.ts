@@ -7,7 +7,6 @@ import {
   type StatusFacts,
   type StatusReport,
 } from "./report.js";
-import { DEFINITION_DIR } from "../paths.js";
 
 const base = {
   repoRoot: "/repo",
