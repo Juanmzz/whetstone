@@ -1,5 +1,9 @@
 # Whetstone
 
+> **Historical.** adr-0049 (2026-10-06) narrowed the product to one question, `wst ready`,
+> and deleted the retro loop this page describes. `AGENTS.md` and `docs/architecture.md` say
+> what is true now; tag `v0.9.0` carries the loop.
+
 **Self-sharpening standards for coding agents.**
 
 ## Thesis

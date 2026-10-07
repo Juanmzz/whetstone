@@ -1,9 +1,8 @@
 /**
  * The interview — the "ask everything the repo does not declare" half of `wst init`.
  *
- * Five questions, each carrying the `why` it is asked at all. `source-paths` and
- * `stack` are new: they used to be inferred by a directory-name list and a
- * file-extension table inside `detect.ts`, both removed by adr-0016.
+ * Three questions (risk, source paths, strict paths), each carrying the `why` it is
+ * asked at all.
  */
 
 import { z } from "zod";
@@ -11,11 +10,9 @@ import type { DeclaredAnswers } from "./detect.js";
 import { DEFINITION_DIR } from "../paths.js";
 
 export type QuestionId =
-  | "purpose"
   | "risk"
   | "source-paths"
-  | "strict-paths"
-  | "stack";
+  | "strict-paths";
 
 export interface QuestionOption {
   readonly value: string;
@@ -27,7 +24,7 @@ export interface InitQuestion {
   readonly prompt: string;
   /** Why the repo could not answer this. Makes over-asking visible in review. */
   readonly why: string;
-  readonly kind: "text" | "flags" | "paths";
+  readonly kind: "flags" | "paths";
   readonly options: readonly QuestionOption[];
   /** Pre-filled answer the human can accept, or null when there is nothing to offer. */
   readonly defaultAnswer: string | null;
@@ -35,7 +32,7 @@ export interface InitQuestion {
    * WHERE the pre-filled answer came from. Null when there is none.
    *
    * A file said it, or a model guessed it, and the screen may not call the
-   * second the first. `purpose`, `risk` and `strict-paths` can only ever be
+   * second the first. `risk` and `strict-paths` can only ever be
    * drafted, since the code itself says no file states them.
    */
   readonly defaultFrom: "repo" | "draft" | null;
@@ -58,7 +55,7 @@ export interface RiskProfile {
   readonly productionData: boolean;
   readonly authn: boolean;
   readonly safetyCritical: boolean;
-  /** Anything the flags do not capture. Rendered verbatim into the constitution. */
+  /** Anything the flags do not capture. */
   readonly note: string | null;
 }
 
@@ -78,7 +75,6 @@ export interface StrictPath {
 }
 
 export interface InterviewAnswers {
-  readonly purpose: string;
   readonly risk: RiskProfile;
   /**
    * Where this project's code lives, as globs. The single source of two outputs:
@@ -88,8 +84,6 @@ export interface InterviewAnswers {
    */
   readonly sourcePaths: readonly string[];
   readonly strictPaths: readonly StrictPath[];
-  /** What the project is built with, verbatim into the constitution. May be null. */
-  readonly stack: string | null;
 }
 
 const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
@@ -102,9 +96,7 @@ const RISK_LABELS: readonly (readonly [keyof RiskProfile, string])[] = [
 
 const NOTHING_DECLARED: DeclaredAnswers = Object.freeze({
   sourceGlobs: [],
-  stack: null,
   strictCandidates: [],
-  purpose: null,
 });
 
 /**
@@ -113,20 +105,18 @@ const NOTHING_DECLARED: DeclaredAnswers = Object.freeze({
  * The judge produces it (`propose.ts`). It arrives as the starting value of the
  * same field a human types into, which is where the human gate is actually
  * exercised: `--propose` wrote a JSON file and told you to edit it, and editing
- * a JSON is not reading five questions with the `why` beside each.
+ * a JSON is not reading three questions with the `why` beside each.
  */
 export interface DraftedAnswers {
-  readonly purpose?: string;
   /** `RiskProfile` keys the draft argued for. */
   readonly risk?: readonly string[];
   readonly strictPaths?: readonly StrictPath[];
   readonly sourcePaths?: readonly string[];
-  readonly stack?: string;
 }
 
 /**
  * The questions, in the order they are asked. The LIST never changes: a repo
- * that declares a lot is asked the same five as one that declares nothing,
+ * that declares a lot is asked the same three as one that declares nothing,
  * because an interview that shrinks when a reading gets lucky is one whose
  * coverage nobody can state.
  *
@@ -220,8 +210,8 @@ export function renderRiskProfile(risk: RiskProfile): string {
 }
 
 /**
- * Answers are validated BEFORE anything is generated. A constitution with a blank
- * purpose, or a "handles money" project with no strict path, is a payload that
+ * Answers are validated BEFORE anything is generated. A "handles money" project
+ * with no strict path is a payload that
  * looks installed and governs nothing — the worst outcome for a tool whose whole
  * claim is that the rules are real.
  */
@@ -280,16 +270,13 @@ export function validateAnswers(answers: InterviewAnswers): readonly string[] {
   return errors;
 }
 
-const RETIRED_ANSWERS = ["conventions", "opinions"];
+const RETIRED_ANSWERS = ["conventions", "opinions", "purpose", "stack"];
 
 /**
  * `InterviewAnswers` as data on disk, tolerant of a base an older Whetstone wrote.
  *
- * A retired key is DROPPED rather than rejected. A repo bootstrapped before
- * adr-0030 recorded its answers with `conventions` and `opinions` in them, and a
- * strict schema that refuses those is one that makes `wst update` unrunnable in
- * exactly the repos it exists to tell about the change. An unknown key still
- * fails, so a typo is not silently swallowed.
+ * A retired key is DROPPED rather than rejected: an answers file written by an older
+ * version still loads. An unknown key still fails, so a typo is not silently swallowed.
  */
 export const AnswersSchema = z.preprocess((raw) => {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return raw;
@@ -297,7 +284,6 @@ export const AnswersSchema = z.preprocess((raw) => {
   for (const key of RETIRED_ANSWERS) delete kept[key];
   return kept;
 }, z.strictObject({
-  purpose: z.string(),
   risk: z
     .strictObject({
       money: z.boolean().default(false),
@@ -314,5 +300,4 @@ export const AnswersSchema = z.preprocess((raw) => {
   strictPaths: z
     .array(z.strictObject({ glob: z.string(), reason: z.string() }))
     .default([]),
-  stack: z.string().nullable().default(null),
 }));

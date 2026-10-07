@@ -13,9 +13,7 @@
  * the net rather than the discovery.
  *
  * `--no-lens` always: this runs on every stop, and a hook that costs money and fifty
- * seconds each time gets disabled, at which point its value is negative. `--no-emit`
- * always: a signal is a record of friction a human hit, not of an agent's inner loop,
- * and emitting here would flood the log the retro reasons over.
+ * seconds each time gets disabled, at which point its value is negative.
  */
 
 import { execFile } from "node:child_process";

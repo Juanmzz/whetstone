@@ -1,10 +1,9 @@
 /**
  * Reading what this repo IS: git, the definition layer, the judge on PATH, the
- * harness plugin, the signals nobody has processed. Adapter only.
+ * harness plugin. Adapter only.
  */
 
 import { execFile } from "node:child_process";
-import { access } from "node:fs/promises";
 import { promisify } from "node:util";
 import { isAbsolute, join, relative } from "node:path";
 import { createGitAdapter, gitEnv } from "./git.js";
@@ -15,16 +14,11 @@ import { definitionRoot, loadRegistry } from "./sdd.js";
 import { DEFINITION_DIR } from "../core/paths.js";
 import { resolveJudge } from "./judge.js";
 import { describePlugin, pluginHookRoot } from "./plugin.js";
-import { readCursorResult } from "./retro.js";
-import { resolveMemory } from "./memory.js";
-import { SIGNALS_PATH } from "./signals.js";
-import { signalsSince } from "../core/retro/cluster.js";
 import { mentionsGate, sourcedPaths } from "../core/status/prepush.js";
 import {
   buildStatusReport,
   WHETSTONE_HOOKS_PATH,
   type AgentFiles,
-  type FreshSignals,
   type StatusReport,
 } from "../core/status/report.js";
 
@@ -189,24 +183,6 @@ async function resolves(binary: string, root: string): Promise<boolean> {
 }
 
 /**
- * Signals recorded since the last retro's cursor, counted with `signalsSince` —
- * the same function `wst retro` uses, so the two cannot report different backlogs.
- * Every way of not knowing lands as `unknown` with its reason, never as a number.
- */
-async function freshSignals(definitionRoot: string): Promise<FreshSignals> {
-  const cursor = await readCursorResult(definitionRoot);
-  if (cursor.kind === "unreadable") return { kind: "unknown", reason: cursor.reason };
-
-  const since = cursor.kind === "cursor" ? cursor.id : null;
-  try {
-    const all = await (await resolveMemory(definitionRoot)).all();
-    return { kind: "counted", count: signalsSince(all, since).length, since };
-  } catch (cause) {
-    return { kind: "unknown", reason: (cause as Error).message };
-  }
-}
-
-/**
  * The facts, gathered once. Exported because `wst` with no arguments opens a
  * screen built from the same report: two ways to compute "what this repo has"
  * is two answers that drift.
@@ -243,11 +219,6 @@ export async function gatherStatus(cwd: string = process.cwd()): Promise<StatusR
     uncommitted: await uncommittedIn(repoRoot ?? cwd),
     agentFiles: await agentFilesIn(repoRoot ?? cwd),
     missingTools: await missingTools(repoRoot ?? cwd),
-    // Omitted, not "unknown", where there is no log. `init` no longer seeds one, and
-    // `0 fresh` over nothing described a subsystem the reader does not have.
-    ...(definitionPresent && (await exists(join(root, SIGNALS_PATH)))
-      ? { freshSignals: await freshSignals(root) }
-      : {}),
   });
 }
 

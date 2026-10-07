@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Whetstone</title>
-<meta name="description" content="Self-sharpening standards for coding agents. Your definition of correct, enforced by an exit code at push and in CI.">
+<meta name="description" content="Is this task ready? One honest answer for coding agents, from the checks your repo already has.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Bebas+Neue&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
@@ -125,26 +125,21 @@
     <p class="label">Operation</p>
     <div class="steps">
       <div class="step"><span class="n">01</span><span class="cmd">wst init</span><span class="d">Interviews your repo. Reads what it declares, and asks about what it cannot know, like where a bug is expensive.</span></div>
-      <div class="step"><span class="n">02</span><span class="cmd">wst gate</span><span class="d">Classifies the change, selects the checks that apply, skips whatever a receipt proves unchanged, runs the rest.</span></div>
-      <div class="step"><span class="n">03</span><span class="cmd">wst signal</span><span class="d">You record the friction the run hit. A human types this one.</span></div>
-      <div class="step"><span class="n">04</span><span class="cmd">wst retro</span><span class="d">Clusters the signals and proposes rule changes. It never applies them.</span></div>
+      <div class="step"><span class="n">02</span><span class="cmd">wst ready</span><span class="d">Finds what the task changed, runs the checks those paths need, and answers READY, NOT_READY, INCOMPLETE or NO_CHANGES.</span></div>
+      <div class="step"><span class="n">03</span><span class="cmd">wst status</span><span class="d">Says what is installed here and what is missing.</span></div>
     </div>
-    <p class="note">In a terminal, <span class="mono">wst</span> with no arguments opens a launcher over these commands. One row each, saying what it reads, what it writes and what its exit code means; the rows this repo cannot run yet say what they are waiting for. It runs the one you pick and comes back. Off a terminal it prints the help, because a menu waiting for a keypress in a CI job hangs where nobody can see it.</p>
     <p class="note">The product is three commands. <span class="mono">wst init</span> writes what a repo needs to verify itself, <span class="mono">wst ready</span> answers whether the current work is ready without being told what changed, and <span class="mono">wst status</span> says what is here and what is missing. <span class="mono">wst triage</span> and <span class="mono">wst check</span> remain as diagnostics.</p>
   </section>
 
   <section class="sec">
     <p class="label">What lands in your repository</p>
     <pre class="tree"><b>.wst/</b>
-  constitution.md      what your project holds non-negotiable
+  wst.yaml             configuration
   triage.yaml          which paths earn which discipline
-  checks/              one file per check, with what earned it
-  skills/              rules that travel with the repo
-  memory/              decisions, signals, retro log
-<b>.githooks/pre-push</b>   where the exit code actually stops a push
-<b>AGENTS.md</b>            rendered from the above, never the source</pre>
+  checks/              one file per check: the command, and the paths it covers
+<b>.githooks/pre-push</b>   with --enforce: where the exit code stops a push
+<b>AGENTS.md</b>            with --enforce: one stanza telling the agent to run wst ready</pre>
     <p class="note">Plain text, all of it. Delete the directory and the tool is gone; nothing else knows you installed it. Three runtime dependencies, no services, nothing to host.</p>
-    <p class="note">A check Whetstone brings itself arrives switched off, with the friction that earned it recorded in the file. Its logic ships with the binary, so it runs as <span class="mono">wst check run &lt;id&gt;</span> and not as a script nobody wrote in your repo.</p>
   </section>
 
   <div class="foot">

@@ -61,8 +61,8 @@ Add automatic enforcement after this pilot.
 
 `check` and `triage` are diagnostics. `gate` remains compatible with existing
 hooks and CI, including its receipt cache and push policy. Unlike `ready`,
-an uncovered change may pass the gate. `signal`, `retro` and `update` remain
-on standby for existing installations; `config` is removed.
+an uncovered change may pass the gate. `signal`, `retro`, `update`, `config`
+and the launcher were removed (adr-0049); `git checkout v0.9.0` restores them.
 
 - [Architecture](docs/architecture.md)
 - [Decisions](.wst/memory/decisions.md)

@@ -1,6 +1,6 @@
 ---
 id: recording
-version: 2
+version: 3
 status: active
 ---
 # Recording
@@ -16,13 +16,12 @@ never a silent write.
    it again in three months. Write down **what was rejected and why**, because that is the part git
    cannot reconstruct, since a rejected option has no commit. No rejected alternative means no
    decision: it is a commit message. Propose it; the human confirms.
-2. [RC2] Record an **signal** (a line in `memory/signals.jsonl`) when something went wrong or
-   nearly did: a correction from the human, a bug's root cause, a triage miss, a slip
-   (wrong cwd, scope creep, a test skipped on a strict path).
-3. [RC3] **The write is human-gated.** The agent DETECTS and PROPOSES ("this looks like an
-   signal / a decision, log it?"); the human confirms before anything is written. Never write
-   to memory silently: a hallucinated or premature record poisons every future session and every
-   retro that reads it.
+2. [RC2] *(Retired by adr-0049.)* It told the agent when to append to `memory/signals.jsonl`.
+   The loop that read the log is deleted; the log is a closed record.
+3. [RC3] **The write is human-gated.** The agent DETECTS and PROPOSES ("this looks like a
+   decision, log it?"); the human confirms before anything is written. Never write
+   to memory silently: a hallucinated or premature record poisons every future session that
+   reads it.
 4. [RC4] Record **at the moment**, proactively. Do not wait to be asked, and do not batch at
    session end (the detail is gone by then). The one batched exception is the session summary.
 5. [RC5] Do **not** record what is re-derivable: code (it's in git), file trees, command output,
@@ -33,8 +32,7 @@ never a silent write.
    above it, and later commentary goes in a NEW entry rather than into an old one's voice.
    **Compacting an entry is selecting, not editing:** dropping a paragraph is allowed, rewording
    one into something the decision did not say is not.
-7. [RC7] Tag each signal with `rule_affected` when you can, because that is the signal the retro groups
-   on. Empty is allowed (the retro will attempt to classify it).
+7. [RC7] *(Retired by adr-0049, with RC2.)* It tagged signals for the retro to group on.
 8. [RC8] **Session close:** before declaring work done, write a session summary (decisions made,
    blockers, next steps) to the substrate.
 
@@ -48,6 +46,8 @@ interface, and the discipline does not change when the backend does.
 
 ## Changelog
 
+- v3 (2026-10-06, adr-0049): [RC2] and [RC7] retired with the signal log and the retro.
+  [RC1], [RC3]-[RC6] and [RC8] still govern decisions and session summaries.
 - v2 (2026-08-14, adr-0017 + adr-0019): [RC1] gains the bar — a decision needs a plausible
   rejected alternative, and what it rejected is what gets written down; decisions live as
   entries on `memory/decisions.md`, not as files in a directory. [RC6] states the status

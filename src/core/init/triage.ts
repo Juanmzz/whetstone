@@ -4,7 +4,6 @@
  */
 
 import type { TriageRule } from "../contracts.js";
-import { DEFINITION_DIR } from "../paths.js";
 import { TRIAGE_RULES_FORMAT } from "../triage/rules.js";
 import type { InterviewAnswers } from "./interview.js";
 

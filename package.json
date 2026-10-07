@@ -1,7 +1,7 @@
 {
   "name": "@juanmzz/whetstone",
-  "version": "0.9.0",
-  "description": "A self-sharpening standards layer for AI coding agents: git-native, files-first.",
+  "version": "0.10.0",
+  "description": "Is this task ready? One honest answer for AI coding agents, from the checks your repo already has.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -55,7 +55,6 @@
     "check:plugin-version": "tsx scripts/check-plugin-version.ts",
     "fix:plugin-version": "tsx scripts/check-plugin-version.ts --fix",
     "check:evidence": "tsx scripts/check-evidence.ts",
-    "check:provenance": "tsx scripts/check-provenance.ts",
     "check:skills": "tsx scripts/check-skills.ts",
     "untested": "tsx scripts/untested.ts",
     "calibrate": "tsx scripts/calibrate.ts",

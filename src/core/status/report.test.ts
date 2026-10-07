@@ -7,7 +7,6 @@ import {
   type StatusFacts,
   type StatusReport,
 } from "./report.js";
-import { DEFINITION_DIR } from "../paths.js";
 
 const base = {
   repoRoot: "/repo",
@@ -82,13 +81,13 @@ describe("renderStatusReport", () => {
 
   it("in quiet mode prints only the ready line", () => {
     const text = renderStatusReport(buildStatusReport(base), { quiet: true });
-    expect(text).toBe("ready");
+    expect(text).toBe("installation ok");
   });
 
-  it("in quiet mode prints only the NOT ready line, omitting problems", () => {
+  it("in quiet mode prints only the NOT ok line, omitting problems", () => {
     const report = buildStatusReport({ ...base, definitionPresent: false });
     const text = renderStatusReport(report, { quiet: true });
-    expect(text).toBe("NOT ready");
+    expect(text).toBe("installation NOT ok");
   });
 });
 
@@ -193,7 +192,7 @@ describe("the plugin row", () => {
 
   it("keeps quiet mode to the ready line", () => {
     const text = renderStatusReport(withPlugin({ install: "absent" }), { quiet: true });
-    expect(text).toBe("ready");
+    expect(text).toBe("installation ok");
   });
 });
 
@@ -273,65 +272,6 @@ describe("the pre-push gate", () => {
   });
 });
 
-/**
- * "No cursor recorded" is a verdict: no retro processed anything, so every signal is
- * fresh. "Could not read it" is status failing, which hard rule 3 keeps separate.
- */
-describe("the fresh-signal count", () => {
-  const withFresh = (freshSignals: StatusFacts["freshSignals"]) =>
-    buildStatusReport({ ...base, ...(freshSignals === undefined ? {} : { freshSignals }) });
-
-  const row = (freshSignals: StatusFacts["freshSignals"]) =>
-    renderStatusReport(withFresh(freshSignals))
-      .split("\n")
-      .find((l) => l.trim().startsWith("signals")) ?? "";
-
-  it("reports how many signals a retro has not processed yet", () => {
-    expect(row({ kind: "counted", count: 3, since: "sig-0046" })).toMatch(/3/);
-  });
-
-  it("names the cursor it counted from, so the number can be checked by hand", () => {
-    expect(row({ kind: "counted", count: 3, since: "sig-0046" })).toContain("sig-0046");
-  });
-
-  it("says every signal is fresh when no retro has recorded a cursor", () => {
-    const text = row({ kind: "counted", count: 61, since: null });
-    expect(text).toMatch(/61/);
-    expect(text).toMatch(/no retro/i);
-  });
-
-  it("says nothing is waiting when the retro is caught up", () => {
-    expect(row({ kind: "counted", count: 0, since: "sig-0046" })).toMatch(/0|none|nothing/i);
-  });
-
-  it("reports a cursor it could not read as unknown rather than as a count", () => {
-    const text = row({ kind: "unknown", reason: "the log was edited" });
-    expect(text).toMatch(/unknown/i);
-    expect(text).toMatch(/the log was edited/);
-  });
-
-  // The whole point: an empty backlog and a failed read are opposite facts.
-  it("does not let 'could not tell' read like 'nothing is waiting'", () => {
-    expect(row({ kind: "unknown", reason: "the log was edited" })).not.toBe(
-      row({ kind: "counted", count: 0, since: "sig-0046" }),
-    );
-  });
-
-  it("warns when the count is unknown, naming why", () => {
-    const r = withFresh({ kind: "unknown", reason: "the log was edited" });
-    expect(r.warnings.join(" ")).toMatch(/the log was edited/);
-  });
-
-  it("stays ready when the count is unknown, since no command needs the number", () => {
-    expect(withFresh({ kind: "unknown", reason: "boom" }).ready).toBe(true);
-    expect(withFresh({ kind: "unknown", reason: "boom" }).problems).toEqual([]);
-  });
-
-  it("says nothing at all when the count was never gathered", () => {
-    expect(row(undefined)).toBe("");
-    expect(withFresh(undefined).warnings.join(" ")).not.toMatch(/retro/i);
-  });
-});
 
 /**
  * Deleting `.wst/` takes `AGENTS.md` and its front doors with it, and every agent

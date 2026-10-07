@@ -6,12 +6,9 @@
 
 import { requireCwd } from "../shell/cwd.js";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
-import { chmod, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { z } from "zod";
 import { banner } from "../banner.js";
 import { createGitAdapter } from "../shell/git.js";
 import { probeCommands } from "../shell/probe.js";
@@ -21,9 +18,7 @@ import { DEFINITION_DIR } from "../core/paths.js";
 import { collisionsIn, renderCollisions } from "../core/init/collisions.js";
 import { openInterview, pressIn, renderInterview } from "../core/tui/interview.js";
 import { openPicker, pressPicker, renderPicker } from "../core/tui/picker.js";
-import type { Agent } from "../core/config/schema.js";
 import { confirm } from "../shell/confirm.js";
-import { startSpinner } from "../shell/spinner.js";
 import { paint, rawKeys, restore } from "../shell/tui.js";
 import { stagePaths } from "../core/init/stage.js";
 import {
@@ -48,9 +43,6 @@ import { DEFAULT_CONFIG } from "../core/config/schema.js";
 import { exists } from "../shell/fs.js";
 import {
   AnswersSchema,
-  BASE_FILE,
-  renderBase,
-  MAX_FILES,
   NO_RISK,
   ROOT_GITIGNORE_ENTRIES,
   buildInterview,
@@ -58,29 +50,20 @@ import {
   detectStack,
   planInit,
   renderRootGitignoreStanza,
-  skipDir,
-  walkDepth,
   type InitPlan,
   type InterviewAnswers,
-  type PackageJson,
   type RepoFacts,
 } from "../core/init/index.js";
-
-const run = promisify(execFile);
 
 export interface InitOptions {
   /** Path to a JSON file holding `InterviewAnswers`. */
   readonly answers?: string;
-  /** Shorthand for a one-line purpose when no answers file is used. */
-  readonly purpose?: string;
   /** Comma-separated risk flags: money,personalData,productionData,authn,safetyCritical */
   readonly risk?: string;
   /** Repeatable glob naming where the project's code lives. */
   readonly source?: readonly string[];
   /** Repeatable `glob:reason`. */
   readonly strict?: readonly string[];
-  /** What the project is built with, verbatim into the constitution. */
-  readonly stack?: string;
   readonly force?: boolean;
   readonly dryRun?: boolean;
   /**
@@ -114,8 +97,8 @@ export interface InitOptions {
 
 /**
  * Validated rather than cast. The answers file is hand-written (usually by an
- * agent), and a typo'd key silently becoming `undefined` produces a constitution
- * with a hole in it — the exact outcome `validateAnswers` exists to prevent, one
+ * agent), and a typo'd key silently becoming `undefined` produces checks
+ * scoped to nothing — the exact outcome `validateAnswers` exists to prevent, one
  * layer too late to catch it.
  */
 
@@ -123,8 +106,7 @@ const RISK_KEYS = ["money", "personalData", "productionData", "authn", "safetyCr
 
 function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
   // `--source` is the trigger, because it is the only required answer: every
-  // seeded check scopes its `include` to it. `--purpose` used to be, back when it
-  // reached the constitution.
+  // seeded check scopes its `include` to it.
   if (opts.source === undefined || opts.source.length === 0) return null;
 
   const flags = (opts.risk ?? "")
@@ -150,14 +132,12 @@ function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
   });
 
   return {
-    purpose: opts.purpose ?? "",
     risk: {
       ...NO_RISK,
       ...Object.fromEntries(RISK_KEYS.map((k) => [k, flags.includes(k)])),
     },
     sourcePaths: opts.source ?? [],
     strictPaths,
-    stack: opts.stack ?? null,
   };
 }
 
@@ -201,8 +181,7 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
   console.log("Answer them, then re-run with either:");
   console.log("  wst init --answers <file.json>");
   console.log(
-    '  wst init --purpose "..." --risk money,authn --source "src/**" \\\n' +
-      '           --strict "src/billing/**:moves money" --stack "TypeScript on Node 24"',
+    '  wst init --risk money,authn --source "src/**" --strict "src/billing/**:moves money"',
   );
   console.log("\nNothing was written.");
 }
@@ -291,9 +270,7 @@ function printPlan(plan: InitPlan, root: string): void {
   }
   for (const copy of plan.copies) console.log(`  + ${copy.to.padEnd(42)}    copied from the payload`);
 
-  // Neither is a plan file: the base hashes the plan, and the root ignore appends
-  // to a file the repo owns. Both landed on disk without appearing here.
-  console.log(`  + ${join(DEFINITION_DIR, BASE_FILE).padEnd(42)}    these answers, for \`wst update\``);
+  // Not a plan file: it appends to a file the repo owns.
   console.log(`  + ${".gitignore".padEnd(42)}    one line appended, if missing`);
 
   if (plan.notes.length > 0) {
@@ -404,38 +381,6 @@ async function proposeAnswers(
   return 0;
 }
 
-/**
- * What `wst update` compares against later: the answers, and a hash per file.
- *
- * Committed, not runtime state. `renderWstGitignore` must never learn about it —
- * a base only one machine has answers a question only that machine can ask.
- */
-/** The same number `wst --version` prints: what wrote this base. */
-const VERSION = (createRequire(import.meta.url)("../../package.json") as { version: string }).version;
-
-const sha256 = (text: string): string =>
-  createHash("sha256").update(text, "utf8").digest("hex");
-
-async function writeBase(
-  plan: InitPlan,
-  answers: InterviewAnswers,
-  root: string,
-): Promise<void> {
-  const files: Record<string, string> = {};
-  for (const file of plan.files) files[file.path] = sha256(file.contents);
-  for (const copy of plan.copies) {
-    if (copy.contents !== undefined) files[copy.to] = sha256(copy.contents);
-  }
-
-  const target = join(root, DEFINITION_DIR, BASE_FILE);
-  await mkdir(dirname(target), { recursive: true });
-  await writeFile(
-    target,
-    renderBase({ version: VERSION, generatedAt: new Date().toISOString().slice(0, 10), answers, files }),
-    "utf-8",
-  );
-}
-
 async function writePlan(plan: InitPlan, root: string): Promise<void> {
   for (const file of plan.files) {
     const target = join(root, file.path);
@@ -522,19 +467,19 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
     if (process.stdin.isTTY === true) {
       // BEFORE anything is asked and long before anything is spent. `init`
       // refuses to overwrite, and it used to find that out after a model call
-      // and five questions. The full collision set needs a plan, which needs
+      // and three questions. The full collision set needs a plan, which needs
       // answers; this is the half that needs neither.
       const already = await existingOf(
-        { files: [{ path: `${DEFINITION_DIR}/constitution.md`, contents: "" }], copies: [] } as never,
+        { files: [{ path: `${DEFINITION_DIR}/wst.yaml`, contents: "" }], copies: [] } as never,
         root,
       );
       if (already.length > 0 && opts.force !== true) {
         console.error(
           `${DEFINITION_DIR}/ already exists here, and \`init\` does not overwrite.
 ` +
-            `  \`wst update\` reports what a newer Whetstone would write. \`--force\` lists what it
+            `  \`--force\` lists what it would replace before replacing it.
 ` +
-            `  would replace before replacing it. Nothing was asked and nothing was spent.`,
+            `  Nothing was asked and nothing was spent.`,
         );
         return 1;
       }
@@ -691,7 +636,7 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
   // a terminal, where there is nobody to ask and the caller already meant it.
   if (
     !(await confirm(
-      `\n  write ${String(plan.files.length + plan.copies.length + 1)} file(s) into ${root}?`,
+      `\n  write ${String(plan.files.length + plan.copies.length)} file(s) into ${root}?`,
     ))
   ) {
     console.log("  nothing written.");
@@ -705,15 +650,15 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
     touchedRootIgnore = await ensureRootGitignored(root);
     // LAST, and only on success. A base written before the files it describes
     // would survive a crash and claim hashes for content nobody wrote.
-    await writeBase(plan, answers, root);
   } catch (cause) {
     console.error(`\nwrite failed: ${(cause as Error).message}`);
     return 1;
   }
 
-  const written = plan.files.length + 1 + (touchedRootIgnore ? 1 : 0);
+  const written = plan.files.length + (touchedRootIgnore ? 1 : 0);
+  const stage = [...stagePaths(plan), ...(touchedRootIgnore ? [".gitignore"] : [])];
   console.log(`\nwrote ${String(written)} files. Review them, then commit:`);
-  console.log(`  git add ${stagePaths(plan).join(" ")}`);
+  console.log(`  git add ${stage.join(" ")}`);
   console.log('  git commit -m "chore: bootstrap verification"');
 
   await offerEnforcement(root, opts.enforce === true, opts.definitionsOnly === true);
@@ -768,9 +713,6 @@ nothing above makes a check RUN. Two ways, and they catch different moments:`);
       await chmod(hook, 0o755);
       await armHooksPath(root);
       console.log(`  wrote ${HOOKS_DIR}/pre-push and set core.hooksPath`);
-      // Said here rather than discovered later: a blocked push records what it saw,
-      // which creates the signal log adr-0048 deliberately does not seed empty.
-      console.log(`  a blocked push records what it observed in ${DEFINITION_DIR}/memory/`);
     } catch (cause) {
       // Reported, never fatal: the definitions are already on disk and correct.
       console.error(`  could not arm the hook: ${(cause as Error).message}`);

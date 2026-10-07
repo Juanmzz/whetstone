@@ -7,7 +7,6 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { realpathSync } from "node:fs";
 import { promisify } from "node:util";
 import type { GitPort } from "../core/ports.js";
 

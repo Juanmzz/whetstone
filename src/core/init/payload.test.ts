@@ -1,32 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { detectStack, type RepoFacts } from "./detect.js";
-import { NO_RISK } from "./interview.js";
-import { buildTriageRules } from "./triage.js";
 import {
   renderRootGitignoreStanza,
   renderWstGitignore,
   ROOT_GITIGNORE_ENTRIES,
   renderWstYaml,
 } from "./payload.js";
-
-const facts = (over: Partial<RepoFacts> = {}): RepoFacts => ({
-  repoName: "acme",
-  files: [],
-  packageJson: null,
-  commitSubjects: [],
-  contributors: null,
-  ...over,
-});
-
-const tsRepo = detectStack(
-  facts({
-    files: ["package.json", "pnpm-lock.yaml", "tsconfig.json", "src/index.ts", "src/index.test.ts"],
-    packageJson: { scripts: { test: "vitest run", typecheck: "tsc --noEmit" } },
-    commitSubjects: ["feat: a", "fix: b", "chore: c"],
-    contributors: 4,
-  }),
-);
 
 describe("renderWstYaml", () => {
   const yaml = renderWstYaml({ backend: "files", namespace: "acme" });

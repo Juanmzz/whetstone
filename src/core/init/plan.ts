@@ -2,7 +2,6 @@
  * `planInit` — the whole of Layer 1 as one pure function.
  */
 
-import { DEFAULT_AGENT } from "../config/schema.js";
 import type { TriageRule } from "../contracts.js";
 import { DEFINITION_DIR } from "../paths.js";
 import type { ClockPort } from "../ports.js";

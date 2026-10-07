@@ -17,7 +17,7 @@ only points.
 
 | | |
 |---|---|
-| `docs/architecture.md` | What is true now: the three parts, the loop, the stages, FCIS, the registry, the measured `claude -p` invocation |
+| `docs/architecture.md` | What is true now: the commands, readiness, FCIS, the registry, the measured `claude -p` invocation |
 | `docs/PARALLEL.md` + `docs/lanes.yaml` | Working in a lane, and who owns which slice |
 | `.wst/constitution.md` | Governance and the non-negotiables |
 | `.wst/triage-rules.md` | What each tier means for a human. `triage.yaml` is the source (adr-0022) |
@@ -96,7 +96,7 @@ concurrent code, and the run that proved it cost $4.45.
 |---|---|---|
 | `.wst/checks/` | The registry, one file per check | yes |
 | `.wst/skills/` | Rules that propagate to bootstrapped repos | yes |
-| `.wst/memory/signals.jsonl` | Append-only observations, the retro's input | yes, `merge=union` |
+| `.wst/memory/signals.jsonl` | The retired loop's observations, kept as a record (adr-0049) | yes, `merge=union` |
 | `.wst/memory/decisions.md` | Decisions by anchor id | yes |
-| `.wst/memory/retro-log.md` | What each retro read and changed | yes |
+| `.wst/memory/retro-log.md` | What each retro read and changed, until adr-0049 | yes |
 | `.wst/receipts/` | Which check passed on which input | no, it is a cache |

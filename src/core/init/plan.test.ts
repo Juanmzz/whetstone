@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { parse as parseYaml } from "yaml";
 import { buildRegistry, parseCheckFile } from "../checks/registry.js";
 import { parseTriageRules } from "../triage/rules.js";
 import { classify } from "../triage/classify.js";
@@ -28,11 +27,9 @@ const TS_REPO = facts({
 });
 
 const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
-  purpose: "A billing service for widget subscriptions.",
   risk: NO_RISK,
   sourcePaths: ["src/**"],
   strictPaths: [],
-  stack: "TypeScript on Node.",
   ...over,
 });
 
@@ -178,7 +175,7 @@ describe("planInit — the declared source paths reach both places that need the
 describe("planInit — a repo with nothing to detect", () => {
   const p = plan({
     facts: facts(),
-    answers: answers({ purpose: "Not started yet.", sourcePaths: ["src/**"], stack: null }),
+    answers: answers({ sourcePaths: ["src/**"] }),
   });
 
   it("seeds no checks rather than commands that would error on every run", () => {

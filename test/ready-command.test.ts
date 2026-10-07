@@ -300,7 +300,7 @@ describe("readiness does not hide missing verification", () => {
     await git(dir, "add", "-A");
     await git(dir, "commit", "-qm", "fixture");
     await writeFile(join(dir, "src/a.ts"), "changed");
-    expect(await runGate({ range: "HEAD", noLens: true, noEmit: true }, dir)).toBe(0);
+    expect(await runGate({ range: "HEAD", noLens: true }, dir)).toBe(0);
     await writeFile(join(dir, "dependency.txt"), "1");
 
     const code = await runReady({ json: true }, dir);

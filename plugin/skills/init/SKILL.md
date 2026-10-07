@@ -15,12 +15,7 @@ wst status
 ```
 
 If `.wst/` already exists, do NOT run `init`. It is not re-init, and it refuses
-anyway. Run `wst update` instead: it re-plans from the answers the repo recorded and
-reports what drifted, what a newer Whetstone writes differently, and what is gone. It
-writes nothing, so reading it costs nothing.
-
-If there is no `.wst/base.json`, `update` says so and stops. That repo predates the
-recorded base; there is nothing to compare against and guessing would be worse.
+anyway. Edit the files in `.wst/checks/` directly, and run `wst ready` to see the result.
 
 Then look at what the repo already has, because it changes which flags you need:
 
@@ -42,20 +37,8 @@ If the test command is wrong, everything downstream is wrong and nothing later w
 catch it.
 
 **In a terminal, `wst init` with no flags opens the interview itself** and the human
-answers it in place. You are not the one filling it in. Your job is sections 2b and 3:
+answers it in place. You are not the one filling it in. Your job is section 3:
 be the one who argues about the answers before they are written.
-
-## 2b. Say what arrived switched off
-
-`init` writes one check the repo did not ask for: `comment-density`, `enabled: false`,
-with the signal that earned it elsewhere in its `origin`. It is an offer sitting in the
-file tree, not a rule. Run `wst check` and it shows as `off`; `wst check run
-comment-density` runs it once without enabling anything.
-
-**Point at it and move on. Do not turn it on for them.** It is off precisely because
-the day `init` runs is the day the answer to "do you want a comment ceiling?" is "I do
-not know yet". Deleting `enabled: false` is a decision the repo makes the first time
-the friction shows up.
 
 ## 3. Draft the answers, then argue about them
 
@@ -63,7 +46,7 @@ the friction shows up.
 wst init --propose
 ```
 
-The judge drafts `purpose`, `risk` and `strictPaths` from evidence it can cite, and
+The judge drafts `sourcePaths`, `risk` and `strictPaths` from evidence it can cite, and
 writes `.wst-answers.json`. It costs about $0.15.
 
 **Then do the part that matters: go through the risk answer with the user, out loud.**
@@ -97,10 +80,11 @@ are files somebody wrote by hand. Either use `--definitions-only`, or stop and a
 ## 5. Arm the gate, correctly
 
 The gate is the only part that does not depend on an agent cooperating, so it is the
-part worth getting right. **`wst init` already wrote `.githooks/pre-push`.** Do not
-write it again; read it, and arm it.
+part worth getting right. **`init` writes `.githooks/pre-push` only under `--enforce`,
+or when the user says yes in a terminal.** Without that, no hook exists yet: ask before
+writing one.
 
-Arming is deliberately not `init`'s to do, because `core.hooksPath` takes ONE value:
+Arming means pointing git at the hook directory, and that setting takes ONE value:
 
 ```sh
 git config core.hooksPath .githooks
@@ -160,19 +144,16 @@ sometimes lies, and nothing will tell them.
 ```bash
 wst check     # what will judge them
 wst triage    # what discipline their current diff earns
-wst gate --no-lens --no-emit
+wst ready     # the answer the agent will use: READY, NOT_READY, INCOMPLETE
 ```
 
-Then commit only Whetstone's own files, never `-A`:
-
-```bash
-git add .wst .claude AGENTS.md CLAUDE.md
-```
+Then commit only what `init` wrote, never `-A`. Its last lines print the exact
+`git add`; with `--enforce` that also covers `.githooks/` and `AGENTS.md`.
 
 ## 7. Tell them how to check back
 
-`wst update` is how they see, later, what they changed and what a newer Whetstone would
-write. Say it once here; it is the command nobody thinks to look for.
+`wst ready` is the whole loop: run it when a task is done, and it says READY,
+NOT_READY or INCOMPLETE, with the reason. Say it once here.
 
 ## What not to do
 
