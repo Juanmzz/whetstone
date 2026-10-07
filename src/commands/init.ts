@@ -712,9 +712,6 @@ nothing above makes a check RUN. Two ways, and they catch different moments:`);
       await chmod(hook, 0o755);
       await armHooksPath(root);
       console.log(`  wrote ${HOOKS_DIR}/pre-push and set core.hooksPath`);
-      // Said here rather than discovered later: a blocked push records what it saw,
-      // which creates the signal log adr-0048 deliberately does not seed empty.
-      console.log(`  a blocked push records what it observed in ${DEFINITION_DIR}/memory/`);
     } catch (cause) {
       // Reported, never fatal: the definitions are already on disk and correct.
       console.error(`  could not arm the hook: ${(cause as Error).message}`);

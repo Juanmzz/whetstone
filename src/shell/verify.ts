@@ -7,8 +7,7 @@
  * the exit code is are all `src/core/gate/`.
  *
  * It RETURNS the verdict rather than printing it. `gate` renders its report and
- * emits signals; `ready` renders readiness and emits nothing. Neither can drift
- * from the other about what actually ran.
+ * `ready` renders readiness, so neither can drift from the other about what ran.
  */
 
 import type { LoadedCheck, Registry } from "../core/checks/registry.js";
