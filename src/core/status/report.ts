@@ -311,7 +311,7 @@ export function renderStatusReport(
   options: { readonly quiet?: boolean } = {},
 ): string {
   if (options.quiet) {
-    return report.ready ? "ready" : "NOT ready";
+    return report.ready ? "installation ok" : "installation NOT ok";
   }
 
   const { facts } = report;
@@ -328,7 +328,7 @@ export function renderStatusReport(
     `  pre-push  ${prePushRow(facts)}`,
     `  plugin    ${pluginRow(facts.plugin)}`,
     "",
-    `  ${report.ready ? "ready" : "NOT ready"}`,
+    `  ${report.ready ? "installation ok" : "installation NOT ok"}`,
   ];
   for (const w of report.warnings) lines.push(`  warn   ${w}`);
   for (const p of report.problems) lines.push(`  blocked  ${p}`);

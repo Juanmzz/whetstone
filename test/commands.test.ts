@@ -276,7 +276,7 @@ describe("wst status", () => {
     expect(stdout()).not.toMatch(/not tracked by git/);
   });
 
-  it("is NOT ready, and exits nonzero, in a repo with no definition directory", async () => {
+  it("is NOT ok, and exits nonzero, in a repo with no definition directory", async () => {
     // The exit code is what a script reads. Reporting problems on stdout while
     // exiting 0 would make `wst status` unusable in CI.
     await withPlugin();
@@ -284,6 +284,6 @@ describe("wst status", () => {
     await git(bare, "init", "-q", "-b", "main");
 
     expect(await runStatus(bare)).toBe(1);
-    expect(stdout()).toMatch(/NOT ready/);
+    expect(stdout()).toMatch(/installation NOT ok/);
   });
 });

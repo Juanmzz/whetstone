@@ -81,13 +81,13 @@ describe("renderStatusReport", () => {
 
   it("in quiet mode prints only the ready line", () => {
     const text = renderStatusReport(buildStatusReport(base), { quiet: true });
-    expect(text).toBe("ready");
+    expect(text).toBe("installation ok");
   });
 
-  it("in quiet mode prints only the NOT ready line, omitting problems", () => {
+  it("in quiet mode prints only the NOT ok line, omitting problems", () => {
     const report = buildStatusReport({ ...base, definitionPresent: false });
     const text = renderStatusReport(report, { quiet: true });
-    expect(text).toBe("NOT ready");
+    expect(text).toBe("installation NOT ok");
   });
 });
 
@@ -192,7 +192,7 @@ describe("the plugin row", () => {
 
   it("keeps quiet mode to the ready line", () => {
     const text = renderStatusReport(withPlugin({ install: "absent" }), { quiet: true });
-    expect(text).toBe("ready");
+    expect(text).toBe("installation ok");
   });
 });
 
