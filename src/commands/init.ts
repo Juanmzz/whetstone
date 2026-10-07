@@ -655,9 +655,10 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
     return 1;
   }
 
-  const written = plan.files.length + 1 + (touchedRootIgnore ? 1 : 0);
+  const written = plan.files.length + (touchedRootIgnore ? 1 : 0);
+  const stage = [...stagePaths(plan), ...(touchedRootIgnore ? [".gitignore"] : [])];
   console.log(`\nwrote ${String(written)} files. Review them, then commit:`);
-  console.log(`  git add ${stagePaths(plan).join(" ")}`);
+  console.log(`  git add ${stage.join(" ")}`);
   console.log('  git commit -m "chore: bootstrap verification"');
 
   await offerEnforcement(root, opts.enforce === true, opts.definitionsOnly === true);
