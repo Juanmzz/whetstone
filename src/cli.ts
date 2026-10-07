@@ -31,13 +31,51 @@ const program = new Command();
 program
   .name("wst")
   .description(
-    "Whetstone: check the work before handing it back. Finds what changed in a worktree,\n" +
+    "Whetstone: check the work before handing it back. Finds what changed in a worktree, " +
       "runs the project's applicable checks, and says what passed, failed or could not be verified.",
   )
   .version(VERSION)
   // Only on the bare `wst`, where a human is looking at the tool rather than at a
   // result. Commander prints this above the usage text.
   .addHelpText("beforeAll", `\n${banner(VERSION)}\n`);
+
+program
+  .command("init")
+  .helpGroup("Commands:")
+  .description(`interview this repo and generate its ${DEFINITION_DIR}/`)
+  .option("--answers <file>", "JSON file of interview answers")
+  .option("--risk <flags>", "comma-separated: money,personalData,productionData,authn,safetyCritical")
+  .option("--source <glob...>", "where this project's code lives: scopes the checks and the triage rules")
+  .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
+  .option("--propose", "write the judge's draft to a file instead of into the questions")
+  .option("--enforce", "also write a pre-push hook and an AGENTS.md stanza, without asking")
+  .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
+  .option("--llm", "also seed an uncalibrated review lens (capped at warn)")
+  .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else: no AGENTS.md, no CLAUDE.md`)
+  .option("--force", "overwrite existing files, listing them first")
+  .option("--dry-run", "show the plan, write nothing")
+  .option("--no-probe", "do not run this repo's own commands; every seeded check starts at warn")
+  .option("--json", "print the plan as JSON")
+  .action(async (opts: Parameters<typeof runInit>[0]) => {
+    process.exitCode = await runInit(opts);
+  });
+
+program.action(() => {
+  program.outputHelp();
+});
+
+program
+  .command("ready")
+  .helpGroup("Commands:")
+  .description("is this task's work ready? resolves its own scope, no range needed")
+  .option("--json", "the report as a JSON envelope, with a semantic `result` field")
+  .option("--range <range>", "advanced: verify this range instead of the resolved scope")
+  .option("--fast", "run only the checks that do not declare themselves slow")
+  .option("--no-evidence", "no evidence store on this machine, so those checks cannot answer")
+  .option("--lens", "run llm checks too; off by default")
+  .action(async (opts: NonNullable<Parameters<typeof runReady>[0]> & { evidence?: boolean }) => {
+    process.exitCode = await runReady({ ...opts, noEvidence: opts.evidence === false });
+  });
 
 program
   .command("status")
@@ -54,7 +92,7 @@ program
 
 const check = program
   .command("check")
-  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .helpGroup("Diagnostics and compatibility:")
   .description(`diagnostic: list the check registry from ${DEFINITION_DIR}/checks/`)
   .option("--json", "print the compiled index as JSON")
   .option("--compile", `write ${DEFINITION_DIR}/checks/_index.json`)
@@ -66,7 +104,7 @@ const check = program
 // `command:`, and the noun it runs under should be the noun the thing is.
 check
   .command("run")
-  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .helpGroup("Commands:")
   .argument("[id]", "which check Whetstone ships the logic for")
   .description("run a check whose logic ships with wst rather than with this repo")
   .action(async (id: string | undefined) => {
@@ -75,7 +113,7 @@ check
 
 program
   .command("triage")
-  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .helpGroup("Diagnostics and compatibility:")
   .description("diagnostic: classify a change into a tier and show which checks apply")
   // No commander default: a default --range makes --paths look like both were
   // passed. runTriage still falls back to HEAD when neither is given.
@@ -90,21 +128,8 @@ program
     process.exitCode = await runTriage(opts);
   });
 program
-  .command("ready")
-  .helpGroup("Commands:")
-  .description("is this task's work ready? resolves its own scope, no range needed")
-  .option("--json", "the report as a JSON envelope, with a semantic `result` field")
-  .option("--range <range>", "advanced: verify this range instead of the resolved scope")
-  .option("--fast", "run only the checks that do not declare themselves slow")
-  .option("--no-evidence", "no evidence store on this machine, so those checks cannot answer")
-  .option("--lens", "run llm checks too; off by default")
-  .action(async (opts: NonNullable<Parameters<typeof runReady>[0]> & { evidence?: boolean }) => {
-    process.exitCode = await runReady({ ...opts, noEvidence: opts.evidence === false });
-  });
-
-program
   .command("gate")
-  .helpGroup("Also available (diagnostics, compatibility, standby):")
+  .helpGroup("Diagnostics and compatibility:")
   .description("compatibility: run the checks over a range. `ready` resolves its own")
   .option("--range <range>", "git diff range", "HEAD")
   .option("--tier <tier>", "provisional triage tier override")
@@ -136,31 +161,6 @@ program
       ...(opts.fast === true ? { fast: true } : {}),
     });
   });
-
-program
-  .command("init")
-  .helpGroup("Commands:")
-  .description(`interview this repo and generate its ${DEFINITION_DIR}/`)
-  .option("--answers <file>", "JSON file of interview answers")
-  .option("--risk <flags>", "comma-separated: money,personalData,productionData,authn,safetyCritical")
-  .option("--source <glob...>", "where this project's code lives: scopes the checks and the triage rules")
-  .option("--strict <glob:reason...>", "a strict path and why it earns full TDD")
-  .option("--propose", "write the judge's draft to a file instead of into the questions")
-  .option("--enforce", "also write a pre-push hook and an AGENTS.md stanza, without asking")
-  .option("--out <file>", "where --propose writes its draft (default .wst-answers.json)")
-  .option("--llm", "also seed an uncalibrated review lens (capped at warn)")
-  .option("--definitions-only", `write ${DEFINITION_DIR}/ and nothing else: no AGENTS.md, no CLAUDE.md`)
-  .option("--force", "overwrite existing files, listing them first")
-  .option("--dry-run", "show the plan, write nothing")
-  .option("--no-probe", "do not run this repo's own commands; every seeded check starts at warn")
-  .option("--json", "print the plan as JSON")
-  .action(async (opts: Parameters<typeof runInit>[0]) => {
-    process.exitCode = await runInit(opts);
-  });
-
-program.action(() => {
-  program.outputHelp();
-});
 
 /**
  * EXIT 2 for every throw, a stack for the unexpected ones. Hard rule 3 applied to
