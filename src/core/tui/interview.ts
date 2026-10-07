@@ -67,14 +67,11 @@ function seed(question: InitQuestion): Field {
     const rows = value.split("\n").map((l) => l.trim()).filter((l) => l !== "");
     return { ...EMPTY, rows: [...rows, ...offered.filter((c) => !rows.includes(c))], picked: rows };
   }
-  if (question.kind === "flags") {
-    const picked = value.split(",").map((v) => v.trim()).filter((v) => v !== "");
-    // Only values the screen offers. A draft naming a flag nobody ships would
-    // otherwise sit in the answers as a ticked box with no row.
-    const offered = new Set(question.options.map((o) => o.value));
-    return { ...EMPTY, picked: picked.filter((v) => offered.has(v)) };
-  }
-  return { ...EMPTY, draft: value };
+  const picked = value.split(",").map((v) => v.trim()).filter((v) => v !== "");
+  // Only values the screen offers. A draft naming a flag nobody ships would
+  // otherwise sit in the answers as a ticked box with no row.
+  const offers = new Set(question.options.map((o) => o.value));
+  return { ...EMPTY, picked: picked.filter((v) => offers.has(v)) };
 }
 
 export function openInterview(questions: readonly InitQuestion[]): InterviewState {
@@ -123,14 +120,10 @@ export function answersOf(s: InterviewState): InterviewAnswers {
     })
     .filter((p) => p.glob !== "");
 
-  const stack = f("stack").draft.trim();
-
   return {
-    purpose: f("purpose").draft.trim(),
     risk: risk.length === 0 ? NO_RISK : profile,
     sourcePaths: f("source-paths").picked,
     strictPaths: strict,
-    stack: stack === "" ? null : stack,
   };
 }
 
@@ -260,14 +253,12 @@ export function renderInterview(s: InterviewState): readonly string[] {
       const here = i === f.option ? "›" : " ";
       lines.push(`  ${here} [${mark(f.picked.includes(o.value))}] ${o.label}`);
     });
-  } else if (q.kind === "paths") {
+  } else {
     f.rows.forEach((row, i) => {
       const here = i === f.option ? "›" : " ";
       lines.push(`  ${here} [${mark(f.picked.includes(row))}] ${row}`);
     });
     lines.push(`    + ${f.draft}_`);
-  } else {
-    lines.push(`  › ${f.draft}_`);
   }
 
   lines.push("", `  ${q.why}`);
@@ -284,7 +275,5 @@ export function renderInterview(s: InterviewState): readonly string[] {
 }
 
 function keysFor(q: InitQuestion): string {
-  if (q.kind === "flags") return "↑↓ move · space toggle";
-  if (q.kind === "paths") return "↑↓ move · space toggle · type + enter adds one";
-  return "type";
+  return q.kind === "flags" ? "↑↓ move · space toggle" : "↑↓ move · space toggle · type + enter adds one";
 }

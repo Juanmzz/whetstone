@@ -23,14 +23,11 @@ const stack: StackFacts = {
   commands: { test: "npm run test", typecheck: null, lint: "npm run lint" },
   hasTests: true,
   mutating: [],
-  declared: { sourceGlobs: [], stack: null, strictCandidates: [], purpose: null },
+  declared: { sourceGlobs: [], strictCandidates: [] },
   evidence: ["package manager: npm (from package-lock.json)"],
 };
 
 const proposal = (over: Partial<Proposal> = {}): Proposal => ({
-  purpose: "A personal task manager with quick capture and daily review.",
-  purposeEvidence: "README.md describes capture and review; apps/bot is a Telegram capture path.",
-  stack: "TypeScript on Node, Vitest, and a CI workflow.",
   sourcePaths: ["apps/*/src/**"],
   risk: [],
   strictPaths: [],
@@ -100,12 +97,6 @@ describe("buildProposalPrompt", () => {
    * it nothing: it anchors the answer on the table's mistake, and the judge has
    * the file list right there and can do better than the table.
    */
-  it("asserts no language of its own — it asks the judge for one", () => {
-    const prompt = buildProposalPrompt(facts, stack);
-    expect(prompt).not.toMatch(/^language: /m);
-    expect(prompt).toMatch(/stack/i);
-  });
-
   it("asks where the code lives, from the file list it was given", () => {
     expect(buildProposalPrompt(facts, stack)).toContain("sourcePaths");
   });
@@ -161,10 +152,8 @@ describe("proposalToAnswers", () => {
   it("produces answers a strict AnswersSchema will accept — no reasoning leaks in", () => {
     const answers = proposalToAnswers(proposal());
     expect(Object.keys(answers).sort()).toEqual([
-      "purpose",
       "risk",
       "sourcePaths",
-      "stack",
       "strictPaths",
     ]);
     expect(JSON.stringify(answers)).not.toContain("Evidence");
@@ -172,7 +161,6 @@ describe("proposalToAnswers", () => {
 
   it("carries the stack and the source paths through — they are answers now, not guesses", () => {
     const answers = proposalToAnswers(proposal());
-    expect(answers.stack).toBe("TypeScript on Node, Vitest, and a CI workflow.");
     expect(answers.sourcePaths).toEqual(["apps/*/src/**"]);
   });
 
@@ -205,9 +193,6 @@ describe("renderProposal", () => {
 describe("ProposalSchema", () => {
   it("rejects a risk entry with no `why`, so the judge cannot return a bare flag", () => {
     const bad = {
-      purpose: "x",
-      purposeEvidence: "y",
-      stack: "z",
       sourcePaths: [],
       risk: [{ flag: "money", citedPaths: [] }],
       strictPaths: [],
@@ -217,9 +202,6 @@ describe("ProposalSchema", () => {
 
   it("rejects an unknown risk flag rather than passing it through", () => {
     const bad = {
-      purpose: "x",
-      purposeEvidence: "y",
-      stack: "z",
       sourcePaths: [],
       risk: [{ flag: "vibes", why: "z", citedPaths: ["a.ts"] }],
       strictPaths: [],
@@ -231,10 +213,6 @@ describe("ProposalSchema", () => {
     expect(ProposalSchema.safeParse(proposal()).success).toBe(true);
   });
 
-  it("rejects a proposal that skips the stack — it is asked for, not optional", () => {
-    const { stack: _dropped, ...rest } = proposal();
-    expect(ProposalSchema.safeParse(rest).success).toBe(false);
-  });
 });
 
 /**
@@ -245,8 +223,6 @@ describe("ProposalSchema", () => {
 describe("proposalToDraft — the proposal in the shape the questions read", () => {
   it("carries purpose, stack and source paths through unchanged", () => {
     const draft = proposalToDraft(proposal());
-    expect(draft.purpose).toBe("A personal task manager with quick capture and daily review.");
-    expect(draft.stack).toBe("TypeScript on Node, Vitest, and a CI workflow.");
     expect(draft.sourcePaths).toEqual(["apps/*/src/**"]);
   });
 

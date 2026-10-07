@@ -58,16 +58,12 @@ import {
 export interface InitOptions {
   /** Path to a JSON file holding `InterviewAnswers`. */
   readonly answers?: string;
-  /** Shorthand for a one-line purpose when no answers file is used. */
-  readonly purpose?: string;
   /** Comma-separated risk flags: money,personalData,productionData,authn,safetyCritical */
   readonly risk?: string;
   /** Repeatable glob naming where the project's code lives. */
   readonly source?: readonly string[];
   /** Repeatable `glob:reason`. */
   readonly strict?: readonly string[];
-  /** What the project is built with, verbatim into the constitution. */
-  readonly stack?: string;
   readonly force?: boolean;
   readonly dryRun?: boolean;
   /**
@@ -101,8 +97,8 @@ export interface InitOptions {
 
 /**
  * Validated rather than cast. The answers file is hand-written (usually by an
- * agent), and a typo'd key silently becoming `undefined` produces a constitution
- * with a hole in it — the exact outcome `validateAnswers` exists to prevent, one
+ * agent), and a typo'd key silently becoming `undefined` produces checks
+ * scoped to nothing — the exact outcome `validateAnswers` exists to prevent, one
  * layer too late to catch it.
  */
 
@@ -110,8 +106,7 @@ const RISK_KEYS = ["money", "personalData", "productionData", "authn", "safetyCr
 
 function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
   // `--source` is the trigger, because it is the only required answer: every
-  // seeded check scopes its `include` to it. `--purpose` used to be, back when it
-  // reached the constitution.
+  // seeded check scopes its `include` to it.
   if (opts.source === undefined || opts.source.length === 0) return null;
 
   const flags = (opts.risk ?? "")
@@ -137,14 +132,12 @@ function answersFromFlags(opts: InitOptions): InterviewAnswers | null {
   });
 
   return {
-    purpose: opts.purpose ?? "",
     risk: {
       ...NO_RISK,
       ...Object.fromEntries(RISK_KEYS.map((k) => [k, flags.includes(k)])),
     },
     sourcePaths: opts.source ?? [],
     strictPaths,
-    stack: opts.stack ?? null,
   };
 }
 
@@ -188,8 +181,7 @@ function printQuestions(stack: ReturnType<typeof detectStack>): void {
   console.log("Answer them, then re-run with either:");
   console.log("  wst init --answers <file.json>");
   console.log(
-    '  wst init --purpose "..." --risk money,authn --source "src/**" \\\n' +
-      '           --strict "src/billing/**:moves money" --stack "TypeScript on Node 24"',
+    '  wst init --risk money,authn --source "src/**" --strict "src/billing/**:moves money"',
   );
   console.log("\nNothing was written.");
 }
@@ -475,19 +467,19 @@ export async function runInit(opts: InitOptions, cwd: string = requireCwd()): Pr
     if (process.stdin.isTTY === true) {
       // BEFORE anything is asked and long before anything is spent. `init`
       // refuses to overwrite, and it used to find that out after a model call
-      // and five questions. The full collision set needs a plan, which needs
+      // and three questions. The full collision set needs a plan, which needs
       // answers; this is the half that needs neither.
       const already = await existingOf(
-        { files: [{ path: `${DEFINITION_DIR}/constitution.md`, contents: "" }], copies: [] } as never,
+        { files: [{ path: `${DEFINITION_DIR}/wst.yaml`, contents: "" }], copies: [] } as never,
         root,
       );
       if (already.length > 0 && opts.force !== true) {
         console.error(
           `${DEFINITION_DIR}/ already exists here, and \`init\` does not overwrite.
 ` +
-            `  \`wst update\` reports what a newer Whetstone would write. \`--force\` lists what it
+            `  \`--force\` lists what it would replace before replacing it.
 ` +
-            `  would replace before replacing it. Nothing was asked and nothing was spent.`,
+            `  Nothing was asked and nothing was spent.`,
         );
         return 1;
       }

@@ -263,14 +263,14 @@ describe("detectStack — what the repo declares about its own shape", () => {
   it("reads the runtime from `engines`, which is a declaration and not an extension count", () => {
     const stack = detectStack(facts({ packageJson: { engines: { node: ">=22" } } as never }));
 
-    expect(stack.declared.stack).toContain("Node");
-    expect(stack.declared.stack).toContain(">=22");
+    expect(stack.evidence.join("\n")).toContain("Node");
+    expect(stack.evidence.join("\n")).toContain(">=22");
   });
 
   it("names TypeScript from tsconfig.json rather than from counting .ts files", () => {
     const stack = detectStack(facts({ files: ["package.json", "tsconfig.json"] }));
 
-    expect(stack.declared.stack).toContain("TypeScript");
+    expect(stack.evidence.join("\n")).toContain("TypeScript");
   });
 
   it("names Rust from Cargo.toml, and both when a repo declares both", () => {
@@ -278,12 +278,12 @@ describe("detectStack — what the repo declares about its own shape", () => {
       facts({ files: ["package.json", "tsconfig.json", "src-tauri/Cargo.toml"] }),
     );
 
-    expect(both.declared.stack).toContain("TypeScript");
-    expect(both.declared.stack).toContain("Rust");
+    expect(both.evidence.join("\n")).toContain("TypeScript");
+    expect(both.evidence.join("\n")).toContain("Rust");
   });
 
   it("leaves the stack blank rather than writing a sentence nothing declared", () => {
-    expect(detectStack(facts({ files: ["README.md"] })).declared.stack).toBeNull();
+    expect(detectStack(facts({ files: ["README.md"] })).evidence.join("\n")).not.toContain("language:");
   });
 
   it("keeps every declaration in the evidence, so a wrong reading can be corrected", () => {
@@ -341,23 +341,23 @@ describe("detectStack — a nested manifest does not name the whole repo", () =>
       facts({ files: ["package.json", "tsconfig.json", "examples/demo/pyproject.toml"] }),
     );
 
-    expect(stack.declared.stack).toContain("TypeScript");
-    expect(stack.declared.stack).not.toContain("Python");
+    expect(stack.evidence.join("\n")).toContain("TypeScript");
+    expect(stack.evidence.join("\n")).not.toContain("Python");
   });
 
   it("still reads a nested manifest when nothing at the root declares a language", () => {
     // `src-tauri/Cargo.toml` is how a Tauri app declares its Rust half, and there
     // is no root Cargo.toml to find.
     const stack = detectStack(facts({ files: ["package.json", "src-tauri/Cargo.toml"] }));
-    expect(stack.declared.stack).toContain("Rust");
+    expect(stack.evidence.join("\n")).toContain("Rust");
   });
 
   it("reads both where the root declares one and only one other exists nested", () => {
     const stack = detectStack(
       facts({ files: ["package.json", "tsconfig.json", "src-tauri/Cargo.toml"] }),
     );
-    expect(stack.declared.stack).toContain("TypeScript");
-    expect(stack.declared.stack).toContain("Rust");
+    expect(stack.evidence.join("\n")).toContain("TypeScript");
+    expect(stack.evidence.join("\n")).toContain("Rust");
   });
 });
 
@@ -379,7 +379,7 @@ describe("the language a repo is actually written in", () => {
     // sift-app was declared `Rust`, on a manifest, with 206 .ts/.tsx against 8
     // .rs. The wrong answer then travels into constitution.md and AGENTS.md,
     // which is the file an agent reads to orient itself.
-    expect(tauri() && detectStack(tauri()).declared.stack).toMatch(/^TypeScript, Rust/);
+    expect(tauri() && detectStack(tauri()).evidence.join("\n")).toMatch(/language: TypeScript[\s\S]*language: Rust/);
   });
 
   it("orders by the repo, not by the order of the table", () => {
@@ -396,7 +396,7 @@ describe("the language a repo is actually written in", () => {
         ],
       }),
     );
-    expect(rustFirst.declared.stack).toMatch(/^Rust, TypeScript/);
+    expect(rustFirst.evidence.join("\n")).toMatch(/language: Rust[\s\S]*language: TypeScript/);
   });
 
   it("names a language the tree is full of even when no manifest declares it", () => {
@@ -406,7 +406,7 @@ describe("the language a repo is actually written in", () => {
     const noTsconfig = detectStack(
       tauri({ files: tauri().files.filter((f) => f !== "tsconfig.json") }),
     );
-    expect(noTsconfig.declared.stack).toMatch(/^TypeScript, Rust/);
+    expect(noTsconfig.evidence.join("\n")).toMatch(/language: TypeScript[\s\S]*language: Rust/);
   });
 
   it("does not promote a language a repo merely touches", () => {
@@ -422,7 +422,7 @@ describe("the language a repo is actually written in", () => {
         ],
       }),
     );
-    expect(rust.declared.stack).toBe("Rust");
+    expect(rust.evidence.join("\n")).toContain("language: Rust");
   });
 
   it("records the count it ordered by, so the answer is checkable", () => {
@@ -432,7 +432,7 @@ describe("the language a repo is actually written in", () => {
   it("still names a declared language the repo has no files for yet", () => {
     // A fresh `cargo init` has a manifest and no code. Zero files is not a
     // reason to drop what the repo says about itself.
-    expect(detectStack(facts({ files: ["Cargo.toml"] })).declared.stack).toBe("Rust");
+    expect(detectStack(facts({ files: ["Cargo.toml"] })).evidence.join("\n")).toContain("language: Rust");
   });
 });
 
@@ -477,18 +477,5 @@ describe("the strict-path candidates a repo offers without being asked", () => {
   it("stops well short of a wall of rows", () => {
     const many = Array.from({ length: 40 }, (_, i) => `pkg/auth${String(i)}/a.ts`);
     expect(detectStack(tree(...many)).declared.strictCandidates.length).toBeLessThanOrEqual(8);
-  });
-});
-
-describe("the purpose a repo already declares", () => {
-  it("reads `description` from package.json, which is a declaration", () => {
-    const stack = detectStack(
-      facts({ packageJson: { description: "Ships invoices to customers." } as never }),
-    );
-    expect(stack.declared.purpose).toBe("Ships invoices to customers.");
-  });
-
-  it("stays null when the repo declares none, rather than inventing one", () => {
-    expect(detectStack(facts()).declared.purpose).toBeNull();
   });
 });

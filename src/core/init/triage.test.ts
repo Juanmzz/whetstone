@@ -13,11 +13,9 @@ import {
  * the code is.
  */
 const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
-  purpose: "A billing service.",
   risk: NO_RISK,
   sourcePaths: ["src/**"],
   strictPaths: [],
-  stack: null,
   ...over,
 });
 

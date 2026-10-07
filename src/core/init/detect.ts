@@ -74,16 +74,12 @@ export interface StackFacts {
 export interface DeclaredAnswers {
   /** Source roots, as globs. Read off `workspaces` and confirmed against the tree. */
   readonly sourceGlobs: readonly string[];
-  /** Language and runtime, from the files that name them. Null when nothing does. */
-  readonly stack: string | null;
   /**
    * Directories whose NAME says a bug there is expensive, as `glob : reason`
    * lines. Offered UNTICKED: which of them may not break is a human's judgement,
    * and this only spares them the recall.
    */
   readonly strictCandidates: readonly string[];
-  /** `description` from package.json. A declaration, so adr-0016 allows it. */
-  readonly purpose: string | null;
 }
 
 /**
@@ -402,7 +398,7 @@ function languagesIn(
   files: readonly string[],
   near: readonly string[],
   note: (what: string, from: string) => void,
-): string[] {
+): void {
   const counts = fileCounts(files);
   const found: { name: string; count: number; from: string }[] = [];
 
@@ -421,7 +417,6 @@ function languagesIn(
 
   found.sort((a, b) => b.count - a.count);
   for (const l of found) note(`language: ${l.name} (${String(l.count)} files)`, l.from);
-  return found.map((l) => l.name);
 }
 
 function declaredAnswers(
@@ -440,21 +435,10 @@ function declaredAnswers(
   // declares its Rust half. Deeper than that it describes something inside the
   // project, and `examples/demo/pyproject.toml` made a TypeScript repo Python.
   const near = files.filter((f) => f.split("/").length <= 2);
-  const languages = languagesIn(files, near, note);
+  languagesIn(files, near, note);
 
   const node = str(facts.packageJson?.engines?.["node"]);
   if (node !== null) note(`runtime: Node ${node}`, "package.json engines");
 
-  const parts = [...languages];
-  if (node !== null) parts.push(`Node ${node}`);
-
-  const purpose = str(facts.packageJson?.description);
-  if (purpose !== null) note("purpose: declared", "package.json description");
-
-  return {
-    sourceGlobs,
-    stack: parts.length === 0 ? null : parts.join(", "),
-    strictCandidates: strictCandidatesIn(files),
-    purpose,
-  };
+  return { sourceGlobs, strictCandidates: strictCandidatesIn(files) };
 }

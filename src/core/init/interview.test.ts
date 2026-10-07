@@ -17,11 +17,9 @@ import {
  */
 
 const answers = (over: Partial<InterviewAnswers> = {}): InterviewAnswers => ({
-  purpose: "A billing service for widget subscriptions.",
   risk: NO_RISK,
   sourcePaths: ["src/**"],
   strictPaths: [],
-  stack: null,
   ...over,
 });
 
@@ -166,7 +164,6 @@ describe("AnswersSchema — a base written by an older Whetstone still parses", 
    */
   it("drops the questions it stopped asking instead of refusing the file", () => {
     const older = {
-      purpose: "A billing service.",
       sourcePaths: ["src/**"],
       conventions: ["code and docs in English"],
       opinions: ["comment-density"],
@@ -174,7 +171,7 @@ describe("AnswersSchema — a base written by an older Whetstone still parses", 
 
     const parsed = AnswersSchema.parse(older);
 
-    expect(parsed.purpose).toBe("A billing service.");
+    expect(parsed).not.toHaveProperty("purpose");
     expect(parsed).not.toHaveProperty("conventions");
     expect(parsed).not.toHaveProperty("opinions");
   });
@@ -192,9 +189,7 @@ describe("AnswersSchema — a base written by an older Whetstone still parses", 
 describe("buildInterview — a declared fact arrives pre-filled, an inferred one never", () => {
   const declared = (over: Partial<DeclaredAnswers> = {}): DeclaredAnswers => ({
     sourceGlobs: [],
-    stack: null,
     strictCandidates: [],
-    purpose: null,
     ...over,
   });
 
@@ -204,7 +199,7 @@ describe("buildInterview — a declared fact arrives pre-filled, an inferred one
   it("asks the same three, whatever the repo declared", () => {
     // An interview that shrinks when a reading gets lucky is one whose coverage
     // nobody can state. Pre-filling is not skipping.
-    const ids = buildInterview(declared({ sourceGlobs: ["apps/*/src/**"], stack: "TypeScript" }))
+    const ids = buildInterview(declared({ sourceGlobs: ["apps/*/src/**"] }))
       .map((q) => q.id);
 
     expect(ids).toEqual(["risk", "source-paths", "strict-paths"]);
@@ -222,7 +217,7 @@ describe("buildInterview — a declared fact arrives pre-filled, an inferred one
   it("never pre-fills what no file can state", () => {
     // Risk and strict paths are judgements about what you are willing to lose. A
     // repo cannot declare them, so a reading may not answer them.
-    const all = declared({ sourceGlobs: ["src/**"], stack: "TypeScript" });
+    const all = declared({ sourceGlobs: ["src/**"] });
     for (const id of ["risk", "strict-paths"]) {
       expect(question(id, all)?.defaultAnswer).toBeNull();
     }
@@ -258,7 +253,7 @@ describe("buildInterview — a reading and a guess are labelled apart", () => {
   });
 
   it("never labels a value it does not have", () => {
-    for (const q of buildInterview(declared, { purpose: "x", risk: ["money"] })) {
+    for (const q of buildInterview(declared, { risk: ["money"] })) {
       if (q.defaultAnswer === null) expect(q.defaultFrom).toBeNull();
       else expect(q.defaultFrom).not.toBeNull();
     }

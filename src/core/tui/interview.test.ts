@@ -146,21 +146,14 @@ describe("leaving", () => {
 
 describe("a pre-filled question opens with the answer in it, editable", () => {
   const q = (over: Partial<InitQuestion>): InitQuestion => ({
-    id: "stack",
+    id: "strict-paths",
     prompt: "p",
     why: "w",
-    kind: "text",
+    kind: "paths",
     options: [],
     defaultAnswer: null,
     defaultFrom: null,
     ...over,
-  });
-
-  it("puts a text default in the draft, so a keystroke edits it", () => {
-    const s = openInterview([q({ defaultAnswer: "TypeScript, Node >=22" })]);
-
-    expect(renderInterview(s).join("\n")).toContain("TypeScript, Node >=22");
-    expect(answersOf(s).stack).toBe("TypeScript, Node >=22");
   });
 
   it("splits a paths default into committed lines, one per glob", () => {
@@ -169,13 +162,6 @@ describe("a pre-filled question opens with the answer in it, editable", () => {
     ]);
 
     expect(answersOf(s).sourcePaths).toEqual(["apps/*/src/**", "packages/*/**"]);
-  });
-
-  it("lets backspace clear a default, which is what makes it a draft and not a decision", () => {
-    let s = openInterview([q({ defaultAnswer: "ab" })]);
-    s = pressIn(pressIn(s, "backspace").state, "backspace").state;
-
-    expect(answersOf(s).stack).toBeNull();
   });
 
   it("says a reading came from the repo, so nobody signs one blind", () => {
@@ -192,12 +178,12 @@ describe("a pre-filled question opens with the answer in it, editable", () => {
   });
 
   it("opens empty where nothing was declared", () => {
-    expect(answersOf(openInterview([q({})])).stack).toBeNull();
+    expect(answersOf(openInterview([q({})])).strictPaths).toEqual([]);
   });
 });
 
 describe("one key, one meaning", () => {
-  const ask = (kind: InitQuestion["kind"], id = "stack"): InitQuestion => ({
+  const ask = (kind: InitQuestion["kind"], id = "risk"): InitQuestion => ({
     id: id as never,
     prompt: "p",
     why: "w",
@@ -210,14 +196,14 @@ describe("one key, one meaning", () => {
   it("advances on enter from every kind of question, including a list", () => {
     // It used to add a line on `paths`, advance undocumented on `flags`, and run
     // a command in the launcher. Three meanings in three consecutive screens.
-    const s = openInterview([ask("paths", "source-paths"), ask("text")]);
+    const s = openInterview([ask("paths", "source-paths"), ask("flags")]);
     expect(pressIn(s, "return").state.at).toBe(1);
   });
 
   it("adds a line with enter, which is what a list does everywhere else", () => {
     // It was `ctrl-n`, and enter advanced. Typing an item and pressing enter is
     // what anyone does in a list, and here it left the question instead.
-    const s = openInterview([ask("paths", "source-paths"), ask("text")]);
+    const s = openInterview([ask("paths", "source-paths"), ask("flags")]);
     const typed = ["a", "b"].reduce((acc, k) => pressIn(acc, k).state, s);
 
     const added = pressIn(typed, "return");
@@ -228,7 +214,7 @@ describe("one key, one meaning", () => {
   });
 
   it("moves on when enter is pressed with nothing typed, since there is nothing to add", () => {
-    const s = openInterview([ask("paths", "source-paths"), ask("text")]);
+    const s = openInterview([ask("paths", "source-paths"), ask("flags")]);
     const typed = ["a", "b"].reduce((acc, k) => pressIn(acc, k).state, s);
 
     const after = pressIn(pressIn(typed, "return").state, "return").state;
@@ -244,21 +230,15 @@ describe("one key, one meaning", () => {
     // legend.
     const always = ["enter", "shift-tab", "ctrl-d", "esc"];
     const also: Record<string, readonly string[]> = {
-      text: [],
       flags: ["space"],
       paths: ["space"],
     };
-    for (const kind of ["text", "flags", "paths"] as const) {
-      const legend = renderInterview(openInterview([ask(kind), ask("text")])).at(-1) ?? "";
+    for (const kind of ["flags", "paths"] as const) {
+      const legend = renderInterview(openInterview([ask(kind), ask("flags")])).at(-1) ?? "";
       for (const key of [...always, ...(also[kind] ?? [])]) expect(legend).toContain(key);
     }
   });
 
-  it("mentions no key that does nothing, which is the other half of the same rule", () => {
-    const legend = renderInterview(openInterview([ask("text"), ask("text")])).at(-1) ?? "";
-    // `tab` was in the legend after it stopped being the way forward.
-    for (const key of ["space", "ctrl-n"]) expect(legend).not.toContain(key);
-  });
 });
 
 /**
@@ -286,7 +266,7 @@ describe("a list question you tick rather than type", () => {
   });
 
   const open = () =>
-    openInterview([paths(["apps/*/src/**", "packages/*/**"]), paths(["x"], ["x"], "stack")]);
+    openInterview([paths(["apps/*/src/**", "packages/*/**"]), paths(["x"], ["x"], "strict-paths")]);
 
   it("opens with every candidate found, already ticked", () => {
     expect(answersOf(open()).sourcePaths).toEqual(["apps/*/src/**", "packages/*/**"]);
@@ -334,7 +314,7 @@ describe("a list question you tick rather than type", () => {
   it("still takes a typed answer in a repo where nothing was found", () => {
     const blank = openInterview([
       { ...paths([], []), defaultAnswer: null, options: [] },
-      paths(["x"], ["x"], "stack"),
+      paths(["x"], ["x"], "strict-paths"),
     ]);
     const typed = ["l", "i", "b"].reduce((s, k) => pressIn(s, k).state, blank);
 
@@ -375,10 +355,10 @@ describe("a drafted checkbox screen opens with the boxes already ticked", () => 
 
 describe("candidates the repo offered but did not answer", () => {
   const tail = (): InitQuestion => ({
-    id: "stack",
+    id: "risk",
     prompt: "what",
     why: "because",
-    kind: "text",
+    kind: "flags",
     options: [],
     defaultAnswer: null,
     defaultFrom: null,
