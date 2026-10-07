@@ -1484,3 +1484,28 @@ a drawer, and nothing was removed from the drawer that anybody was using.
 Cost accepted: an existing `.wst/` still carries skills, memory and a constitution that a
 new installation would not create. Nothing reads them on the readiness path, so they are
 inert rather than broken, and `update` is the command that would reconcile them.
+
+### adr-0049 — delete the standby commands and the launcher; `v0.9.0` is where to pick them up
+`accepted` · 2026-10-06
+
+Narrows adr-0048, which put `signal`, `retro` and `update` on standby and rejected deleting
+them as "a rewrite of an unrelated subsystem".
+
+Two independent reviews of 0.9.0 (one per vendor) found the same thing: the verdict is the
+product, and it was the part with the defects (a failure detail that names no test, an
+INCOMPLETE that gives no reason), while most of the code sat in apparatus that no task
+used. Standby code still has to be read, typechecked and kept passing, and every agent
+orienting in this repo pays for it. So it goes: `signal`, `retro`, `update`, the memory
+substrate behind them, and the launcher `wst` opens with no arguments. `wst` alone prints
+the help. The interactive interview in `init` stays, because that is the one place a person
+is walked through a choice.
+
+**Nothing is lost.** Tag `v0.9.0` is the last release carrying all of it, and `git checkout
+v0.9.0` restores the code. The data stays where it is: `.wst/memory/signals.jsonl` and
+`retro-log.md` are not deleted, so the record of what the loop observed survives the loop.
+
+Rejected: keeping them on standby. That was adr-0048's cost accepted, and it turned out to
+be paid every day by whoever reads the repo, for a loop whose input was mostly typed by hand.
+
+Rejected: moving them to a separate package. A package needs an owner and a user, and they
+have neither yet. If the concept earns a return, it starts from the tag with a reason.
