@@ -80,10 +80,11 @@ are files somebody wrote by hand. Either use `--definitions-only`, or stop and a
 ## 5. Arm the gate, correctly
 
 The gate is the only part that does not depend on an agent cooperating, so it is the
-part worth getting right. **`wst init` already wrote `.githooks/pre-push`.** Do not
-write it again; read it, and arm it.
+part worth getting right. **`init` writes `.githooks/pre-push` only under `--enforce`,
+or when the user says yes in a terminal.** Without that, no hook exists yet: ask before
+writing one.
 
-Arming is deliberately not `init`'s to do, because `core.hooksPath` takes ONE value:
+Arming means pointing git at the hook directory, and that setting takes ONE value:
 
 ```sh
 git config core.hooksPath .githooks
@@ -143,14 +144,11 @@ sometimes lies, and nothing will tell them.
 ```bash
 wst check     # what will judge them
 wst triage    # what discipline their current diff earns
-wst gate --no-lens --no-emit
+wst ready     # the answer the agent will use: READY, NOT_READY, INCOMPLETE
 ```
 
-Then commit only Whetstone's own files, never `-A`:
-
-```bash
-git add .wst .claude AGENTS.md CLAUDE.md
-```
+Then commit only what `init` wrote, never `-A`. Its last lines print the exact
+`git add`; with `--enforce` that also covers `.githooks/` and `AGENTS.md`.
 
 ## 7. Tell them how to check back
 

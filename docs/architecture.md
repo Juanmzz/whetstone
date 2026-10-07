@@ -18,7 +18,7 @@ path is `init`, `ready`, `status`. Decisions and rejected alternatives live in
 `init` reads declared repository commands, offers draft answers when a judge is
 available, and asks about risk, source paths and strict paths. Every drafted
 field must be visited before the interview can write. It probes the repo's
-commands, presents a plan, writes definitions and records an installation base.
+commands, presents a plan and writes definitions.
 
 New installations create no skills, constitution, memory logs, vendor pointers,
 agent instructions or hooks. Existing installations may still contain them.

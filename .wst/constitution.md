@@ -5,11 +5,13 @@
 
 ## Purpose
 
-A self-sharpening standards layer for AI coding agents, installed per project and versioned as plain
-files in git. It captures a project's definition of *correct* (its constitution, its risk triage,
+One honest answer to "is this task's work ready?" for AI coding agents, installed per project and
+versioned as plain files in git. It captures a project's definition of *correct* (its risk triage
 and the checks that matter) and enforces it with a deterministic engine that calls an LLM only where
-judgment is irreducible. It owns the definition-and-verification layer, plus the feedback loop that
-sharpens it (use → record → distill → amend).
+judgment is irreducible.
+
+> Amended 2026-10-06 (adr-0049). This paragraph also claimed the feedback loop that sharpens the
+> rules (use → record → distill → amend). The loop was deleted; tag `v0.9.0` carries it.
 
 ## Risk profile
 
@@ -27,6 +29,10 @@ keeping the core small, not about financial correctness.
 1. **Files-first.** All state is plain text in git. The core must be fully functional with
    the file backend alone. No required servers or databases.
 2. **Memory is an interface.** The core depends on `MemoryPort` and never on a backend.
+
+   > Amended 2026-10-06 (adr-0049). `MemoryPort` and every caller of it were deleted with the
+   > loop. The core holds no memory now. The clause stands for any memory a future version adds.
+
    no forking, no hard dependency, engram included. The port carries the verbs that have a
    live caller and nothing else; which ones those are is read from the port, not from here.
 
@@ -38,7 +44,8 @@ keeping the core small, not about financial correctness.
    > `MemoryPort` ships `save` and `all`. Pinning a verb list in a document nobody executes is
    > the same failure as `AGENTS.md`'s status block, which needed a check to stop lying; the
    > list is removed rather than corrected so it cannot go stale a second time.
-3. **Human-in-the-loop.** The retro proposes; a human disposes. No autonomous rule writes.
+3. **Human-in-the-loop.** A human disposes of every rule change. No autonomous rule writes.
+   (Amended 2026-10-06, adr-0049: it read "the retro proposes", and the retro is deleted.)
    Applied triage-gated on the forward path: critical changes keep a human gate, trivial ones do not.
 4. **Rules carry receipts.** Every rule, and every check, cites the signals/decisions that created it.
 5. **Anti-scope is policy.** Not a spec framework, not a memory server (see VISION.md).
