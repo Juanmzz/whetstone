@@ -1,6 +1,6 @@
 {
   "name": "@juanmzz/whetstone",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Is this task ready? One honest answer for AI coding agents, from the checks your repo already has.",
   "license": "MIT",
   "repository": {
