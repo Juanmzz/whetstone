@@ -2,7 +2,7 @@
 id: architecture
 ts: 2026-09-05
 status: active
-origin: [adr-0017, adr-0019, adr-0048]
+origin: [adr-0017, adr-0019, adr-0048, adr-0049]
 ---
 # Architecture
 
@@ -102,17 +102,15 @@ prompt corrupted structured output in measurement. Do not use `--bare`, which
 requires API-key authentication. Envelopes carry usage and duration; native
 schema validation is followed by application validation and retry policy.
 
-## Compatibility and standby
+## Compatibility
 
-`gate` remains the existing push/CI surface. It can reuse receipts, emits signals
-unless `--no-emit` is set, and allows uncovered changes without claiming checks
-passed. Its policy is whether a push may proceed; readiness reports whether
-verification was established. This repo's hook and CI still use `gate`.
+`gate` remains the existing push/CI surface. It can reuse receipts, and allows uncovered
+changes without claiming checks passed. Its policy is whether a push may proceed;
+readiness reports whether verification was established. This repo's hook and CI still use
+`gate`.
 
-`check` and `triage` are diagnostics. `status` inspects installation and adapter
-health, not a diff. The launcher exposes the three product commands and a
-diagnostic drawer. `config` is deleted.
+`check` and `triage` are diagnostics. `status` inspects installation and adapter health,
+not a diff. `wst` with no arguments prints the help.
 
-`signal`, `retro` and `update` remain on standby. Existing memory stays under
-`.wst/memory/`: decisions, signals and retro records. Retro proposes amendments
-for a human to accept; it never applies rules autonomously.
+`signal`, `retro`, `update`, `config` and the launcher are deleted (adr-0048, adr-0049).
+Tag `v0.9.0` carries them. Their records stay in `.wst/memory/`.

@@ -1,7 +1,7 @@
 {
   "name": "@juanmzz/whetstone",
   "version": "0.9.0",
-  "description": "A self-sharpening standards layer for AI coding agents: git-native, files-first.",
+  "description": "Is this task ready? One honest answer for AI coding agents, from the checks your repo already has.",
   "license": "MIT",
   "repository": {
     "type": "git",

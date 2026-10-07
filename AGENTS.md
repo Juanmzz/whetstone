@@ -8,10 +8,10 @@
 > counts in the status block, which is the part that drifted; the prose is still hand-maintained
 > and **`.wst/` is authoritative wherever the two disagree.**
 
-Whetstone is a **self-sharpening standards layer** for AI coding agents. It captures a
-project's definition of *correct* as plain files in git, enforces it with a deterministic
-engine that calls an LLM only where judgment is irreducible, and grows the checks a project
-needs from the friction it actually hits. Not a spec framework, not a memory server.
+Whetstone answers one question for an AI coding agent: **is this task's work ready?** A
+project's checks live as plain files in git; `wst ready` finds what the task changed, runs the
+checks those paths need, and gives one honest answer. A deterministic engine does the work and
+calls an LLM only where judgment is irreducible. Not a spec framework, not a memory server.
 
 
 ## Read first
@@ -26,34 +26,25 @@ needs from the friction it actually hits. Not a spec framework, not a memory ser
 
 ## The commands
 
-Three of them are the product. The rest are diagnostics, compatibility, or standby
-(adr-0048).
+Three of them are the product. The rest are diagnostics or compatibility (adr-0048, adr-0049).
 
 | | |
 |---|---|
 | `wst init` | interview a repo and write `.wst/`: the checks it can run, and how to route them. Nothing else |
 | `wst ready` | **zero arguments.** Resolves what this task changed, runs the checks, answers READY, NOT_READY, INCOMPLETE or NO_CHANGES |
-| `wst status` | repo, `.wst/`, judge health, version drift, whether the push gate is armed |
-| `wst` | with no arguments and in a terminal: a four-row launcher over those three, plus a diagnostics drawer. Off a terminal, the help |
+| `wst status` | repo, `.wst/`, judge health, whether the push gate is armed |
 
-**Diagnostic**, for agents and maintainers, behind one key in the launcher:
+**Diagnostic**, for agents and maintainers: `wst triage` (classify a change, run nothing) and
+`wst check` (the registry; `check run <id>` runs one whose logic ships with `wst`).
 
-| | |
-|---|---|
-| `wst triage` | classify a change → tier → which checks apply. Runs none of them |
-| `wst check` | the check registry; refuses to load an uncalibrated blocking lens. `check run <id>` runs one whose logic ships with `wst` |
+**Compatibility**: `wst gate` runs the checks over a range somebody passes. `ready` reuses its
+engine and resolves the range itself; the hook and CI still name `gate`.
 
-**Compatibility**: `wst gate` runs the checks over a range somebody passes. `ready` reuses
-its engine and resolves the range itself; the hook and CI still name `gate`.
-
-**Standby**, off the product path and still working: `wst signal` (it IS the [RC3] gate,
-for a human to type), `wst retro` (clusters signals, proposes, never applies), `wst update`
-(reports what drifted since `init`).
-
-**Deleted**: `wst config`. It edited four keys an agent edits directly.
+**Deleted**: `config` (adr-0048); `signal`, `retro`, `update` and the launcher (adr-0049).
+`git checkout v0.9.0` restores them; their data stays in `.wst/memory/`.
 
 Useful flags: `ready --json` (an envelope with a semantic `result` field) · `ready --range`
-(an override for CI and diagnostics) · `gate --no-lens` · `gate --fast` · `gate --no-emit`.
+(an override for CI and diagnostics) · `gate --no-lens` · `gate --fast`.
 
 ## Where things live
 
@@ -61,10 +52,10 @@ Useful flags: `ready --json` (an envelope with a semantic `result` field) · `re
 |---|---|
 | `.wst/` | The definition layer. Source of truth. |
 | `.wst/checks/` · `lanes.yaml` · `triage.yaml` | Registry, lane ownership, triage rules |
-| `.wst/memory/` | `decisions.md`, `signals.jsonl`, `retro-log.md`; `proposals/` holds a retro's draft until the log records it |
+| `.wst/memory/` | `decisions.md`; `signals.jsonl` and `retro-log.md` are the record of the retired loop (adr-0049) |
 | `src/core/` | Pure deterministic engine. **Never imports `src/shell/`.** |
 | `src/core/orchestrate/` | Policy driving ports passed as PARAMETERS (retry, sequencing) |
-| `src/shell/` | Thin adapters: git, claude, sdd, signals, events, receipts, plugin |
+| `src/shell/` | Thin adapters: git, claude, sdd, receipts, plugin |
 | `scripts/calibrate.ts` · `scripts/mutate.ts` | Lens calibration · mutation testing |
 | `.githooks/pre-push` · `.github/workflows/gate.yml` | Where the gate actually runs |
 | `.claude/hooks/` | Emitter output compiled from `.wst/`. Hand-edits are drift. |
@@ -109,52 +100,22 @@ Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram
 `whetstone`.** Never save Whetstone work under another project's namespace.
 
 <!-- Checked by `docs-fresh`. Run `npm run check:docs` after changing anything it counts. -->
-## Status: branch `main` · 49 ADRs · 66 signals · 10 commands
+## Status: branch `main` · 49 ADRs · 66 signals · 7 commands
 
-ADR-0008 records the pivot from Wizard-of-Oz to a TS engine, discharging ADR-0004 for
-`init`/`retro` and **explicitly waiving** it for the gate, registry and triage. PR annotation was
-built under that waiver and removed by ADR-0009.
-
-- **The loop is closed and self-hosting.** `wst gate` verifies this repo's own changes and
-  writes its own signals; `wst retro` has run four times, producing amendments across seven of
-  the eight skills, each carrying the signals that earned it. Enforcement on any worker's
-  changes is the push and CI: the pre-push hook is armed (`core.hooksPath=.githooks`) and CI
-  runs the full gate on every PR. ADR-0023 cut `plan` and `prepare`; what a worker needs to
-  know is in `.wst/`, which it can already read.
-- **61 signals**, 27 with `resolved_by`. Four retros. Seven of eight skills amended:
-  `tdd-discipline` v7, `delegation` v4, `xreview` v3, `doc-locations` v4, `voice` v2,
-  `recording` v2, `lazy` v2. Only `token-economy` is still at v1.
-- **`correctness` does NOT block.** Measured 2026-08-25 on claude 2.1.245: 100/100, unanimous
-  on all ten fixtures, zero harness errors, $2.97. adr-0027 promoted it on that. The receipt
-  records `model: sonnet`, and the check is `tiers: [strict]`, which routes to `opus`: its
-  authority came from a measurement of a judge it never runs under. adr-0045 binds the model
-  and the block lapsed on 2026-08-30. The receipt binds the prompt, the fixtures and the
-  model; the runtime version is recorded and reported as drift, not enforced. adr-0047
-  adds the other way back: a `signed_block` grants it on the owner's judgement instead,
-  and `wst check` prints `BLOCK*` so the two bases are never read as one.
+- **The product is `ready`.** `wst gate` verifies this repo's own changes on push and in CI:
+  the pre-push hook is armed (`core.hooksPath=.githooks`) and CI runs the gate on every PR.
+- **`correctness` does NOT block.** Its calibration receipt records `model: sonnet` while the
+  check routes to `opus`, so adr-0045 lapsed the block on 2026-08-30. One `calibrate` run
+  against `opus`, or a `signed_block` (adr-0047), restores it. `wst check` prints `BLOCK*`
+  for signed authority.
 
 ### Known weaknesses, stated plainly
 
-- **Most signals are still hand-authored.** Of 61: 45 predate the `source` field, 8 are `cli`,
-  2 are `human`, and **6 were written by the gate about its own blocks**. The first was
-  `sig-a9ff00c4` on 2026-08-14, when `docs-fresh` blocked a change that added an ADR and left
-  this line behind. Before that, CI emitted one on an ephemeral runner and it evaporated: the
-  gap was never "the gate does not fail", it was that where the gate really runs, nothing
-  persisted what it observed.
-  The machine-written six are the loop's only input nobody had to remember to type, and
-  that number is the one to watch.
-- **Nothing blocks on judgement right now.** `correctness` never fired: the promoting change
-  touched no `src/**/*.ts`, so the lens did not run in its own CI, and adr-0045 then found the
-  measurement described the wrong model. One `calibrate` run against `opus` restores it.
-- **Mutation score 85%** over a 40-mutation sample; the suite catches real bugs but the sample
-  was small.
-- **Unowned:** `npm run check:in-force` lists what is decided and not yet true of the
-  code, so this line no longer keeps it by hand. Beyond that: no skill owns
-  subprocess-exit-code conventions (a retro proposal was declined for want of a home);
-  **eight of the thirteen checks are Whetstone-only**: `adr-refs`, `command-surface`, `docs-fresh`,
-  `in-force`, `provenance`, `run-the-lens`, `skill-shape` and `strict-tdd` enforce this repo's own discipline, `init` seeds none of them, and
-  nobody has asked what each last caught; and nothing says what the signal log does after two
-  years of appending. **`commit-message` is the first check whose subject is not a file**, and
-  the registry has no way to express that: selection is by changed path, so its `include` is
-  made broad here and scoped to the declared layout where `init` writes it, which means a
-  documentation-only commit escapes it in a bootstrapped repo.
+- **The verdict's detail is thin.** A failing check reports one line of its output, and
+  INCOMPLETE does not always say why. Both are the next release's first work.
+- **Every check runs at once.** On a repo with heavy checks that contention may produce
+  false NOT_READY; unmeasured.
+- **Selection is by path, not by dependency graph.** A change a check covers runs that
+  check's whole command.
+- **Seven of the twelve checks are Whetstone-only**: `adr-refs`, `command-surface`,
+  `docs-fresh`, `in-force`, `run-the-lens`, `skill-shape` and `strict-tdd`. `init` seeds none.
