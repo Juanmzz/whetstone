@@ -116,12 +116,10 @@ describe("the plugin the marketplace ships", () => {
     }
   });
 
-  it("tells an agent about `wst update` rather than to stop at an existing .wst/", async () => {
-    // The line said "STOP and say so. `init` is not re-init" — true, and the reason
-    // an agent had nothing to offer a repo that already had one.
+  it("gives an agent something to do at an existing .wst/, rather than only stopping", async () => {
     const skill = await readFile(join(repoRoot, "plugin", "skills", "init", "SKILL.md"), "utf-8");
 
-    expect(skill).toContain("wst update");
-    expect(skill).toContain("wst check run");
+    expect(skill).toContain(".wst/checks/");
+    expect(skill).toContain("wst ready");
   });
 });
