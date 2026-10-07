@@ -4,26 +4,6 @@
 
 import { DEFINITION_DIR } from "../paths.js";
 
-/**
- * All eight ship, always — a skill left out cannot be switched on later without a
- * re-init. The *active* set is calibration, and it lives in `wst.yaml`.
- */
-/**
- * @param texts what the shell read off Whetstone's own `skills/`, keyed by `from`.
- *   Absent entries leave `contents` unset, which `auditSelfContained` reports as
- *   unaudited rather than clean.
- */
-/**
- * A skill as it should land in someone else's repo.
- *
- * The rule travels; the argument that produced it does not. A changelog entry
- * says "v4 (adr-0014, sig-0041)" — a decision and a signal that exist in
- * Whetstone's record and in no bootstrapped repo, so every line of it is a
- * dangling reference under ADR-0004. It is replaced by one line naming where the
- * rule came from, and the target repo's own retro grows the log from there.
- *
- * The frontmatter stays: `version:` is what an update compares against.
- */
 export interface WstYamlInput {
   readonly backend: string;
   /** Namespace for any memory adapter. Written only where one is configured. */

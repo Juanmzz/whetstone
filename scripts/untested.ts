@@ -6,9 +6,7 @@
  * not run it. Non-negotiable 4 says a check cites the signals that earned it, and
  * nothing has earned this one — the numbers below were measured out of git rather
  * than accumulated from friction. When the gap it reports causes real trouble,
- * `wst signal` records that, the retro clusters it, and THEN it can enter the
- * registry with an origin it actually has. Shortcutting that is the loop this
- * project exists to demonstrate, skipped.
+ * that trouble is the origin it can enter the registry with, and not before.
  *
  *   npm run untested
  *   npm run untested -- --range origin/main..HEAD

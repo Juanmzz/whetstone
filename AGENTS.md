@@ -16,8 +16,8 @@ calls an LLM only where judgment is irreducible. Not a spec framework, not a mem
 
 ## Read first
 
-1. **`docs/architecture.md`** states what is true now: the three parts, the
-   loop, the layers, FCIS, the check registry, the measured `claude -p` invocation.
+1. **`docs/architecture.md`** states what is true now: the commands, readiness,
+   FCIS, the check registry, the measured `claude -p` invocation.
 2. **`.wst/constitution.md`**: governance and the seven non-negotiables.
 3. **`.wst/triage-rules.md`**: which discipline a change earns. Read BEFORE editing.
 4. **`.wst/memory/decisions.md`**: every decision by anchor id, carrying what it ruled out.
@@ -91,7 +91,7 @@ Useful flags: `ready --json` (an envelope with a semantic `result` field) · `re
    and `.wst/` is what orients it. `wst prepare`, which used to write that briefing, is gone
    too (ADR-0023).
 10. **Isolate a negative control.** When you break something on purpose to prove a check catches
-    it, that defect must be the ONLY uncommitted change, and use `--no-emit`. Twice now it has
+    it, that defect must be the ONLY uncommitted change. Twice now it has
     contaminated something else: real work (`sig-0025`) and the evidence log (`sig-0026`).
 
 ## Memory

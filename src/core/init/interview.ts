@@ -275,11 +275,8 @@ const RETIRED_ANSWERS = ["conventions", "opinions", "purpose", "stack"];
 /**
  * `InterviewAnswers` as data on disk, tolerant of a base an older Whetstone wrote.
  *
- * A retired key is DROPPED rather than rejected. A repo bootstrapped before
- * adr-0030 recorded its answers with `conventions` and `opinions` in them, and a
- * strict schema that refuses those is one that makes `wst update` unrunnable in
- * exactly the repos it exists to tell about the change. An unknown key still
- * fails, so a typo is not silently swallowed.
+ * A retired key is DROPPED rather than rejected: an answers file written by an older
+ * version still loads. An unknown key still fails, so a typo is not silently swallowed.
  */
 export const AnswersSchema = z.preprocess((raw) => {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return raw;

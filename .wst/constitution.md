@@ -29,10 +29,6 @@ keeping the core small, not about financial correctness.
 1. **Files-first.** All state is plain text in git. The core must be fully functional with
    the file backend alone. No required servers or databases.
 2. **Memory is an interface.** The core depends on `MemoryPort` and never on a backend.
-
-   > Amended 2026-10-06 (adr-0049). `MemoryPort` and every caller of it were deleted with the
-   > loop. The core holds no memory now. The clause stands for any memory a future version adds.
-
    no forking, no hard dependency, engram included. The port carries the verbs that have a
    live caller and nothing else; which ones those are is read from the port, not from here.
 
@@ -44,6 +40,9 @@ keeping the core small, not about financial correctness.
    > `MemoryPort` ships `save` and `all`. Pinning a verb list in a document nobody executes is
    > the same failure as `AGENTS.md`'s status block, which needed a check to stop lying; the
    > list is removed rather than corrected so it cannot go stale a second time.
+
+   > Amended 2026-10-06 (adr-0049). `MemoryPort` and every caller of it were deleted with the
+   > loop. The core holds no memory now. The clause stands for any memory a future version adds.
 3. **Human-in-the-loop.** A human disposes of every rule change. No autonomous rule writes.
    (Amended 2026-10-06, adr-0049: it read "the retro proposes", and the retro is deleted.)
    Applied triage-gated on the forward path: critical changes keep a human gate, trivial ones do not.
