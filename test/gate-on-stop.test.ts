@@ -21,9 +21,9 @@ interface HookOutput {
   readonly hookSpecificOutput?: { readonly hookEventName?: string; readonly additionalContext?: string };
 }
 
-async function stop(root: string): Promise<HookOutput | null> {
+async function stop(root: string, input = "{}"): Promise<HookOutput | null> {
   const child = exec(HOOK, [], { env: { ...process.env, CLAUDE_PROJECT_DIR: root } });
-  child.child.stdin?.end("{}");
+  child.child.stdin?.end(input);
   const { stdout } = await child;
   return stdout.trim() === "" ? null : (JSON.parse(stdout) as HookOutput);
 }
@@ -134,5 +134,37 @@ describe("the gate-on-stop hook", () => {
 
     expect(out?.decision).toBeUndefined();
     expect(out?.hookSpecificOutput?.additionalContext).toContain("did not finish");
+  });
+
+  it("does not block again after a fix attempt, and says the work is still NOT_READY", async () => {
+    await installFakeBin("wst", { exit: 1, stdout: "NOT_READY\n  FAIL test\n" });
+
+    const out = await stop(await project(true), '{"stop_hook_active":true}');
+
+    expect(out?.decision).toBeUndefined();
+    const context = out?.hookSpecificOutput?.additionalContext;
+    expect(context).toContain("still NOT_READY");
+    expect(context).toContain("Do not report the work as ready");
+    expect(context).toContain("FAIL test");
+  });
+
+  it("blocks on the first stop when the flag is false", async () => {
+    await installFakeBin("wst", { exit: 1, stdout: "FAIL test\n" });
+
+    expect((await stop(await project(true), '{"stop_hook_active":false}'))?.decision).toBe("block");
+  });
+
+  it("blocks when stdin is not JSON", async () => {
+    await installFakeBin("wst", { exit: 1, stdout: "FAIL test\n" });
+
+    expect((await stop(await project(true), "not json"))?.decision).toBe("block");
+  });
+
+  it("still tells INCOMPLETE as a notice when the flag is true", async () => {
+    await installFakeBin("wst", { exit: 2, stderr: "INCOMPLETE\n" });
+
+    const out = await stop(await project(true), '{"stop_hook_active":true}');
+
+    expect(out?.hookSpecificOutput?.additionalContext).toContain("answered INCOMPLETE");
   });
 });
