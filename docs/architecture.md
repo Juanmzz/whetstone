@@ -59,9 +59,21 @@ The report names the branch, base and resolved commit, splits files by Git state
 and lists check results. `--json` exposes a semantic `result` and warning IDs.
 Stdout carries the report and stderr carries progress.
 
+A check that failed or could not run reports `detail`, an array of lines: the last
+40 non-blank lines it printed, with terminal escapes and `node_modules` stack frames
+removed and the total capped at 4000 characters (`core/gate/detail.ts`). A leading
+line counts what was cut. The text report prints them indented under the check.
+
+`INCOMPLETE` and a `NO_CHANGES` in a repo with no `.wst/` carry `reason`
+(`core/ready/incomplete.ts`): no `.wst/`, an empty registry, the checks that could
+not run or were left out, and the changed paths no check covers. `uncovered` lists
+those paths in every result; `declined` lists the switched-off checks that would
+have matched.
+
 ## Functional core, imperative shell
 
-`src/cli.ts` wires commands. `src/commands/` composes adapters, core functions and
+`src/bin.ts` is what `wst` resolves to: it refuses a Node below the `engines`
+floor with one line and exit 2, then imports `src/cli.ts`, which wires commands. `src/commands/` composes adapters, core functions and
 reports. `src/core/` owns deterministic policies: triage, selection, readiness,
 aggregation, receipt hashing, interview transitions and validation. It never
 imports `src/shell/` or calls a model.
