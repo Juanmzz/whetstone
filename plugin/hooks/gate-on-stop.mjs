@@ -54,16 +54,19 @@ try {
 
   const out = `${cause.stdout ?? ""}${cause.stderr ?? ""}`.trim();
 
-  // 2 is every way of NOT having a verdict. It must not read as "you broke something",
-  // and silence would read as a pass, so it is told as neither.
+  // INCOMPLETE ran and may have passed some checks; a kill never answered. Neither is a
+  // failed check, and silence would read as a pass, so each is told as what it is.
   if (code === 2 || killed !== undefined) {
+    const lead =
+      code === 2
+        ? `Whetstone ready answered INCOMPLETE: this change is not fully verified. `
+        : `Whetstone ready did not finish, so this change is not verified. `;
     console.log(
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "Stop",
           additionalContext:
-            `Whetstone ready could not run, so this change was NOT verified. ` +
-            `This is not a failed check. Do not report the work as verified.\n\n${out}`,
+            `${lead}This is not a failed check. Do not report the work as verified.\n\n${out}`,
         },
       }),
     );
