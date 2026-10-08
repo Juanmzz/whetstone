@@ -76,7 +76,7 @@ export type PluginInstall = "enabled" | "disabled" | "absent" | "unknown";
 export interface PluginFacts {
   readonly install: PluginInstall;
   /**
-   * The directory the Stop hook would run the gate in: `CLAUDE_PROJECT_DIR` when the
+   * The directory the Stop hook would run ready in: `CLAUDE_PROJECT_DIR` when the
    * harness sets it, else the cwd. NOT necessarily the repo — in the field it was an
    * umbrella folder holding several repos, and every hook was inert because of it.
    */

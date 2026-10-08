@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Runs the gate when Claude finishes, and hands the verdict back into the session.
+ * Runs `wst ready` when Claude finishes, and hands the verdict back into the session.
  *
  * THE POINT. Layers 1 and 2 of this tool both depend on the agent cooperating: the
  * strict-path hook only warns, and "run `wst gate` when you are done" lives as prose in
@@ -12,8 +12,9 @@
  * it corrects itself before a human looks. By the time you push, the pre-push gate is
  * the net rather than the discovery.
  *
- * `--no-lens` always: this runs on every stop, and a hook that costs money and fifty
- * seconds each time gets disabled, at which point its value is negative.
+ * `ready`, not `gate`: `gate` diffs the working tree against HEAD, so an agent that
+ * committed before stopping presented an empty diff and passed unverified. `ready`
+ * resolves the merge base, sees untracked files, and never exits 0 having verified nothing.
  */
 
 import { execFile } from "node:child_process";
@@ -24,8 +25,17 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const root = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
 
-// Drain stdin so the harness never blocks on a hook that ignored its input.
-for await (const _ of process.stdin) void _;
+let raw = "";
+for await (const chunk of process.stdin) raw += chunk;
+
+// True when this Stop is already a continuation caused by a stop hook. Empty or invalid
+// input means no flag.
+let afterFixAttempt = false;
+try {
+  afterFixAttempt = JSON.parse(raw)?.stop_hook_active === true;
+} catch {}
+
+if (!existsSync(join(root, ".wst"))) process.exit(0);
 
 /**
  * Every failure to RUN exits silently.
@@ -37,7 +47,7 @@ for await (const _ of process.stdin) void _;
  */
 let result;
 try {
-  result = await run("wst", ["gate", "--no-lens", "--no-emit"], {
+  result = await run("wst", ["ready"], {
     cwd: root,
     timeout: 170_000,
     maxBuffer: 8 * 1024 * 1024,
@@ -45,21 +55,32 @@ try {
 } catch (cause) {
   const code = cause?.code;
   // A NUMBER is the gate having decided. A STRING (ENOENT) is it never having run.
-  if (typeof code !== "number") process.exit(0);
+  // A signal (the timeout kill) is it having started and never answered.
+  const killed = code === null || code === undefined ? cause?.signal : undefined;
+  if (typeof code !== "number" && killed === undefined) process.exit(0);
 
   const out = `${cause.stdout ?? ""}${cause.stderr ?? ""}`.trim();
 
-  // 2 is every way of NOT having a verdict. It must not read as "you broke something",
-  // and silence would read as a pass, so it is told as neither.
-  if (code === 2) {
-    if (!existsSync(join(root, ".wst"))) process.exit(0);
+  // After a fix attempt nothing may continue the turn (additionalContext does, like a block),
+  // so the user alone is told. INCOMPLETE ran and may have passed some checks; a kill never
+  // answered. Neither is a failed check, and silence would read as a pass.
+  if (afterFixAttempt) {
+    const state = code === 1 ? "is still NOT_READY" : code === 2 ? "is still INCOMPLETE" : "did not finish";
+    console.log(JSON.stringify({ systemMessage: `Whetstone ready ${state} after a fix attempt. Not ready to report.\n\n${out}` }));
+    process.exit(0);
+  }
+
+  if (code === 2 || killed !== undefined) {
+    const lead =
+      code === 2
+        ? `Whetstone ready answered INCOMPLETE: this change is not fully verified. `
+        : `Whetstone ready did not finish, so this change is not verified. `;
     console.log(
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "Stop",
           additionalContext:
-            `The Whetstone gate could not run, so this change was NOT verified. ` +
-            `This is not a failed check. Do not report the work as verified.\n\n${out}`,
+            `${lead}This is not a failed check. Do not report the work as verified.\n\n${out}`,
         },
       }),
     );
@@ -70,9 +91,9 @@ try {
     JSON.stringify({
       decision: "block",
       reason:
-        `The Whetstone gate BLOCKED this change. This is not advisory; the work is not ` +
+        `Whetstone ready says this change is NOT_READY. This is not advisory; the work is not ` +
         `done until it passes.\n\n${out}\n\n` +
-        `Fix the failing check and run \`wst gate --no-lens --no-emit\` yourself to confirm. ` +
+        `Fix the failing check and run \`wst ready\` yourself to confirm. ` +
         `Do not weaken or skip the check to make it pass; if the check itself is wrong, ` +
         `say so and stop rather than editing it.`,
     }),
@@ -80,6 +101,6 @@ try {
   process.exit(0);
 }
 
-// Passed. Say nothing: a hook that speaks on success is noise on every single stop.
+// READY or NO_CHANGES. Say nothing: a hook that speaks on success is noise on every single stop.
 void result;
 process.exit(0);
