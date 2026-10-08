@@ -16,6 +16,10 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { isolateFromInheritedGit } from "./git-env.js";
+
+// Before anything builds a repository. See `git-env.ts`.
+isolateFromInheritedGit();
 
 const repoRoot = new URL("..", import.meta.url).pathname;
 
