@@ -7,6 +7,13 @@
 
 import { DEFINITION_DIR } from "../paths.js";
 
+export interface UnrunCheck {
+  readonly id: string;
+  /** What kept it from running, and what would run it where something would. */
+  readonly why: string;
+  readonly blocks: boolean;
+}
+
 export interface IncompleteFacts {
   /** Whether the definition directory exists at all. */
   readonly definitions: boolean;
@@ -16,10 +23,8 @@ export interface IncompleteFacts {
   readonly errored: readonly string[];
   /** Switched off, and would have matched these paths. */
   readonly declined: readonly string[];
-  /** Left out by `--fast`, and may block. */
-  readonly omitted: readonly string[];
-  /** May block, applied, and produced no verdict: a method, or a skip with no receipt. */
-  readonly unrun: readonly string[];
+  /** Applied and produced no verdict: left out by a flag, a method, a skip with no receipt. */
+  readonly unrun: readonly UnrunCheck[];
 }
 
 const MAX_PATHS = 10;
@@ -27,6 +32,9 @@ const MAX_PATHS = 10;
 const NO_DEFINITIONS = `no ${DEFINITION_DIR}/ in this repository, so there are no checks to run. Run \`wst init\`.`;
 
 const checks = (n: number): string => `${String(n)} check${n === 1 ? "" : "s"}`;
+
+const named = (unrun: readonly UnrunCheck[]): string =>
+  unrun.map((check) => `${check.id} (${check.why})`).join(", ");
 
 function uncoveredSentence(paths: readonly string[]): string {
   const shown = paths.slice(0, MAX_PATHS).join(", ");
@@ -38,7 +46,7 @@ function uncoveredSentence(paths: readonly string[]): string {
 export function whyIncomplete(facts: IncompleteFacts): string {
   if (!facts.definitions) return NO_DEFINITIONS;
   if (facts.checks === 0) {
-    return `init seeded no checks: ${DEFINITION_DIR}/checks/ is empty, so nothing can verify this change. Add a check there, or run \`wst init\` again.`;
+    return `no checks in ${DEFINITION_DIR}/checks/: init seeded no checks, or they were removed. Add a check there, or run \`wst init\` again.`;
   }
 
   const causes: string[] = [];
@@ -52,17 +60,18 @@ export function whyIncomplete(facts: IncompleteFacts): string {
       `${checks(facts.declined.length)} that would cover this change ${facts.declined.length === 1 ? "is" : "are"} switched off: ${facts.declined.join(", ")}`,
     );
   }
-  if (facts.omitted.length > 0) {
-    causes.push(`${checks(facts.omitted.length)} left out by --fast: ${facts.omitted.join(", ")}. Rerun without --fast.`);
-  }
-  if (facts.unrun.length > 0) {
-    causes.push(`${checks(facts.unrun.length)} that may block did not run: ${facts.unrun.join(", ")}`);
-  }
+  const blocking = facts.unrun.filter((check) => check.blocks);
+  if (blocking.length > 0) causes.push(`${checks(blocking.length)} that may block did not run: ${named(blocking)}`);
 
   if (facts.uncovered.length > 0) {
     causes.push(`${causes.length === 0 ? "" : "also, "}${uncoveredSentence(facts.uncovered)}`);
   }
-  return causes.length === 0 ? "no check ran over this change, so nothing verified it" : causes.join("\n");
+  if (causes.length > 0) return causes.join("\n");
+
+  const nothing = "no check ran over this change, so nothing verified it";
+  return facts.unrun.length === 0
+    ? nothing
+    : `${nothing}. ${checks(facts.unrun.length)} applied and did not run: ${named(facts.unrun)}`;
 }
 
 /** A clean tree reads the same with and without checks, so the missing directory is said. */

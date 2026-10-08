@@ -426,6 +426,29 @@ describe("readiness does not hide missing verification", () => {
     expect(envelope().results).toContainEqual(expect.objectContaining({ id: "slow", status: "skipped", detail: ["fast"] }));
   });
 
+  it("names the flag that left a blocking check out", async () => {
+    const dir = await repo();
+    await checkFile(dir, "slow", 'node -e "process.exit(1)"', "slow: true");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "a slow check");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    expect(await runReady({ json: true, fast: true }, dir)).toBe(2);
+    expect(envelope().reason).toBe("1 check that may block did not run: slow (left out by --fast, rerun without it)");
+  });
+
+  it("names an advisory check that was the only one to apply and did not run", async () => {
+    const dir = await repo();
+    await checkFile(dir, "always", 'node -e "process.exit(0)"', "", "docs/**");
+    await checkFile(dir, "slow", 'node -e "process.exit(1)"', "slow: true", "src/**", "warn");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "only an advisory check covers src");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    expect(await runReady({ json: true, fast: true }, dir)).toBe(2);
+    expect(envelope().reason).toContain("1 check applied and did not run: slow (left out by --fast, rerun without it)");
+  });
+
   it("does not omit slow checks without fast", async () => {
     const dir = await repo();
     await checkFile(dir, "slow", 'node -e "process.exit(1)"', "slow: true");

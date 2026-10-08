@@ -22,7 +22,7 @@ import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/res
 import { renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
 import { outcomeOf } from "../core/gate/report.js";
 import { leavesWorkUndone, uncoveredPaths } from "../core/gate/select.js";
-import { whyIncomplete, whyNothingToVerify } from "../core/ready/incomplete.js";
+import { whyIncomplete, whyNothingToVerify, type UnrunCheck } from "../core/ready/incomplete.js";
 import { definitionRoot } from "../shell/sdd.js";
 import { exists } from "../shell/fs.js";
 import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
@@ -137,15 +137,25 @@ export async function runReady(
   const { run, routing, registry } = verified;
   // An EMPTY registry is a gate that could not run, not an uncovered change.
   const outcome = registry.byId.size === 0 ? "incomplete" : outcomeOf(run.verdict, run.selection);
-  const omitted = run.selection.omitted.filter(leavesWorkUndone).map((r) => r.id);
-  const unrun = run.verdict.results
-    .filter((r) => r.severity === "block" &&
-      ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
-    .map((r) => r.checkId);
+  const lensOff = (id: string): boolean => opts.lens !== true && registry.byId.get(id)?.kind === "llm";
+  const unrun: UnrunCheck[] = [
+    ...run.selection.omitted.map((o) => ({
+      id: o.id,
+      why: o.reason === "fast" ? "left out by --fast, rerun without it" : "needs an evidence store this machine does not have",
+      blocks: leavesWorkUndone(o),
+    })),
+    ...run.verdict.results.flatMap((r): UnrunCheck[] => {
+      const blocks = r.severity === "block";
+      if (r.outcome.status === "declared") return [{ id: r.checkId, why: "a method to follow by hand", blocks }];
+      if (r.outcome.status !== "skipped" || r.outcome.reason === "receipt") return [];
+      const why = lensOff(r.checkId) ? "a model review, rerun with --lens" : r.outcome.reason === "disabled" ? "switched off" : "not in this tier";
+      return [{ id: r.checkId, why, blocks }];
+    }),
+  ];
   const readiness = readinessOf(outcome, files.length > 0, {
     errored: run.verdict.errored,
     declined: run.selection.declined,
-    pending: [...omitted, ...unrun],
+    pending: unrun.filter((u) => u.blocks).map((u) => u.id),
   });
 
   const definitions = await exists(definitionRoot(repoRoot));
@@ -158,7 +168,6 @@ export async function runReady(
           uncovered,
           errored: run.verdict.errored,
           declined: run.selection.declined,
-          omitted,
           unrun,
         })
       : readiness === "NO_CHANGES"
@@ -170,7 +179,7 @@ export async function runReady(
     status: STATUS[r.outcome.status] ?? "n/a",
     ms: r.durationMs ?? 0,
     ...(r.outcome.status === "fail" || r.outcome.status === "errored"
-      ? { detail: (r.outcome.detail ?? "").split("\n") }
+      ? { detail: (r.outcome.detail ?? "").split("\n").filter((line) => line.trim() !== "") }
       : {}),
     ...(r.outcome.status === "skipped" ? { detail: [r.outcome.reason] } : {}),
   }));
