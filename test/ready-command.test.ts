@@ -20,6 +20,10 @@ import { runReady } from "../src/commands/ready.js";
 import { runGate } from "../src/commands/gate.js";
 import { gitEnv } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
+import { isolateFromInheritedGit } from "./git-env.js";
+
+// Before anything builds a repository. See `git-env.ts`.
+isolateFromInheritedGit();
 
 const exec = promisify(execFile);
 
