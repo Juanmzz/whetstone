@@ -1,0 +1,65 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/price.test.ts > total > is zero for an empty cart
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/price.test.ts:6:23
+      4| describe("total", () => {
+      5|   it("is zero for an empty cart", () => {
+      6|     expect(total([])).toBe(0);
+       |                       ^
+      7|   });
+      8|   it("multiplies cents by quantity", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/price.test.ts > total > multiplies cents by quantity
+AssertionError: expected 501 to be 500 // Object.is equality
+
+- Expected
++ Received
+
+- 500
++ 501
+
+ ❯ src/price.test.ts:9:55
+      7|   });
+      8|   it("multiplies cents by quantity", () => {
+      9|     expect(total([{ sku: "a", cents: 250, qty: 2 }])).toBe(500);
+       |                                                       ^
+     10|   });
+     11| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/price.test.ts > parseLine > accepts a line with a quantity of zero as an empty line
+ZodError: [
+  {
+    "origin": "number",
+    "code": "too_small",
+    "minimum": 0,
+    "inclusive": false,
+    "path": [
+      "qty"
+    ],
+    "message": "Too small: expected number to be >0"
+  }
+]
+ ❯ parseLine src/price.ts:11:15
+      9|
+     10| export function parseLine(raw: unknown): Line {
+     11|   return Line.parse(raw);
+       |               ^
+     12| }
+     13|
+ ❯ src/price.test.ts:15:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
