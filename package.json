@@ -26,7 +26,7 @@
   },
   "type": "module",
   "bin": {
-    "wst": "dist/cli.js"
+    "wst": "dist/bin.js"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -39,7 +39,7 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc -p tsconfig.build.json && chmod +x dist/cli.js",
+    "build": "npm run clean && tsc -p tsconfig.build.json && chmod +x dist/cli.js dist/bin.js",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
