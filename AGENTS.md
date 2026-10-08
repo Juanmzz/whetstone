@@ -113,8 +113,8 @@ Backend is `files`; `.wst/memory/` is the source of truth, human-gated. **Engram
 
 - **The verdict's detail is a tail.** A failing check reports its last 40 lines. With
   several failures the first ones are counted, not shown.
-- **Every check runs at once.** On a repo with heavy checks that contention may produce
-  false NOT_READY; unmeasured.
+- **Every check runs at once.** Measured on sift on 2026-10-07 under a load average of 34
+  to 92: 1 false NOT_READY in 10 runs, and 1 in 10 with the checks run one at a time.
 - **Selection is by path, not by dependency graph.** A change a check covers runs that
   check's whole command.
 - **Seven of the twelve checks are Whetstone-only**: `adr-refs`, `command-surface`,
