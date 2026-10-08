@@ -61,8 +61,15 @@ try {
 
   const out = `${cause.stdout ?? ""}${cause.stderr ?? ""}`.trim();
 
-  // INCOMPLETE ran and may have passed some checks; a kill never answered. Neither is a
-  // failed check, and silence would read as a pass, so each is told as what it is.
+  // After a fix attempt nothing may continue the turn (additionalContext does, like a block),
+  // so the user alone is told. INCOMPLETE ran and may have passed some checks; a kill never
+  // answered. Neither is a failed check, and silence would read as a pass.
+  if (afterFixAttempt) {
+    const state = code === 1 ? "is still NOT_READY" : code === 2 ? "is still INCOMPLETE" : "did not finish";
+    console.log(JSON.stringify({ systemMessage: `Whetstone ready ${state} after a fix attempt. Not ready to report.\n\n${out}` }));
+    process.exit(0);
+  }
+
   if (code === 2 || killed !== undefined) {
     const lead =
       code === 2
@@ -74,20 +81,6 @@ try {
           hookEventName: "Stop",
           additionalContext:
             `${lead}This is not a failed check. Do not report the work as verified.\n\n${out}`,
-        },
-      }),
-    );
-    process.exit(0);
-  }
-
-  if (afterFixAttempt) {
-    console.log(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: "Stop",
-          additionalContext:
-            `Whetstone ready is still NOT_READY after a fix attempt. The work is not ready. ` +
-            `Do not report the work as ready.\n\n${out}`,
         },
       }),
     );
