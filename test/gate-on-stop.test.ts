@@ -3,7 +3,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
@@ -117,5 +117,17 @@ describe("the gate-on-stop hook", () => {
 
     expect(await stop(await project(false))).toBeNull();
     expect(await wst.invocations()).toEqual([]);
+  });
+
+  it("tells the agent nothing was verified when ready was killed before it answered", async () => {
+    const bin = await tempDir("wst-killed-");
+    await writeFile(join(bin, "wst"), "#!/bin/sh\nkill -9 $$\n");
+    await chmod(join(bin, "wst"), 0o755);
+    process.env["PATH"] = `${bin}:${process.env["PATH"] ?? ""}`;
+
+    const out = await stop(await project(true));
+
+    expect(out?.decision).toBeUndefined();
+    expect(out?.hookSpecificOutput?.additionalContext).toContain("NOT verified");
   });
 });

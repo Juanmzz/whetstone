@@ -18,7 +18,7 @@ const run = promisify(execFile);
 export const PLUGIN_NAME = "whetstone";
 
 /**
- * Where the plugin's Stop hook would run the gate.
+ * Where the plugin's Stop hook would run ready.
  *
  * `CLAUDE_PROJECT_DIR` is the harness's variable, so knowing it belongs to this
  * adapter rather than to a generic command. In the field it was the umbrella

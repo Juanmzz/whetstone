@@ -48,13 +48,15 @@ try {
 } catch (cause) {
   const code = cause?.code;
   // A NUMBER is the gate having decided. A STRING (ENOENT) is it never having run.
-  if (typeof code !== "number") process.exit(0);
+  // A signal (the timeout kill) is it having started and never answered.
+  const killed = code === null || code === undefined ? cause?.signal : undefined;
+  if (typeof code !== "number" && killed === undefined) process.exit(0);
 
   const out = `${cause.stdout ?? ""}${cause.stderr ?? ""}`.trim();
 
   // 2 is every way of NOT having a verdict. It must not read as "you broke something",
   // and silence would read as a pass, so it is told as neither.
-  if (code === 2) {
+  if (code === 2 || killed !== undefined) {
     console.log(
       JSON.stringify({
         hookSpecificOutput: {
