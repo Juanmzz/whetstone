@@ -21,7 +21,10 @@ import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
 import { renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
 import { outcomeOf } from "../core/gate/report.js";
-import { leavesWorkUndone } from "../core/gate/select.js";
+import { leavesWorkUndone, uncoveredPaths } from "../core/gate/select.js";
+import { whyIncomplete, whyNothingToVerify } from "../core/ready/incomplete.js";
+import { definitionRoot } from "../shell/sdd.js";
+import { exists } from "../shell/fs.js";
 import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 
 export interface ReadyOptions {
@@ -134,16 +137,33 @@ export async function runReady(
   const { run, routing, registry } = verified;
   // An EMPTY registry is a gate that could not run, not an uncovered change.
   const outcome = registry.byId.size === 0 ? "incomplete" : outcomeOf(run.verdict, run.selection);
+  const omitted = run.selection.omitted.filter(leavesWorkUndone).map((r) => r.id);
+  const unrun = run.verdict.results
+    .filter((r) => r.severity === "block" &&
+      ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
+    .map((r) => r.checkId);
   const readiness = readinessOf(outcome, files.length > 0, {
     errored: run.verdict.errored,
     declined: run.selection.declined,
-    pending: [
-      ...run.selection.omitted.filter(leavesWorkUndone).map((r) => r.id),
-      ...run.verdict.results.filter((r) => r.severity === "block" &&
-        ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
-        .map((r) => r.checkId),
-    ],
+    pending: [...omitted, ...unrun],
   });
+
+  const definitions = await exists(definitionRoot(repoRoot));
+  const uncovered = uncoveredPaths(registry.byId.values(), routing.tier, files);
+  const reason =
+    readiness === "INCOMPLETE"
+      ? whyIncomplete({
+          definitions,
+          checks: registry.byId.size,
+          uncovered,
+          errored: run.verdict.errored,
+          declined: run.selection.declined,
+          omitted,
+          unrun,
+        })
+      : readiness === "NO_CHANGES"
+        ? whyNothingToVerify(definitions)
+        : undefined;
 
   const results: CheckLine[] = run.verdict.results.map((r) => ({
     id: r.checkId,
@@ -172,7 +192,9 @@ export async function runReady(
     applicable: run.selection.selected.map((s) => s.check.id),
     results,
     warnings: run.verdict.warnings,
-    uncovered: run.selection.declined,
+    uncovered,
+    declined: run.selection.declined,
+    ...(reason === undefined ? {} : { reason }),
     evidence: [] as string[],
     elapsedMs: Date.now() - began,
     readiness,
@@ -182,7 +204,7 @@ export async function runReady(
     // `result` is the field a consumer reads; `readiness` is the same value under
     // the name the renderer uses, and two names for one fact is one too many.
     const { readiness: _same, ...rest } = facts;
-    console.log(JSON.stringify({ result: readiness, ...rest }, null, 2));
+    console.log(JSON.stringify({ result: readiness, ...(reason === undefined ? {} : { reason }), ...rest }, null, 2));
   } else {
     console.log(renderReady(facts));
   }

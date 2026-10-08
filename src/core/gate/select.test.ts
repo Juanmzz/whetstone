@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRegistry, type LoadedCheck } from "../checks/registry.js";
 import type { Routing } from "../contracts.js";
 import type { ChangedFile } from "../diff/parse.js";
-import { fastOnly, matchFiles, selectChecks } from "./select.js";
+import { fastOnly, matchFiles, selectChecks, uncoveredPaths } from "./select.js";
 
 function check(over: Partial<LoadedCheck> = {}): LoadedCheck {
   return {
@@ -214,5 +214,32 @@ describe("selecting only the checks that are cheap", () => {
 
   it("changes nothing when nothing is slow", () => {
     expect(fastOnly([cheap]).map((c) => c.id)).toEqual(["typecheck"]);
+  });
+});
+
+describe("uncoveredPaths", () => {
+  it("names the changed paths no check matches", () => {
+    expect(uncoveredPaths([check()], "strict", FILES)).toEqual(["README.md"]);
+  });
+
+  it("is empty when every path has a check", () => {
+    expect(uncoveredPaths([check(), check({ id: "docs", include: ["*.md"] })], "strict", FILES)).toEqual([]);
+  });
+
+  it("does not count a check that is switched off, since it verifies nothing", () => {
+    expect(uncoveredPaths([check({ enabled: false })], "strict", [file("src/a.ts")])).toEqual(["src/a.ts"]);
+  });
+
+  it("does not count a check that disclaims this tier", () => {
+    expect(uncoveredPaths([check({ tiers: ["strict"] })], "light", [file("src/a.ts")])).toEqual(["src/a.ts"]);
+  });
+
+  it("respects a check's exclude", () => {
+    const checks = [check({ exclude: ["src/**/*.test.ts"] })];
+    expect(uncoveredPaths(checks, "strict", [file("src/a.ts"), file("src/a.test.ts")])).toEqual(["src/a.test.ts"]);
+  });
+
+  it("counts a deleted path, which is a change like any other", () => {
+    expect(uncoveredPaths([], "strict", [file("docs/gone.md", "deleted")])).toEqual(["docs/gone.md"]);
   });
 });

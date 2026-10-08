@@ -38,6 +38,7 @@ const said = (): string => `${out.join("\n")}\n${err.join("\n")}`;
 const envelope = (): {
   result: string; untracked: string[]; applicable: string[]; warnings: string[];
   results: { id: string; status: string; detail?: string[] }[]; conflicts: string[];
+  reason?: string; uncovered: string[]; declined: string[];
 } => JSON.parse(out.at(-1)!);
 
 async function checkFile(
@@ -93,6 +94,17 @@ async function repo(defaultBranch = "main"): Promise<string> {
     ].join("\n"),
     "utf-8",
   );
+  await mkdir(join(dir, "src"), { recursive: true });
+  await writeFile(join(dir, "src/a.ts"), "export const a = 1;\n", "utf-8");
+  await git(dir, "add", "-A");
+  await git(dir, "commit", "-qm", "init");
+  return dir;
+}
+
+/** A repo nobody ran `wst init` in. */
+async function bare(): Promise<string> {
+  const dir = await tempDir("wst-ready-bare-");
+  await git(dir, "init", "-q", "-b", "main");
   await mkdir(join(dir, "src"), { recursive: true });
   await writeFile(join(dir, "src/a.ts"), "export const a = 1;\n", "utf-8");
   await git(dir, "add", "-A");
@@ -184,6 +196,65 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
 
     expect(await runReady({}, dir)).toBe(2);
     expect(said()).toContain("Verification incomplete");
+  });
+
+  it("lists the paths no check covers, in the reason and as `uncovered`", async () => {
+    const dir = await repo();
+    await writeFile(join(dir, "README.md"), "# changed\n", "utf-8");
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(0);
+    expect(envelope().uncovered).toEqual(["README.md"]);
+    expect(envelope().reason).toBeUndefined();
+
+    await writeFile(join(dir, "src/a.ts"), "export const a = 1;\n", "utf-8");
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().reason).toBe("no check covers 1 changed path, so nothing verified it: README.md");
+
+    out = [];
+    await runReady({}, dir);
+    expect(said()).toContain("no check covers 1 changed path, so nothing verified it: README.md");
+  });
+
+  it("reports a switched-off check by id and the paths it left uncovered as paths", async () => {
+    const dir = await repo();
+    await checkFile(dir, "always", "node -e \"process.exit(0)\"", "enabled: false");
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().declined).toEqual(["always"]);
+    expect(envelope().uncovered).toEqual([".wst/checks/always.md", "src/a.ts"]);
+    expect(envelope().reason).toContain("switched off: always");
+  });
+
+  it("sends a repo with no .wst/ to `wst init`, in text and in --json", async () => {
+    const dir = await bare();
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().result).toBe("INCOMPLETE");
+    expect(envelope().reason).toMatch(/no \.wst\/.*`wst init`/);
+
+    out = [];
+    await runReady({}, dir);
+    expect(said()).toContain("Run `wst init`");
+  });
+
+  it("says a clean tree has no .wst/ either, and still calls it NO_CHANGES", async () => {
+    const dir = await bare();
+
+    expect(await runReady({ json: true }, dir)).toBe(0);
+    expect(envelope().result).toBe("NO_CHANGES");
+    expect(envelope().reason).toContain("`wst init`");
+  });
+
+  it("says init seeded no checks when .wst/ is there and the registry is empty", async () => {
+    const dir = await bare();
+    await mkdir(join(dir, ".wst/checks"), { recursive: true });
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().reason).toContain("init seeded no checks");
   });
 
   it("is NOT_READY when a check really fails, and names it", async () => {
