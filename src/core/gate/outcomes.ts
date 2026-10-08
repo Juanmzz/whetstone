@@ -8,6 +8,7 @@
 import { z } from "zod";
 import type { CheckOutcome } from "../contracts.js";
 import type { JudgeResult } from "../ports.js";
+import { failureLines } from "./detail.js";
 
 /**
  * What an `llm` check must return. `reason` is mandatory and non-empty: an
@@ -38,19 +39,8 @@ export interface CommandResult {
   readonly timedOut?: boolean;
 }
 
-const MAX_DETAIL = 2000;
-
-/**
- * Keep the TAIL. Compilers and test runners put the summary last, and a detail
- * truncated from the end throws away the only line a human wants.
- */
-function tail(text: string): string {
-  const trimmed = text.trim();
-  return trimmed.length <= MAX_DETAIL ? trimmed : `…${trimmed.slice(-MAX_DETAIL)}`;
-}
-
 function output(result: CommandResult): string {
-  return tail([result.stdout, result.stderr].filter((s) => s.trim() !== "").join("\n"));
+  return failureLines(`${result.stdout}\n${result.stderr}`).join("\n");
 }
 
 /**

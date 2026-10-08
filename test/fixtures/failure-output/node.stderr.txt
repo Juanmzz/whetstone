@@ -1,0 +1,26 @@
+/home/dev/sample-app/node_modules/yaml/dist/compose/composer.js:70
+                this.errors.push(new errors.YAMLParseError(pos, code, message));
+                                 ^
+
+YAMLParseError: Sequence item without - indicator at line 3, column 1:
+
+  - id: lint
+   command: [npm, run
+^
+
+    at Composer.onError (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/composer.js:70:34)
+    at Object.resolveBlockSeq (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/resolve-block-seq.js:30:21)
+    at resolveCollection (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/compose-collection.js:15:31)
+    at Object.composeCollection (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/compose-collection.js:59:16)
+    at composeNode (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/compose-node.js:34:42)
+    at Object.resolveBlockMap (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/resolve-block-map.js:85:19)
+    at resolveCollection (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/compose-collection.js:13:27)
+    at Object.composeCollection (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/compose-collection.js:59:16)
+    at Object.composeNode (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/compose-node.js:34:42)
+    at Object.composeDoc (/home/dev/sample-app/node_modules/[4myaml[24m/dist/compose/compose-doc.js:35:23) {
+  code: [32m'MISSING_CHAR'[39m,
+  pos: [ [33m21[39m, [33m22[39m ],
+  linePos: [ { line: [33m3[39m, col: [33m1[39m }, { line: [33m3[39m, col: [33m2[39m } ]
+}
+
+Node.js v24.19.0

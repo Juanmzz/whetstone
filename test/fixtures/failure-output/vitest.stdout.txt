@@ -1,0 +1,17 @@
+
+> sample-app@1.4.0 test
+> vitest run
+
+
+ RUN  v4.1.10 /home/dev/sample-app
+
+ ❯ src/price.test.ts (4 tests | 3 failed) 7ms
+     × is zero for an empty cart 4ms
+     × multiplies cents by quantity 0ms
+     × accepts a line with a quantity of zero as an empty line 1ms
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+   Start at  21:25:06
+   Duration  160ms (transform 16ms, setup 0ms, import 46ms, tests 7ms, environment 0ms)
+

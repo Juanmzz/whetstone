@@ -37,7 +37,7 @@ const said = (): string => `${out.join("\n")}\n${err.join("\n")}`;
 
 const envelope = (): {
   result: string; untracked: string[]; applicable: string[]; warnings: string[];
-  results: { id: string; status: string; detail?: string }[]; conflicts: string[];
+  results: { id: string; status: string; detail?: string[] }[]; conflicts: string[];
 } => JSON.parse(out.at(-1)!);
 
 async function checkFile(
@@ -214,6 +214,37 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
     expect(said()).toContain("fails");
   });
 
+  it("hands back what the failing check printed, as clean lines an agent can act on", async () => {
+    const dir = await repo();
+    await writeFile(
+      join(dir, "fail.mjs"),
+      [
+        'const red = (s) => `\\u001b[31m${s}\\u001b[0m`;',
+        'console.log("\\n RUN  v4\\n");',
+        'console.error(red(" FAIL  src/a.test.ts > adds two numbers"));',
+        'console.error("AssertionError: expected 3 to be 4\\n");',
+        'console.error("    at run (/repo/node_modules/vitest/dist/index.js:1:1)");',
+        "process.exit(1);",
+      ].join("\n"),
+      "utf-8",
+    );
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "a failing runner");
+    await checkFile(dir, "test", "node fail.mjs");
+    await writeFile(join(dir, "src/a.ts"), "export const a = 9;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(1);
+    expect(envelope().results.find((r) => r.id === "test")?.detail).toEqual([
+      " RUN  v4",
+      " FAIL  src/a.test.ts > adds two numbers",
+      "AssertionError: expected 3 to be 4",
+    ]);
+
+    out = [];
+    await runReady({}, dir);
+    expect(said()).toContain("\n         FAIL  src/a.test.ts > adds two numbers\n        AssertionError: expected 3 to be 4");
+  });
+
   it("refuses when there is no merge base, rather than diffing unrelated trees", async () => {
     // Found by a cross-vendor review. Two histories that share nothing have no
     // merge base; diffing against the ref anyway compares everything in both and
@@ -321,7 +352,7 @@ describe("readiness does not hide missing verification", () => {
 
     expect(code).toBe(expectedCode);
     expect(envelope().result).toBe(result);
-    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "slow", status: "skipped", detail: "fast" }));
+    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "slow", status: "skipped", detail: ["fast"] }));
   });
 
   it("does not omit slow checks without fast", async () => {
@@ -349,7 +380,7 @@ describe("readiness does not hide missing verification", () => {
 
     const report = JSON.parse(result.stdout);
     expect(report.result).not.toBe("INCOMPLETE");
-    expect(report.results).toContainEqual(expect.objectContaining({ id: "evidence-review", status: "skipped", detail: "no-evidence" }));
+    expect(report.results).toContainEqual(expect.objectContaining({ id: "evidence-review", status: "skipped", detail: ["no-evidence"] }));
   });
 
   it("but the same check blocks when nobody claimed the store is missing", async () => {
@@ -375,7 +406,7 @@ describe("readiness does not hide missing verification", () => {
     const code = await runReady({ json: true, lens: true }, dir);
 
     expect(code).toBe(2);
-    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "review", status: "errored", detail: expect.stringContaining("untracked") }));
+    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "review", status: "errored", detail: [expect.stringContaining("untracked")] }));
   });
 
   it("keeps failed warnings non-blocking and lists them in JSON", async () => {
