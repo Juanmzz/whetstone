@@ -8,7 +8,10 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import { installFakeBin, restorePath } from "./fake-bin.js";
+import { isolateFromInheritedGit } from "./git-env.js";
 import { tempDir } from "./tmp.js";
+
+isolateFromInheritedGit();
 
 const exec = promisify(execFile);
 const HOOK = join(import.meta.dirname, "..", "plugin", "hooks", "gate-on-stop.mjs");
