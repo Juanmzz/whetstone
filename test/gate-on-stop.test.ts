@@ -3,7 +3,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
@@ -28,6 +28,21 @@ async function stop(root: string): Promise<HookOutput | null> {
 async function project(withDefinitions: boolean): Promise<string> {
   const dir = await tempDir("wst-stop-");
   if (withDefinitions) await mkdir(join(dir, ".wst"));
+  return dir;
+}
+
+async function git(dir: string, ...args: string[]): Promise<void> {
+  await exec("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: dir });
+}
+
+async function repoWithCommittedWork(): Promise<string> {
+  const dir = await project(true);
+  await git(dir, "init", "-q", "-b", "main");
+  await git(dir, "commit", "-q", "--allow-empty", "-m", "base");
+  await git(dir, "checkout", "-q", "-b", "task");
+  await writeFile(join(dir, "feature.ts"), "export const x = 1;\n");
+  await git(dir, "add", ".");
+  await git(dir, "commit", "-q", "-m", "feat: x");
   return dir;
 }
 
@@ -63,5 +78,44 @@ describe("the gate-on-stop hook", () => {
     await installFakeBin("wst", { exit: 0 });
 
     expect(await stop(await project(true))).toBeNull();
+  });
+
+  it("asks `ready`, not `gate`, so the verdict does not depend on the working tree", async () => {
+    const wst = await installFakeBin("wst", { exit: 0 });
+
+    await stop(await project(true));
+
+    expect((await wst.invocations()).map((i) => i.argv)).toEqual([["ready"]]);
+  });
+
+  it("blocks with ready's own text when the agent committed before stopping", async () => {
+    await installFakeBin("wst", { exit: 1, stdout: "NOT_READY\n  FAIL test\n" });
+
+    const out = await stop(await repoWithCommittedWork());
+
+    expect(out?.decision).toBe("block");
+    expect((out as { reason?: string }).reason).toContain("FAIL test");
+  });
+
+  it("blocks when the only change is an untracked file", async () => {
+    await installFakeBin("wst", { exit: 1, stdout: "NOT_READY\n  FAIL lint\n" });
+    const dir = await repoWithCommittedWork();
+    await git(dir, "checkout", "-q", "main");
+    await writeFile(join(dir, "new.ts"), "export {};\n");
+
+    expect((await stop(dir))?.decision).toBe("block");
+  });
+
+  it("stays silent on NO_CHANGES", async () => {
+    await installFakeBin("wst", { exit: 0, stdout: "NO_CHANGES\n" });
+
+    expect(await stop(await project(true))).toBeNull();
+  });
+
+  it("does not run anything in a project without .wst/", async () => {
+    const wst = await installFakeBin("wst", { exit: 1, stdout: "FAIL\n" });
+
+    expect(await stop(await project(false))).toBeNull();
+    expect(await wst.invocations()).toEqual([]);
   });
 });
