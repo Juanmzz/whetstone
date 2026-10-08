@@ -10,7 +10,10 @@ import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { rangeFiles, taskFilesFrom } from "./scope.js";
+import { isolateFromInheritedGit } from "../../test/git-env.js";
 import { tempDir } from "../../test/tmp.js";
+
+isolateFromInheritedGit();
 
 const run = promisify(execFile);
 const originalPath = process.env["PATH"];
