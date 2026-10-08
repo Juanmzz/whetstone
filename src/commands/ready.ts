@@ -19,7 +19,7 @@ import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths
 import { verifyRange } from "../shell/verify.js";
 import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
-import { firstMeaningfulLine, renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
+import { renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
 import { outcomeOf } from "../core/gate/report.js";
 import { leavesWorkUndone } from "../core/gate/select.js";
 import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
@@ -150,11 +150,11 @@ export async function runReady(
     status: STATUS[r.outcome.status] ?? "n/a",
     ms: r.durationMs ?? 0,
     ...(r.outcome.status === "fail" || r.outcome.status === "errored"
-      ? { detail: firstMeaningfulLine(r.outcome.detail ?? "") }
+      ? { detail: (r.outcome.detail ?? "").split("\n") }
       : {}),
-    ...(r.outcome.status === "skipped" ? { detail: r.outcome.reason } : {}),
+    ...(r.outcome.status === "skipped" ? { detail: [r.outcome.reason] } : {}),
   }));
-  results.push(...run.selection.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: r.reason })));
+  results.push(...run.selection.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: [r.reason] })));
 
   const facts = {
     repo: repoRoot,

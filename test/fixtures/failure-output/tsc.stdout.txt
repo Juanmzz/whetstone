@@ -1,0 +1,17 @@
+
+> sample-app@1.4.0 typecheck
+> tsc --noEmit -p .
+
+[96msrc/cart.ts[0m:[93m4[0m:[93m9[0m - [91merror[0m[90m TS2322: [0mType 'number' is not assignable to type 'string'.
+
+[7m4[0m   const cents: string = total(lines);
+[7m [0m [91m        ~~~~~[0m
+
+[96msrc/cart.ts[0m:[93m5[0m:[93m35[0m - [91merror[0m[90m TS2339: [0mProperty 'name' does not exist on type '{ sku: string; cents: number; qty: number; }'.
+
+[7m5[0m   return lines.map((line) => line.name).join(", ") + ` = ${cents}`;
+[7m [0m [91m                                  ~~~~[0m
+
+
+Found 2 errors in the same file, starting at: src/cart.ts[90m:4[0m
+
