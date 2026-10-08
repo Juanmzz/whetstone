@@ -12,6 +12,10 @@ import { promisify } from "node:util";
 import { beforeAll, describe, expect, it } from "vitest";
 import { gitEnv } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
+import { isolateFromInheritedGit } from "./git-env.js";
+
+// Before anything builds a repository. See `git-env.ts`.
+isolateFromInheritedGit();
 
 const exec = promisify(execFile);
 const HOOK = join(import.meta.dirname, "..", "plugin", "hooks", "uncommitted-work-guard.mjs");

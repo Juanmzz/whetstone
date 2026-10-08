@@ -20,6 +20,10 @@ import { runReady } from "../src/commands/ready.js";
 import { runGate } from "../src/commands/gate.js";
 import { gitEnv } from "../src/shell/git.js";
 import { tempDir } from "./tmp.js";
+import { isolateFromInheritedGit } from "./git-env.js";
+
+// Before anything builds a repository. See `git-env.ts`.
+isolateFromInheritedGit();
 
 const exec = promisify(execFile);
 
@@ -37,7 +41,8 @@ const said = (): string => `${out.join("\n")}\n${err.join("\n")}`;
 
 const envelope = (): {
   result: string; untracked: string[]; applicable: string[]; warnings: string[];
-  results: { id: string; status: string; detail?: string }[]; conflicts: string[];
+  results: { id: string; status: string; detail?: string[] }[]; conflicts: string[];
+  reason?: string; uncovered: string[]; declined: string[];
 } => JSON.parse(out.at(-1)!);
 
 async function checkFile(
@@ -93,6 +98,17 @@ async function repo(defaultBranch = "main"): Promise<string> {
     ].join("\n"),
     "utf-8",
   );
+  await mkdir(join(dir, "src"), { recursive: true });
+  await writeFile(join(dir, "src/a.ts"), "export const a = 1;\n", "utf-8");
+  await git(dir, "add", "-A");
+  await git(dir, "commit", "-qm", "init");
+  return dir;
+}
+
+/** A repo nobody ran `wst init` in. */
+async function bare(): Promise<string> {
+  const dir = await tempDir("wst-ready-bare-");
+  await git(dir, "init", "-q", "-b", "main");
   await mkdir(join(dir, "src"), { recursive: true });
   await writeFile(join(dir, "src/a.ts"), "export const a = 1;\n", "utf-8");
   await git(dir, "add", "-A");
@@ -186,6 +202,65 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
     expect(said()).toContain("Verification incomplete");
   });
 
+  it("lists the paths no check covers, in the reason and as `uncovered`", async () => {
+    const dir = await repo();
+    await writeFile(join(dir, "README.md"), "# changed\n", "utf-8");
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(0);
+    expect(envelope().uncovered).toEqual(["README.md"]);
+    expect(envelope().reason).toBeUndefined();
+
+    await writeFile(join(dir, "src/a.ts"), "export const a = 1;\n", "utf-8");
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().reason).toBe("no check covers 1 changed path, so nothing verified it: README.md");
+
+    out = [];
+    await runReady({}, dir);
+    expect(said()).toContain("no check covers 1 changed path, so nothing verified it: README.md");
+  });
+
+  it("reports a switched-off check by id and the paths it left uncovered as paths", async () => {
+    const dir = await repo();
+    await checkFile(dir, "always", "node -e \"process.exit(0)\"", "enabled: false");
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().declined).toEqual(["always"]);
+    expect(envelope().uncovered).toEqual([".wst/checks/always.md", "src/a.ts"]);
+    expect(envelope().reason).toContain("switched off: always");
+  });
+
+  it("sends a repo with no .wst/ to `wst init`, in text and in --json", async () => {
+    const dir = await bare();
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().result).toBe("INCOMPLETE");
+    expect(envelope().reason).toMatch(/no \.wst\/.*`wst init`/);
+
+    out = [];
+    await runReady({}, dir);
+    expect(said()).toContain("Run `wst init`");
+  });
+
+  it("says a clean tree has no .wst/ either, and still calls it NO_CHANGES", async () => {
+    const dir = await bare();
+
+    expect(await runReady({ json: true }, dir)).toBe(0);
+    expect(envelope().result).toBe("NO_CHANGES");
+    expect(envelope().reason).toContain("`wst init`");
+  });
+
+  it("says init seeded no checks when .wst/ is there and the registry is empty", async () => {
+    const dir = await bare();
+    await mkdir(join(dir, ".wst/checks"), { recursive: true });
+    await writeFile(join(dir, "src/a.ts"), "export const a = 2;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().reason).toContain("init seeded no checks");
+  });
+
   it("is NOT_READY when a check really fails, and names it", async () => {
     const dir = await repo();
     await writeFile(
@@ -212,6 +287,37 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
     expect(await runReady({}, dir)).toBe(1);
     expect(said()).toContain("Needs work");
     expect(said()).toContain("fails");
+  });
+
+  it("hands back what the failing check printed, as clean lines an agent can act on", async () => {
+    const dir = await repo();
+    await writeFile(
+      join(dir, "fail.mjs"),
+      [
+        'const red = (s) => `\\u001b[31m${s}\\u001b[0m`;',
+        'console.log("\\n RUN  v4\\n");',
+        'console.error(red(" FAIL  src/a.test.ts > adds two numbers"));',
+        'console.error("AssertionError: expected 3 to be 4\\n");',
+        'console.error("    at run (/repo/node_modules/vitest/dist/index.js:1:1)");',
+        "process.exit(1);",
+      ].join("\n"),
+      "utf-8",
+    );
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "a failing runner");
+    await checkFile(dir, "test", "node fail.mjs");
+    await writeFile(join(dir, "src/a.ts"), "export const a = 9;\n", "utf-8");
+
+    expect(await runReady({ json: true }, dir)).toBe(1);
+    expect(envelope().results.find((r) => r.id === "test")?.detail).toEqual([
+      " RUN  v4",
+      " FAIL  src/a.test.ts > adds two numbers",
+      "AssertionError: expected 3 to be 4",
+    ]);
+
+    out = [];
+    await runReady({}, dir);
+    expect(said()).toContain("\n         FAIL  src/a.test.ts > adds two numbers\n        AssertionError: expected 3 to be 4");
   });
 
   it("refuses when there is no merge base, rather than diffing unrelated trees", async () => {
@@ -321,7 +427,30 @@ describe("readiness does not hide missing verification", () => {
 
     expect(code).toBe(expectedCode);
     expect(envelope().result).toBe(result);
-    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "slow", status: "skipped", detail: "fast" }));
+    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "slow", status: "skipped", detail: ["fast"] }));
+  });
+
+  it("names the flag that left a blocking check out", async () => {
+    const dir = await repo();
+    await checkFile(dir, "slow", 'node -e "process.exit(1)"', "slow: true");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "a slow check");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    expect(await runReady({ json: true, fast: true }, dir)).toBe(2);
+    expect(envelope().reason).toBe("1 check that may block did not run: slow (left out by --fast, rerun without it)");
+  });
+
+  it("names an advisory check that was the only one to apply and did not run", async () => {
+    const dir = await repo();
+    await checkFile(dir, "always", 'node -e "process.exit(0)"', "", "docs/**");
+    await checkFile(dir, "slow", 'node -e "process.exit(1)"', "slow: true", "src/**", "warn");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-qm", "only an advisory check covers src");
+    await writeFile(join(dir, "src/a.ts"), "changed");
+
+    expect(await runReady({ json: true, fast: true }, dir)).toBe(2);
+    expect(envelope().reason).toContain("1 check applied and did not run: slow (left out by --fast, rerun without it)");
   });
 
   it("does not omit slow checks without fast", async () => {
@@ -349,7 +478,7 @@ describe("readiness does not hide missing verification", () => {
 
     const report = JSON.parse(result.stdout);
     expect(report.result).not.toBe("INCOMPLETE");
-    expect(report.results).toContainEqual(expect.objectContaining({ id: "evidence-review", status: "skipped", detail: "no-evidence" }));
+    expect(report.results).toContainEqual(expect.objectContaining({ id: "evidence-review", status: "skipped", detail: ["no-evidence"] }));
   });
 
   it("but the same check blocks when nobody claimed the store is missing", async () => {
@@ -375,7 +504,7 @@ describe("readiness does not hide missing verification", () => {
     const code = await runReady({ json: true, lens: true }, dir);
 
     expect(code).toBe(2);
-    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "review", status: "errored", detail: expect.stringContaining("untracked") }));
+    expect(envelope().results).toContainEqual(expect.objectContaining({ id: "review", status: "errored", detail: [expect.stringContaining("untracked")] }));
   });
 
   it("keeps failed warnings non-blocking and lists them in JSON", async () => {

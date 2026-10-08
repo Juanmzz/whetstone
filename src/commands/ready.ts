@@ -19,9 +19,12 @@ import { readScopeFacts, mergeBaseOf, rangeFiles, taskFilesFrom, conflictedPaths
 import { verifyRange } from "../shell/verify.js";
 import { resolveBase } from "../core/ready/scope.js";
 import { exitFor, readinessOf, saidAs, EXIT_INCOMPLETE } from "../core/ready/result.js";
-import { firstMeaningfulLine, renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
+import { renderReady, type CheckLine, type ResultStatus } from "../core/ready/report.js";
 import { outcomeOf } from "../core/gate/report.js";
-import { leavesWorkUndone } from "../core/gate/select.js";
+import { leavesWorkUndone, uncoveredPaths } from "../core/gate/select.js";
+import { whyIncomplete, whyNothingToVerify, type UnrunCheck } from "../core/ready/incomplete.js";
+import { definitionRoot } from "../shell/sdd.js";
+import { exists } from "../shell/fs.js";
 import { parseNameStatusZ, type ChangedFile } from "../core/diff/parse.js";
 
 export interface ReadyOptions {
@@ -134,27 +137,53 @@ export async function runReady(
   const { run, routing, registry } = verified;
   // An EMPTY registry is a gate that could not run, not an uncovered change.
   const outcome = registry.byId.size === 0 ? "incomplete" : outcomeOf(run.verdict, run.selection);
+  const lensOff = (id: string): boolean => opts.lens !== true && registry.byId.get(id)?.kind === "llm";
+  const unrun: UnrunCheck[] = [
+    ...run.selection.omitted.map((o) => ({
+      id: o.id,
+      why: o.reason === "fast" ? "left out by --fast, rerun without it" : "needs an evidence store this machine does not have",
+      blocks: leavesWorkUndone(o),
+    })),
+    ...run.verdict.results.flatMap((r): UnrunCheck[] => {
+      const blocks = r.severity === "block";
+      if (r.outcome.status === "declared") return [{ id: r.checkId, why: "a method to follow by hand", blocks }];
+      if (r.outcome.status !== "skipped" || r.outcome.reason === "receipt") return [];
+      const why = lensOff(r.checkId) ? "a model review, rerun with --lens" : r.outcome.reason === "disabled" ? "switched off" : "not in this tier";
+      return [{ id: r.checkId, why, blocks }];
+    }),
+  ];
   const readiness = readinessOf(outcome, files.length > 0, {
     errored: run.verdict.errored,
     declined: run.selection.declined,
-    pending: [
-      ...run.selection.omitted.filter(leavesWorkUndone).map((r) => r.id),
-      ...run.verdict.results.filter((r) => r.severity === "block" &&
-        ((r.outcome.status === "skipped" && r.outcome.reason !== "receipt") || r.outcome.status === "declared"))
-        .map((r) => r.checkId),
-    ],
+    pending: unrun.filter((u) => u.blocks).map((u) => u.id),
   });
+
+  const definitions = await exists(definitionRoot(repoRoot));
+  const uncovered = uncoveredPaths(registry.byId.values(), routing.tier, files);
+  const reason =
+    readiness === "INCOMPLETE"
+      ? whyIncomplete({
+          definitions,
+          checks: registry.byId.size,
+          uncovered,
+          errored: run.verdict.errored,
+          declined: run.selection.declined,
+          unrun,
+        })
+      : readiness === "NO_CHANGES"
+        ? whyNothingToVerify(definitions)
+        : undefined;
 
   const results: CheckLine[] = run.verdict.results.map((r) => ({
     id: r.checkId,
     status: STATUS[r.outcome.status] ?? "n/a",
     ms: r.durationMs ?? 0,
     ...(r.outcome.status === "fail" || r.outcome.status === "errored"
-      ? { detail: firstMeaningfulLine(r.outcome.detail ?? "") }
+      ? { detail: (r.outcome.detail ?? "").split("\n").filter((line) => line.trim() !== "") }
       : {}),
-    ...(r.outcome.status === "skipped" ? { detail: r.outcome.reason } : {}),
+    ...(r.outcome.status === "skipped" ? { detail: [r.outcome.reason] } : {}),
   }));
-  results.push(...run.selection.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: r.reason })));
+  results.push(...run.selection.omitted.map((r): CheckLine => ({ id: r.id, status: "skipped", ms: 0, detail: [r.reason] })));
 
   const facts = {
     repo: repoRoot,
@@ -172,7 +201,9 @@ export async function runReady(
     applicable: run.selection.selected.map((s) => s.check.id),
     results,
     warnings: run.verdict.warnings,
-    uncovered: run.selection.declined,
+    uncovered,
+    declined: run.selection.declined,
+    ...(reason === undefined ? {} : { reason }),
     evidence: [] as string[],
     elapsedMs: Date.now() - began,
     readiness,
@@ -182,7 +213,7 @@ export async function runReady(
     // `result` is the field a consumer reads; `readiness` is the same value under
     // the name the renderer uses, and two names for one fact is one too many.
     const { readiness: _same, ...rest } = facts;
-    console.log(JSON.stringify({ result: readiness, ...rest }, null, 2));
+    console.log(JSON.stringify({ result: readiness, ...(reason === undefined ? {} : { reason }), ...rest }, null, 2));
   } else {
     console.log(renderReady(facts));
   }

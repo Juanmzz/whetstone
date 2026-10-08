@@ -14,8 +14,8 @@ export interface CheckLine {
   readonly id: string;
   readonly status: ResultStatus;
   readonly ms: number;
-  /** What it said, for the two statuses a reader has to act on. */
-  readonly detail?: string;
+  /** What it printed, a line each, or the one word a skip was skipped for. */
+  readonly detail?: readonly string[];
 }
 
 export interface ReadyFacts {
@@ -32,26 +32,13 @@ export interface ReadyFacts {
   readonly applicable: readonly string[];
   readonly results: readonly CheckLine[];
   readonly warnings?: readonly string[];
+  /** Changed paths no live check matches. Paths, never check ids. */
   readonly uncovered: readonly string[];
+  /** Why the result is not an established one. Absent when there is nothing to add. */
+  readonly reason?: string;
   readonly evidence: readonly string[];
   readonly elapsedMs: number;
   readonly readiness: Readiness;
-}
-
-/**
- * The first line of a check's output that says something.
- *
- * npm prints its own banner before the script runs, so the first line of a failure
- * is `> pkg@1.0.0 check:docs` and tells a reader nothing. Skipping it is the
- * difference between a report that names the problem and one that names npm.
- */
-export function firstMeaningfulLine(detail: string): string {
-  for (const line of detail.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed === "" || trimmed.startsWith(">")) continue;
-    return trimmed;
-  }
-  return "";
 }
 
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
@@ -73,7 +60,7 @@ const MARK: Readonly<Record<ResultStatus, string>> = {
 
 export function renderReady(facts: ReadyFacts): string {
   const warnings = facts.warnings?.length ?? 0;
-  const omitted = facts.results.filter((r) => r.status === "skipped" && r.detail !== "receipt").length;
+  const omitted = facts.results.filter((r) => r.status === "skipped" && r.detail?.[0] !== "receipt").length;
   const notes = [
     ...(warnings === 0 ? [] : [`${warnings} warning${warnings === 1 ? "" : "s"} failed`]),
     ...(omitted === 0 ? [] : [`${omitted} check${omitted === 1 ? "" : "s"} omitted`]),
@@ -81,6 +68,7 @@ export function renderReady(facts: ReadyFacts): string {
   const lines: string[] = [
     "",
     `  ${saidAs(facts.readiness)}${notes.length === 0 ? "" : `: ${notes.join(", ")}`}`,
+    ...(facts.reason === undefined ? [] : ["", ...facts.reason.split("\n").map((line) => `  ${line}`)]),
     "",
     `  repo        ${facts.repo}`,
     `  branch      ${facts.branch}`,
@@ -108,13 +96,16 @@ export function renderReady(facts: ReadyFacts): string {
   }
 
   for (const r of facts.results) {
-    const why = r.detail === undefined ? "" : `  ${r.detail}`;
+    const detail = r.detail ?? [];
+    const why = r.status === "skipped" && detail.length > 0 ? `  ${detail.join(" ")}` : "";
     const said = r.status === "errored" ? `${MARK[r.status]} ${r.id.padEnd(16)} could not run` : `${MARK[r.status]} ${r.id.padEnd(16)}`;
     lines.push(`  ${said} ${seconds(r.ms).padStart(6)}${why}`);
+    if (r.status !== "skipped") lines.push(...detail.map((line) => `        ${line}`));
   }
   if (facts.results.length > 0) lines.push("");
 
-  if (facts.uncovered.length > 0) {
+  // INCOMPLETE names them in its reason, which is where a reader looks first.
+  if (facts.uncovered.length > 0 && facts.readiness !== "INCOMPLETE") {
     lines.push("  no check covers these paths, so nothing verified them:", ...paths("", facts.uncovered), "");
   }
   if (facts.evidence.length > 0) {

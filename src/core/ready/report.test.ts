@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstMeaningfulLine, renderReady, type ReadyFacts } from "./report.js";
+import { renderReady, type ReadyFacts } from "./report.js";
 
 const facts = (over: Partial<ReadyFacts> = {}): ReadyFacts => ({
   repo: "/repos/acme",
@@ -55,39 +55,74 @@ describe("renderReady", () => {
 
   it("names the check that failed, because that is the next thing to do", () => {
     const out = renderReady(
-      facts({ readiness: "NOT_READY", results: [{ id: "test", status: "fail", ms: 900, detail: "2 failing" }] }),
+      facts({ readiness: "NOT_READY", results: [{ id: "test", status: "fail", ms: 900, detail: ["2 failing"] }] }),
     );
     expect(out).toContain("test");
     expect(out).toContain("2 failing");
+  });
+
+  it("shows every line a failing check kept, indented under it", () => {
+    const out = renderReady(
+      facts({
+        readiness: "NOT_READY",
+        results: [
+          { id: "test", status: "fail", ms: 900, detail: [" FAIL  src/a.test.ts > adds", "AssertionError: expected 1 to be 2"] },
+          { id: "typecheck", status: "pass", ms: 400 },
+        ],
+      }),
+    ).split("\n");
+    const at = out.findIndex((line) => line.includes("FAIL  test"));
+    expect(out[at + 1]).toBe(`${" ".repeat(8)} FAIL  src/a.test.ts > adds`);
+    expect(out[at + 2]).toBe(`${" ".repeat(8)}AssertionError: expected 1 to be 2`);
+    expect(out[at + 3]).toContain("typecheck");
+  });
+
+  it("keeps a skip's reason on its own line, since it is one word", () => {
+    const out = renderReady(facts({ results: [{ id: "e2e", status: "skipped", ms: 0, detail: ["fast"] }] }));
+    expect(out).toMatch(/skip\s+e2e\s+0\.0s\s+fast/);
+    expect(out).toContain("1 check omitted");
+  });
+
+  it("does not count a receipt skip as an omission", () => {
+    const out = renderReady(facts({ results: [{ id: "test", status: "skipped", ms: 0, detail: ["receipt"] }] }));
+    expect(out).not.toContain("omitted");
   });
 
   it("tells a check that could not run apart from one that failed", () => {
     // Hard rule 3, in the one line a reader sees. Sending an agent to fix code
     // when the gate is what broke wastes the whole loop.
     const out = renderReady(
-      facts({ readiness: "INCOMPLETE", results: [{ id: "test", status: "errored", ms: 10, detail: "spawn failed" }] }),
+      facts({ readiness: "INCOMPLETE", results: [{ id: "test", status: "errored", ms: 10, detail: ["spawn failed"] }] }),
     );
     expect(out).toContain("Verification incomplete");
     expect(out).toMatch(/could not run/i);
+    expect(out).toContain("spawn failed");
   });
 
-  it("lists uncovered paths, which are the reason readiness was not established", () => {
-    const out = renderReady(facts({ readiness: "INCOMPLETE", uncovered: ["docs/x.md"] }));
+  it("lists uncovered paths under a result that is otherwise established", () => {
+    const out = renderReady(facts({ uncovered: ["docs/x.md"] }));
+    expect(out).toContain("no check covers these paths");
     expect(out).toContain("docs/x.md");
   });
-});
 
-describe("firstMeaningfulLine", () => {
-  it("skips npm's banner, which is what a reader saw instead of the failure", () => {
-    const npm = "\n> @juanmzz/whetstone@0.7.0 check:docs\n> tsx scripts/check-docs-fresh.ts\n\nclaims 10 commands: the repo has 11\n";
-    expect(firstMeaningfulLine(npm)).toBe("claims 10 commands: the repo has 11");
+  it("says why it is incomplete, straight under the headline", () => {
+    const out = renderReady(
+      facts({ readiness: "INCOMPLETE", reason: "1 check could not run: test.\nalso, no check covers 1 changed path: docs/x.md", uncovered: ["docs/x.md"] }),
+    ).split("\n");
+    const at = out.findIndex((line) => line.includes("Verification incomplete"));
+    expect(out.slice(at + 1, at + 4)).toEqual(["", "  1 check could not run: test.", "  also, no check covers 1 changed path: docs/x.md"]);
   });
 
-  it("returns the first line when there is no banner", () => {
-    expect(firstMeaningfulLine("2 tests failed\nsee above")).toBe("2 tests failed");
+  it("does not list the uncovered paths twice when the reason already names them", () => {
+    const out = renderReady(facts({ readiness: "INCOMPLETE", reason: "no check covers 1 changed path: docs/x.md", uncovered: ["docs/x.md"] }));
+    expect(out.split("docs/x.md")).toHaveLength(2);
   });
 
-  it("returns nothing rather than inventing something", () => {
-    expect(firstMeaningfulLine("\n\n")).toBe("");
+  it("carries a reason on NO_CHANGES too, for a repo with no checks at all", () => {
+    const out = renderReady(
+      facts({ readiness: "NO_CHANGES", committed: [], unstaged: [], untracked: [], results: [], reason: "no .wst/ in this repository. Run `wst init`." }),
+    );
+    expect(out).toContain("No changes to verify");
+    expect(out).toContain("Run `wst init`");
   });
 });

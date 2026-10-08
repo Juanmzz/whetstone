@@ -10,9 +10,15 @@
 - The Claude Code Stop hook runs `wst ready` instead of `gate`: work committed before
   stopping, and untracked files, are now verified.
 - The CLI still accepts the flags and hooks 0.9 printed and wrote.
-- Placeholder: `ready` explains failures and INCOMPLETE.
+- A failing check reports its last 40 lines, without ANSI codes or `node_modules` stack
+  frames, so the test name and the error are in the report.
+- INCOMPLETE carries a `reason`: no `.wst/` (run `wst init`), no checks, a check that
+  could not run or was left out, or the changed paths no check covers.
+- `wst` on a Node below 22.12 prints one line and exits 2 instead of crashing on an import.
 - Compatibility: scripts calling `signal`, `retro` or `update` break; CI and the pre-push
   hook that call `gate` keep working.
+- Compatibility: `ready --json` changed shape. `detail` is an array of lines, `uncovered`
+  lists paths, and the check ids it used to list are in the new `declined`.
 
 ## 0.9.0
 

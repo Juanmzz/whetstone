@@ -49,12 +49,20 @@ describe("interpretCommandResult — a deterministic check's exit status", () =>
     expect(outcome.status === "fail" && outcome.detail).toMatch(/exit(ed)? (with )?(code )?3/i);
   });
 
-  it("truncates a huge output from the FRONT, keeping the tail where the summary lives", () => {
-    const outcome = interpretCommandResult(command({ exitCode: 1, stdout: `${"x".repeat(9000)}THE SUMMARY` }));
-    const detail = outcome.status === "fail" ? outcome.detail : "";
-    expect(detail).toContain("THE SUMMARY");
-    expect(detail.length).toBeLessThan(3000);
-    expect(detail.startsWith("…")).toBe(true);
+  it("keeps the END of a long output, where the summary lives", () => {
+    const noise = Array.from({ length: 500 }, (_, i) => `compiling module ${String(i)}`).join("\n");
+    const outcome = interpretCommandResult(command({ exitCode: 1, stdout: `${noise}\nTHE SUMMARY` }));
+    const lines = outcome.status === "fail" ? outcome.detail.split("\n") : [];
+    expect(lines.at(-1)).toBe("THE SUMMARY");
+    expect(lines).toHaveLength(41);
+    expect(lines[0]).toBe("… 461 earlier lines not shown");
+  });
+
+  it("puts stderr after stdout, so a runner's failures are what the tail holds", () => {
+    const outcome = interpretCommandResult(
+      command({ exitCode: 1, stdout: "\u001b[32m3 passed\u001b[0m\n\n", stderr: "\n FAIL  a.test.ts > adds\n" }),
+    );
+    expect(outcome).toEqual({ status: "fail", detail: "3 passed\n FAIL  a.test.ts > adds" });
   });
 
   /**
@@ -200,34 +208,6 @@ describe("LensVerdictSchema", () => {
 
   it("rejects any verdict word other than pass or fail", () => {
     expect(LensVerdictSchema.safeParse({ verdict: "block", reason: "x" }).success).toBe(false);
-  });
-});
-
-/**
- * Gap found by `npm run mutate`: flipping `<=` to `<` on the truncation boundary
- * survived, because no test sat exactly on MAX_DETAIL. An off-by-one there
- * silently ellipsises output that fit perfectly.
- */
-describe("tail — the truncation boundary", () => {
-  const run = (stdout: string) =>
-    interpretCommandResult({ exitCode: 1, stdout, stderr: "", signal: null });
-
-  it("does not truncate output that is exactly at the limit", () => {
-    const out = run("x".repeat(2000));
-    if (out.status === "fail") {
-      expect(out.detail.startsWith("…")).toBe(false);
-      expect(out.detail).toHaveLength(2000);
-    }
-  });
-
-  it("truncates output one byte over the limit, keeping the TAIL", () => {
-    // The tail, not the head: the error a human needs is at the end of a log.
-    const out = run(`HEAD${"x".repeat(2000)}TAIL`);
-    if (out.status === "fail") {
-      expect(out.detail.startsWith("…")).toBe(true);
-      expect(out.detail.endsWith("TAIL")).toBe(true);
-      expect(out.detail).not.toContain("HEAD");
-    }
   });
 });
 

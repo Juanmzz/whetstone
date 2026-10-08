@@ -180,6 +180,23 @@ export function selectChecks(
   return { selected, excluded, missingFromRegistry, unmatched, declined, omitted: [] };
 }
 
+/**
+ * The changed paths no live check matches. A check that is switched off or
+ * disclaims the tier verifies nothing, so it covers nothing either.
+ */
+export function uncoveredPaths(
+  checks: Iterable<LoadedCheck>,
+  tier: Routing["tier"],
+  files: readonly ChangedFile[],
+): string[] {
+  const covered = new Set<string>();
+  for (const check of checks) {
+    if (!check.enabled || !check.tiers.includes(tier)) continue;
+    for (const file of matchFiles(check, files)) covered.add(file.path);
+  }
+  return files.filter((file) => !covered.has(file.path)).map((file) => file.path);
+}
+
 /** The checks that can answer while somebody is waiting. */
 export function fastOnly(checks: readonly LoadedCheck[]): readonly LoadedCheck[] {
   return checks.filter((check) => !check.slow);
