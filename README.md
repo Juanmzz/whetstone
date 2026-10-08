@@ -49,6 +49,14 @@ stage those files and rerun. An explicit commit range covers committed work
 only. Tests, types and lint only prove what they check; readiness does not
 guarantee that the requested feature is complete or visually correct.
 
+## Connect it to an agent
+
+- **Claude Code:** install the Whetstone plugin. Its Stop hook runs `wst ready` when
+  the agent finishes: `NOT_READY` sends the agent back to fix it, `INCOMPLETE` tells it
+  nothing was verified, and `READY` or `NO_CHANGES` stay silent.
+- **Any other agent:** add one line to its `AGENTS.md`: `Before handing work back, run
+  wst ready and fix what it reports.`
+
 ## Try it on one project
 
 Start with a project that already has tests and a typechecker. Review what
