@@ -52,15 +52,17 @@ async function repoWithCommittedWork(): Promise<string> {
 describe("the gate-on-stop hook", () => {
   afterEach(restorePath);
 
-  it("tells the agent nothing was verified when the gate could not run", async () => {
+  it("tells the agent the change is not fully verified when ready answered INCOMPLETE", async () => {
     await installFakeBin("wst", { exit: 2, stderr: "whetstone crashed before it could finish.\n" });
 
     const out = await stop(await project(true));
 
     expect(out?.decision).toBeUndefined();
     expect(out?.hookSpecificOutput?.hookEventName).toBe("Stop");
-    expect(out?.hookSpecificOutput?.additionalContext).toContain("NOT verified");
-    expect(out?.hookSpecificOutput?.additionalContext).toContain("whetstone crashed");
+    const context = out?.hookSpecificOutput?.additionalContext;
+    expect(context).toContain("answered INCOMPLETE: this change is not fully verified");
+    expect(context).not.toContain("could not run");
+    expect(context).toContain("whetstone crashed");
   });
 
   it("stays silent on exit 2 in a project that never set Whetstone up", async () => {
@@ -122,7 +124,7 @@ describe("the gate-on-stop hook", () => {
     expect(await wst.invocations()).toEqual([]);
   });
 
-  it("tells the agent nothing was verified when ready was killed before it answered", async () => {
+  it("tells the agent ready did not finish when it was killed before it answered", async () => {
     const bin = await tempDir("wst-killed-");
     await writeFile(join(bin, "wst"), "#!/bin/sh\nkill -9 $$\n");
     await chmod(join(bin, "wst"), 0o755);
@@ -131,6 +133,6 @@ describe("the gate-on-stop hook", () => {
     const out = await stop(await project(true));
 
     expect(out?.decision).toBeUndefined();
-    expect(out?.hookSpecificOutput?.additionalContext).toContain("NOT verified");
+    expect(out?.hookSpecificOutput?.additionalContext).toContain("did not finish");
   });
 });
