@@ -32,7 +32,10 @@ export interface ReadyFacts {
   readonly applicable: readonly string[];
   readonly results: readonly CheckLine[];
   readonly warnings?: readonly string[];
+  /** Changed paths no live check matches. Paths, never check ids. */
   readonly uncovered: readonly string[];
+  /** Why the result is not an established one. Absent when there is nothing to add. */
+  readonly reason?: string;
   readonly evidence: readonly string[];
   readonly elapsedMs: number;
   readonly readiness: Readiness;
@@ -65,6 +68,7 @@ export function renderReady(facts: ReadyFacts): string {
   const lines: string[] = [
     "",
     `  ${saidAs(facts.readiness)}${notes.length === 0 ? "" : `: ${notes.join(", ")}`}`,
+    ...(facts.reason === undefined ? [] : ["", ...facts.reason.split("\n").map((line) => `  ${line}`)]),
     "",
     `  repo        ${facts.repo}`,
     `  branch      ${facts.branch}`,
@@ -100,7 +104,8 @@ export function renderReady(facts: ReadyFacts): string {
   }
   if (facts.results.length > 0) lines.push("");
 
-  if (facts.uncovered.length > 0) {
+  // INCOMPLETE names them in its reason, which is where a reader looks first.
+  if (facts.uncovered.length > 0 && facts.readiness !== "INCOMPLETE") {
     lines.push("  no check covers these paths, so nothing verified them:", ...paths("", facts.uncovered), "");
   }
   if (facts.evidence.length > 0) {

@@ -99,8 +99,30 @@ describe("renderReady", () => {
     expect(out).toContain("spawn failed");
   });
 
-  it("lists uncovered paths, which are the reason readiness was not established", () => {
-    const out = renderReady(facts({ readiness: "INCOMPLETE", uncovered: ["docs/x.md"] }));
+  it("lists uncovered paths under a result that is otherwise established", () => {
+    const out = renderReady(facts({ uncovered: ["docs/x.md"] }));
+    expect(out).toContain("no check covers these paths");
     expect(out).toContain("docs/x.md");
+  });
+
+  it("says why it is incomplete, straight under the headline", () => {
+    const out = renderReady(
+      facts({ readiness: "INCOMPLETE", reason: "1 check could not run: test.\nalso, no check covers 1 changed path: docs/x.md", uncovered: ["docs/x.md"] }),
+    ).split("\n");
+    const at = out.findIndex((line) => line.includes("Verification incomplete"));
+    expect(out.slice(at + 1, at + 4)).toEqual(["", "  1 check could not run: test.", "  also, no check covers 1 changed path: docs/x.md"]);
+  });
+
+  it("does not list the uncovered paths twice when the reason already names them", () => {
+    const out = renderReady(facts({ readiness: "INCOMPLETE", reason: "no check covers 1 changed path: docs/x.md", uncovered: ["docs/x.md"] }));
+    expect(out.split("docs/x.md")).toHaveLength(2);
+  });
+
+  it("carries a reason on NO_CHANGES too, for a repo with no checks at all", () => {
+    const out = renderReady(
+      facts({ readiness: "NO_CHANGES", committed: [], unstaged: [], untracked: [], results: [], reason: "no .wst/ in this repository. Run `wst init`." }),
+    );
+    expect(out).toContain("No changes to verify");
+    expect(out).toContain("Run `wst init`");
   });
 });
