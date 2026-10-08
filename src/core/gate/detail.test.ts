@@ -11,6 +11,21 @@ describe("failureLines, stack frames", () => {
   });
 });
 
+describe("failureLines, what is not a frame", () => {
+  it("keeps prose that starts with `at` and mentions node_modules", () => {
+    const line = "at least one package in node_modules/foo is missing a peer";
+    expect(failureLines(line)).toEqual([line]);
+  });
+
+  it("drops a dependency frame whose line opens an object", () => {
+    expect(failureLines("E: x\n    at f (/r/node_modules/y/i.js:35:23) {\n  code: 1")).toEqual(["E: x", "  code: 1"]);
+  });
+
+  it("drops a vitest frame and a Windows one", () => {
+    expect(failureLines(" ❯ node_modules/x/i.js:1:1\n    at f (C:\\r\\node_modules\\y\\i.js:3:4)\nkept")).toEqual(["kept"]);
+  });
+});
+
 describe("failureLines, the caps", () => {
   const numbered = (n: number): string => Array.from({ length: n }, (_, i) => `line ${String(i + 1)}`).join("\n");
 
@@ -66,6 +81,19 @@ describe("failureLines, the caps", () => {
 describe("failureLines, terminal noise", () => {
   it("keeps what a carriage return left on screen", () => {
     expect(failureLines("building 10%\rbuilding 90%\rbuild failed")).toEqual(["build failed"]);
+  });
+
+  it("keeps a line that ends in a carriage return, or two", () => {
+    expect(failureLines("error: build failed\r")).toEqual(["error: build failed"]);
+    expect(failureLines("FAIL a.test.ts\r\r\nAssertionError: x\r\r\n")).toEqual(["FAIL a.test.ts", "AssertionError: x"]);
+  });
+
+  it("strips a charset reset and other two-byte escapes, which `tput sgr0` emits", () => {
+    expect(failureLines(`${ESC}[31mFAIL${ESC}(B${ESC}[m done${ESC}7${ESC}8`)).toEqual(["FAIL done"]);
+  });
+
+  it("does not let an unterminated OSC swallow the lines after it", () => {
+    expect(failureLines(`${ESC}]0;title\nFAIL important\n\u0007after`)).toEqual(["]0;title", "FAIL important", "after"]);
   });
 
   it("reads CRLF output as lines", () => {

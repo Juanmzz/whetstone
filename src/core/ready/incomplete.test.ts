@@ -7,7 +7,6 @@ const facts = (over: Partial<IncompleteFacts> = {}): IncompleteFacts => ({
   uncovered: [],
   errored: [],
   declined: [],
-  omitted: [],
   unrun: [],
   ...over,
 });
@@ -24,7 +23,7 @@ describe("whyIncomplete", () => {
   it("tells an empty registry apart from a missing one", () => {
     const why = whyIncomplete(facts({ checks: 0, uncovered: ["src/a.ts"] }));
 
-    expect(why).toContain("init seeded no checks");
+    expect(why).toContain("init seeded no checks, or they were removed");
     expect(why).not.toContain("no .wst/");
   });
 
@@ -59,15 +58,24 @@ describe("whyIncomplete", () => {
     expect(whyIncomplete(facts({ declined: ["typecheck"] }))).toContain("switched off: typecheck");
   });
 
-  it("names what --fast left out, and how to get it back", () => {
-    const why = whyIncomplete(facts({ omitted: ["e2e"] }));
+  it("names a blocking check that did not run, with what would run it", () => {
+    const why = whyIncomplete(
+      facts({ unrun: [{ id: "e2e", why: "left out by --fast", blocks: true }, { id: "review", why: "a model review, run with --lens", blocks: true }] }),
+    );
 
-    expect(why).toContain("e2e");
-    expect(why).toContain("without --fast");
+    expect(why).toBe("2 checks that may block did not run: e2e (left out by --fast), review (a model review, run with --lens)");
   });
 
-  it("names a blocking check that applied and did not run", () => {
-    expect(whyIncomplete(facts({ unrun: ["review"] }))).toContain("did not run: review");
+  it("does not blame an advisory check that did not run while something else is the cause", () => {
+    const why = whyIncomplete(facts({ errored: ["test"], unrun: [{ id: "style", why: "left out by --fast", blocks: false }] }));
+
+    expect(why).not.toContain("style");
+  });
+
+  it("names the advisory checks that did not run when nothing else ran either", () => {
+    const why = whyIncomplete(facts({ unrun: [{ id: "review", why: "a model review, run with --lens", blocks: false }] }));
+
+    expect(why).toBe("no check ran over this change, so nothing verified it. 1 check applied and did not run: review (a model review, run with --lens)");
   });
 
   it("puts a check that could not run ahead of paths nothing covers", () => {
