@@ -25,8 +25,15 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const root = process.env["CLAUDE_PROJECT_DIR"] ?? process.cwd();
 
-// Drain stdin so the harness never blocks on a hook that ignored its input.
-for await (const _ of process.stdin) void _;
+let raw = "";
+for await (const chunk of process.stdin) raw += chunk;
+
+// True when this Stop is already a continuation caused by a stop hook. Empty or invalid
+// input means no flag.
+let afterFixAttempt = false;
+try {
+  afterFixAttempt = JSON.parse(raw)?.stop_hook_active === true;
+} catch {}
 
 if (!existsSync(join(root, ".wst"))) process.exit(0);
 
@@ -67,6 +74,20 @@ try {
           hookEventName: "Stop",
           additionalContext:
             `${lead}This is not a failed check. Do not report the work as verified.\n\n${out}`,
+        },
+      }),
+    );
+    process.exit(0);
+  }
+
+  if (afterFixAttempt) {
+    console.log(
+      JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: "Stop",
+          additionalContext:
+            `Whetstone ready is still NOT_READY after a fix attempt. The work is not ready. ` +
+            `Do not report the work as ready.\n\n${out}`,
         },
       }),
     );
