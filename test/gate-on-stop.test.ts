@@ -18,6 +18,7 @@ const HOOK = join(import.meta.dirname, "..", "plugin", "hooks", "gate-on-stop.mj
 
 interface HookOutput {
   readonly decision?: string;
+  readonly systemMessage?: string;
   readonly hookSpecificOutput?: { readonly hookEventName?: string; readonly additionalContext?: string };
 }
 
@@ -136,16 +137,15 @@ describe("the gate-on-stop hook", () => {
     expect(out?.hookSpecificOutput?.additionalContext).toContain("did not finish");
   });
 
-  it("does not block again after a fix attempt, and says the work is still NOT_READY", async () => {
+  it("only warns the user after a fix attempt, and never continues the turn on exit 1", async () => {
     await installFakeBin("wst", { exit: 1, stdout: "NOT_READY\n  FAIL test\n" });
 
     const out = await stop(await project(true), '{"stop_hook_active":true}');
 
     expect(out?.decision).toBeUndefined();
-    const context = out?.hookSpecificOutput?.additionalContext;
-    expect(context).toContain("still NOT_READY");
-    expect(context).toContain("Do not report the work as ready");
-    expect(context).toContain("FAIL test");
+    expect(out?.hookSpecificOutput).toBeUndefined();
+    expect(out?.systemMessage).toContain("still NOT_READY");
+    expect(out?.systemMessage).toContain("FAIL test");
   });
 
   it("blocks on the first stop when the flag is false", async () => {
@@ -160,11 +160,26 @@ describe("the gate-on-stop hook", () => {
     expect((await stop(await project(true), "not json"))?.decision).toBe("block");
   });
 
-  it("still tells INCOMPLETE as a notice when the flag is true", async () => {
+  it("only warns the user on INCOMPLETE when the flag is true", async () => {
     await installFakeBin("wst", { exit: 2, stderr: "INCOMPLETE\n" });
 
     const out = await stop(await project(true), '{"stop_hook_active":true}');
 
-    expect(out?.hookSpecificOutput?.additionalContext).toContain("answered INCOMPLETE");
+    expect(out?.decision).toBeUndefined();
+    expect(out?.hookSpecificOutput).toBeUndefined();
+    expect(out?.systemMessage).toContain("INCOMPLETE");
+  });
+
+  it("only warns the user when ready was killed and the flag is true", async () => {
+    const bin = await tempDir("wst-killed-");
+    await writeFile(join(bin, "wst"), "#!/bin/sh\nkill -9 $$\n");
+    await chmod(join(bin, "wst"), 0o755);
+    process.env["PATH"] = `${bin}:${process.env["PATH"] ?? ""}`;
+
+    const out = await stop(await project(true), '{"stop_hook_active":true}');
+
+    expect(out?.decision).toBeUndefined();
+    expect(out?.hookSpecificOutput).toBeUndefined();
+    expect(out?.systemMessage).toContain("did not finish");
   });
 });
