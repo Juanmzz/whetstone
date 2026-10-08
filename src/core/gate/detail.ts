@@ -12,11 +12,18 @@ const MAX_CHARS = 4000;
 
 const ESC = "\\u001b";
 const BEL = "\\u0007";
-/** CSI (colours, cursor moves) and OSC (hyperlinks, titles). */
-const ANSI = new RegExp(`${ESC}(?:\\[[0-?]*[ -/]*[@-~]|\\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\))`, "g");
+/**
+ * CSI (colours, cursor moves), OSC (hyperlinks, titles) and the two-byte escapes
+ * `tput` emits. An OSC stops at a newline: an unterminated one must not eat the output.
+ */
+const ANSI = new RegExp(
+  `${ESC}(?:\\[[0-?]*[ -/]*[@-~]|\\][^${BEL}${ESC}\\n]*(?:${BEL}|${ESC}\\\\)|[()#][0-9A-Za-z]|[0-9A-Za-z=<>])`,
+  "g",
+);
+const STRAY = new RegExp(`[${ESC}${BEL}]`, "g");
 
-/** node prints `at`, vitest prints `❯`. Either way the frame is somebody else's code. */
-const DEPENDENCY_FRAME = /^\s*(?:at|❯)\s.*node_modules[\\/]/;
+/** node prints `at`, vitest prints `❯`. The position at the end is what tells a frame from prose. */
+const DEPENDENCY_FRAME = /^\s*(?:at|❯)\s.*node_modules[\\/].*:\d+:\d+\)?(?:\s*\{)?$/;
 
 const cut = (line: string): string =>
   line.length <= MAX_LINE_CHARS ? line : `${line.slice(0, MAX_LINE_CHARS)}…`;
@@ -24,8 +31,11 @@ const cut = (line: string): string =>
 export function failureLines(text: string): string[] {
   const meaningful = text
     .replace(ANSI, "")
-    .split(/\r?\n/)
-    // A carriage return redraws the line, so only what follows the last one was left on screen.
+    .replace(STRAY, "")
+    .split("\n")
+    // A carriage return redraws the line, so only what follows the last one was left on
+    // screen. Trailing ones are line endings, and redraw nothing.
+    .map((line) => line.replace(/\r+$/, ""))
     .map((line) => line.slice(line.lastIndexOf("\r") + 1).trimEnd())
     .filter((line) => line.trim() !== "" && !DEPENDENCY_FRAME.test(line))
     .map(cut);

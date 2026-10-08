@@ -17,9 +17,12 @@ if (tooOld !== null) {
   console.error(tooOld);
   process.exitCode = 2;
 } else {
-  import("./cli.js").catch((cause: unknown) => {
+  // Awaited, so a command that never settles still exits 13 and not 0.
+  try {
+    await import("./cli.js");
+  } catch (cause) {
     console.error(cause);
     console.error("\nwhetstone could not start. Nothing was verified by this run.");
     process.exitCode = 2;
-  });
+  }
 }

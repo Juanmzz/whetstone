@@ -59,14 +59,16 @@ The report names the branch, base and resolved commit, splits files by Git state
 and lists check results. `--json` exposes a semantic `result` and warning IDs.
 Stdout carries the report and stderr carries progress.
 
-A check that failed or could not run reports `detail`, an array of lines: the last
-40 non-blank lines it printed, with terminal escapes and `node_modules` stack frames
-removed and the total capped at 4000 characters (`core/gate/detail.ts`). A leading
-line counts what was cut. The text report prints them indented under the check.
+A check that failed or could not run reports `detail`, an array of lines. For a
+command these are the last 40 non-blank lines it printed, with terminal escapes and
+`node_modules` stack frames removed and about 4000 characters at most
+(`core/gate/detail.ts`); a leading line counts what was cut. A model review reports
+its reason, uncut. The text report prints the lines indented under the check.
 
 `INCOMPLETE` and a `NO_CHANGES` in a repo with no `.wst/` carry `reason`
 (`core/ready/incomplete.ts`): no `.wst/`, an empty registry, the checks that could
-not run or were left out, and the changed paths no check covers. `uncovered` lists
+not run, the ones that applied and did not run with what would run them, and the
+changed paths no check covers. `uncovered` lists
 those paths in every result; `declined` lists the switched-off checks that would
 have matched.
 
