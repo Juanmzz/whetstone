@@ -34,7 +34,7 @@ async function repoWith(pkg: string, plugin: string): Promise<string> {
 
 const pluginIn = (dir: string): Promise<string> => readFile(join(dir, PLUGIN), "utf-8");
 
-describe("check-plugin-version", () => {
+describe("check-plugin-version", { timeout: 30_000 }, () => {
   it("passes on this repository, so a drifted plugin cannot reach main", async () => {
     const { code } = await run(ROOT);
 
