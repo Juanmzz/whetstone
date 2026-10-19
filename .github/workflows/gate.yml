@@ -55,10 +55,16 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             RANGE="${{ github.event.pull_request.base.sha }}..${{ github.sha }}"
           else
-            RANGE="${{ github.event.before }}..${{ github.sha }}"
+            BEFORE="${{ github.event.before }}"
+            if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+              echo "the previous tip of main ($BEFORE) is gone, so this was a forced push and the range cannot be built." >&2
+              echo "nothing was verified. Exit 2 is deliberate: a narrower range would report a pass on less." >&2
+              exit 2
+            fi
+            RANGE="$BEFORE..${{ github.sha }}"
           fi
           echo "gating $RANGE"
-          node dist/cli.js gate --range "$RANGE" --no-lens --no-evidence
+          node dist/bin.js ready --range "$RANGE" --no-evidence
 
   # Its own job so an edit can re-run it alone. A push to `main` has no body to
   # read, and the script says so and exits 0 rather than inventing a verdict.
