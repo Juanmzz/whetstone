@@ -101,9 +101,9 @@
   <div class="hero">
     <img src="assets/whetstone-web.png" alt="An isometric pixel-art sharpening stone" width="704" height="384">
     <div class="claim">
-      <h2>Your definition of correct, enforced.</h2>
+      <h2>Is this task ready?</h2>
       <p>Whetstone captures what <em>correct</em> means in your repo as plain files in git, then enforces it with a deterministic engine that calls a model only where judgment is irreducible.</p>
-      <p>It gates your changes, whoever wrote them.</p>
+      <p>One honest answer for AI coding agents, from the checks your repo already has.</p>
     </div>
   </div>
 
@@ -112,13 +112,13 @@
     <table>
       <thead><tr><th>Code</th><th>Outcome</th><th>What it means about your change</th></tr></thead>
       <tbody>
-        <tr><td class="code">0</td><td class="name">Passed</td><td>Every check that applied ran, and none of them failed.</td></tr>
-        <tr><td class="code">0</td><td class="name">Uncovered</td><td>No check matched these paths. It says so rather than implying a pass, and lets you through: blocking here is what teaches people <span class="mono">--no-verify</span>.</td></tr>
-        <tr><td class="code halt">1</td><td class="name halt">Blocked</td><td>A check ran and failed. The only outcome that is a verdict on your change.</td></tr>
-        <tr><td class="code halt">2</td><td class="name halt">Incomplete</td><td>A check that could have blocked never ran. The gate is broken, not your change, and the two never share a message.</td></tr>
+        <tr><td class="code">0</td><td class="name">Ready</td><td>Verification completed under the configured policy. Failed warnings stay visible.</td></tr>
+        <tr><td class="code">0</td><td class="name">No changes</td><td>Nothing changed against the reported base.</td></tr>
+        <tr><td class="code halt">1</td><td class="name halt">Not ready</td><td>A blocking check ran and failed. The only outcome that is a verdict on your change.</td></tr>
+        <tr><td class="code halt">2</td><td class="name halt">Incomplete</td><td>Verification could not finish, or nothing verified the change. It never shares a message with a failure.</td></tr>
       </tbody>
     </table>
-    <p class="note">Four outcomes where most gates have two. Splitting <em>failed</em> from <em>could not run</em> is the difference between a gate you trust and one you learn to route around.</p>
+    <p class="note">Four outcomes where most gates have two. Splitting <em>failed</em> from <em>could not run</em> is the difference between a check you trust and one you learn to route around.</p>
   </section>
 
   <section class="sec">

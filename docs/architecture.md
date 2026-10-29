@@ -128,3 +128,10 @@ not a diff. `wst` with no arguments prints the help.
 
 `signal`, `retro`, `update`, `config` and the launcher are deleted (adr-0048, adr-0049).
 Tag `v0.9.0` carries them. Their records stay in `.wst/memory/`.
+
+## Beyond `ready`
+
+`ready --lens` also runs configured model reviews (lenses). A lens earns `block` only through
+a calibration receipt; none is installed by default and it cannot review untracked content yet.
+`gate` keeps its receipt cache and push policy for the pre-push hook and CI, and lets an
+uncovered change through. The retired commands are listed under Compatibility.

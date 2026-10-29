@@ -1,30 +1,46 @@
 # Whetstone
 
-**Check the work before handing it back.**
+**Is this task ready? One honest answer for AI coding agents, from the checks your repo already has.**
 
-Whetstone finds what changed in a Git worktree, runs the project's applicable
-checks, and reports what passed, failed or could not be verified. Configuration
-is plain files under `.wst/`, versioned with the project.
+`wst ready` finds what the task changed, runs only the checks those paths need, and
+says `READY`, `NOT_READY`, `INCOMPLETE` or `NO_CHANGES`. The checks are plain files under
+`.wst/`, versioned with your project.
 
-## Use
+```text
+$ wst ready
+  fail     test           (223ms)
+  pass     typecheck      (168ms)
 
-```bash
-npm install -g @juanmzz/whetstone
-cd your-repo
-wst init
-wst ready
+  Needs work
+
+  base        HEAD at ebfc00ec
+  unstaged    src/price.js
+
+  FAIL  test               0.2s
+        ✖ total sums price times quantity
+          AssertionError: Expected values to be strictly equal:
+          6 !== 13
+  pass  typecheck          0.2s
+
+$ echo $?
+1
 ```
 
-Node 22.12 or newer. `init` reads the test, typecheck and lint commands the repo
-declares, asks about risk and code paths, and shows a plan before writing.
-It probes those commands; a command that does not pass starts as a warning.
+A real run on a scratch repo, trimmed. The agent broke `total()`, and `ready` named the test.
 
-A new installation creates configuration, triage rules and available checks.
-It installs no hooks, agent instructions, skills or memory system. Ask your
-agent to run `wst ready` before handing work back, or connect verification to
-your existing CI. `wst status` inspects the installation, not the change.
+## Try it
 
-## Read the result
+```bash
+npm install -g @juanmzz/whetstone   # Node 22.12 or newer
+cd your-repo
+wst init     # reads your test, typecheck and lint commands, shows a plan, writes .wst/
+wst ready    # no arguments
+wst status   # what is installed here, and whether the push gate is armed
+```
+
+`init` probes each command it finds; one that does not pass starts as a warning, not a block.
+
+## Results
 
 | Result | Meaning | Exit |
 |---|---|---|
@@ -33,44 +49,34 @@ your existing CI. `wst status` inspects the installation, not the change.
 | `INCOMPLETE` | Verification could not finish, a required check was omitted, coverage was declined, or nothing verified the change. | 2 |
 | `NO_CHANGES` | Nothing changed against the reported base. | 0 |
 
-`ready` resolves its base from local Git references and includes committed,
-staged, unstaged and untracked changes. It refuses unresolved conflicts and
-reruns checks without trusting cached receipts. It never fetches; use
-`--range main..HEAD` when CI needs an explicit commit range.
-
-```bash
-wst ready --json   # semantic result, scope, check results and warning IDs
-wst ready --fast   # omit slow checks; blocking omissions leave INCOMPLETE
-wst ready --lens   # also run configured model reviews
-```
-
-No lens is installed by default. A lens cannot review untracked content yet:
-stage those files and rerun. An explicit commit range covers committed work
-only. Tests, types and lint only prove what they check; readiness does not
-guarantee that the requested feature is complete or visually correct.
+`wst ready --json` gives the same answer as data. `--range main..HEAD` sets the commit
+range for CI. `--fast` omits slow checks.
 
 ## Connect it to an agent
 
-- **Claude Code:** install the Whetstone plugin. Its Stop hook runs `wst ready` when
-  the agent finishes: `NOT_READY` sends the agent back to fix it, `INCOMPLETE` tells it
-  nothing was verified, and `READY` or `NO_CHANGES` stay silent.
-- **Any other agent:** add one line to its `AGENTS.md`: `Before handing work back, run
-  wst ready and fix what it reports.`
+**Claude Code.** Add the marketplace, then install the plugin:
 
-## Try it on one project
+```text
+/plugin marketplace add Juanmzz/whetstone
+/plugin install whetstone@whetstone
+```
 
-Start with a project that already has tests and a typechecker. Review what
-`init` proposes, use `ready` for several real tasks alongside your usual checks,
-and compare scope, findings and time spent. In an isolated copy, introduce one
-known failure at a time, confirm detection, fix it and confirm recovery.
-Add automatic enforcement after this pilot.
+Its Stop hook runs `wst ready` when the agent finishes. `NOT_READY` sends the agent back to
+fix it, `INCOMPLETE` tells it nothing was verified, and `READY` stays silent.
 
-## Other commands
+**Any other agent.** Add one line to its `AGENTS.md`:
 
-`check` and `triage` are diagnostics. `gate` remains compatible with existing
-hooks and CI, including its receipt cache and push policy. Unlike `ready`,
-an uncovered change may pass the gate. `signal`, `retro`, `update`, `config`
-and the launcher were removed (adr-0049); `git checkout v0.9.0` restores them.
+```text
+Before handing work back, run wst ready and fix what it reports.
+```
 
-- [Architecture](docs/architecture.md)
-- [Decisions](.wst/memory/decisions.md)
+## Why not just CI
+
+- It runs at the end of the agent's turn, not minutes later on a pushed branch.
+- It runs only the checks the change needs, so it is fast enough to run every time.
+- It says `INCOMPLETE` when it could not verify something, instead of passing what it did not check.
+
+Tests, types and lint only prove what they check. Readiness does not guarantee the feature is
+complete or looks right.
+
+[Architecture](docs/architecture.md) · [Decisions](.wst/memory/decisions.md) · [Changelog](CHANGELOG.md)

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Docs: README rewritten around one real `wst ready` run and the plugin install command; `VISION.md` and `docs/reviews/` removed.
+
 ## 0.10.0
 
 - Cut: `signal`, `retro`, `update`, the memory substrate behind them, and the launcher
