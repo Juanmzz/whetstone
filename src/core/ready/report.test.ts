@@ -125,4 +125,31 @@ describe("renderReady", () => {
     expect(out).toContain("No changes to verify");
     expect(out).toContain("Run `wst init`");
   });
+
+  it("names the blocking failures in a NOT_READY headline, before any warning", () => {
+    const out = renderReady(
+      facts({
+        readiness: "NOT_READY",
+        warnings: ["correctness"],
+        results: [
+          { id: "test", status: "fail", ms: 10, detail: ["boom"] },
+          { id: "typecheck", status: "fail", ms: 10, detail: ["bad"] },
+          { id: "correctness", status: "fail", ms: 10, detail: ["meh"] },
+        ],
+      }),
+    );
+    expect(out).toContain("Needs work: test, typecheck failed, 1 warning failed");
+  });
+
+  it("does not count a warning as the reason for a NOT_READY", () => {
+    const out = renderReady(
+      facts({
+        readiness: "NOT_READY",
+        warnings: ["correctness"],
+        results: [{ id: "correctness", status: "fail", ms: 10 }, { id: "test", status: "fail", ms: 10 }],
+      }),
+    );
+    expect(out).not.toMatch(/Needs work: 1 warning/);
+    expect(out).toContain("Needs work: test failed");
+  });
 });
