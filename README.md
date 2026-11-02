@@ -11,7 +11,7 @@ $ wst ready
   fail     test           (223ms)
   pass     typecheck      (168ms)
 
-  Needs work
+  Needs work: test failed
 
   base        HEAD at ebfc00ec
   unstaged    src/price.js
@@ -62,7 +62,9 @@ range for CI. `--fast` omits slow checks.
 ```
 
 Its Stop hook runs `wst ready` when the agent finishes. `NOT_READY` sends the agent back to
-fix it, `INCOMPLETE` tells it nothing was verified, and `READY` stays silent.
+fix it and `READY` stays silent. It reports a given repo state only once. An `INCOMPLETE`
+where no check covers the changed paths goes to you without reopening the turn; any other
+`INCOMPLETE` tells the agent once.
 
 **Any other agent.** Add one line to its `AGENTS.md`:
 
@@ -73,7 +75,7 @@ Before handing work back, run wst ready and fix what it reports.
 ## Why not just CI
 
 - It runs at the end of the agent's turn, not minutes later on a pushed branch.
-- It runs only the checks the change needs, so it is fast enough to run every time.
+- It runs only the checks the change needs.
 - It says `INCOMPLETE` when it could not verify something, instead of passing what it did not check.
 
 Tests, types and lint only prove what they check. Readiness does not guarantee the feature is
