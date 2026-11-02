@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.1
+
+- The Claude Code Stop hook remembers. It fingerprints the repo (HEAD, status, the content of
+  every changed file, the `wst` version) and keeps the last verdict per worktree, so an
+  unchanged state is never judged or reported twice.
+- An INCOMPLETE that only says no check covers the changed paths reaches the user as a
+  message and no longer reopens the turn. A check that could not run, or one switched off,
+  still reaches the agent once.
+- The hook reads `wst ready --json` and reports the reason and each failing check.
+
 ## 0.10.0
 
 - Cut: `signal`, `retro`, `update`, the memory substrate behind them, and the launcher
