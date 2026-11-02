@@ -61,7 +61,12 @@ const MARK: Readonly<Record<ResultStatus, string>> = {
 export function renderReady(facts: ReadyFacts): string {
   const warnings = facts.warnings?.length ?? 0;
   const omitted = facts.results.filter((r) => r.status === "skipped" && r.detail?.[0] !== "receipt").length;
+  const blocking =
+    facts.readiness === "NOT_READY"
+      ? facts.results.filter((r) => r.status === "fail" && !(facts.warnings ?? []).includes(r.id)).map((r) => r.id)
+      : [];
   const notes = [
+    ...(blocking.length === 0 ? [] : [`${blocking.join(", ")} failed`]),
     ...(warnings === 0 ? [] : [`${warnings} warning${warnings === 1 ? "" : "s"} failed`]),
     ...(omitted === 0 ? [] : [`${omitted} check${omitted === 1 ? "" : "s"} omitted`]),
   ];
