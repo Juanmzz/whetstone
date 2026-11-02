@@ -55,7 +55,7 @@ async function git(args, cwd = root, input = "") {
 
 async function wstVersion() {
   try {
-    return (await run("wst", ["--version"], { cwd: root, timeout: 15_000 })).stdout.trim();
+    return (await run("wst", ["--version"], { cwd: root, timeout: 5_000 })).stdout.trim();
   } catch {
     return "";
   }
