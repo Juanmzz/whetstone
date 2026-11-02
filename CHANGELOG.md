@@ -9,6 +9,7 @@
   message and no longer reopens the turn. A check that could not run, or one switched off,
   still reaches the agent once.
 - The hook reads `wst ready --json` and reports the reason and each failing check.
+- Docs: README rewritten around one real `wst ready` run and the plugin install command; `VISION.md` and `docs/reviews/` removed.
 
 ## 0.10.0
 
