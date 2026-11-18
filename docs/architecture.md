@@ -68,7 +68,9 @@ its reason, uncut. The text report prints the lines indented under the check.
 `INCOMPLETE` and a `NO_CHANGES` in a repo with no `.wst/` carry `reason`
 (`core/ready/incomplete.ts`): no `.wst/`, an empty registry, the checks that could
 not run, the ones that applied and did not run with what would run them, and the
-changed paths no check covers. `uncovered` lists
+changed paths no check covers. The early `INCOMPLETE` envelopes where the scope could
+not be established (not a git repo, no resolvable base such as a detached HEAD, no merge
+base) also carry `"scope": "unresolved"`; a conflict does not. `uncovered` lists
 those paths in every result; `declined` lists the switched-off checks that would
 have matched.
 
@@ -86,7 +88,8 @@ twice, except a run that did not finish, which runs again without repeating its 
 | `READY`, `NO_CHANGES` | Nothing. |
 | `NOT_READY` | Blocks the stop. |
 | `INCOMPLETE`, only uncovered paths | Tells the user. Never reopens the turn: the agent has nothing to fix. |
-| Any other `INCOMPLETE`, or a run that did not finish | Tells the agent once, which continues the turn. |
+| `INCOMPLETE`, scope unresolved, clean working tree | Tells the user. Never reopens the turn: nothing changed, so nothing is claimed verified. |
+| Any other `INCOMPLETE` (scope unresolved with uncommitted changes included), or a run that did not finish | Tells the agent once, which continues the turn. |
 
 After a fix attempt (`stop_hook_active`) only the user is told, since anything else would
 continue the turn again. The fingerprint does not see ignored files, submodule contents or a

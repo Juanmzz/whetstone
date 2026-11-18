@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.2
+
+- A clean detached HEAD no longer reopens the turn. When `wst ready` cannot establish the
+  scope and the working tree has no changes, the Stop hook tells the user alone. With
+  uncommitted changes the agent is still told once.
+- `wst ready --json` marks those early INCOMPLETE answers with `"scope": "unresolved"`
+  (not a git repo, no resolvable base, no merge base). A conflict does not carry it.
+
 ## 0.10.1
 
 - The Claude Code Stop hook remembers. It fingerprints the repo (HEAD, status, the content of

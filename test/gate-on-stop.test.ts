@@ -429,3 +429,50 @@ describe("the gate-on-stop hook remembers what it already reported", () => {
     expect((out as { reason?: string }).reason).toContain("NOT_READY\n  FAIL test");
   });
 });
+
+describe("the gate-on-stop hook on a detached HEAD", () => {
+  afterEach(restorePath);
+
+  const UNRESOLVED = envelope("INCOMPLETE", { reason: "detached HEAD: there is no branch", scope: "unresolved" });
+
+  async function detached(): Promise<string> {
+    const dir = await repo();
+    const head = (await exec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim();
+    await git(dir, "checkout", "-q", head);
+    return dir;
+  }
+
+  it("tells only the user, once, when the tree is clean", async () => {
+    const wst = await fakeWst({ exit: 2, stdout: UNRESOLVED });
+    const dir = await detached();
+
+    const first = await stop(dir);
+    const second = await stop(dir);
+
+    expect(first?.systemMessage).toContain("detached HEAD");
+    expect(first?.hookSpecificOutput).toBeUndefined();
+    expect(first?.decision).toBeUndefined();
+    expect(second).toBeNull();
+    expect(await readyRuns(wst)).toBe(1);
+  });
+
+  it("tells the agent once when the tree has an uncommitted edit", async () => {
+    await fakeWst({ exit: 2, stdout: UNRESOLVED });
+    const dir = await detached();
+    await writeFile(join(dir, "a.ts"), "1\n");
+
+    const first = await stop(dir);
+    const second = await stop(dir);
+
+    expect(first?.hookSpecificOutput?.additionalContext).toContain("not fully verified");
+    expect(first?.systemMessage).toBeUndefined();
+    expect(second).toBeNull();
+  });
+
+  it("still tells the agent about an INCOMPLETE without the scope field on a clean tree", async () => {
+    await fakeWst({ exit: 2, stdout: envelope("INCOMPLETE", { reason: "unresolved conflicts: a.ts" }) });
+
+    expect((await stop(await detached()))?.hookSpecificOutput?.additionalContext).toContain("not fully verified");
+  });
+});
+

@@ -92,7 +92,7 @@ async function fingerprint() {
     const hash = createHash("sha256")
       .update([head, status, await wstVersion(), ...files.map((f, i) => `${f}\0${hashes[i]}`), ...links].join("\0\0"))
       .digest("hex");
-    return { hash, state };
+    return { hash, state, clean: paths.length === 0 };
   } catch {
     return null;
   }
@@ -152,6 +152,8 @@ function uncoveredOnly(envelope) {
   );
 }
 
+const scopeUnresolved = (envelope) => envelope?.result === "INCOMPLETE" && envelope.scope === "unresolved";
+
 /**
  * Every failure to RUN exits silently.
  *
@@ -206,6 +208,11 @@ async function main() {
 
   if (kind === "INCOMPLETE" && uncoveredOnly(envelope)) {
     say({ systemMessage: `Whetstone ready answered INCOMPLETE: no check covers the changed paths. Nothing for the agent to fix.\n\n${text}` });
+    return;
+  }
+
+  if (kind === "INCOMPLETE" && scopeUnresolved(envelope) && now?.clean === true) {
+    say({ systemMessage: `Whetstone ready answered INCOMPLETE: the scope of this task could not be established and nothing has changed. Nothing for the agent to fix.\n\n${text}` });
     return;
   }
 

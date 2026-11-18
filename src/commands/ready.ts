@@ -52,15 +52,18 @@ export async function runReady(
   cwd: string = requireCwd(),
 ): Promise<number> {
   const began = Date.now();
-  const incomplete = (reason: string, conflicts: readonly string[] = []): number => {
-    if (opts.json === true) console.log(JSON.stringify({ result: "INCOMPLETE", reason, conflicts, results: [] }));
+  const incomplete = (reason: string, conflicts: readonly string[] = [], unresolved = false): number => {
+    if (opts.json === true) {
+      const scope = unresolved ? { scope: "unresolved" } : {};
+      console.log(JSON.stringify({ result: "INCOMPLETE", reason, conflicts, ...scope, results: [] }));
+    }
     else console.error(`\n  ${saidAs("INCOMPLETE")}\n\n  ${reason}\n`);
     return EXIT_INCOMPLETE;
   };
   const git = createGitAdapter(cwd);
   const repoRoot = await git.repoRoot();
   if (repoRoot === null) {
-    return incomplete("not inside a git repository: readiness is measured against a base, so it needs one");
+    return incomplete("not inside a git repository: readiness is measured against a base, so it needs one", [], true);
   }
 
   try {
@@ -77,7 +80,7 @@ export async function runReady(
   if (!base.ok) {
     // Ambiguous scope is INCOMPLETE, never NOT_READY: nothing about the change was
     // judged, so calling it not ready would name the wrong problem.
-    return incomplete(base.why);
+    return incomplete(base.why, [], true);
   }
 
   // A merge base that will not resolve means the scope was never established. Two
@@ -91,7 +94,7 @@ export async function runReady(
   } else {
     const found = await mergeBaseOf(base.ref, cwd);
     if (found === null) {
-      return incomplete(`no merge base between HEAD and ${base.ref}, so the scope of this task is not established.\n  Pass --range to say what to verify.`);
+      return incomplete(`no merge base between HEAD and ${base.ref}, so the scope of this task is not established.\n  Pass --range to say what to verify.`, [], true);
     }
     commit = found;
   }

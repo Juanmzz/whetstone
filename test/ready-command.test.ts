@@ -42,7 +42,7 @@ const said = (): string => `${out.join("\n")}\n${err.join("\n")}`;
 const envelope = (): {
   result: string; untracked: string[]; applicable: string[]; warnings: string[];
   results: { id: string; status: string; detail?: string[] }[]; conflicts: string[];
-  reason?: string; uncovered: string[]; declined: string[];
+  reason?: string; uncovered: string[]; declined: string[]; scope?: string;
 } => JSON.parse(out.at(-1)!);
 
 async function checkFile(
@@ -344,6 +344,30 @@ describe("wst ready — the states an agent's worktree is actually in", () => {
 
     expect(await runReady({}, dir)).toBe(2);
     expect(said()).toMatch(/detached/i);
+  });
+
+  it("marks the scope unresolved in --json on a detached HEAD", async () => {
+    const dir = await repo();
+    const { stdout } = await exec("git", ["rev-parse", "HEAD"], { cwd: dir, env: ENV });
+    await git(dir, "checkout", "-q", stdout.trim());
+
+    expect(await runReady({ json: true }, dir)).toBe(2);
+    expect(envelope().scope).toBe("unresolved");
+  });
+
+  it("does not mark the scope unresolved when the cause is a conflict", async () => {
+    const dir = await repo();
+    await git(dir, "checkout", "-qb", "feature");
+    await writeFile(join(dir, "src/a.ts"), "feature");
+    await git(dir, "commit", "-qam", "feature");
+    await git(dir, "checkout", "-q", "main");
+    await writeFile(join(dir, "src/a.ts"), "main");
+    await git(dir, "commit", "-qam", "main");
+    await expect(git(dir, "merge", "feature")).rejects.toThrow();
+
+    await runReady({ json: true }, dir);
+
+    expect(envelope().scope).toBeUndefined();
   });
 
   it("reports repo-relative paths even when run from a subdirectory", async () => {
