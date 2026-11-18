@@ -72,6 +72,27 @@ changed paths no check covers. `uncovered` lists
 those paths in every result; `declined` lists the switched-off checks that would
 have matched.
 
+## The Stop hook
+
+The Claude Code plugin runs `wst ready --json` when the agent stops
+(`plugin/hooks/gate-on-stop.mjs`). A Stop fires per response, not per change, so the
+hook fingerprints the repo (HEAD, status, the content of every changed or untracked
+file, the `wst` version) and keeps the last verdict per worktree in
+`wst-stop-state.json` under the git dir. The same fingerprint is not run or reported
+twice, except a run that did not finish, which runs again without repeating its notice.
+
+| New state | What the hook does |
+|---|---|
+| `READY`, `NO_CHANGES` | Nothing. |
+| `NOT_READY` | Blocks the stop. |
+| `INCOMPLETE`, only uncovered paths | Tells the user. Never reopens the turn: the agent has nothing to fix. |
+| Any other `INCOMPLETE`, or a run that did not finish | Tells the agent once, which continues the turn. |
+
+After a fix attempt (`stop_hook_active`) only the user is told, since anything else would
+continue the turn again. The fingerprint does not see ignored files, submodule contents or a
+moved base, so a verdict can outlive those changes until the next edit. The pre-push hook and CI
+still run. No git or an unusable state file means no memory; no `wst` on `PATH` means silence.
+
 ## Functional core, imperative shell
 
 `src/bin.ts` is what `wst` resolves to: it refuses a Node below the `engines`
